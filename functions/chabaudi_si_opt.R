@@ -51,9 +51,6 @@ chabaudi_si_opt <- function(parameters_cr, immunity, parameters, time_range, df,
   dummy_cr.mod <- lm(dummy_y.vals ~ splines::bs(cue_range, df), data = dummy_cr.data)
   dummy_cr.mod$data <- dummy_cr.data
     
-    #do.call("lm", list(as.formula(dummy_y.vals ~ splines::bs(substitute(cue_range), substitue(df)),
-    #data = as.name("dummy_cr.data"))))
-  
   ## Assign coefficient to be optimized to the dummy conversion rate function
   dummy_cr.mod$coefficients <- parameters_cr
   
