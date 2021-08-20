@@ -7,7 +7,19 @@
 ## 6. the "cue" that conversion rate is dependent on
 ## 7. The range of cue
 
-chabaudi_si_opt <- function(parameters_cr, immunity, parameter, time, df, cue, cue_range){
+chabaudi_si_opt <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range){
+  #-------------------------#
+  # Force values we inputted 
+  # are available in environment
+  #------------------------#
+  force(parameters_cr)
+  force(immunity)
+  force(parameters)
+  force(time_range)
+  force(df)
+  force(cue)
+  force(cue_range)
+  
   #-------------------------#
   # Define initial condition
   #------------------------#
@@ -31,6 +43,143 @@ chabaudi_si_opt <- function(parameters_cr, immunity, parameter, time, df, cue, c
   #-------------------------#
   # Define conversion rate function
   #------------------------#
+  ## Define dummy data of conversion rate
+  dummy_y.vals <- rep(0, length(cue_range)) 
+  dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
   
+  ## Define initial conversion rate as basic-Spline
+  dummy_cr.mod <- lm(dummy_y.vals ~ splines::bs(cue_range, df), data = dummy_cr.data)
+  dummy_cr.mod$data <- dummy_cr.data
+    
+    #do.call("lm", list(as.formula(dummy_y.vals ~ splines::bs(substitute(cue_range), substitue(df)),
+    #data = as.name("dummy_cr.data"))))
   
+  ## Assign coefficient to be optimized to the dummy conversion rate function
+  dummy_cr.mod$coefficients <- parameters_cr
+  
+  ## Function to get conversion rates at various cue values (this speeds up fitting process)
+  spline.fun <- function(x){
+    cr.int <- exp(-exp(predict(dummy_cr.mod, newdata =
+                                 data.frame(cue_range = x))))
+    return(cr.int[[1]])}
+  
+  ## Put the conversion rate into a list
+  cr.int2 <- rep(NA, length(cue_range)) # define empty list
+  cr.int2 <- sapply(cue_range, spline.fun) # loop over function to get fitted value
+  
+  ## Produce a table with time value and conversion rate
+  cr <- splinefun(cbind(cue_range, cr.int2))
+  
+  #-------------------------#
+  # Define single-infection model
+  #------------------------#
+  single_infection.fun <- function(t, state, parameters) {
+    with(as.list(c(state, parameters)), {
+
+      ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
+      if(t>alpha){lag1 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
+      if(t>alphag){lag2 = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
+      
+      ## get lag term index given cue
+      lag.i <- match(cue, names(state))
+      
+      ## convert cue to variable in state
+      cue_state <- get(cue)
+      
+      ## Define K, carrying capacity of RBC
+      K <- lambda*R1/(lambda-mu*R1)
+      
+      ## Define survival functions
+      ### Survival of infected asexual RBC
+      if(t>alpha && immunity == "ni"){
+        S <- exp(-mu*alpha)
+      } else if(t>alpha && immunity =="i"){
+        integrand <- function(x) {mu+a/(b+I)}
+        S <- exp(-integrate(integrand, lower = t-alpha, upper = t))
+      } else if(t<=alpha && immunity == "ni"){
+        S <- exp(-mu*t)
+      } else{
+        integrand <- function(x) {mu+a/(b+I)}
+        S <- exp(-integrate(integrand, lower = 0, upper = t))
+      }
+
+      ### Survival of gametocytes. We assume that infected
+      ### RBC with gametocyte is not removed by immune response
+      if(t<=alphag){
+        Sg <- exp(-mu*t)
+      } else{
+      Sg <- exp(-mu*alphag)}
+      
+      ## Define the models without lag terms. 
+      dR <- lambda*(1-R/K)-mu*R-p*R*M # change in susceptible RBC
+      if(immunity == "ni"){
+        dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I # change in infected RBC density
+      } else{
+        dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(a*I)/(b+I) # change in infected RBC density with immunity
+      }
+      dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig 
+      dM_nolag <- -mum*M-p*R*M
+      dG_nolag <- -mug*G
+      
+      ## Track states in initial cohort of infection
+      if(t<=alpha){
+        dI <- dI_nolag-pulseBeta(I0, sp, t)*S 
+        dM <- dM_nolag+beta*pulseBeta(I0, sp, t)*S 
+      }
+      
+      if(t<=alphag){
+        dIg <- dIg_nolag-pulseBeta(Ig0, sp, t-1)*Sg 
+        dG <- dG_nolag+pulseBeta(Ig0, sp, t-1)*Sg 
+      }
+      
+      ## Track states after delay 
+      if(t>alpha){
+        dI <- dI_nolag-(1-cr(lag1[lag.i]))*p*lag1[1]*lag1[4]*S 
+        dM <- dM_nolag+beta*(1-cr(lag1[lag.i]))*p*lag1[1]*lag1[4]*S 
+      }
+      
+      if(t>alphag){
+        dIg <- dIg_nolag-cr(lag2[lag.i])*p*lag2[1]*lag2[4]*Sg 
+        dG <- dG_nolag+cr(lag2[lag.i])*p*lag2[1]*lag2[4]*Sg
+      }
+      
+      ## Return the states
+      return(list(c(dR, dI, dIg, dM, dG)))
+    })
+  }
+  
+  #-------------------------#
+  # Run single-infection model
+  #------------------------#
+  single_infection.df <- as.data.frame(deSolve::dede(y = state,
+                                                     times = time_range,
+                                                     func = single_infection.fun,
+                                                     p = parameters,
+                                                     control=list(mxhist = 1e6)))
+  
+  #-------------------------#
+  # Calculate fitness
+  #------------------------#
+  ## Get Gametocyte density time series data
+  gam <- single_infection.df$G
+  gam[gam<0] <- 0 # Assign negative gametocyte density to 0
+  
+  ## Get timeseries interval. Simplify first time after t=0
+  int <- single_infection.df[2,1]
+  
+  ## Define the fitness parameter values
+  aval <- -12.69
+  bval <- 3.6
+  dens <- log10(gam)
+  
+  ## Calculate the transmission potential at each time t
+  tau.ls <- (exp(aval+bval*dens))/(1+exp(aval+bval*dens))
+  
+  ## Get approximation of cumulative transmission potential
+  tau.sum <- sum(tau.ls*int)
+  
+  # return cumulative transmission potential. Turn negative to maximize
+  return(tau.sum*-1) 
 }
+
+

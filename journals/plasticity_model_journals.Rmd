@@ -1,0 +1,64 @@
+---
+title: "plasticity_model_journal"
+output: html_document
+---
+
+# Load libraries
+```{r}
+library(deSolve)
+library(splines)
+library(optimParallel)
+library(ggplot2)
+library(ggpubr)
+library(tidyr)
+library(magrittr)
+```
+
+# Testing single infection model
+```{r}
+
+
+# define arguments
+parameters_cr <- c(1,2,3,4)
+parameters <- c(R1 = 8.5*10^6,
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 4*10^-6,
+                alpha = 1, 
+                alphag = 2, 
+                beta = 10, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1)
+
+time_range <- seq(0, 20, by = 1e-3)
+cue_range <- seq(0, (3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)), by = 1000) 
+
+# parameters_cr, immunity, parameters, time_range, df, cue, cue_range
+
+# load package
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt.R")
+
+# Prepare for parallel computing
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+
+test <- optimParallel(par = c(1,2,3,4), 
+                      fn = chabaudi_si_opt, 
+                      control = list(trace = 6),
+                      immunity = "ni",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range)
+
+stopCluster(cl)
+
+chabaudi_si_opt
+```
+
