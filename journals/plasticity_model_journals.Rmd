@@ -14,10 +14,9 @@ library(tidyr)
 library(magrittr)
 ```
 
-# Testing single infection model
+# Testing single infection model chabaudi_si_opt
+See if results matches original script. It does!
 ```{r}
-
-
 # define arguments
 parameters_cr <- c(1,2,3,4)
 parameters <- c(R1 = 8.5*10^6,
@@ -38,16 +37,15 @@ parameters <- c(R1 = 8.5*10^6,
 time_range <- seq(0, 20, by = 1e-3)
 cue_range <- seq(0, (3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)), by = 1000) 
 
-# parameters_cr, immunity, parameters, time_range, df, cue, cue_range
-
-# load package
+# load function
 setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
 source("chabaudi_si_opt.R")
 
-# Prepare for parallel computing
+# Run model
+## Name = parasite_infection(single/co-infection)_immunity_cue_infectiontimeperiod.opt
+start.time <- Sys.time()
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-
-test <- optimParallel(par = c(1,2,3,4), 
+ch_si_ni_i_20.opt <- optimParallel(par = c(1,2,3,4), 
                       fn = chabaudi_si_opt, 
                       control = list(trace = 6),
                       immunity = "ni",
@@ -58,7 +56,35 @@ test <- optimParallel(par = c(1,2,3,4),
                       cue_range = cue_range)
 
 stopCluster(cl)
+end.time <- end.time <- Sys.time()
 
-chabaudi_si_opt
+time.taken <- end.time - start.time 
+time.taken #12.18853 minutes
+
+#setwd("/Users/avrilwang/Desktop/Project_Plasmodium/opt_parm")
+#write.csv(ch_si_ni_i_20.opt$par, "ch_si_ni_i_20.csv")
 ```
+
+# visualizing conversion rate across cue range
+```{r}
+# load function to convert parameter to dataframe for plotting
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("par_to_df.R")
+
+# convert parameter values to dataframe 
+ch_si_ni_i_20_cr.df <- par_to_df(ch_si_ni_i_20.opt, cue_range)
+
+# plot!
+ch_si_ni_i_20_cr.df %>% 
+    gather(key = "optimization_methods", value = "Transmission_investment", -cue_range) %>%
+    ggplot(aes(x = cue_range, y = model)) +
+    geom_line(alpha = 0.7) +
+    xlab("Infected RBC density") +
+    ylab("Transmission investment") +
+  xlim(0,400000) +
+    labs(color = "Optimization methods") +
+    theme_bw()
+```
+
+
 

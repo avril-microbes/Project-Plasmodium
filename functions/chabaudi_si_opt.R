@@ -1,15 +1,18 @@
 # The following function will produce the optimal conversion rate strategy of Plasmodium chabaudi in a single infection scenario. Users must specify:
 ## 1. Initial parameter (for conversion rate) search space
-## 2.whether immunity is present or not
+## 2. whether immunity is present or not ("ni" for no immunity and "si" for saturated immunity)
 ## 3. parameter setting
 ## 4. time period that infection run
 ## 5. degrees of freedom for conversion rate spline function
 ## 6. the "cue" that conversion rate is dependent on
 ## 7. The range of cue
 
+## To run the function, please see "plasticity_model_journals.Rmd" for reference". Function best run 
+## when paired with optimParallel to allow for parallel computing.
+
 chabaudi_si_opt <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range){
   #-------------------------#
-  # Force values we inputted 
+  # Ensure values we inputted 
   # are available in environment
   #------------------------#
   force(parameters_cr)

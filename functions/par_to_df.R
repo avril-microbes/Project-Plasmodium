@@ -1,4 +1,4 @@
-# function to convert parameter from optimal parameter values to a dataframe of cue range vs conversion rate
+# function to convert the output form an "opt" function to a dataframe of cue range vs conversion rate
 par_to_df <- function(mod_opt, cue_range){
   # get parameter values
   par <- mod_opt$par
@@ -9,16 +9,15 @@ par_to_df <- function(mod_opt, cue_range){
   # define basic spline model
   basis_mod <- splines::bs(cue_range, df)
   
-  # define function that creates spline function
-  ## function creates individual parts of spline function
+  # iterate through parameter values and basic spline model to create conversion rate values
   model_part <- list()
   for(i in 1:length(par)){
     model_part[[i]] <- par[i]*basis_mod[,i-1]
   }
-  ## sum them up
+  ## sum the conversion rate values up
   model_part2 <- rowSums(do.call(cbind, model_part))
   
-  ## need to add par[1] given it is not included. Double exp to limit between 0 and 1
+  ## need to add par[1] given it is not included. Double exp to limit conversion rate between 0 and 1
   model <- exp(-exp(par[1]+model_part2))
   
   # Create dataframe from model
