@@ -14,6 +14,13 @@ library(tidyr)
 library(magrittr)
 ```
 
+# Load functions
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt.R")
+source("par_to_df.R")
+```
+
 # Testing single infection model chabaudi_si_opt
 See if results matches original script. It does!
 ```{r}
@@ -37,15 +44,11 @@ parameters <- c(R1 = 8.5*10^6,
 time_range <- seq(0, 20, by = 1e-3)
 cue_range <- seq(0, (3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)), by = 1000) 
 
-# load function
-setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
-source("chabaudi_si_opt.R")
-
 # Run model
 ## Name = parasite_infection(single/co-infection)_immunity_cue_infectiontimeperiod.opt
 start.time <- Sys.time()
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-ch_si_ni_i_20.opt <- optimParallel(par = c(1,2,3,4), 
+ch_si_ni_I_20.opt <- optimParallel(par = c(1,2,3,4), 
                       fn = chabaudi_si_opt, 
                       control = list(trace = 6),
                       immunity = "ni",
@@ -55,7 +58,7 @@ ch_si_ni_i_20.opt <- optimParallel(par = c(1,2,3,4),
                       cue = "I",
                       cue_range = cue_range)
 
-stopCluster(cl)
+stopCluster(cl) #1.543123 -309.396705  -25.689852    2.609319
 end.time <- end.time <- Sys.time()
 
 time.taken <- end.time - start.time 
@@ -63,19 +66,13 @@ time.taken #12.18853 minutes
 
 #setwd("/Users/avrilwang/Desktop/Project_Plasmodium/opt_parm")
 #write.csv(ch_si_ni_i_20.opt$par, "ch_si_ni_i_20.csv")
-```
 
 # visualizing conversion rate across cue range
-```{r}
-# load function to convert parameter to dataframe for plotting
-setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
-source("par_to_df.R")
+## convert parameter values to dataframe 
+ch_si_ni_I_20_cr.df <- par_to_df(ch_si_ni_i_20.opt, cue_range)
 
-# convert parameter values to dataframe 
-ch_si_ni_i_20_cr.df <- par_to_df(ch_si_ni_i_20.opt, cue_range)
-
-# plot!
-ch_si_ni_i_20_cr.df %>% 
+## plot!
+ch_si_ni_I_20_cr.df %>% 
     gather(key = "optimization_methods", value = "Transmission_investment", -cue_range) %>%
     ggplot(aes(x = cue_range, y = model)) +
     geom_line(alpha = 0.7) +
@@ -84,6 +81,50 @@ ch_si_ni_i_20_cr.df %>%
   xlim(0,400000) +
     labs(color = "Optimization methods") +
     theme_bw()
+```
+
+# Testing chabaudi single infection model to see whether host immunity modulates optimal conversion rate strategy
+```{r}
+# run model for 20 days with immunity. Conversion rate still dependent on infected RBC density
+
+## very slow at its current state.
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt <- optimParallel(par = c(1,2,3,4), 
+                      fn = chabaudi_si_opt, 
+                      control = list(trace = 6),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range)
+
+stopCluster(cl) #1.769660 -363.080884  -37.980378    1.827227
+#setwd("/Users/avrilwang/Desktop/Project_Plasmodium/opt_parm")
+#write.csv(ch_si_i_I_20.opt$par, "ch_si_i_I_20.csv")
+
+# visualize
+ch_si_i_I_20_cr.df <- par_to_df(ch_si_i_I_20.opt, cue_range)
+ch_si_i_I_20_cr.df %>% 
+    ggplot(aes(x = cue_range, y = model)) +
+    geom_line(alpha = 0.7) +
+    xlab("Infected RBC density") +
+    ylab("Transmission investment") +
+    xlim(0, 500000)+
+    labs(color = "Optimization methods") +
+    theme_bw()
+
+ch_si_ni_I_20_cr.df %>% 
+    ggplot(aes(x = cue_range, y = model)) +
+    geom_line(alpha = 0.7) +
+    xlab("Infected RBC density") +
+    ylab("Transmission investment") +
+    xlim(0, 500000)+
+    labs(color = "Optimization methods") +
+    theme_bw()
+
+ch_si_i_I_20.opt$par
+ch_si_ni_i_20.opt$par
 ```
 
 
