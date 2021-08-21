@@ -95,12 +95,14 @@ chabaudi_si_opt <- function(parameters_cr, immunity, parameters, time_range, df,
         S <- exp(-mu*alpha)
       } else if(t>alpha && immunity =="i"){
         integrand <- function(x) {mu+a/(b+I)}
-        S <- exp(-integrate(integrand, lower = t-alpha, upper = t))
+        integrate_val <- integrate(Vectorize(integrand), lower = t-alpha, upper = t)
+        S <- exp(-1*integrate_val$value)
       } else if(t<=alpha && immunity == "ni"){
         S <- exp(-mu*t)
       } else{
         integrand <- function(x) {mu+a/(b+I)}
-        S <- exp(-integrate(integrand, lower = 0, upper = t))
+        integrate_val <- integrate(Vectorize(integrand), lower = 0, upper = t)
+        S <- exp(-1*integrate_val$value)
       }
 
       ### Survival of gametocytes. We assume that infected
