@@ -24,6 +24,18 @@ chabaudi_si_opt <- function(parameters_cr, immunity, parameters, time_range, df,
   force(cue_range)
   
   #-------------------------#
+  # Ensure inputs are correct
+  #------------------------#
+  ## Ensure length of initial parameter search space matches with df
+  if (length(parameters_cr) != df+1 ) {
+    stop("Conversion rate parameters must match degrees of freedom")
+  }
+  ## Ensure immunity input is correct
+  if (immunity != "ni" && immunity != "i") {
+    stop("Immunity must be either 'ni' for no immunity or 'i' for saturating immunity")
+  }
+  
+  #-------------------------#
   # Define initial condition
   #------------------------#
   state <- c(R = 8.5*10^6,
