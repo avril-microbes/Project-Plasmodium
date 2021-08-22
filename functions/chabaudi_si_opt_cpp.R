@@ -29,7 +29,7 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   # Ensure inputs are correct
   #------------------------#
   ## Ensure length of initial parameter search space matches with df
-  if (length(parameters_cr) != df+1 ) {
+  if (length(parameters_cr) != df+1) {
     stop("Conversion rate parameters must match degrees of freedom")
   }
   ## Ensure immunity input is correct
@@ -84,80 +84,78 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   # Define single-infection model
   #------------------------#
   single_infection.fun <- function(t, state, parameters) {
-    with(as.list(c(state, parameters)), {
       
       ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
-      if(t>alpha){lag1 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
-      if(t>alphag){lag2 = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
+      if(t>parameters["alpha"]){lag1 = deSolve::lagvalue(t-parameters["alpha"])} # lag state for asexual development
+      if(t>parameters["alphag"]){lag2 = deSolve::lagvalue(t-parameters["alphag"])} # lag state for gametocyte development
       
       ## get lag term index given cue
       lag.i <- match(cue, names(state))
       
       ## convert cue to variable in state
-      cue_state <- get(cue)
+      cue_state <- state[cue]
       
       ## Define K, carrying capacity of RBC
-      K <- lambda*R1/(lambda-mu*R1)
+      K <- parameters["lambda"]*parameters["R1"]/(parameters["lambda"]-parameters["mu"]*parameters["R1"])
       
       ## Define survival functions
       ### Survival of infected asexual RBC
-      if(t>alpha && immunity == "ni"){
-        S <- exp(-mu*alpha)
-      } else if(t>alpha && immunity =="i"){
-        integrand <- function(x) {mu+a/(b+I)}
-        integrate_val <- integrate(Vectorize(integrand), lower = t-alpha, upper = t)
+      if(t>parameters["alpha"] && immunity == "ni"){
+        S <- exp(-parameters["mu"]*parameters["alpha"])
+      } else if(t>parameters["alpha"] && immunity =="i"){
+        integrand <- function(x) {parameters["mu"]+parameters["a"]/(parameters["b"]+state["I"])}
+        integrate_val <- integrate(Vectorize(integrand), lower = t-parameters["alpha"], upper = t)
         S <- exp(-1*integrate_val$value)
-      } else if(t<=alpha && immunity == "ni"){
-        S <- exp(-mu*t)
+      } else if(t<=parameters["alpha"] && immunity == "ni"){
+        S <- exp(-parameters["mu"]*t)
       } else{
-        integrand <- function(x) {mu+a/(b+I)}
+        integrand <- function(x) {parameters["mu"]+parameters["a"]/(parameters["b"]+state["I"])}
         integrate_val <- integrate(Vectorize(integrand), lower = 0, upper = t)
         S <- exp(-1*integrate_val$value)
       }
       
       ### Survival of gametocytes. We assume that infected
       ### RBC with gametocyte is not removed by immune response
-      if(t<=alphag){
-        Sg <- exp(-mu*t)
+      if(t<=parameters["alphag"]){
+        Sg <- exp(-parameters["mu"]*t)
       } else{
-        Sg <- exp(-mu*alphag)}
+        Sg <- exp(-parameters["mu"]*parameters["alphag"])}
       
       ## Define the models without lag terms. 
-      dR <- lambda*(1-R/K)-mu*R-p*R*M # change in susceptible RBC
+      dR <- parameters["lambda"]*(1-state["R"]/K)-parameters["mu"]*state["R"]-parameters["p"]*state["R"]*state["M"] # change in susceptible RBC
       if(immunity == "ni"){
-        dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I # change in infected RBC density
+        dI_nolag <- (1-cr(cue_state))*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["I"] # change in infected RBC density
       } else{
-        dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(a*I)/(b+I) # change in infected RBC density with immunity
+        dI_nolag <- (1-cr(cue_state))*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["I"]-(parameters["a"]*state["I"])/(parameters["b"]+state["I"]) # change in infected RBC density with immunity
       }
-      dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig 
-      dM_nolag <- -mum*M-p*R*M
-      dG_nolag <- -mug*G
+      dIg_nolag <- cr(cue_state)*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["Ig"] 
+      dM_nolag <- -parameters["mum"]*state["M"]-parameters["p"]*state["R"]*state["M"]
+      dG_nolag <- -parameters["mug"]*state["G"]
       
       ## Track states in initial cohort of infection
-      if(t<=alpha){
-        dI <- dI_nolag-pulseBeta(I0, sp, t)*S 
-        dM <- dM_nolag+beta*pulseBeta(I0, sp, t)*S 
+      if(t<=parameters["alpha"]){
+        dI <- dI_nolag-pulseBeta(parameters["I0"], parameters["sp"], t)*S 
+        dM <- dM_nolag+parameters["beta"]*pulseBeta(parameters["I0"], parameters["sp"], t)*S 
       }
       
-      if(t<=alphag){
-        dIg <- dIg_nolag-pulseBeta(Ig0, sp, t-1)*Sg 
-        dG <- dG_nolag+pulseBeta(Ig0, sp, t-1)*Sg 
+      if(t<=parameters["alphag"]){
+        dIg <- dIg_nolag-pulseBeta(parameters["Ig0"], parameters["sp"], t-1)*Sg 
+        dG <- dG_nolag+pulseBeta(parameters["Ig0"], parameters["sp"], t-1)*Sg 
       }
       
       ## Track states after delay 
-      if(t>alpha){
-        dI <- dI_nolag-(1-cr(lag1[lag.i]))*p*lag1[1]*lag1[4]*S 
-        dM <- dM_nolag+beta*(1-cr(lag1[lag.i]))*p*lag1[1]*lag1[4]*S 
+      if(t>parameters["alpha"]){
+        dI <- dI_nolag-(1-cr(lag1[lag.i]))*parameters["p"]*lag1[1]*lag1[4]*S 
+        dM <- dM_nolag+parameters["beta"]*(1-cr(lag1[lag.i]))*parameters["p"]*lag1[1]*lag1[4]*S 
       }
       
-      if(t>alphag){
-        dIg <- dIg_nolag-cr(lag2[lag.i])*p*lag2[1]*lag2[4]*Sg 
-        dG <- dG_nolag+cr(lag2[lag.i])*p*lag2[1]*lag2[4]*Sg
+      if(t>parameters["alphag"]){
+        dIg <- dIg_nolag-cr(lag2[lag.i])*parameters["p"]*lag2[1]*lag2[4]*Sg 
+        dG <- dG_nolag+cr(lag2[lag.i])*parameters["p"]*lag2[1]*lag2[4]*Sg
       }
       
       ## Return the states
       return(list(c(dR, dI, dIg, dM, dG)))
-    })
   }
   
   #-------------------------#
