@@ -123,9 +123,13 @@ ch_si_ni_I_20_cr.df %>%
     labs(color = "Optimization methods") +
     theme_bw()
 
+# seems to have earlier convesion rate rise with immunity
 ch_si_i_I_20.opt$par
 ch_si_ni_i_20.opt$par
 ```
+
+
+
 
 
 
