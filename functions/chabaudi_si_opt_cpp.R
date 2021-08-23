@@ -6,14 +6,14 @@
 ## 5. degrees of freedom for conversion rate spline function
 ## 6. the "cue" that conversion rate is dependent on
 ## 7. The range of cue
-## 8. Choice of solver used by dede
+## 8. Choice of solver used by dede. lsoda is chosen as default.
 
 ## To run the function, please see "plasticity_model_journals.Rmd" for reference". Function best run 
 ## when paired with optimParallel to allow for parallel computing.
 
 # the following function is also optimized with Rcpp to increase computation speed
 
-chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver){
+chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver = "lsoda"){
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -50,17 +50,19 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   if (!(cue %in% names(state)) && !(cue %in% paste0("d", names(state))) && cue != "t") {
     stop("Cue must be one of the states, derivative of states, or time")
   }
+  ## Ensure that time_range is used as cue_range when t is used
+  if(cue == "t" && !(all.equal(cue_range, time_range))){
+    stop("Time is chosen as cue. Cue_range must equal to time_range")
+  }
   
   #-------------------------#
   # Function to describe population 
   # structure of initial inoculum
   #------------------------#
-  pulseBeta <- function(I0, sp, t){ 
+  pulseBeta_fun <- function(I0, sp, t){ 
     res = rep(NA, length(t))
-    for (num in 1:length(t)){
-      res[num] = I0*(dbeta(t[num], sp, sp))
-    }
-    return(res)}
+    res = I0*(dbeta(t, sp, sp))
+  }
   
   #-------------------------#
   # Define conversion rate function. 
@@ -87,7 +89,7 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   
   #-------------------------#
   # Define trapezoidal estimation 
-  # for survival function approximation
+  # for survival function approximation. Use this if speeding up model
   #------------------------#
   trapezoid <- function(f, lower, upper) {
     if (is.function(f) == FALSE) {
@@ -101,16 +103,33 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   # Define single-infection model
   #------------------------#
   single_infection.fun <- function(t, state, parameters) {
+    
+    ## Defining Pulse beta function based on current time
+    pulseBeta <- pulseBeta_fun(parameters["I0"], parameters["sp"], t)
       
       ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
       if(t>parameters["alpha"]){lag1 = deSolve::lagvalue(t-parameters["alpha"])} # lag state for asexual development
       if(t>parameters["alphag"]){lag2 = deSolve::lagvalue(t-parameters["alphag"])} # lag state for gametocyte development
       
       ## get lag term index given cue
-      lag.i <- match(cue, names(state))
+    ### Only get lag index when it is a state-based cue
+    if(cue != "t") {
+      lag.i <- match(cue, names(state))}
+    
+    ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
+    if(cue == "t"){
+      cue_lag1 <- t-parameters["alpha"]
+      cue_lag2 <- t-parameters["alphag"]
+    } else{
+      cue_lag1 <- lag1[lag.i]
+      cue_lag2 <- lag2[lag.i]
+    }
       
-      ## convert cue to variable in state
-      cue_state <- state[cue]
+      ## convert cue to variable in state or just time
+    if(cue == "t"){
+      cue_state <- t}
+    else{
+      cue_state <- state[cue]}
       
       ## Define K, carrying capacity of RBC
       K <- parameters["lambda"]*parameters["R1"]/(parameters["lambda"]-parameters["mu"]*parameters["R1"])
@@ -151,24 +170,24 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
       
       ## Track states in initial cohort of infection
       if(t<=parameters["alpha"]){
-        dI <- dI_nolag-pulseBeta(parameters["I0"], parameters["sp"], t)*S 
-        dM <- dM_nolag+parameters["beta"]*pulseBeta(parameters["I0"], parameters["sp"], t)*S 
+        dI <- dI_nolag-pulseBeta*S 
+        dM <- dM_nolag+parameters["beta"]*pulseBeta*S 
       }
       
       if(t<=parameters["alphag"]){
-        dIg <- dIg_nolag-pulseBeta(parameters["Ig0"], parameters["sp"], t-1)*Sg 
-        dG <- dG_nolag+pulseBeta(parameters["Ig0"], parameters["sp"], t-1)*Sg 
+        dIg <- dIg_nolag-pulseBeta*Sg ## should have no cells form initial cohort
+        dG <- dG_nolag+pulseBeta*Sg 
       }
       
       ## Track states after delay 
       if(t>parameters["alpha"]){
-        dI <- dI_nolag-(1-cr(lag1[lag.i]))*parameters["p"]*lag1[1]*lag1[4]*S 
-        dM <- dM_nolag+parameters["beta"]*(1-cr(lag1[lag.i]))*parameters["p"]*lag1[1]*lag1[4]*S 
+        dI <- dI_nolag-(1-cr(cue_lag1))*parameters["p"]*lag1[1]*lag1[4]*S 
+        dM <- dM_nolag+parameters["beta"]*(1-cr(cue_lag1))*parameters["p"]*lag1[1]*lag1[4]*S 
       }
       
       if(t>parameters["alphag"]){
-        dIg <- dIg_nolag-cr(lag2[lag.i])*parameters["p"]*lag2[1]*lag2[4]*Sg 
-        dG <- dG_nolag+cr(lag2[lag.i])*parameters["p"]*lag2[1]*lag2[4]*Sg
+        dIg <- dIg_nolag-cr(cue_lag2)*parameters["p"]*lag2[1]*lag2[4]*Sg 
+        dG <- dG_nolag+cr(cue_lag2)*parameters["p"]*lag2[1]*lag2[4]*Sg
       }
       
       ## Return the states
