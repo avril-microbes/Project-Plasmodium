@@ -12,6 +12,8 @@ library(ggplot2)
 library(ggpubr)
 library(tidyr)
 library(magrittr)
+library(Rcpp)
+library(microbenchmark)
 ```
 
 # Load functions
@@ -19,6 +21,7 @@ library(magrittr)
 setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
 source("chabaudi_si_opt.R")
 source("par_to_df.R")
+source("chabaudi_si_opt_cpp.R")
 ```
 
 # Testing single infection model chabaudi_si_opt
@@ -59,7 +62,7 @@ ch_si_ni_I_20.opt <- optimParallel(par = c(1,2,3,4),
                       cue_range = cue_range)
 
 stopCluster(cl) #1.543123 -309.396705  -25.689852    2.609319
-end.time <- end.time <- Sys.time()
+end.time <- Sys.time()
 
 time.taken <- end.time - start.time 
 time.taken #12.18853 minutes
@@ -127,6 +130,498 @@ ch_si_ni_I_20_cr.df %>%
 ch_si_i_I_20.opt$par
 ch_si_ni_i_20.opt$par
 ```
+
+# integrating C++ to speed up calculation
+## test out whether using splines 2 bSpline will be faster. Nope!
+## streamlined cr function section. much faster
+```{r}
+# get alternative y value
+dummy_y.vals <- rep(0, length(cue_range)) 
+# bind to make dummy data
+dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
+# fit basic spline with no internal knots. Here, increasing df increases knots
+dummy_cr.mod <- lm(dummy_y.vals ~ bSpline(cue_range, degree = 3, df = 3))
+# specify coefficient, or the way individual splines are multiplicated. Numberof parameters = d+k+1, or degree of freedom (shape of basis sline) + number of knots (0) here + 1.
+dummy_cr.mod $coefficients <- c(1,2,3,4)
+cr_fit <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
+cr2 <- splinefun(data.frame(cue_range, cr_fit))
+
+# same as original cr function output
+all.equal(cr, cr2)
+
+# testing whether models run or not
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_ni_20.opt <- optimParallel(par = c(1,2,3,4), 
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "ni",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range)
+stopCluster(cl) #1.543123 -309.396705  -25.689852    2.609319. Same as before
+end.time <- Sys.time()
+
+time.taken <- end.time - start.time 
+time.taken #7.009973 minutes much faster. Compared to 12 minutes, much faster!
+```
+
+# testing after removing with list
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_cpp.R")
+
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_ni_20.opt <- optimParallel(par = c(1,2,3,4), 
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "ni",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range)
+stopCluster(cl) #1.543123 -309.396705  -25.689852    2.609319
+end.time <- Sys.time()
+time.taken <- end.time - start.time 
+time.taken #6.350481. Not sure whether this is much better or due to diff between programs
+```
+
+# changed method of solver to lsoda
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_cpp.R")
+
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_ni_20.opt <- optimParallel(par = c(1,2,3,4), 
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "ni",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range)
+ch_si_i_ni_20.opt$par
+stopCluster(cl) #1.543123 -309.396705  -25.689852    2.609319
+end.time <- Sys.time()
+time.taken <- end.time - start.time 
+time.taken #6.533385. not too different
+```
+
+## testing with immunity function
+## very slow with base integrate or integral from pracma
+## investigating where the bottle neck is
+```{r}
+
+  df <- 3
+  #-------------------------#
+  # Define initial condition
+  #------------------------#
+  state <- c(R = 8.5*10^6,
+             I = 43.85965,
+             Ig = 0,
+             M = 0,
+             G = 0)
+  
+  #-------------------------#
+  # Function to describe population 
+  # structure of initial inoculum
+  #------------------------#
+  pulseBeta <- function(I0, sp, t){ 
+    res = rep(NA, length(t))
+    for (num in 1:length(t)){
+      res[num] = I0*(dbeta(t[num], sp, sp))
+    }
+    return(res)}
+  
+  #-------------------------#
+  # Define conversion rate function. 
+  # Simplified to increase performance. 
+  #------------------------#
+  ## Define dummy data of conversion rate
+  dummy_y.vals <- rep(0, length(cue_range)) 
+  dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
+  
+  ## fit basic cubic spline with no internal knots. Here, increasing df increases knots.
+  ## degree defines shape of basis spline. This shouldn't have any impact on ultimate result
+  ## What matter is the number of knots, or df. Increasing df should give us more complex reaction norm
+  dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(cue_range, degree = 3, df = df))
+  dummy_cr.mod$data <- dummy_cr.data
+  
+  ## Assign coefficient to be optimized to the dummy conversion rate function
+  dummy_cr.mod$coefficients <- parameters_cr
+  
+  ## use spline function to predict cr 
+  cr_fit <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
+  
+  ## Get spline function where cr ~ cue
+  cr <- splinefun(cbind(cue_range, cr_fit))
+  
+  # define trapezoid function for estimation survival curve
+  trapezoid <- function(f, lower, upper) {
+  if (is.function(f) == FALSE) {
+    stop('f must be a function with one parameter (variable)')
+  }
+  h <- upper - lower
+  fxdx <- (h / 2) * (f(lower) + f(upper))
+  return(fxdx)}
+  
+  #-------------------------#
+  # Define single-infection model
+  #------------------------#
+   single_infection.fun <- function(t, state, parameters) {
+      
+      ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
+      if(t>parameters["alpha"]){lag1 = deSolve::lagvalue(t-parameters["alpha"])} # lag state for asexual development
+      if(t>parameters["alphag"]){lag2 = deSolve::lagvalue(t-parameters["alphag"])} # lag state for gametocyte development
+      
+      ## get lag term index given cue
+      lag.i <- match(cue, names(state))
+      
+      ## convert cue to variable in state
+      cue_state <- state[cue]
+      
+      ## Define K, carrying capacity of RBC
+      K <- parameters["lambda"]*parameters["R1"]/(parameters["lambda"]-parameters["mu"]*parameters["R1"])
+      
+      ## Define survival functions
+      ### Survival of infected asexual RBC
+      if(t>parameters["alpha"] && immunity == "ni"){
+        S <- exp(-parameters["mu"]*parameters["alpha"])
+      } else if(t>parameters["alpha"] && immunity =="i"){
+        integrand <- function(x) {parameters["mu"]+parameters["a"]/(parameters["b"]+state["I"])}
+        integrate_val <- trapezoid(Vectorize(integrand), lower = t-parameters["alpha"], upper = t)
+        S <- exp(-1*integrate_val)
+      } else if(t<=parameters["alpha"] && immunity == "ni"){
+        S <- exp(-parameters["mu"]*t)
+      } else{
+        integrand <- function(x) {parameters["mu"]+parameters["a"]/(parameters["b"]+state["I"])}
+        integrate_val <- trapezoid(Vectorize(integrand), lower = 0, upper = t)
+        S <- exp(-1*integrate_val)
+      }
+      
+      ### Survival of gametocytes. We assume that infected
+      ### RBC with gametocyte is not removed by immune response
+      if(t<=parameters["alphag"]){
+        Sg <- exp(-parameters["mu"]*t)
+      } else{
+        Sg <- exp(-parameters["mu"]*parameters["alphag"])}
+      
+      ## Define the models without lag terms. 
+      dR <- parameters["lambda"]*(1-state["R"]/K)-parameters["mu"]*state["R"]-parameters["p"]*state["R"]*state["M"] # change in susceptible RBC
+      if(immunity == "ni"){
+        dI_nolag <- (1-cr(cue_state))*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["I"] # change in infected RBC density
+      } else{
+        dI_nolag <- (1-cr(cue_state))*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["I"]-(parameters["a"]*state["I"])/(parameters["b"]+state["I"]) # change in infected RBC density with immunity
+      }
+      dIg_nolag <- cr(cue_state)*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["Ig"] 
+      dM_nolag <- -parameters["mum"]*state["M"]-parameters["p"]*state["R"]*state["M"]
+      dG_nolag <- -parameters["mug"]*state["G"]
+      
+      ## Track states in initial cohort of infection
+      if(t<=parameters["alpha"]){
+        dI <- dI_nolag-pulseBeta(parameters["I0"], parameters["sp"], t)*S 
+        dM <- dM_nolag+parameters["beta"]*pulseBeta(parameters["I0"], parameters["sp"], t)*S 
+      }
+      
+      if(t<=parameters["alphag"]){
+        dIg <- dIg_nolag-pulseBeta(parameters["Ig0"], parameters["sp"], t-1)*Sg 
+        dG <- dG_nolag+pulseBeta(parameters["Ig0"], parameters["sp"], t-1)*Sg 
+      }
+      
+      ## Track states after delay 
+      if(t>parameters["alpha"]){
+        dI <- dI_nolag-(1-cr(lag1[lag.i]))*parameters["p"]*lag1[1]*lag1[4]*S 
+        dM <- dM_nolag+parameters["beta"]*(1-cr(lag1[lag.i]))*parameters["p"]*lag1[1]*lag1[4]*S 
+      }
+      
+      if(t>parameters["alphag"]){
+        dIg <- dIg_nolag-cr(lag2[lag.i])*parameters["p"]*lag2[1]*lag2[4]*Sg 
+        dG <- dG_nolag+cr(lag2[lag.i])*parameters["p"]*lag2[1]*lag2[4]*Sg
+      }
+      
+      ## Return the states
+      return(list(c(dR, dI, dIg, dM, dG)))
+  }
+
+immunity <- "i"
+cue <- "I"
+  
+# visualize where bottle neck with immunity run is. Integration is the greatest bottleneck 23000ms for integrate alone. Down to 11850 for trapezoid approximation
+profvis::profvis({deSolve::dede(y = state, times = time_range, func = single_infection.fun, p = parameters, control=list(mxhist = 1e6))})
+
+# trying lsoda
+start.time <- Sys.time()
+deSolve::dede(y = state, times = time_range, func = single_infection.fun, p = parameters, control=list(mxhist = 1e6), method = "lsoda")
+end.time <- Sys.time()
+end.time-start.time #31.42669 secs
+
+# trying bdf
+start.time <- Sys.time()
+deSolve::dede(y = state, times = time_range, func = single_infection.fun, p = parameters, control=list(mxhist = 1e6), method = "bdf")
+end.time <- Sys.time()
+end.time-start.time #34.48703 secs'
+
+# trying vode
+start.time <- Sys.time()
+deSolve::dede(y = state, times = time_range, func = single_infection.fun, p = parameters, control=list(mxhist = 1e6), method = "vode")
+end.time <- Sys.time()
+end.time-start.time #6.451089 
+```
+
+# testing the speed of different integrator
+```{r}
+# using stat integrate
+t <- 10
+integrand <- function(x) {parameters["mu"]+parameters["a"]/(parameters["b"]+state["I"])}
+integrate(Vectorize(integrand), lower = t-parameters["alpha"], upper = t)$value
+
+# cubature package. much slower
+cubature::adaptIntegrate(Vectorize(integrand), lower = t-parameters["alpha"], upper = t)$integral
+
+# pracma
+pracma::integral(Vectorize(integrand), xmin = t-parameters["alpha"], xmax = t, method = "Kronrod")
+
+# foreach
+library(foreach)
+foreach(i=1,.combine="c") %dopar%
+{
+  integrate(Vectorize(integrand), lower = t-parameters["alpha"], upper = t)$value;
+}
+
+# trapezoid estimation
+trapezoid <- function(f, lower, upper) {
+  if (is.function(f) == FALSE) {
+    stop('f must be a function with one parameter (variable)')
+  }
+  h <- upper - lower
+  fxdx <- (h / 2) * (f(lower) + f(upper))
+  return(fxdx)
+}
+
+# composite trapezoid estimation
+composite_trapezoid <- function(f, lower, upper, n) {
+  if (is.function(f) == FALSE) {
+    stop('f must be a function with one parameter (variable)')
+  }
+  h <- (upper - lower) / n
+  j <- 1:n - 1
+  xj <- lower + j * h
+  approx <- (h / 2) * (f(lower) + 2 * sum(f(xj)) + f(upper))
+  return(approx)
+}
+
+composite_trapezoid(Vectorize(integrand), lower = t-parameters["alpha"], upper = t, n = parameters["alpha"]/1e-3)
+
+# Simpsin's rule
+simpsons_rule <- function(f, lower, upper) {
+  if (is.function(f) == FALSE) {
+    stop('f must be a function with one parameter (variable)')
+  }
+  h <- (upper - lower) / 2
+  x0 <- lower
+  x1 <- lower + h
+  x2 <- upper
+  s <- (h / 3) * (f(x0) + 4 * f(x1) + f(x2))
+  return(s)
+}
+
+simpsons_rule(Vectorize(integrand), lower = t-parameters["alpha"], upper = t)
+
+# pracma auadinf
+pracma::quadinf(Vectorize(integrand), t-parameters["alpha"], t)$Q
+
+# compare method speeds. Trapezoid fastest followed by Simpson's and R integrate
+microbenchmark(integrate(Vectorize(integrand), lower = t-parameters["alpha"], upper = t)$value,
+               cubature::adaptIntegrate(Vectorize(integrand), lower = t-parameters["alpha"], upper = t)$integral, foreach(i=1,.combine="c") %dopar%
+{
+  integrate(Vectorize(integrand), lower = t-parameters["alpha"], upper = t)$value;
+},
+pracma::integral(Vectorize(integrand), xmin = t-parameters["alpha"], xmax = t, method = "Kronrod"),
+pracma::integral(Vectorize(integrand), xmin = t-parameters["alpha"], xmax = t, method = "Clenshaw"),
+pracma::integral(Vectorize(integrand), xmin = t-parameters["alpha"], xmax = t, method = "Simpson"),
+trapezoid(Vectorize(integrand), lower = t-parameters["alpha"], upper = t), 
+composite_trapezoid(Vectorize(integrand), lower = t-parameters["alpha"], upper = t, n = parameters["alpha"]/1e-3), 
+simpsons_rule(Vectorize(integrand), lower = t-parameters["alpha"], upper = t), 
+pracma::quadinf(Vectorize(integrand), t-parameters["alpha"], t)$Q, times = 1000L)
+```
+
+# rerunning immunity model and calculate run time
+```{r}
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_i_20.opt <- optimParallel(par = c(1,2,3,4), 
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range)
+ch_si_i_i_20.opt$par
+stopCluster(cl) #1.769660 -363.080884  -37.980378    1.827227. Same as before
+end.time <- Sys.time()
+time.taken <- end.time - start.time 
+time.taken #38.85414 (40 minutes!)
+```
+
+## trying trapezoid estimation
+much faster
+```{r}
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_i_20.opt_trap <- optimParallel(par = c(1,2,3,4), 
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range)
+ch_si_i_i_20.opt #-11.63003
+stopCluster(cl)
+# 1.768788 -362.923187  -37.759598    1.992568. Slightly different than original with precise integration
+#1.769660 -363.080884  -37.980378    1.827227.
+end.time <- Sys.time()
+time.taken <- end.time - start.time 
+time.taken #25.95028 mins. 67% of pure integration 
+```
+
+# trying vode method for dede
+```{r}
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_vode_trap <- optimParallel(par = c(1,2,3,4), 
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range)
+ch_si_i_I_20.opt_vode_trap$par #1.766034 -360.630602  -36.766177 1.477862, with #-11.63002. Very small difference between lsoda 
+stopCluster(cl)
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken # 8.007386 minute much faster
+
+# plot. Not huge difference
+ch_si_i_I_20_vode_trap.df <- par_to_df(ch_si_i_I_20.opt_vode_trap, cue_range)
+
+    ggplot() +
+    geom_line(data = ch_si_i_I_20_cr.df, aes(x = cue_range, y = model), alpha = 0.7, color = "blue") +
+    geom_line(data = ch_si_i_i_20_cr.df, aes(x = cue_range, y = model), color = "red", alpha = 0.7) +
+    xlab("Infected RBC density") +
+    ylab("Transmission investment") +
+    labs(color = "Optimization methods") +
+    theme_bw()
+```
+
+# trying with vode and original integration
+```{r}
+# Line search cannot locate an adequate point after 20 function and gradient evaluations. Bad direction in the line search
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_vode_int <- optimParallel(par = c(1,2,3,4), 
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range)
+ch_si_i_I_20.opt_vode_int$par
+stopCluster(cl) # 1.768348 -363.405382  -34.474332   -4.695846. Very different. due to bad solve
+end.time <- Sys.time()
+time.taken <- end.time - start.time #12.76853 mins
+time.taken
+```
+
+# optimizing pulsebeta function to vectorize
+```{r}
+# original pulse beta function
+pulseBeta <- function(I0, sp, t){ 
+    res = rep(NA, length(t))
+    for (num in 1:length(t)){
+      res[num] = I0*(dbeta(t[num], sp, sp))
+    }
+    return(res)}
+
+# new pulse beta function
+pulseBeta2 <- function(I0, sp, t){ 
+    res = rep(NA, length(t))
+    res = I0*(dbeta(t, sp, sp))
+    }
+
+# are they equal? Yes!
+all.equal(pulseBeta2(48, 100, time_range), pulseBeta(48, 100, time_range))
+
+# how should we call new function. Here dividng time by 1e-3 (time interval) and + 1 give us the proper index
+test <- pulseBeta2(48, 100, time_range)
+test[[(t/1e-3)+1]]
+
+# plotting. We should see synchronous centering at 12 hours. Yes, it does
+ggplot(data.frame(time_range, test)) +
+  geom_line(aes(x = time_range, y = test)) +
+  xlim(0,2)
+
+# plotting asynchronous. All infected RBC must brst after 1 day. Matches up. 
+ggplot(data.frame(time_range, test2 = pulseBeta2(48, 1, time_range))) +
+  geom_line(aes(x = time_range, y = test2)) +
+  xlim(0,2)
+```
+
+# testing new function that includes updated pulse-beta function and time-based cue
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_cpp.R")
+
+# no immunity run with time
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_ni_t_20.opt <- optimParallel(par = c(1,2,3,4), 
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "ni",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range)
+
+stopCluster(cl) 
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken #13 minutes, down from 40 minutes in original run and from 20 minutes in first iteration
+ch_si_ni_t_20.opt$par #6.2932211 -15.3891982   0.3197596 -11.3816705. Similar to Greischar model
+
+# with immunity run with time
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_t_20.opt <- optimParallel(par = c(1,2,3,4), 
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range)
+
+stopCluster(cl) 
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+```
+
 
 
 
