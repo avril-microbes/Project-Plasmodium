@@ -6,13 +6,14 @@
 ## 5. degrees of freedom for conversion rate spline function
 ## 6. the "cue" that conversion rate is dependent on
 ## 7. The range of cue
+## 8. Choice of solver used by dede
 
 ## To run the function, please see "plasticity_model_journals.Rmd" for reference". Function best run 
 ## when paired with optimParallel to allow for parallel computing.
 
 # the following function is also optimized with Rcpp to increase computation speed
 
-chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range){
+chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver){
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -26,6 +27,15 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   force(cue_range)
   
   #-------------------------#
+  # Define initial condition
+  #------------------------#
+  state <- c(R = 8.5*10^6,
+             I = 43.85965,
+             Ig = 0,
+             M = 0,
+             G = 0)
+  
+  #-------------------------#
   # Ensure inputs are correct
   #------------------------#
   ## Ensure length of initial parameter search space matches with df
@@ -36,15 +46,10 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   if (immunity != "ni" && immunity != "i") {
     stop("Immunity must be either 'ni' for no immunity or 'i' for saturating immunity")
   }
-  
-  #-------------------------#
-  # Define initial condition
-  #------------------------#
-  state <- c(R = 8.5*10^6,
-             I = 43.85965,
-             Ig = 0,
-             M = 0,
-             G = 0)
+  ## Ensure cue is correct
+  if (!(cue %in% names(state)) && !(cue %in% paste0("d", names(state))) && cue != "t") {
+    stop("Cue must be one of the states, derivative of states, or time")
+  }
   
   #-------------------------#
   # Function to describe population 
@@ -79,6 +84,18 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   
   ## Get spline function where cr ~ cue
   cr <- splinefun(cbind(cue_range, cr_fit))
+  
+  #-------------------------#
+  # Define trapezoidal estimation 
+  # for survival function approximation
+  #------------------------#
+  trapezoid <- function(f, lower, upper) {
+    if (is.function(f) == FALSE) {
+      stop('f must be a function with one parameter (variable)')
+    }
+    h <- upper - lower
+    fxdx <- (h / 2) * (f(lower) + f(upper))
+    return(fxdx)}
   
   #-------------------------#
   # Define single-infection model
@@ -165,6 +182,7 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
                                                      times = time_range,
                                                      func = single_infection.fun,
                                                      p = parameters,
+                                                     method = solver,
                                                      control=list(mxhist = 1e6)))
   
   #-------------------------#
