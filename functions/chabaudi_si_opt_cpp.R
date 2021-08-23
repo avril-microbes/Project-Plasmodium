@@ -51,7 +51,7 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
     stop("Cue must be one of the states, derivative of states, or time")
   }
   ## Ensure that time_range is used as cue_range when t is used
-  if(cue == "t" && !(all.equal(cue_range, time_range))){
+  if(cue == "t" && !isTRUE(all.equal(cue_range, time_range))){
     stop("Time is chosen as cue. Cue_range must equal to time_range")
   }
   
@@ -117,13 +117,17 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
       lag.i <- match(cue, names(state))}
     
     ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
-    if(cue == "t"){
-      cue_lag1 <- t-parameters["alpha"]
-      cue_lag2 <- t-parameters["alphag"]
-    } else{
-      cue_lag1 <- lag1[lag.i]
-      cue_lag2 <- lag2[lag.i]
-    }
+    if(t>parameters["alpha"] && cue == "t"){
+      cue_lag1 <- t-parameters["alpha"]} 
+    
+    if(t>parameters["alpha"] && cue != "t"){
+      cue_lag1 <- lag1[lag.i]} 
+    
+    if(t>parameters["alphag"] && cue == "t") {
+      cue_lag2 <- t-parameters["alphag"]} 
+    
+    if(t>parameters["alphag"] && cue != "t") {
+      cue_lag2 <- lag2[lag.i]}
       
       ## convert cue to variable in state or just time
     if(cue == "t"){
@@ -159,11 +163,13 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
       
       ## Define the models without lag terms. 
       dR <- parameters["lambda"]*(1-state["R"]/K)-parameters["mu"]*state["R"]-parameters["p"]*state["R"]*state["M"] # change in susceptible RBC
-      if(immunity == "ni"){
+     
+       if(immunity == "ni"){
         dI_nolag <- (1-cr(cue_state))*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["I"] # change in infected RBC density
       } else{
         dI_nolag <- (1-cr(cue_state))*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["I"]-(parameters["a"]*state["I"])/(parameters["b"]+state["I"]) # change in infected RBC density with immunity
       }
+      
       dIg_nolag <- cr(cue_state)*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["Ig"] 
       dM_nolag <- -parameters["mum"]*state["M"]-parameters["p"]*state["R"]*state["M"]
       dG_nolag <- -parameters["mug"]*state["G"]
@@ -175,8 +181,8 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
       }
       
       if(t<=parameters["alphag"]){
-        dIg <- dIg_nolag-pulseBeta*Sg ## should have no cells form initial cohort
-        dG <- dG_nolag+pulseBeta*Sg 
+        dIg <- dIg_nolag ## should have no cells form initial cohort
+        dG <- 0
       }
       
       ## Track states after delay 
