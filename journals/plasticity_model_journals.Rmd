@@ -581,6 +581,7 @@ ggplot(data.frame(time_range, test2 = pulseBeta2(48, 1, time_range))) +
 ```
 
 # testing new function that includes updated pulse-beta function and time-based cue
+## without immunity, time-based. Looks good.
 ```{r}
 setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
 source("chabaudi_si_opt_cpp.R")
@@ -604,6 +605,13 @@ time.taken <- end.time - start.time
 time.taken #13 minutes, down from 40 minutes in original run and from 20 minutes in first iteration
 ch_si_ni_t_20.opt$par #6.2932211 -15.3891982   0.3197596 -11.3816705. Similar to Greischar model
 
+# plot
+ch_si_ni_t_20_cr.df <- par_to_df(ch_si_ni_t_20.opt, time_range)
+```
+
+## with immunity. Different! Greischar model had much later trnamission investment. 
+### plotting the cumulutive transmission potential suggests that my model should be correct... By my model, Greischar;s optimal strategy produced lower cumulative transmission potential than the one I found.
+```{r}
 # with immunity run with time
 start.time <- Sys.time()
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
@@ -620,6 +628,237 @@ ch_si_i_t_20.opt <- optimParallel(par = c(1,2,3,4),
 stopCluster(cl) 
 end.time <- Sys.time()
 time.taken <- end.time - start.time
+time.taken #58.7155 minutes. Very long with lsoda and integrate function
+ch_si_i_t_20.opt$par #10.948894 -23.608461  -1.903851 -17.421159. SLightly different from Greischar's model wonder why.
+ch_si_i_t_20.opt$value #-11.96688. 
+
+## plotting
+ch_si_i_t_20_cr.df <- par_to_df(ch_si_i_t_20.opt, time_range)
+### get greischar model parameters
+ch_si_i_t_20.opt_gre <- ch_si_i_t_20.opt
+ch_si_i_t_20.opt_gre$par <- c(13.46, -27.66, -3.62, -20.24)
+ch_si_i_t_20_cr_gre.df <- par_to_df(ch_si_i_t_20.opt_gre, time_range)
+
+### similar directions but Greischar model had even more delayed transmission investment. 
+ggplot() +
+  geom_line(data = ch_si_i_t_20_cr.df, aes(x = time_range, y = model), alpha = 0.7, color = "blue") +
+  geom_line(data = ch_si_i_t_20_cr_gre.df, aes(x = time_range, y = model), alpha = 0.7, color = "red") +
+  geom_line(data = ch_si_ni_t_20_cr.df, aes(x = time_range, y = model), alpha = 0.7, color = "black") +
+    xlab("Time") +
+    ylab("Transmission investment") +
+    labs(color = "Optimization methods") +
+    theme_bw()
+
+parameters
+```
+
+## getting transmission value cumulative form greischar's parameters 11.87644 in Greischar model. Smaller than ours. Different model or something?
+```{r}
+cue_range <- time_range
+immunity <- "i"
+cue <- "t"
+df <- 3
+
+state <- c(R = 8.5*10^6,
+             I = 43.85965,
+             Ig = 0,
+             M = 0,
+             G = 0)
+
+
+  pulseBeta_fun <- function(I0, sp, t){ 
+    res = rep(NA, length(t))
+    res = I0*(dbeta(t, sp, sp))
+  }
+  
+  #-------------------------#
+  # Define conversion rate function. 
+  # Simplified to increase performance. 
+  #------------------------#
+  ## Define dummy data of conversion rate
+  dummy_y.vals <- rep(0, length(cue_range)) 
+  dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
+  
+  ## fit basic cubic spline with no internal knots. Here, increasing df increases knots.
+  ## degree defines shape of basis spline. This shouldn't have any impact on ultimate result
+  ## What matter is the number of knots, or df. Increasing df should give us more complex reaction norm
+  dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(cue_range, degree = 3, df = df))
+  dummy_cr.mod$data <- dummy_cr.data
+  
+  ## Assign coefficient to be optimized to the dummy conversion rate function
+  dummy_cr.mod$coefficients <- c(13.46, -27.66, -3.62, -20.24)
+  
+  ## use spline function to predict cr 
+  cr_fit <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
+  
+  ## Get spline function where cr ~ cue
+  cr <- splinefun(cbind(cue_range, cr_fit))
+  
+  #-------------------------#
+  # Define trapezoidal estimation 
+  # for survival function approximation. Use this if speeding up model
+  #------------------------#
+  trapezoid <- function(f, lower, upper) {
+    if (is.function(f) == FALSE) {
+      stop('f must be a function with one parameter (variable)')
+    }
+    h <- upper - lower
+    fxdx <- (h / 2) * (f(lower) + f(upper))
+    return(fxdx)}
+  
+  #-------------------------#
+  # Define single-infection model
+  #------------------------#
+  single_infection.fun <- function(t, state, parameters) {
+    
+    ## Defining Pulse beta function based on current time
+    pulseBeta <- pulseBeta_fun(parameters["I0"], parameters["sp"], t)
+      
+      ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
+      if(t>parameters["alpha"]){lag1 = deSolve::lagvalue(t-parameters["alpha"])} # lag state for asexual development
+      if(t>parameters["alphag"]){lag2 = deSolve::lagvalue(t-parameters["alphag"])} # lag state for gametocyte development
+      
+      ## get lag term index given cue
+    ### Only get lag index when it is a state-based cue
+    if(cue != "t") {
+      lag.i <- match(cue, names(state))}
+    
+     ## convert cue to variable in state or just time
+    if(cue == "t"){
+      cue_state <- t}
+    else{
+      cue_state <- state[cue]}
+    
+    ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
+    if(t>parameters["alpha"] && cue == "t"){
+      cue_lag1 <- t-parameters["alpha"]
+    } 
+    
+    if(t>parameters["alpha"] && cue != "t"){
+      cue_lag1 <- lag1[lag.i]
+    } 
+    
+    if(t>parameters["alphag"] && cue == "t") {
+      cue_lag2 <- t-parameters["alphag"]
+    } 
+    
+    if(t>parameters["alphag"] && cue != "t") {
+      cue_lag2 <- lag2[lag.i]
+    }
+      
+      ## Define K, carrying capacity of RBC
+      K <- parameters["lambda"]*parameters["R1"]/(parameters["lambda"]-parameters["mu"]*parameters["R1"])
+      
+      ## Define survival functions
+      ### Survival of infected asexual RBC
+      if(t>parameters["alpha"] && immunity == "ni"){
+        S <- exp(-parameters["mu"]*parameters["alpha"])
+      } else if(t>parameters["alpha"] && immunity =="i"){
+        integrand <- function(x) {parameters["mu"]+parameters["a"]/(parameters["b"]+state["I"])}
+        integrate_val <- integrate(Vectorize(integrand), lower = t-parameters["alpha"], upper = t)
+        S <- exp(-1*integrate_val$value)
+      } else if(t<=parameters["alpha"] && immunity == "ni"){
+        S <- exp(-parameters["mu"]*t)
+      } else{
+        integrand <- function(x) {parameters["mu"]+parameters["a"]/(parameters["b"]+state["I"])}
+        integrate_val <- integrate(Vectorize(integrand), lower = 0, upper = t)
+        S <- exp(-1*integrate_val$value)
+      }
+      
+      ### Survival of gametocytes. We assume that infected
+      ### RBC with gametocyte is not removed by immune response
+      if(t<=parameters["alphag"]){
+        Sg <- exp(-parameters["mu"]*t)
+      } else{
+        Sg <- exp(-parameters["mu"]*parameters["alphag"])}
+      
+      ## Define the models without lag terms. 
+      dR <- parameters["lambda"]*(1-state["R"]/K)-parameters["mu"]*state["R"]-parameters["p"]*state["R"]*state["M"] # change in susceptible RBC
+     
+       if(immunity == "ni"){
+        dI_nolag <- (1-cr(cue_state))*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["I"] # change in infected RBC density
+      } else{
+        dI_nolag <- (1-cr(cue_state))*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["I"]-(parameters["a"]*state["I"])/(parameters["b"]+state["I"]) # change in infected RBC density with immunity
+      }
+      
+      dIg_nolag <- cr(cue_state)*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["Ig"] 
+      dM_nolag <- -parameters["mum"]*state["M"]-parameters["p"]*state["R"]*state["M"]
+      dG_nolag <- -parameters["mug"]*state["G"]
+      
+      ## Track states in initial cohort of infection
+      if(t<=parameters["alpha"]){
+        dI <- dI_nolag-pulseBeta*S 
+        dM <- dM_nolag+parameters["beta"]*pulseBeta*S 
+      }
+      
+      if(t<=parameters["alphag"]){
+        dIg <- dIg_nolag ## should have no cells form initial cohort
+        dG <- 0
+      }
+      
+      ## Track states after delay 
+      if(t>parameters["alpha"]){
+        dI <- dI_nolag-(1-cr(cue_lag1))*parameters["p"]*lag1[1]*lag1[4]*S 
+        dM <- dM_nolag+parameters["beta"]*(1-cr(cue_lag1))*parameters["p"]*lag1[1]*lag1[4]*S 
+      }
+      
+      if(t>parameters["alphag"]){
+        dIg <- dIg_nolag-cr(cue_lag2)*parameters["p"]*lag2[1]*lag2[4]*Sg 
+        dG <- dG_nolag+cr(cue_lag2)*parameters["p"]*lag2[1]*lag2[4]*Sg
+      }
+      
+      ## Return the states
+      return(list(c(dR, dI, dIg, dM, dG)))
+  }
+  
+  #-------------------------#
+  # Run single-infection model
+  #------------------------#
+  single_infection.df <- as.data.frame(deSolve::dede(y = state,
+                                                     times = time_range,
+                                                     func = single_infection.fun,
+                                                     p = parameters,
+                                                     method = solver,
+                                                     control=list(mxhist = 1e6)))
+  
+#-------------------------#
+  # Calculate fitness
+  #------------------------#
+  ## Get Gametocyte density time series data
+  gam <- single_infection.df$G
+  gam[gam<0] <- 0 # Assign negative gametocyte density to 0
+  
+  ## Get timeseries interval. Simplify first time after t=0
+  int <- single_infection.df[2,1]
+  
+  ## Define the fitness parameter values
+  aval <- -12.69
+  bval <- 3.6
+  dens <- log10(gam)
+  
+  ## Calculate the transmission potential at each time t
+  tau.ls <- (exp(aval+bval*dens))/(1+exp(aval+bval*dens))
+  
+  ## Get approximation of cumulative transmission potential
+  tau.sum <- sum(tau.ls*int)
+  tau.cumsum <- cumsum(tau.ls*int)
+  tau.sum
+```
+
+## check infection dynamics to see if same model.Seems to be the case...
+```{r}
+# tau cumulative sum. Looks very similar
+ggplot(data.frame(time_range, tau.cumsum)) +
+  geom_line(aes(time_range, tau.cumsum))
+
+# plotting other stuff
+single_infection.df2 <- single_infection.df %>% gather(key = "variable", value = "value", -time)
+
+ggplot(single_infection.df2, aes(x = time, y = value)) +
+  geom_line() +
+  facet_wrap(~variable, scales = "free") +
+  scale_y_continuous(labels = scales::scientific) +
+  theme_bw()
 ```
 
 

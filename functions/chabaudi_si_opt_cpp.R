@@ -1,3 +1,6 @@
+# Single strain infection model with Plasmodium chabaudi
+# By: Avril Wang. Code adapted from Greischar et al., 2016 Predicting optimal transmission investment in malaria parasites
+
 # The following function will produce the optimal conversion rate strategy of Plasmodium chabaudi in a single infection scenario. Users must specify:
 ## 1. Initial parameter (for conversion rate) search space
 ## 2. whether immunity is present or not ("ni" for no immunity and "si" for saturated immunity)
@@ -8,10 +11,24 @@
 ## 7. The range of cue
 ## 8. Choice of solver used by dede. lsoda is chosen as default.
 
-## To run the function, please see "plasticity_model_journals.Rmd" for reference". Function best run 
-## when paired with optimParallel to allow for parallel computing.
-
-# the following function is also optimized with Rcpp to increase computation speed
+# Function best run when paired with optimParallel to allow for parallel computing.
+# To run the function, use the following code:
+## library(optimParallel)
+## source("path to this file")
+## parameters <- c()
+## time_range <- seq(0, max time, by = 1e-3)
+## cue_range <- seq(0, max cue, by = ...)
+## cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+## mod.opt <- optimParallel(par = c(...), 
+                                  # fn = chabaudi_si_opt_cpp, 
+                                  # control = list(trace = 6),
+                                  # immunity = "i",
+                                  # parameters = parameters,
+                                  # time_range = time_range,
+                                  # df = 3,
+                                  # cue = "t",
+                                  # cue_range = time_range)
+## stopCluster(cl) 
 
 chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver = "lsoda"){
   #-------------------------#
@@ -104,41 +121,41 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   #------------------------#
   single_infection.fun <- function(t, state, parameters) {
     
-    ## Defining Pulse beta function based on current time
-    pulseBeta <- pulseBeta_fun(parameters["I0"], parameters["sp"], t)
+     ## Defining Pulse beta function based on current time
+     pulseBeta <- pulseBeta_fun(parameters["I0"], parameters["sp"], t)
       
-      ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
-      if(t>parameters["alpha"]){lag1 = deSolve::lagvalue(t-parameters["alpha"])} # lag state for asexual development
-      if(t>parameters["alphag"]){lag2 = deSolve::lagvalue(t-parameters["alphag"])} # lag state for gametocyte development
+     ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
+     if(t>parameters["alpha"]){lag1 = deSolve::lagvalue(t-parameters["alpha"])} # lag state for asexual development
+     if(t>parameters["alphag"]){lag2 = deSolve::lagvalue(t-parameters["alphag"])} # lag state for gametocyte development
       
-      ## get lag term index given cue
-    ### Only get lag index when it is a state-based cue
-    if(cue != "t") {
-      lag.i <- match(cue, names(state))}
-    
-    ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
-    if(t>parameters["alpha"] && cue == "t"){
-      cue_lag1 <- t-parameters["alpha"]} 
-    
-    if(t>parameters["alpha"] && cue != "t"){
-      cue_lag1 <- lag1[lag.i]} 
-    
-    if(t>parameters["alphag"] && cue == "t") {
-      cue_lag2 <- t-parameters["alphag"]} 
-    
-    if(t>parameters["alphag"] && cue != "t") {
-      cue_lag2 <- lag2[lag.i]}
+     ## get lag term index given cue
+        ### Only get lag index when it is a state-based cue
+        if(cue != "t") {
+          lag.i <- match(cue, names(state))}
+        
+        ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
+        if(t>parameters["alpha"] && cue == "t"){
+          cue_lag1 <- t-parameters["alpha"]} 
+        
+        if(t>parameters["alpha"] && cue != "t"){
+          cue_lag1 <- lag1[lag.i]} 
+        
+        if(t>parameters["alphag"] && cue == "t") {
+          cue_lag2 <- t-parameters["alphag"]} 
+        
+        if(t>parameters["alphag"] && cue != "t") {
+          cue_lag2 <- lag2[lag.i]}
       
-      ## convert cue to variable in state or just time
+    ## convert cue to variable in state or just time
     if(cue == "t"){
       cue_state <- t}
     else{
       cue_state <- state[cue]}
       
-      ## Define K, carrying capacity of RBC
+    ## Define K, carrying capacity of RBC
       K <- parameters["lambda"]*parameters["R1"]/(parameters["lambda"]-parameters["mu"]*parameters["R1"])
       
-      ## Define survival functions
+    ## Define survival functions
       ### Survival of infected asexual RBC
       if(t>parameters["alpha"] && immunity == "ni"){
         S <- exp(-parameters["mu"]*parameters["alpha"])
