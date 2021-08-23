@@ -121,7 +121,7 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   #------------------------#
   single_infection.fun <- function(t, state, parameters) {
     
-    ## Rename parameters for cleaner code. With.list not used given computation strain
+    ## Rename parameters for cleaner code. With.list not used to speed up computation
     R1 <- parameters["R1"]
     lambda <- parameters["lambda"]
     mu <- parameters["mu"]
