@@ -121,12 +121,35 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   #------------------------#
   single_infection.fun <- function(t, state, parameters) {
     
+    ## Rename parameters for cleaner code. With.list not used given computation strain
+    R1 <- parameters["R1"]
+    lambda <- parameters["lambda"]
+    mu <- parameters["mu"]
+    p <- parameters["p"]
+    alpha <- parameters["alpha"]
+    alphag <- parameters["alphag"]
+    beta <- parameters["beta"]
+    mum <- parameters["mum"]
+    mug <- parameters["mug"]
+    I0 <- parameters["I0"]
+    Ig0 <- parameters["Ig0"]
+    a <- parameters["a"]
+    b <- parameters["b"]
+    sp <- parameters["sp"]
+    
+    # rename states for cleaner code
+    R <- state["R"]
+    I <- state["I"]
+    Ig <- state["Ig"]
+    M <- state["M"]
+    G <- state["G"]
+    
      ## Defining Pulse beta function based on current time
-     pulseBeta <- pulseBeta_fun(parameters["I0"], parameters["sp"], t)
+     pulseBeta <- pulseBeta_fun(I0, sp, t)
       
      ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
-     if(t>parameters["alpha"]){lag1 = deSolve::lagvalue(t-parameters["alpha"])} # lag state for asexual development
-     if(t>parameters["alphag"]){lag2 = deSolve::lagvalue(t-parameters["alphag"])} # lag state for gametocyte development
+     if(t>alpha){lag1 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
+     if(t>alphag){lag2 = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
       
      ## get lag term index given cue
         ### Only get lag index when it is a state-based cue
@@ -134,16 +157,16 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
           lag.i <- match(cue, names(state))}
         
         ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
-        if(t>parameters["alpha"] && cue == "t"){
-          cue_lag1 <- t-parameters["alpha"]} 
+        if(t>alpha && cue == "t"){
+          cue_lag1 <- t-alpha} 
         
-        if(t>parameters["alpha"] && cue != "t"){
+        if(t>alpha && cue != "t"){
           cue_lag1 <- lag1[lag.i]} 
         
-        if(t>parameters["alphag"] && cue == "t") {
-          cue_lag2 <- t-parameters["alphag"]} 
+        if(t>alphag && cue == "t") {
+          cue_lag2 <- t-alphag} 
         
-        if(t>parameters["alphag"] && cue != "t") {
+        if(t>alphag && cue != "t") {
           cue_lag2 <- lag2[lag.i]}
       
     ## convert cue to variable in state or just time
@@ -153,64 +176,64 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
       cue_state <- state[cue]}
       
     ## Define K, carrying capacity of RBC
-      K <- parameters["lambda"]*parameters["R1"]/(parameters["lambda"]-parameters["mu"]*parameters["R1"])
+      K <- lambda*R1/(lambda-mu*R1)
       
     ## Define survival functions
       ### Survival of infected asexual RBC
-      if(t>parameters["alpha"] && immunity == "ni"){
-        S <- exp(-parameters["mu"]*parameters["alpha"])
-      } else if(t>parameters["alpha"] && immunity =="i"){
-        integrand <- function(x) {parameters["mu"]+parameters["a"]/(parameters["b"]+state["I"])}
-        integrate_val <- integrate(Vectorize(integrand), lower = t-parameters["alpha"], upper = t)
+      if(t>alpha && immunity == "ni"){
+        S <- exp(-mu*alpha)
+      } else if(t>alpha && immunity =="i"){
+        integrand <- function(x) {mu+a/(b+I)}
+        integrate_val <- integrate(Vectorize(integrand), lower = t-alpha, upper = t)
         S <- exp(-1*integrate_val$value)
-      } else if(t<=parameters["alpha"] && immunity == "ni"){
-        S <- exp(-parameters["mu"]*t)
+      } else if(t<=alpha && immunity == "ni"){
+        S <- exp(-mu*t)
       } else{
-        integrand <- function(x) {parameters["mu"]+parameters["a"]/(parameters["b"]+state["I"])}
+        integrand <- function(x) {mu+a/(b+I)}
         integrate_val <- integrate(Vectorize(integrand), lower = 0, upper = t)
         S <- exp(-1*integrate_val$value)
       }
       
       ### Survival of gametocytes. We assume that infected
       ### RBC with gametocyte is not removed by immune response
-      if(t<=parameters["alphag"]){
-        Sg <- exp(-parameters["mu"]*t)
+      if(t<=alphag){
+        Sg <- exp(-mu*t)
       } else{
-        Sg <- exp(-parameters["mu"]*parameters["alphag"])}
+        Sg <- exp(-mu*alphag)}
       
       ## Define the models without lag terms. 
-      dR <- parameters["lambda"]*(1-state["R"]/K)-parameters["mu"]*state["R"]-parameters["p"]*state["R"]*state["M"] # change in susceptible RBC
+      dR <- lambda*(1-R/K)-mu*R-p*R*M # change in susceptible RBC
      
        if(immunity == "ni"){
-        dI_nolag <- (1-cr(cue_state))*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["I"] # change in infected RBC density
+        dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I # change in infected RBC density
       } else{
-        dI_nolag <- (1-cr(cue_state))*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["I"]-(parameters["a"]*state["I"])/(parameters["b"]+state["I"]) # change in infected RBC density with immunity
+        dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(a*I)/(b+I) # change in infected RBC density with immunity
       }
       
-      dIg_nolag <- cr(cue_state)*parameters["p"]*state["R"]*state["M"]-parameters["mu"]*state["Ig"] 
-      dM_nolag <- -parameters["mum"]*state["M"]-parameters["p"]*state["R"]*state["M"]
-      dG_nolag <- -parameters["mug"]*state["G"]
+      dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig
+      dM_nolag <- -mum*M-p*R*M
+      dG_nolag <- -mug*G
       
       ## Track states in initial cohort of infection
-      if(t<=parameters["alpha"]){
+      if(t<=alpha){
         dI <- dI_nolag-pulseBeta*S 
-        dM <- dM_nolag+parameters["beta"]*pulseBeta*S 
+        dM <- dM_nolag+beta*pulseBeta*S 
       }
       
-      if(t<=parameters["alphag"]){
+      if(t<=alphag){
         dIg <- dIg_nolag ## should have no cells form initial cohort
         dG <- 0
       }
       
       ## Track states after delay 
-      if(t>parameters["alpha"]){
-        dI <- dI_nolag-(1-cr(cue_lag1))*parameters["p"]*lag1[1]*lag1[4]*S 
-        dM <- dM_nolag+parameters["beta"]*(1-cr(cue_lag1))*parameters["p"]*lag1[1]*lag1[4]*S 
+      if(t>alpha){
+        dI <- dI_nolag-(1-cr(cue_lag1))*p*lag1[1]*lag1[4]*S 
+        dM <- dM_nolag+beta*(1-cr(cue_lag1))*p*lag1[1]*lag1[4]*S 
       }
       
-      if(t>parameters["alphag"]){
-        dIg <- dIg_nolag-cr(cue_lag2)*parameters["p"]*lag2[1]*lag2[4]*Sg 
-        dG <- dG_nolag+cr(cue_lag2)*parameters["p"]*lag2[1]*lag2[4]*Sg
+      if(t>alphag){
+        dIg <- dIg_nolag-cr(cue_lag2)*p*lag2[1]*lag2[4]*Sg 
+        dG <- dG_nolag+cr(cue_lag2)*p*lag2[1]*lag2[4]*Sg
       }
       
       ## Return the states
