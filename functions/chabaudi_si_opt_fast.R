@@ -72,11 +72,7 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   if(cue == "t" && !isTRUE(all.equal(cue_range, time_range))){
     stop("Time is chosen as cue. Cue_range must equal to time_range")
   }
-  
-  ## Ensure integration method is correct
-  if(integration != "integrate" && integration != "trapezoid" && integration != "simpson") {
-    stop("Input correct integration method: 'integrate,' 'trapezoid,' 'simpson'")
-  }
+
   
   #-------------------------#
   # Function to describe population 
@@ -172,7 +168,7 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
      if(t>alpha){lag1 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
      if(t>alphag){lag2 = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
       
-     ## get lag term index given cue
+     ## get lag term index given cue. Cannot use else if given that during simulation, multiple iterations of cue_lag is used
         ### Only get lag index when it is a state-based cue
         if(cue != "t") {
           lag.i <- match(cue, names(state))}
@@ -202,20 +198,17 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     ## Define survival functions
       ### Survival of infected asexual RBC
       if(t>alpha && immunity == "ni"){
-        S <- exp(-mu*alpha)
-      } 
+        S <- exp(-mu*alpha)} 
       
       if(t>alpha && immunity =="i"){
-        S <- exp(-mu*alpha - (alpha*a)/(b+I))
-      } 
+        S <- exp(-mu*alpha - (alpha*a)/(b+I))} 
       
       if(t<=alpha && immunity == "ni"){
-        S <- exp(-mu*t)
-      } 
+        S <- exp(-mu*t)} 
       
       if(t<=alpha && immunity == "i"){
-        S <- exp(-mu*t-(a*t)/(I+b))
-      }
+        S <- exp(-mu*t-(a*t)/(I+b))}
+      
       #################### Old integration code
       #if(t>alpha && immunity == "ni"){
       #  S <- exp(-mu*alpha)
@@ -253,7 +246,7 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
      
        if(immunity == "ni"){
         dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I # change in infected RBC density
-      } else{
+       } else {
         dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(a*I)/(b+I) # change in infected RBC density with immunity
       }
       
