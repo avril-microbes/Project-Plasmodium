@@ -10,6 +10,8 @@
 ## 6. the "cue" that conversion rate is dependent on
 ## 7. The range of cue
 ## 8. Choice of solver used by dede. lsoda is chosen as default.
+## 9. Whether infection dynamics is simulated. If set as TRUE, rather than performing optimization, the function will
+## perform dede on the model using the parameter provided
 
 # Function best run when paired with optimParallel to allow for parallel computing.
 # To run the function, use the following code:
@@ -22,15 +24,37 @@
 ## mod.opt <- optimParallel(par = c(...), 
                                   # fn = chabaudi_si_opt_cpp, 
                                   # control = list(trace = 6),
-                                  # immunity = "i",
-                                  # parameters = parameters,
+                                  # immunity = "...", ## "i" or "ni"
+                                  # parameters = parameters, # list of time points. Use seq(lower time, upper time, by = time interval)
                                   # time_range = time_range,
-                                  # df = 3,
-                                  # cue = "t",
-                                  # cue_range = time_range)
+                                  # df = ..., # give a number
+                                  # cue = "...", # see state for choice of cue
+                                  # cue_range = time_range) # list of cue points. Use seq(lower cue, upper cue, by = cue interval)
 ## stopCluster(cl) 
 
-chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver = "lsoda"){
+# Function can also be used to simulate infection dynamics (track states with time) if dyn is set to TRUE
+# To perform infection dynamics simulation, using the following script
+## library(ggplot)
+## source("path to this file")
+## parameters <- c()
+## time_range <- seq(0, max time, by = 1e-3)
+## cue_range <- seq(0, max cue, by = ...)
+## mod.dyn <- chabaudi_si_opt_fast(parameters_cr = ...,
+                                # immunity = "...",
+                                # parameters = ...,
+                                # time_range = ...,
+                                # df = ...,
+                                # cue = "...",
+                                # cue_range = ...,
+                                # solver = "",
+                                # dyn = TRUE)
+## ggplot(mod.dyn, aes(x = time, y = value)) + # plot infection dynamics 
+  # geom_line() +
+  # facet_wrap(~variable, scales = "free") +
+  # scale_y_continuous(labels = scales::scientific) +
+  # theme_bw()                  
+
+chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver = "lsoda", dyn = FALSE){
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -136,7 +160,7 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   #-------------------------#
   # Define single-infection model
   #------------------------#
-  single_infection.fun <- function(t, state, parameters) {
+  chabaudi_si_model <- function(t, state, parameters) {
     
     ## Rename parameters for cleaner code. With.list not used to speed up computation
     R1 <- parameters["R1"]
@@ -283,9 +307,9 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   #-------------------------#
   # Run single-infection model
   #------------------------#
-  single_infection.df <- as.data.frame(deSolve::dede(y = state,
+  chabaudi_si.df <- as.data.frame(deSolve::dede(y = state,
                                                      times = time_range,
-                                                     func = single_infection.fun,
+                                                     func = chabaudi_si_model,
                                                      p = parameters,
                                                      method = solver,
                                                      control=list(mxhist = 1e6)))
@@ -294,11 +318,11 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   # Calculate fitness
   #------------------------#
   ## Get Gametocyte density time series data
-  gam <- single_infection.df$G
+  gam <- chabaudi_si.df$G
   gam[gam<0] <- 0 # Assign negative gametocyte density to 0
   
   ## Get timeseries interval. Simplify first time after t=0
-  int <- single_infection.df[2,1]
+  int <- chabaudi_si.df[2,1]
   
   ## Define the fitness parameter values
   aval <- -12.69
@@ -312,7 +336,27 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   tau.sum <- sum(tau.ls*int)
   
   # return cumulative transmission potential. Turn negative to maximize
-  return(tau.sum*-1) 
+  if(dyn == FALSE){return(tau.sum*-1)}
+  
+  #-------------------------#
+  # Simulating infection dynamics if Dyn == TRUE
+  #------------------------# 
+  if(dyn == TRUE) {
+    ### calculate cumulative transmission potential gain
+    tau_cum.ls <- cumsum(tau.ls*int)
+    
+    ### cbind results
+    single_infection.df$tau <- tau.ls
+    single_infection.df$tau_cum <- tau_cum.ls
+    
+    ### calculate CR based on cue
+    cr.ls <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(chabaudi_si.df$I))))
+    chabaudi_si.df$cr <- cr.ls
+
+    ### processing df for plotting
+    chabaudi_si.df2 <- chabaudi_si.df %>% tidyr::gather(key = "variable", value = "value", -time)
+    return(chabaudi_si.df2)
+  }
 }
 
 
