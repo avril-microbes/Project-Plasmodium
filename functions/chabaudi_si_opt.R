@@ -1,3 +1,6 @@
+# Deprecated version of chabaudi_si_opt_fast function. Still runs but lacks customizability and is very slow.
+
+
 # The following function will produce the optimal conversion rate strategy of Plasmodium chabaudi in a single infection scenario. Users must specify:
 ## 1. Initial parameter (for conversion rate) search space
 ## 2. whether immunity is present or not ("ni" for no immunity and "si" for saturated immunity)
@@ -81,6 +84,9 @@ chabaudi_si_opt <- function(parameters_cr, immunity, parameters, time_range, df,
   
   ## Produce a table with time value and conversion rate
   cr <- splinefun(cbind(cue_range, cr.int2))
+
+  
+  
   
   #-------------------------#
   # Define single-infection model
