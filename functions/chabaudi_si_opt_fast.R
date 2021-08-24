@@ -1,6 +1,10 @@
 # Single strain infection model with Plasmodium chabaudi
 # By: Avril Wang. Code adapted from Greischar et al., 2016 Predicting optimal transmission investment in malaria parasites
 
+#-------------------------#
+# Getting optimal conversion 
+# rate strategy
+#------------------------#
 # The following function will produce the optimal conversion rate strategy of Plasmodium chabaudi in a single infection scenario. Users must specify:
 ## 1. Initial parameter (for conversion rate) search space
 ## 2. whether immunity is present or not ("ni" for no immunity and "si" for saturated immunity)
@@ -32,6 +36,11 @@
                                   # cue_range = time_range) # list of cue points. Use seq(lower cue, upper cue, by = cue interval)
 ## stopCluster(cl) 
 
+#-------------------------#
+# Simulating infection dynamics
+# Given a set of conversion rate
+# parameters
+#------------------------#
 # Function can also be used to simulate infection dynamics (track states with time) if dyn is set to TRUE
 # To perform infection dynamics simulation, using the following script
 ## library(ggplot)
@@ -46,7 +55,7 @@
                                 # df = ...,
                                 # cue = "...",
                                 # cue_range = ...,
-                                # solver = "",
+                                # solver = "...",
                                 # dyn = TRUE)
 ## ggplot(mod.dyn, aes(x = time, y = value)) + # plot infection dynamics 
   # geom_line() +
