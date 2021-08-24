@@ -471,81 +471,6 @@ time.taken <- end.time - start.time
 time.taken #38.85414 (40 minutes!)
 ```
 
-## trying trapezoid estimation
-much faster
-```{r}
-start.time <- Sys.time()
-cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-ch_si_i_i_20.opt_trap <- optimParallel(par = c(1,2,3,4), 
-                      fn = chabaudi_si_opt_cpp, 
-                      control = list(trace = 6),
-                      immunity = "i",
-                      parameters = parameters,
-                      time_range = time_range,
-                      df = 3,
-                      cue = "I",
-                      cue_range = cue_range)
-ch_si_i_i_20.opt #-11.63003
-stopCluster(cl)
-# 1.768788 -362.923187  -37.759598    1.992568. Slightly different than original with precise integration
-#1.769660 -363.080884  -37.980378    1.827227.
-end.time <- Sys.time()
-time.taken <- end.time - start.time 
-time.taken #25.95028 mins. 67% of pure integration 
-```
-
-# trying vode method for dede
-```{r}
-start.time <- Sys.time()
-cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-ch_si_i_I_20.opt_vode_trap <- optimParallel(par = c(1,2,3,4), 
-                      fn = chabaudi_si_opt_cpp, 
-                      control = list(trace = 6),
-                      immunity = "i",
-                      parameters = parameters,
-                      time_range = time_range,
-                      df = 3,
-                      cue = "I",
-                      cue_range = cue_range)
-ch_si_i_I_20.opt_vode_trap$par #1.766034 -360.630602  -36.766177 1.477862, with #-11.63002. Very small difference between lsoda 
-stopCluster(cl)
-end.time <- Sys.time()
-time.taken <- end.time - start.time
-time.taken # 8.007386 minute much faster
-
-# plot. Not huge difference
-ch_si_i_I_20_vode_trap.df <- par_to_df(ch_si_i_I_20.opt_vode_trap, cue_range)
-
-    ggplot() +
-    geom_line(data = ch_si_i_I_20_cr.df, aes(x = cue_range, y = model), alpha = 0.7, color = "blue") +
-    geom_line(data = ch_si_i_i_20_cr.df, aes(x = cue_range, y = model), color = "red", alpha = 0.7) +
-    xlab("Infected RBC density") +
-    ylab("Transmission investment") +
-    labs(color = "Optimization methods") +
-    theme_bw()
-```
-
-# trying with vode and original integration
-```{r}
-# Line search cannot locate an adequate point after 20 function and gradient evaluations. Bad direction in the line search
-start.time <- Sys.time()
-cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-ch_si_i_I_20.opt_vode_int <- optimParallel(par = c(1,2,3,4), 
-                      fn = chabaudi_si_opt_cpp, 
-                      control = list(trace = 6),
-                      immunity = "i",
-                      parameters = parameters,
-                      time_range = time_range,
-                      df = 3,
-                      cue = "I",
-                      cue_range = cue_range)
-ch_si_i_I_20.opt_vode_int$par
-stopCluster(cl) # 1.768348 -363.405382  -34.474332   -4.695846. Very different. due to bad solve
-end.time <- Sys.time()
-time.taken <- end.time - start.time #12.76853 mins
-time.taken
-```
-
 # optimizing pulsebeta function to vectorize
 ```{r}
 # original pulse beta function
@@ -859,6 +784,143 @@ ggplot(single_infection.df2, aes(x = time, y = value)) +
   facet_wrap(~variable, scales = "free") +
   scale_y_continuous(labels = scales::scientific) +
   theme_bw()
+```
+
+## double check this is the case. I changed some stuff, fixed the conditional lag cue code. So rerun the code
+### run with immunity
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_cpp.R")
+
+# no immunity run with time
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_t_20.opt2 <- optimParallel(par = c(13, -25, -3, -20), # get it close so it runs faster
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range)
+
+stopCluster(cl) 
+end.time <- Sys.time()
+time.taken <- end.time - start.time
+time.taken # 31.47385 mins taken
+ch_si_i_t_20.opt2$par #10.948492 -23.607393  -1.904272 -17.419994. Same as before. Sigh...
+
+single_function.fun
+```
+
+## run with immunity + trapezoidal estimation for integration
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_fast.R")
+
+# no immunity run with time
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_t_20.opt_trap <- optimParallel(par = c(13, -25, -3, -20), # get it close so it runs faster
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range,
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+end.time-start.time #22.84097 minutes. Done from 31 minutes with integrate.
+ch_si_i_t_20.opt_trap$par #10.94948 -23.60937  -1.90456 -17.42204 (very similar. insignificant difference)
+```
+
+## run with immunity + trapezoid+vode integration. Fastest run so far. 
+```{r}
+# no immunity run with time
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_t_20.opt_trap_vode <- optimParallel(par = c(13, -25, -3, -20), # get it close so it runs faster
+                      fn = chabaudi_si_opt_cpp, 
+                      control = list(trace = 6),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range,
+                      integration = "trapezoid",
+                      solver = "vode")
+stopCluster(cl) 
+end.time <- Sys.time()
+end.time-start.time # 6.682592 minutes. very fast
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_t_20.opt_trap_vode$par #10.947226 -23.605154  -1.902684 -17.423413 (very similar)
+```
+
+# fix death rate from immune response
+## trying out other forms of immunity removal integration
+```{r}
+# calculate immune reaction based on non-immunity model
+immune <- parameters["a"]/(parameters["b"]+single_infection.df$I)
+immune_dummy <- data.frame(time_range, immune)
+## calculate cumulative immune hazard rate for each time t (from t-alpha to t)
+immune_dummy.df <- immune_dummy %>%
+  mutate(cumsum = cumsum(immune)) %>%
+  mutate(cum_rolling1000 = zoo::rollapplyr(immune*1e-3, width = 1000, FUN = sum, partial = TRUE)) %>%
+  drop_na(cumsum)
+
+# trying definite integral function
+def_int <- data.frame(time_range, immune =(parameters["alpha"]*parameters["a"])/(parameters["b"]+single_infection.df$I))
+
+# trying laplace
+laplace <- data.frame(time_range, immune = (parameters["a"]*log10(single_infection.df$time+parameters["b"])-2*log10(single_infection.df$time-parameters["alpha"]))/single_infection.df$I)
+
+# plotting. Definitive integral seem to match up pretty good. Of course...
+ggplot() +
+  geom_line(data = immune_dummy.df, aes(x = time_range, y = cum_rolling1000), color = "blue") +
+  geom_line(data = def_int, aes(x = time_range, y = immune), color = "red") +
+  geom_line(data = laplace, aes(x = time_range, y = immune), color = "green") +
+  xlim(1, 20) + #applies to only after alpha
+  theme_bw() +
+  ylim(0,3)
+
+def_int
+immune_dummy.df
+```
+
+## test out function with immunity as definitive integral
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_fast.R")
+
+# no immunity run with time
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_t_20.def_int <- optimParallel(par = c(13, -25, -3, -20), # get it close so it runs faster
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range,
+                      solver = "vode")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+end.time-start.time#2.391554 minutes fast!
+ch_si_i_t_20.def_int$par # 10.94816 -23.60684  -1.90449 -17.41818. Very similar to integrate. lol....
+
+par_to_df(ch_si_i_t_20.def_int, time_range) %>% 
+  ggplot(aes(x = cue_range, y = model)) +
+  geom_line()
+
 ```
 
 
