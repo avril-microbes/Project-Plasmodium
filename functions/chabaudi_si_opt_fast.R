@@ -30,7 +30,7 @@
                                   # cue_range = time_range)
 ## stopCluster(cl) 
 
-chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, integration = "integrate", solver = "lsoda"){
+chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver = "lsoda"){
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -111,31 +111,31 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
   cr <- splinefun(cbind(cue_range, cr_fit))
   
   #-------------------------#
-  # Define integration method. Default to integrate.
+  # Define integration method. Default to integrate. Not used anymore
   #------------------------#
-  if(integration == "integrate"){
-    integrate_fun <- stats::integrate
-    } else if (integration == "trapezoid"){
-    integrate_fun <- function(f, lower, upper) {
-      if (is.function(f) == FALSE) {
-        stop('f must be a function with one parameter (variable)')
-      }
-      h <- upper - lower
-      fxdx <- (h / 2) * (f(lower) + f(upper))
-      return(fxdx)}
-    } else {
-    integrate_fun <- function(f, lower, upper) {
-      if (is.function(f) == FALSE) {
-        stop('f must be a function with one parameter (variable)')
-      }
-      h <- (upper - lower) / 2
-      x0 <- lower
-      x1 <- lower + h
-      x2 <- upper
-      s <- (h / 3) * (f(x0) + 4 * f(x1) + f(x2))
-      return(s)
-    }
-  }
+  #if(integration == "integrate"){
+  #  integrate_fun <- stats::integrate
+   # } else if (integration == "trapezoid"){
+    #integrate_fun <- function(f, lower, upper) {
+     # if (is.function(f) == FALSE) {
+      #  stop('f must be a function with one parameter (variable)')
+      #}
+      #h <- upper - lower
+      #fxdx <- (h / 2) * (f(lower) + f(upper))
+      #return(fxdx)}
+    #} else {
+    #integrate_fun <- function(f, lower, upper) {
+     # if (is.function(f) == FALSE) {
+      #  stop('f must be a function with one parameter (variable)')
+      #}
+      #h <- (upper - lower) / 2
+      #x0 <- lower
+      #x1 <- lower + h
+      #x2 <- upper
+      #s <- (h / 3) * (f(x0) + 4 * f(x1) + f(x2))
+      #return(s)
+    #}
+  #}
   
   #-------------------------#
   # Define single-infection model
@@ -203,25 +203,49 @@ chabaudi_si_opt_cpp <- function(parameters_cr, immunity, parameters, time_range,
       ### Survival of infected asexual RBC
       if(t>alpha && immunity == "ni"){
         S <- exp(-mu*alpha)
-      } else if(t>alpha && immunity =="i"){
-        integrand <- function(x) {mu+a/(b+I)}
-        integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
-        if(integration == "integrate"){integrate_val <- integrate_val$value}
-        S <- exp(-1*integrate_val)
-      } else if(t<=alpha && immunity == "ni"){
+      } 
+      
+      if(t>alpha && immunity =="i"){
+        S <- exp(-mu*alpha - (alpha*a)/(b+I))
+      } 
+      
+      if(t<=alpha && immunity == "ni"){
         S <- exp(-mu*t)
-      } else{
-        integrand <- function(x) {mu+a/(b+I)}
-        integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
-        if(integration == "integrate"){integrate_val <- integrate_val$value}
-        S <- exp(-1*integrate_val)
+      } 
+      
+      if(t<=alpha && immunity == "i"){
+        S <- exp(-mu*t-(a*t)/(I+b))
       }
+      #################### Old integration code
+      #if(t>alpha && immunity == "ni"){
+      #  S <- exp(-mu*alpha)
+      #} 
+      
+      #if(t>alpha && immunity =="i"){
+      #  integrand <- function(x) {mu+a/(b+I)}
+      #  integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
+      #  if(integration == "integrate"){integrate_val <- integrate_val$value}
+      #  S <- exp(-1*integrate_val)
+      #} 
+      
+      #if(t<=alpha && immunity == "ni"){
+      #  S <- exp(-mu*t)
+      #} 
+      
+      #if(t<=alpha && immunity == "i"){
+      #  integrand <- function(x) {mu+a/(b+I)}
+      #  integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
+      #  if(integration == "integrate"){integrate_val <- integrate_val$value}
+      #  S <- exp(-1*integrate_val)
+      #}
       
       ### Survival of gametocytes. We assume that infected
       ### RBC with gametocyte is not removed by immune response
       if(t<=alphag){
         Sg <- exp(-mu*t)
-      } else{
+      } 
+      
+      if(t>alphag){
         Sg <- exp(-mu*alphag)}
       
       ## Define the models without lag terms. 
