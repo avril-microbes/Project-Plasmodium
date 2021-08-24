@@ -359,7 +359,7 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     single_infection.df$tau_cum <- tau_cum.ls
     
     ### calculate CR based on cue
-    cr.ls <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(chabaudi_si.df$I))))
+    cr.ls <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
     chabaudi_si.df$cr <- cr.ls
 
     ### processing df for plotting
