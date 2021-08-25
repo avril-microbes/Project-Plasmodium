@@ -63,7 +63,7 @@
   # scale_y_continuous(labels = scales::scientific) +
   # theme_bw()                  
 
-chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver = "lsoda", dyn = FALSE){
+chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver = "lsoda", integration = "integrate", dyn = FALSE){
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -76,6 +76,7 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   force(cue)
   force(cue_range)
   force(solver)
+  force(integration)
   
   #-------------------------#
   # Define initial condition
@@ -86,6 +87,16 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
              M = 0,
              G = 0)
   
+  ## Input additional state parameters if Kochin's 
+  ## innate immunity model is chosen
+  if(immunity == "kochin"){
+    state <- c(R = 8.5*10^6,
+               I = 43.85965,
+               Ig = 0,
+               M = 0,
+               G = 0,
+               E = 0)}
+  
   #-------------------------#
   # Ensure inputs are correct
   #------------------------#
@@ -94,7 +105,7 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     stop("Conversion rate parameters must match degrees of freedom")
   }
   ## Ensure immunity input is correct
-  if (immunity != "ni" && immunity != "i") {
+  if (immunity != "ni" && immunity != "i" && immunity != "kochin") {
     stop("Immunity must be either 'ni' for no immunity or 'i' for saturating immunity")
   }
   ## Ensure cue is correct
@@ -104,6 +115,10 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   ## Ensure that time_range is used as cue_range when t is used
   if(cue == "t" && !isTRUE(all.equal(cue_range, time_range))){
     stop("Time is chosen as cue. Cue_range must equal to time_range")
+  }
+  ## Ensure integration is entered correctly
+  if(integration != "integrate" && integration != "trapezoid" && integration != "simpson"){
+    stop("Please enter the correct integration method. Must be 'integrate', trapezoid', or 'simpson'")
   }
 
   
@@ -140,31 +155,31 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   cr <- splinefun(cbind(cue_range, cr_fit))
   
   #-------------------------#
-  # Define integration method. Default to integrate. Not used anymore
+  # Define integration method. Default to integrate. 
   #------------------------#
-  #if(integration == "integrate"){
-  #  integrate_fun <- stats::integrate
-   # } else if (integration == "trapezoid"){
-    #integrate_fun <- function(f, lower, upper) {
-     # if (is.function(f) == FALSE) {
-      #  stop('f must be a function with one parameter (variable)')
-      #}
-      #h <- upper - lower
-      #fxdx <- (h / 2) * (f(lower) + f(upper))
-      #return(fxdx)}
-    #} else {
-    #integrate_fun <- function(f, lower, upper) {
-     # if (is.function(f) == FALSE) {
-      #  stop('f must be a function with one parameter (variable)')
-      #}
-      #h <- (upper - lower) / 2
-      #x0 <- lower
-      #x1 <- lower + h
-      #x2 <- upper
-      #s <- (h / 3) * (f(x0) + 4 * f(x1) + f(x2))
-      #return(s)
-    #}
-  #}
+  if(integration == "integrate"){
+    integrate_fun <- stats::integrate
+    } else if (integration == "trapezoid"){
+    integrate_fun <- function(f, lower, upper) {
+      if (is.function(f) == FALSE) {
+        stop('f must be a function with one parameter (variable)')
+      }
+      h <- upper - lower
+      fxdx <- (h / 2) * (f(lower) + f(upper))
+      return(fxdx)}
+    } else {
+    integrate_fun <- function(f, lower, upper) {
+      if (is.function(f) == FALSE) {
+        stop('f must be a function with one parameter (variable)')
+      }
+      h <- (upper - lower) / 2
+      x0 <- lower
+      x1 <- lower + h
+      x2 <- upper
+      s <- (h / 3) * (f(x0) + 4 * f(x1) + f(x2))
+      return(s)
+    }
+  }
   
   #-------------------------#
   # Define single-infection model
@@ -187,130 +202,143 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     b <- parameters["b"]
     sp <- parameters["sp"]
     
+    ## Additional parameters in Kochin
+    if (immunity == "kochin"){ 
+      sigma <- parameters["sigma"] # Probability of activating immune cell upon contact
+      mue <- parameters["mue"] # inactivation of immune cells
+      gamma <- parameters["gamma"] # Maximum removal rate of iRBC
+    }
+    
     # rename states for cleaner code
     R <- state["R"]
     I <- state["I"]
     Ig <- state["Ig"]
     M <- state["M"]
     G <- state["G"]
+    if (immunity == "kochin") {E <- state["E"]}
     
-     ## Defining Pulse beta function based on current time
-     pulseBeta <- pulseBeta_fun(I0, sp, t)
-      
-     ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
-     if(t>alpha){lag1 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
-     if(t>alphag){lag2 = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
-      
-     ## get lag term index given cue. Cannot use else if given that during simulation, multiple iterations of cue_lag is used
-        ### Only get lag index when it is a state-based cue
-        if(cue != "t") {
-          lag.i <- match(cue, names(state))}
-        
-        ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
-        if(t>alpha && cue == "t"){
-          cue_lag1 <- t-alpha} 
-        
-        if(t>alpha && cue != "t"){
-          cue_lag1 <- lag1[lag.i]} 
-        
-        if(t>alphag && cue == "t") {
-          cue_lag2 <- t-alphag} 
-        
-        if(t>alphag && cue != "t") {
-          cue_lag2 <- lag2[lag.i]}
-      
+    ## Defining Pulse beta function based on current time
+    pulseBeta <- pulseBeta_fun(I0, sp, t)
+    
+    ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
+    if(t>alpha){lag1 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
+    if(t>alphag){lag2 = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
+    
+    ## get lag term index given cue. Cannot use else if given that during simulation, multiple iterations of cue_lag is used
+    ### Only get lag index when it is a state-based cue
+    if(cue != "t") {
+      lag.i <- match(cue, names(state))}
+    
+    ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
+    if(t>alpha && cue == "t"){
+      cue_lag1 <- t-alpha} 
+    
+    if(t>alpha && cue != "t"){
+      cue_lag1 <- lag1[lag.i]} 
+    
+    if(t>alphag && cue == "t") {
+      cue_lag2 <- t-alphag} 
+    
+    if(t>alphag && cue != "t") {
+      cue_lag2 <- lag2[lag.i]}
+    
     ## convert cue to variable in state or just time
     if(cue == "t"){
       cue_state <- t}
     else{
       cue_state <- state[cue]}
-      
+    
     ## Define K, carrying capacity of RBC
-      K <- lambda*R1/(lambda-mu*R1)
-      
+    K <- lambda*R1/(lambda-mu*R1)
+    
     ## Define survival functions
-      ### Survival of infected asexual RBC
-      if(t>alpha && immunity == "ni"){
-        S <- exp(-mu*alpha)} 
-      
-      if(t>alpha && immunity =="i"){
-        S <- exp(-mu*alpha - (alpha*a)/(b+I))} 
-      
-      if(t<=alpha && immunity == "ni"){
-        S <- exp(-mu*t)} 
-      
-      if(t<=alpha && immunity == "i"){
-        S <- exp(-mu*t-(a*t)/(I+b))}
-      
-      #################### Old integration code
-      #if(t>alpha && immunity == "ni"){
-      #  S <- exp(-mu*alpha)
-      #} 
-      
-      #if(t>alpha && immunity =="i"){
-      #  integrand <- function(x) {mu+a/(b+I)}
-      #  integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
-      #  if(integration == "integrate"){integrate_val <- integrate_val$value}
-      #  S <- exp(-1*integrate_val)
-      #} 
-      
-      #if(t<=alpha && immunity == "ni"){
-      #  S <- exp(-mu*t)
-      #} 
-      
-      #if(t<=alpha && immunity == "i"){
-      #  integrand <- function(x) {mu+a/(b+I)}
-      #  integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
-      #  if(integration == "integrate"){integrate_val <- integrate_val$value}
-      #  S <- exp(-1*integrate_val)
-      #}
-      
-      ### Survival of gametocytes. We assume that infected
-      ### RBC with gametocyte is not removed by immune response
-      if(t<=alphag){
-        Sg <- exp(-mu*t)
-      } 
-      
-      if(t>alphag){
-        Sg <- exp(-mu*alphag)}
-      
-      ## Define the models without lag terms. 
-      dR <- lambda*(1-R/K)-mu*R-p*R*M # change in susceptible RBC
-     
-       if(immunity == "ni"){
-        dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I # change in infected RBC density
-       } else {
-        dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(a*I)/(b+I) # change in infected RBC density with immunity
-      }
-      
-      dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig
-      dM_nolag <- -mum*M-p*R*M
-      dG_nolag <- -mug*G
-      
-      ## Track states in initial cohort of infection
-      if(t<=alpha){
-        dI <- dI_nolag-pulseBeta*S 
-        dM <- dM_nolag+beta*pulseBeta*S 
-      }
-      
-      if(t<=alphag){
-        dIg <- dIg_nolag ## should have no cells form initial cohort
-        dG <- 0
-      }
-      
-      ## Track states after delay 
-      if(t>alpha){
-        dI <- dI_nolag-(1-cr(cue_lag1))*p*lag1[1]*lag1[4]*S 
-        dM <- dM_nolag+beta*(1-cr(cue_lag1))*p*lag1[1]*lag1[4]*S 
-      }
-      
-      if(t>alphag){
-        dIg <- dIg_nolag-cr(cue_lag2)*p*lag2[1]*lag2[4]*Sg 
-        dG <- dG_nolag+cr(cue_lag2)*p*lag2[1]*lag2[4]*Sg
-      }
-      
-      ## Return the states
-      return(list(c(dR, dI, dIg, dM, dG)))
+    ### Survival of infected asexual RBC
+    if(t>alpha && immunity == "ni"){
+      S <- exp(-mu*alpha)} 
+    
+    if(t>alpha && immunity =="i"){
+      integrand <- function(x) {mu+a/(b+I)}
+      integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
+      if(integration == "integrate"){integrate_val <- integrate_val$value}
+      S <- exp(-1*integrate_val)
+    }  
+    
+    if(t>alpha && immunity == "kochin"){
+      integrand <- function(x) {mu+gamma*E}
+      integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
+      if(integration == "integrate"){integrate_val <- integrate_val$value}
+      S <- exp(-1*integrate_val)} 
+    
+    if(t<=alpha && immunity == "ni"){
+      S <- exp(-mu*t)} 
+    
+    if(t<=alpha && immunity == "i"){
+      integrand <- function(x) {mu+a/(b+I)}
+      integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
+      if(integration == "integrate"){integrate_val <- integrate_val$value}
+      S <- exp(-1*integrate_val)
+    }
+    
+    if(t<=alpha && immunity == "kochin"){
+      integrand <- function(x) {mu+gamma*E}
+      integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
+      if(integration == "integrate"){integrate_val <- integrate_val$value}
+      S <- exp(-1*integrate_val)}
+    
+    ### Survival of gametocytes. We assume that infected
+    ### RBC with gametocyte is not removed by immune response
+    if(t<=alphag){
+      Sg <- exp(-mu*t)
+    } 
+    
+    if(t>alphag){
+      Sg <- exp(-mu*alphag)}
+    
+    ## Define the models without lag terms. 
+    dR <- lambda*(1-R/K)-mu*R-p*R*M # change in susceptible RBC
+    
+    if(immunity =="kochin"){
+      dE <- sigma*I*(1-E)-mue*E # change in innate immune strength
+    }
+    
+    if(immunity == "ni"){
+      dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I # change in infected RBC density
+    } else if(immunity == "i") {
+      dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(a*I)/(b+I) # change in infected RBC density with immunity
+    } else{
+      dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-gamma*E*I #Kochin's innate immune removal
+    }
+    
+    dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig
+    dM_nolag <- -mum*M-p*R*M
+    dG_nolag <- -mug*G
+    
+    ## Track states in initial cohort of infection
+    if(t<=alpha){
+      dI <- dI_nolag-pulseBeta*S 
+      dM <- dM_nolag+beta*pulseBeta*S 
+    }
+    
+    if(t<=alphag){
+      dIg <- dIg_nolag ## should have no cells form initial cohort
+      dG <- 0
+    }
+    
+    ## Track states after delay 
+    if(t>alpha){
+      dI <- dI_nolag-(1-cr(cue_lag1))*p*lag1[1]*lag1[4]*S 
+      dM <- dM_nolag+beta*(1-cr(cue_lag1))*p*lag1[1]*lag1[4]*S 
+    }
+    
+    if(t>alphag){
+      dIg <- dIg_nolag-cr(cue_lag2)*p*lag2[1]*lag2[4]*Sg 
+      dG <- dG_nolag+cr(cue_lag2)*p*lag2[1]*lag2[4]*Sg
+    }
+    
+    ## Return the states
+    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dI, dIg, dM, dG)))}
+    
+    if (immunity == "kochin") {return(list(c(dR, dI, dIg, dM, dG, dE)))}
   }
   
   #-------------------------#
