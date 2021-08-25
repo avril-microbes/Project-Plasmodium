@@ -127,7 +127,7 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   ## fit basic cubic spline with no internal knots. Here, increasing df increases knots.
   ## degree defines shape of basis spline. This shouldn't have any impact on ultimate result
   ## What matter is the number of knots, or df. Increasing df should give us more complex reaction norm
-  dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(cue_range, degree = 3, df = df))
+  dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3, df = df))
   dummy_cr.mod$data <- dummy_cr.data
   
   ## Assign coefficient to be optimized to the dummy conversion rate function
