@@ -7,15 +7,15 @@ Antimalarial resistance can occur via classical routes (e.g. efflux pump) or non
 
 ## Progress so far
 1. Streamlined optimization strategy search and improved run time drastically by implementing parallel computing and vectorizing sub-functions
-..a. Allows sensitivity analysis to be conducted using plastic conversion rate strategy rather than static strategy
-..b. Configurable code allows each aspect of modelling process (DDE solver, parameter sets, degrees of freedom...) to be altered with minimum manipulation
+⋅⋅a. Allows sensitivity analysis to be conducted using plastic conversion rate strategy rather than static strategy
+⋅⋅b. Configurable code allows each aspect of modelling process (DDE solver, parameter sets, degrees of freedom...) to be altered with minimum manipulation
 3. Incorporated option to allow conversion rate to depend on states (etc. density of infected RBC) rather than time
 
 ## Next steps
 1. Creating configurable models that simulate realistic within-host parasite dynamics and can rapidly derive the optimal conversion rate strategy 
-..a. Incorporate adaptive immunity into the model
-..b. Allowing cues to be based on derivative of states (e.g. change in infected RBC density)
-..c. Further optimizing sensitivity analysis run time
+⋅⋅a. Incorporate adaptive immunity into the model
+⋅⋅b. Allowing cues to be based on derivative of states (e.g. change in infected RBC density)
+⋅⋅c. Further optimizing sensitivity analysis run time
 2. Testing the effects of modelling parameters (e.g. degrees of freedom, cue range) on optimal conversion rate
 
 ## Currently working on:
