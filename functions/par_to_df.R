@@ -1,4 +1,12 @@
-# function to convert the output form an "opt" function to a dataframe of cue range vs conversion rate
+# function to convert the output form an "opt" function to a data frame of 
+# cue range vs conversion rate
+
+# to plot the resulting data frame, using the following script:
+## library(ggplot)
+## ggplot() +
+  # geom_line(data = df, aes(x = cue_range, y = cr))
+
+
 par_to_df <- function(mod_opt, cue_range){
   # get parameter values
   par <- mod_opt$par
@@ -7,7 +15,7 @@ par_to_df <- function(mod_opt, cue_range){
   df <- length(par)-1
 
   # define basic spline model
-  basis_mod <- splines::bs(cue_range, df)
+  basis_mod <- splines2::bSpline(x = cue_range, df = df)
   
   # iterate through parameter values and basic spline model to create conversion rate values
   model_part <- list()
@@ -18,10 +26,10 @@ par_to_df <- function(mod_opt, cue_range){
   model_part2 <- rowSums(do.call(cbind, model_part))
   
   ## need to add par[1] given it is not included. Double exp to limit conversion rate between 0 and 1
-  model <- exp(-exp(par[1]+model_part2))
+  cr <- exp(-exp(par[1]+model_part2))
   
   # Create dataframe from model
-  s_ni_t.df <- data.frame(cue_range, model)
+  cr.df <- data.frame(cue_range, cr)
 }
 
 

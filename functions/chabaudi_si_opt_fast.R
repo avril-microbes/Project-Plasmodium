@@ -355,15 +355,16 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     tau_cum.ls <- cumsum(tau.ls*int)
     
     ### cbind results
-    single_infection.df$tau <- tau.ls
-    single_infection.df$tau_cum <- tau_cum.ls
+    chabaudi_si.df$tau <- tau.ls
+    chabaudi_si.df$tau_cum <- tau_cum.ls
     
     ### calculate CR based on cue
-    cr.ls <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
+    cr.ls <- cr(chabaudi_si.df[, cue])
     chabaudi_si.df$cr <- cr.ls
 
     ### processing df for plotting
     chabaudi_si.df2 <- chabaudi_si.df %>% tidyr::gather(key = "variable", value = "value", -time)
+    
     return(chabaudi_si.df2)
   }
 }
