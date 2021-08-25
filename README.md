@@ -8,4 +8,4 @@ Antimalarial resistance can occur via classical routes (e.g. efflux pump) or non
 ## Currently working on:
 Creating a series of functions for non-age structured single infection and co-infection (without drugs for now) models where conversion rate depends on specific "cues" rather than time. Modelling conversion rate as a plastic trait allows for more realistic infection dynamics. This cue-based approach prevents parasites from "anticipating" drug administration/co-infection and relaxes the assumption that cue correlates with time post-infection (especially useful when we consider that drug adherence rate might be low in certain areas). 
 
-The main focus of the next few days is to improve function execution speed through vectorizing sub-functions and implementing parallel computing. This step is important for simulating more complex reaction norms, longer infection time, and sensitivity analysis. 
+The main focus for the next few days is to incorporate adaptive immune response into the model to simulate more realistic infection dynamics.
