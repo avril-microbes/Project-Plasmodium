@@ -227,6 +227,7 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
       phin <- parameters["phin"] # half life for general RBC removal
       phiw <- parameters["phiw"] # halflife for targeted RBC removal
       iota <- parameters["iota"] # cue strength (infected iRBC)
+      rho <- parameters["rho"] #  proportion of the deviation from the homeostatic equilibrium restored by the host per day 
     }
     
     # rename states for cleaner code
@@ -338,7 +339,7 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     } 
     
     if(immunity == "tsukushi"){ #Tsukushi exclusive ODEs
-      dR <- lambda*(1-R/K)-(mu-log(1-N))*R-p*R*M
+      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N))*R-p*R*M
       dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(-log(1-N)-log(1-W))*I
       dN <- psin*iota*(1-N)-N/phin
       dW <- psiw*iota*(1-W)-W/phiw
@@ -409,7 +410,7 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   gam[gam<0] <- 0 # Assign negative gametocyte density to 0
   
   ## Get timeseries interval. Simplify first time after t=0
-  int <- chabaudi_si.df[2,1]
+  int <- 1e-3
   
   ## Define the fitness parameter values
   aval <- -12.69
