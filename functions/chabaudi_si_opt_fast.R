@@ -63,7 +63,7 @@
   # scale_y_continuous(labels = scales::scientific) +
   # theme_bw()                  
 
-chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver = "lsoda", integration = "integrate", dyn = FALSE){
+chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver = "lsoda", integration = "integrate", dyn = FALSE) {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -81,11 +81,13 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   #-------------------------#
   # Define initial condition
   #------------------------#
+  if(immunity == "ni" || immunity == "i"){
   state <- c(R = 8.5*10^6,
              I = 43.85965,
              Ig = 0,
              M = 0,
              G = 0)
+  }
   
   ## Input additional state parameters if Kochin's 
   ## innate immunity model is chosen
@@ -95,7 +97,18 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
                Ig = 0,
                M = 0,
                G = 0,
-               E = 0)}
+               E = 0)} # targeted RBC removal (proportion activated)
+  
+  ## Input additional state parameters for Tsukushi's model
+  if(immunity == "tsukushi"){
+    state <- c(R = 8.5*10^6,
+               I = 43.85965,
+               Ig = 0,
+               M = 0,
+               G = 0,
+               N = 0, # general RBC removal
+               W = 0) # targeted RBC removal
+  }
   
   #-------------------------#
   # Ensure inputs are correct
@@ -105,8 +118,8 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     stop("Conversion rate parameters must match degrees of freedom")
   }
   ## Ensure immunity input is correct
-  if (immunity != "ni" && immunity != "i" && immunity != "kochin") {
-    stop("Immunity must be either 'ni' for no immunity or 'i' for saturating immunity")
+  if (immunity != "ni" && immunity != "i" && immunity != "kochin" && immunity != "tsukushi") {
+    stop("Immunity must be either 'ni', 'i', 'kochin,' or 'tsukushi'")
   }
   ## Ensure cue is correct
   if (!(cue %in% names(state)) && !(cue %in% paste0("d", names(state))) && cue != "t") {
@@ -162,16 +175,14 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     } else if (integration == "trapezoid"){
     integrate_fun <- function(f, lower, upper) {
       if (is.function(f) == FALSE) {
-        stop('f must be a function with one parameter (variable)')
-      }
+        stop('f must be a function with one parameter (variable)')}
       h <- upper - lower
       fxdx <- (h / 2) * (f(lower) + f(upper))
       return(fxdx)}
     } else {
     integrate_fun <- function(f, lower, upper) {
       if (is.function(f) == FALSE) {
-        stop('f must be a function with one parameter (variable)')
-      }
+        stop('f must be a function with one parameter (variable)')}
       h <- (upper - lower) / 2
       x0 <- lower
       x1 <- lower + h
@@ -209,6 +220,15 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
       gamma <- parameters["gamma"] # Maximum removal rate of iRBC
     }
     
+    ## Additional parameters of Tsukushi model
+    if (immunity == "tsukushi") {
+      psin <- parameters["psin"] # activation strength for general RBC removal
+      psiw <- parameters["psiw"] # activation strength for targeted RBC removal
+      phin <- parameters["phin"] # half life for general RBC removal
+      phiw <- parameters["phiw"] # halflife for targeted RBC removal
+      iota <- parameters["iota"] # cue strength (infected iRBC)
+    }
+    
     # rename states for cleaner code
     R <- state["R"]
     I <- state["I"]
@@ -216,6 +236,10 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     M <- state["M"]
     G <- state["G"]
     if (immunity == "kochin") {E <- state["E"]}
+    if (immunity == "tsukushi"){
+      N <- state["N"]
+      W <- state["W"]
+    }
     
     ## Defining Pulse beta function based on current time
     pulseBeta <- pulseBeta_fun(I0, sp, t)
@@ -245,8 +269,8 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     ## convert cue to variable in state or just time
     if(cue == "t"){
       cue_state <- t}
-    else{
-      cue_state <- state[cue]}
+    
+    if(cue != "t"){ cue_state <- state[cue]}
     
     ## Define K, carrying capacity of RBC
     K <- lambda*R1/(lambda-mu*R1)
@@ -269,6 +293,14 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
       if(integration == "integrate"){integrate_val <- integrate_val$value}
       S <- exp(-1*integrate_val)} 
     
+    if(t>alpha && immunity == "tsukushi"){
+      integrand <- function(x) {mu-log(1-N)-log(1-W)}
+      integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
+      if(integration == "integrate"){integrate_val <- integrate_val$value}
+      S <- exp(-1*integrate_val)} 
+    
+    ################################
+    
     if(t<=alpha && immunity == "ni"){
       S <- exp(-mu*t)} 
     
@@ -285,6 +317,12 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
       if(integration == "integrate"){integrate_val <- integrate_val$value}
       S <- exp(-1*integrate_val)}
     
+    if(t<=alpha && immunity == "tsukushi"){
+      integrand <- function(x) {mu-log(1-N)-log(1-W)}
+      integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
+      if(integration == "integrate"){integrate_val <- integrate_val$value}
+      S <- exp(-1*integrate_val)}
+    
     ### Survival of gametocytes. We assume that infected
     ### RBC with gametocyte is not removed by immune response
     if(t<=alphag){
@@ -295,20 +333,30 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
       Sg <- exp(-mu*alphag)}
     
     ## Define the models without lag terms. 
-    dR <- lambda*(1-R/K)-mu*R-p*R*M # change in susceptible RBC
+    if(immunity != "tsukushi"){
+      dR <- lambda*(1-R/K)-mu*R-p*R*M # change in susceptible RBC
+    } 
+    
+    if(immunity == "tsukushi"){ #Tsukushi exclusive ODEs
+      dR <- lambda*(1-R/K)-(mu-log(1-N))*R-p*R*M
+      dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(-log(1-N)-log(1-W))*I
+      dN <- psin*iota*(1-N)-N/phin
+      dW <- psiw*iota*(1-W)-W/phiw
+    }
     
     if(immunity =="kochin"){
       dE <- sigma*I*(1-E)-mue*E # change in innate immune strength
+      dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-gamma*E*I
     }
     
     if(immunity == "ni"){
       dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I # change in infected RBC density
-    } else if(immunity == "i") {
-      dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(a*I)/(b+I) # change in infected RBC density with immunity
-    } else{
-      dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-gamma*E*I #Kochin's innate immune removal
     }
     
+    if(immunity == "i") {
+      dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(a*I)/(b+I) # change in infected RBC density with immunity
+      } 
+
     dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig
     dM_nolag <- -mum*M-p*R*M
     dG_nolag <- -mug*G
@@ -339,6 +387,8 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     if (immunity == "ni" || immunity == "i") {return(list(c(dR, dI, dIg, dM, dG)))}
     
     if (immunity == "kochin") {return(list(c(dR, dI, dIg, dM, dG, dE)))}
+    
+    if (immunity == "tsukushi") {return(list(c(dR, dI, dIg, dM, dG, dN, dW)))}
   }
   
   #-------------------------#
@@ -387,7 +437,8 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     chabaudi_si.df$tau_cum <- tau_cum.ls
     
     ### calculate CR based on cue
-    cr.ls <- cr(chabaudi_si.df[, cue])
+    if(cue != "t"){cr.ls <- cr(chabaudi_si.df[, cue])}
+    if(cue == "t"){cr.ls <- cr(time_range)}
     chabaudi_si.df$cr <- cr.ls
 
     ### processing df for plotting
