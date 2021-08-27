@@ -11,9 +11,9 @@ Antimalarial resistance can occur via classical routes (e.g. efflux pump) or non
     * Configurable code allows each aspect of modelling process (DDE solver, parameter sets, degrees of freedom...) to be altered with minimum manipulation. 
 2. Incorporated option to allow conversion rate to depend on states (etc. density of infected RBC) rather than time. 
 3. Incorporated several modes of innate immunity:
-    * Greischar's model for saturating immunity (targeted infected RBC removal)
-    * Kochin's model for saturating immunity (targeted infected RBC removal + explicit modelling of effector cell population)
-    * Kamiya's model for innate immunity (targeted infected RBC removal, indiscriminant removal of RBC)
+    * Greischar model for saturating immunity (targeted infected RBC removal)
+    * Kochin model for saturating immunity (targeted infected RBC removal + explicit modelling of effector cell population)
+    * Kamiya model for innate immunity (targeted infected RBC removal, indiscriminant removal of RBC)
 
 ## Next steps
 1. Creating configurable models that simulate realistic within-host parasite dynamics and can rapidly derive the optimal conversion rate strategy.
