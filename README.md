@@ -9,7 +9,11 @@ Antimalarial resistance can occur via classical routes (e.g. efflux pump) or non
 1. Streamlined optimization strategy search and improved run time drastically by implementing parallel computing and vectorizing sub-functions.
     * Allows sensitivity analysis to be conducted using plastic conversion rate strategy rather than static strategy.
     * Configurable code allows each aspect of modelling process (DDE solver, parameter sets, degrees of freedom...) to be altered with minimum manipulation. 
-3. Incorporated option to allow conversion rate to depend on states (etc. density of infected RBC) rather than time. 
+2. Incorporated option to allow conversion rate to depend on states (etc. density of infected RBC) rather than time. 
+3. Incorporated several modes of innate immunity:
+    * Greischar's model for saturating immunity (targeted infected RBC removal)
+    * Kochin's model for saturating immunity (targeted infected RBC removal + explicit modelling of effector cell population)
+    * Kamiya's model for innate immunity (targeted infected RBC removal, indiscriminant removal of RBC)
 
 ## Next steps
 1. Creating configurable models that simulate realistic within-host parasite dynamics and can rapidly derive the optimal conversion rate strategy.
@@ -17,10 +21,7 @@ Antimalarial resistance can occur via classical routes (e.g. efflux pump) or non
     * Allowing cues to be based on derivative of states (e.g. change in infected RBC density).
     * Further optimizing sensitivity analysis run time. 
 2. Testing the effects of modelling parameters (e.g. degrees of freedom, cue range) on optimal conversion rate. 
-3. Incorporated several modes of innate immunity:
-    * Greischar's model for saturating immunity (targeted infected RBC removal)
-    * Kochin's model for saturating immunity (targeted infected RBC removal + explicit modelling of effector cell population)
-    * Kamiya's model for innate immunity (targeted infected RBC removal, indiscriminant removal of RBC)
+
 
 ## Currently working on:
 Creating a series of functions for non-age structured single infection and co-infection (without drugs for now) models where conversion rate depends on specific "cues" rather than time. Modelling conversion rate as a plastic trait allows for more realistic infection dynamics. This cue-based approach prevents parasites from "anticipating" drug administration/co-infection and relaxes the assumption that cue correlates with time post-infection (especially useful when we consider that drug adherence rate might be low in certain areas). 
