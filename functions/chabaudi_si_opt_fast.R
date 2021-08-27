@@ -82,8 +82,8 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   # Define initial condition
   #------------------------#
   if(immunity == "ni" || immunity == "i"){
-  state <- c(R = 8.5*10^6,
-             I = 43.85965,
+  state <- c(R = parameters[["R1"]],
+             I = parameters[["I0"]],
              Ig = 0,
              M = 0,
              G = 0)
@@ -92,8 +92,8 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   ## Input additional state parameters if Kochin's 
   ## innate immunity model is chosen
   if(immunity == "kochin"){
-    state <- c(R = 8.5*10^6,
-               I = 43.85965,
+    state <- c(R = parameters[["R1"]],
+               I = parameters[["I0"]],
                Ig = 0,
                M = 0,
                G = 0,
@@ -101,8 +101,8 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   
   ## Input additional state parameters for Tsukushi's model
   if(immunity == "tsukushi"){
-    state <- c(R = 8.5*10^6,
-               I = 43.85965,
+    state <- c(R = parameters[["R1"]],
+               I = parameters[["I0"]],
                Ig = 0,
                M = 0,
                G = 0,
@@ -326,12 +326,29 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     
     ### Survival of gametocytes. We assume that infected
     ### RBC with gametocyte is not removed by immune response
-    if(t<=alphag){
-      Sg <- exp(-mu*t)
-    } 
+    if(immunity != "tsukushi"){
+      if(t<=alphag){
+        Sg <- exp(-mu*t)
+      } 
+      
+      if(t>alphag){
+        Sg <- exp(-mu*alphag)}
+    }
     
-    if(t>alphag){
-      Sg <- exp(-mu*alphag)}
+    if(immunity == "tsukushi"){
+      if(t<=alphag){
+        integrand <- function(x) {mu-log(1-N)}
+        integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
+        if(integration == "integrate"){integrate_val <- integrate_val$value}
+        Sg <- exp(-1*integrate_val)
+      } 
+      
+      if(t>alphag){
+        integrand <- function(x) {mu-log(1-N)}
+        integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alphag, upper = t)
+        if(integration == "integrate"){integrate_val <- integrate_val$value}
+        Sg <- exp(-1*integrate_val)}
+    }
     
     ## Define the models without lag terms. 
     if(immunity != "tsukushi"){
@@ -339,29 +356,38 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     } 
     
     if(immunity == "tsukushi"){ #Tsukushi exclusive ODEs
+      #dR <- lambda*(1-R/K)-mu*R-p*R*M-(mu-log(1-N))*R
       dR <- R1*mu+rho*(R1-R)-(mu-log(1-N))*R-p*R*M
       dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(-log(1-N)-log(1-W))*I
-      dN <- psin*iota*(1-N)-N/phin
-      dW <- psiw*iota*(1-W)-W/phiw
+      dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig-(-log(1-N))*Ig #assume no targeted clearance
+      dN <- psin*(I/iota)*(1-N)-N/phin # assume Ig does not elicit strong immune response. Not included in cue
+      dW <- psiw*(I/iota)*(1-W)-W/phiw
+      dM_nolag <- -mum*M-p*R*M
+      dG_nolag <- -mug*G
     }
     
     if(immunity =="kochin"){
       dE <- sigma*I*(1-E)-mue*E # change in innate immune strength
       dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-gamma*E*I
+      dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig
+      dM_nolag <- -mum*M-p*R*M
+      dG_nolag <- -mug*G
     }
     
     if(immunity == "ni"){
       dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I # change in infected RBC density
+      dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig
+      dM_nolag <- -mum*M-p*R*M
+      dG_nolag <- -mug*G
     }
     
     if(immunity == "i") {
       dI_nolag <- (1-cr(cue_state))*p*R*M-mu*I-(a*I)/(b+I) # change in infected RBC density with immunity
+      dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig
+      dM_nolag <- -mum*M-p*R*M
+      dG_nolag <- -mug*G
       } 
 
-    dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig
-    dM_nolag <- -mum*M-p*R*M
-    dG_nolag <- -mug*G
-    
     ## Track states in initial cohort of infection
     if(t<=alpha){
       dI <- dI_nolag-pulseBeta*S 
@@ -369,8 +395,8 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
     }
     
     if(t<=alphag){
-      dIg <- dIg_nolag ## should have no cells form initial cohort
-      dG <- 0
+      dIg <- dIg_nolag ## no bursting yet!
+      dG <- dG_nolag ## should have no gametocytes before alphag!
     }
     
     ## Track states after delay 
