@@ -1,5 +1,7 @@
 # Single strain infection model with Plasmodium chabaudi
 # By: Avril Wang. Code adapted from Greischar et al., 2016 Predicting optimal transmission investment in malaria parasites
+# the following script is altered to reflect next cycle conversion, where sexual commitment occurs in the previous
+# transmission cycle 
 
 #-------------------------#
 # Getting optimal conversion 
@@ -353,24 +355,32 @@ chabaudi_si_opt_lag <- function(parameters_cr, immunity, parameters, time_range,
     ### Survival of gametocytes. We assume that infected
     ### RBC with gametocyte is not removed by immune response
     if(immunity != "tsukushi"){
-      if(t<=alphag){
-        Sg <- exp(-mu*t)
+      if(t<=alpha){
+        Sg <- 0 # not relevent
       } 
       
-      if(t>alphag){
-        Sg <- exp(-mu*alphag)}
+      if(t>alpha && t<=alpha+alphag){
+        Sg <- exp(-mu*t+mu*alpha)}
+      
+      if(t>alpha+alphag){
+        Sg <- exp(-mu*alphag)
+      }
     }
     
     if(immunity == "tsukushi"){
-      if(t<=alphag){
+      if(t<=alpha){
+        Sg <- 0 # not relevent
+      }
+      
+      if(t>alpha && t<=alpha+alphag){
         #integrand <- function(x) {mu-log(1-N)}
         integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)} 
-        integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
+        integrate_val <- integrate_fun(Vectorize(integrand), lower = alpha, upper = t)
         if(integration == "integrate"){integrate_val <- integrate_val$value}
         Sg <- exp(-1*integrate_val)
       } 
       
-      if(t>alphag){
+      if(t>alpha+alphag){
         #integrand <- function(x) {mu-log(1-N)}
         integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)}
         integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alphag, upper = t)
@@ -380,7 +390,7 @@ chabaudi_si_opt_lag <- function(parameters_cr, immunity, parameters, time_range,
     
     ## Define the models without lag terms. 
     if(immunity != "tsukushi"){
-      dR <- lambda*(1-R/K)-(mu*R)-(p*R*M)-(p*R*Mg) # change in susceptible RBC
+      dR <- lambda*(1-(R/K))-(mu*R)-(p*R*M)-(p*R*Mg) # change in susceptible RBC
     } 
     
     if(immunity == "tsukushi"){ #Tsukushi exclusive ODEs
