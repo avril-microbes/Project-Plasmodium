@@ -9,7 +9,7 @@
 
 par_to_df <- function(mod_opt, cue_range){
   # get parameter values
-  par <- mod_opt$par
+  par <- mod_opt
   
   # get df from length of parameter values
   df <- length(par)-1
