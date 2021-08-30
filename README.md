@@ -15,6 +15,7 @@ Antimalarial resistance can occur via classical routes (e.g. efflux pump) or non
     * Kochin model for saturating immunity (targeted infected RBC removal + explicit modelling of effector cell population)
     * Kamiya model for innate immunity (targeted infected RBC removal, indiscriminant removal of RBC)
 4. Adopted hybrid genetic algorithm (with L-BFGS-B) to identify global optimum conversion rate strategy.
+5. Wrote alternative model where sexual commitment occurs one cycle before, similar to the canonical next cycle conversion observed in *Plasmodium falciparum.*
 
 ## Next steps
 1. Creating configurable models that simulate realistic within-host parasite dynamics and can rapidly derive the optimal conversion rate strategy.
