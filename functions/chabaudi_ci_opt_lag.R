@@ -69,7 +69,18 @@
 # scale_y_continuous(labels = scales::scientific) +
 # theme_bw()                  
 
-chabaudi_ci_opt_lag <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver = "lsoda", integration = "integrate", adaptive = FALSE, dyn = FALSE) {
+chabaudi_ci_opt_lag <- function(parameters_cr,
+                                immunity,
+                                parameters,
+                                time_range,
+                                df,
+                                cue,
+                                cue_range,
+                                solver = "lsoda",
+                                integration = "integrate",
+                                transformation = "exp",
+                                adaptive = FALSE,
+                                dyn = FALSE) {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -89,32 +100,56 @@ chabaudi_ci_opt_lag <- function(parameters_cr, immunity, parameters, time_range,
   # Define initial condition
   #------------------------#
   if(immunity == "ni" || immunity == "i"){
-    state <- c(R = parameters[["R1"]],
-               M = 0,
-               Mg = 0,
-               I = parameters[["I0"]],
-               Ig = 0,
-               G = 0, 
-               A = 0)
+    state1 <- c(R1 = parameters[["R1"]],
+               M1 = 0,
+               Mg1 = 0,
+               I1 = parameters[["I0"]]/2,
+               Ig1 = 0,
+               G1 = 0, 
+               A1 = 0)
+    state2 <- c(R2 = parameters[["R1"]],
+                M2 = 0,
+                Mg2 = 0,
+                I2 = parameters[["I0"]]/2,
+                Ig2 = 0,
+                G2 = 0, 
+                A2 = 0)
   } else if(immunity == "kochin"){
-    state <- c(R = parameters[["R1"]],
-               M = 0,
-               Mg = 0,
-               I = parameters[["I0"]],
-               Ig = 0,
-               G = 0,
-               E = 0,
-               A = 0)
+    state1 <- c(R1 = parameters[["R1"]],
+               M1 = 0,
+               Mg1 = 0,
+               I1 = parameters[["I0"]]/2,
+               Ig1 = 0,
+               G1 = 0,
+               E1 = 0,
+               A1 = 0)
+    state2 <- c(R2 = parameters[["R1"]],
+               M2 = 0,
+               Mg2 = 0,
+               I2 = parameters[["I0"]]/2,
+               Ig2 = 0,
+               G2 = 0,
+               E2 = 0,
+               A2 = 0)
   } else{
-    state <- c(R = parameters[["R1"]],
-               M = 0,
-               Mg = 0,
-               I = parameters[["I0"]],
-               Ig = 0,
-               G = 0,
-               N = 0, # general RBC removal
-               W = 0,
-               A = 0) # targeted RBC removal
+    state1 <- c(R1 = parameters[["R1"]],
+               M1 = 0,
+               Mg1 = 0,
+               I1 = parameters[["I0"]]/2,
+               Ig1 = 0,
+               G1 = 0,
+               N1 = 0, # general RBC removal
+               W1 = 0,
+               A1 = 0) # targeted RBC removal
+    state2 <- c(R2 = parameters[["R1"]],
+               M2 = 0,
+               Mg2 = 0,
+               I2 = parameters[["I0"]]/2,
+               Ig2 = 0,
+               G2 = 0,
+               N2 = 0, # general RBC removal
+               W2 = 0,
+               A2 = 0) # targeted RBC removal
   }
   
   #-------------------------#
@@ -140,7 +175,10 @@ chabaudi_ci_opt_lag <- function(parameters_cr, immunity, parameters, time_range,
   if(integration != "integrate" && integration != "trapezoid" && integration != "simpson"){
     stop("Please enter the correct integration method. Must be 'integrate', trapezoid', or 'simpson'")
   }
-  
+  ## Ensure spline transformation is entered correct
+  if(transformation != "norm" && transformation != "exp" && transformation != "logit"){
+    stop("Transformation must be either 'norm' or 'exp' or 'logit'")
+  }
   
   #-------------------------#
   # Function to describe population 
@@ -169,10 +207,18 @@ chabaudi_ci_opt_lag <- function(parameters_cr, immunity, parameters, time_range,
   dummy_cr.mod$coefficients <- parameters_cr
   
   ## use spline function to predict cr 
-  cr_fit <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
+  if(transformation == "norm"){
+    cr_fit <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
+    cr_fit_2 <- (cr_fit-min(cr_fit))/(max(cr_fit-min(cr_fit)))
+  } else if(transformation == "exp"){
+    cr_fit_2 <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
+  } else{
+    cr_fit <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
+    cr_fit_2 <- 1 / (1 + exp(-cr_fit))
+  }
   
   ## Get spline function where cr ~ cue
-  cr <- splinefun(cbind(cue_range, cr_fit))
+  cr <- splinefun(cbind(cue_range, cr_fit_norm))
   
   #-------------------------#
   # Define integration method. Default to integrate. 

@@ -69,7 +69,18 @@
 # scale_y_continuous(labels = scales::scientific) +
 # theme_bw()                  
 
-chabaudi_si_opt_lag <- function(parameters_cr, immunity, parameters, time_range, df, cue, cue_range, solver = "lsoda", integration = "integrate", adaptive = FALSE, dyn = FALSE) {
+chabaudi_si_opt_lag <- function(parameters_cr,
+                                immunity,
+                                parameters,
+                                time_range,
+                                df,
+                                cue,
+                                cue_range,
+                                solver = "lsoda",
+                                integration = "integrate",
+                                transformation = "exp",
+                                adaptive = FALSE,
+                                dyn = FALSE) {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -140,7 +151,10 @@ chabaudi_si_opt_lag <- function(parameters_cr, immunity, parameters, time_range,
   if(integration != "integrate" && integration != "trapezoid" && integration != "simpson"){
     stop("Please enter the correct integration method. Must be 'integrate', trapezoid', or 'simpson'")
   }
-  
+  ## Ensure spline transformation is entered correct
+  if(transformation != "norm" && transformation != "exp" && transformation != "logit"){
+    stop("Transformation must be either 'norm' or 'exp' or 'logit'")
+  }
   
   #-------------------------#
   # Function to describe population 
@@ -169,10 +183,15 @@ chabaudi_si_opt_lag <- function(parameters_cr, immunity, parameters, time_range,
   dummy_cr.mod$coefficients <- parameters_cr
   
   ## use spline function to predict cr 
-  cr_fit <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
-  
-  ## Normalize to between 0 and 1
-  cr_fit_norm <- (cr_fit-min(cr_fit))/(max(cr_fit-min(cr_fit)))
+  if(transformation == "norm"){
+    cr_fit <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
+    cr_fit_2 <- (cr_fit-min(cr_fit))/(max(cr_fit-min(cr_fit)))
+  } else if(transformation == "exp"){
+    cr_fit_2 <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
+  } else{
+    cr_fit <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
+    cr_fit_2 <- 1 / (1 + exp(-cr_fit))
+  }
   
   ## Get spline function where cr ~ cue
   cr <- splinefun(cbind(cue_range, cr_fit_norm))

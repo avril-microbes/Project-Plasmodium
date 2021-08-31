@@ -7,11 +7,11 @@
   # geom_line(data = df, aes(x = cue_range, y = cr))
 
 
-par_to_df <- function(par, cue_range, transformation = "norm"){
+par_to_df <- function(par, cue_range, transformation = "exp"){
   
   # ensure correct model arguments
-  if(transformation != "norm" && transformation != "exp"){
-    stop("Transformation must be either 'norm' or 'exp'")
+  if(transformation != "norm" && transformation != "exp" && transformation != "logit"){
+    stop("Transformation must be either 'norm' or 'exp' or 'logit'")
   }
   
   # get df from length of parameter values
@@ -35,8 +35,12 @@ par_to_df <- function(par, cue_range, transformation = "norm"){
   if(transformation == "norm"){
   cr_pre <- par[1]+model_part2
   cr <- (cr_pre-min(cr_pre, na.rm = TRUE))/(max(cr_pre, na.rm = TRUE)-min(cr_pre, na.rm = TRUE))
-  } else{
+  } 
+  
+  if(transformation == "exp"){
     cr <- exp(-exp(par[1]+model_part2))
+  } else{
+    cr <- 1/(1+exp(-(par[1]+model_part2)))
   }
   
   # Create dataframe from model
