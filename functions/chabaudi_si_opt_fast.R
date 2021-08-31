@@ -166,10 +166,13 @@ chabaudi_si_opt_fast <- function(parameters_cr, immunity, parameters, time_range
   dummy_cr.mod$coefficients <- parameters_cr
   
   ## use spline function to predict cr 
-  cr_fit <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
+  cr_fit <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
+  
+  ## Normalize to between 0 and 1
+  cr_fit_norm <- (cr_fit-min(cr_fit))/(max(cr_fit-min(cr_fit)))
   
   ## Get spline function where cr ~ cue
-  cr <- splinefun(cbind(cue_range, cr_fit))
+  cr <- splinefun(cbind(cue_range, cr_fit_norm))
   
   #-------------------------#
   # Define integration method. Default to integrate. 

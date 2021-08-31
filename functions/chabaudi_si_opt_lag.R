@@ -1,7 +1,11 @@
 # Single strain infection model with Plasmodium chabaudi
 # By: Avril Wang. Code adapted from Greischar et al., 2016 Predicting optimal transmission investment in malaria parasites
 # the following script is altered to reflect next cycle conversion, where sexual commitment occurs in the previous
-# transmission cycle 
+# transmission cycle. Upon receiving a cue, infected RBC does not decide, on site, whether to produce merozoite
+# or gametocyte. Instead, all iRBC will produce either sexually committed merozoite (Mg) or asexual merozoite after
+# 1 day of development time. Subsequent RBC that is infected by Mg or M then becomes sexually committed iRBC (Ig) or
+# asexual iRBC (I). I assumed that all injected iRBC are asexual, hence, the earliest date at which gametocytes
+# are produced is day 3.
 
 #-------------------------#
 # Getting optimal conversion 
@@ -165,10 +169,13 @@ chabaudi_si_opt_lag <- function(parameters_cr, immunity, parameters, time_range,
   dummy_cr.mod$coefficients <- parameters_cr
   
   ## use spline function to predict cr 
-  cr_fit <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
+  cr_fit <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
+  
+  ## Normalize to between 0 and 1
+  cr_fit_norm <- (cr_fit-min(cr_fit))/(max(cr_fit-min(cr_fit)))
   
   ## Get spline function where cr ~ cue
-  cr <- splinefun(cbind(cue_range, cr_fit))
+  cr <- splinefun(cbind(cue_range, cr_fit_norm))
   
   #-------------------------#
   # Define integration method. Default to integrate. 
