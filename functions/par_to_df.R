@@ -7,9 +7,12 @@
   # geom_line(data = df, aes(x = cue_range, y = cr))
 
 
-par_to_df <- function(mod_opt, cue_range){
-  # get parameter values
-  par <- mod_opt
+par_to_df <- function(par, cue_range, transformation = "norm"){
+  
+  # ensure correct model arguments
+  if(transformation != "norm" && transformation != "exp"){
+    stop("Transformation must be either 'norm' or 'exp'")
+  }
   
   # get df from length of parameter values
   df <- length(par)-1
@@ -26,7 +29,15 @@ par_to_df <- function(mod_opt, cue_range){
   model_part2 <- rowSums(do.call(cbind, model_part))
   
   ## need to add par[1] given it is not included. Double exp to limit conversion rate between 0 and 1
-  cr <- exp(-exp(par[1]+model_part2))
+  #cr <- exp(-exp(par[1]+model_part2))
+  
+  # if transformation is specified to be normalization, perform normalization
+  if(transformation == "norm"){
+  cr_pre <- par[1]+model_part2
+  cr <- (cr_pre-min(cr_pre, na.rm = TRUE))/(max(cr_pre, na.rm = TRUE)-min(cr_pre, na.rm = TRUE))
+  } else{
+    cr <- exp(-exp(par[1]+model_part2))
+  }
   
   # Create dataframe from model
   cr.df <- data.frame(cue_range, cr)
