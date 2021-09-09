@@ -1,0 +1,103 @@
+---
+title: "2021-09-09_report2"
+output: html_document
+---
+
+# Loading libraries
+```{r}
+library(deSolve)
+library(optimParallel)
+library(ggplot2)
+library(magrittr)
+library(ggpubr)
+```
+
+# loading functions
+```{r}
+setwd("/Users/avrilwang/Desktop/Project-Plasmodium/functions")
+source("par_to_df.R")
+source("chabaudi_si_opt_fast.R")
+```
+
+#--------------------#
+# Run time-based cues with
+# different innate immunity models
+#--------------------#
+# define time range
+```{r}
+time_range <- seq(0, 20, by = 1e-3)
+```
+
+# Kochins
+```{r}
+parameters_kochin <- c(R1 = 8.89*10^6,
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 4*10^-6,
+                alpha = 1, 
+                alphag = 2, 
+                beta = 10, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                sigma = 1.17*10^-8,
+                mue = 0.3,
+                gamma = 133)
+
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_t_20.opt_kochin <- optimParallel(par = c(13.46,-27.66,-3.62,-20.24),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "kochin",
+                      parameters = parameters_kochin,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range,
+                      solver = "vode",
+                      integration = "trapezoid")
+stopCluster(cl)
+```
+
+# Kamiya
+```{r}
+parameters_kamiya <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_t_20.opt_kochin <- optimParallel(par = c(13.46,-27.66,-3.62,-20.24),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "kochin",
+                      parameters = parameters_kochin,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range,
+                      solver = "vode",
+                      integration = "trapezoid")
+stopCluster(cl)
+```
+
