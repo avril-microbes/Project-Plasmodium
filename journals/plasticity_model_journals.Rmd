@@ -14,6 +14,7 @@ library(tidyr)
 library(magrittr)
 library(Rcpp)
 library(microbenchmark)
+library(GA)
 ```
 
 # Load functions
@@ -1370,7 +1371,7 @@ ggplot() +
 ```
 
 ## Need to add in replenishment rate that increases with deviation
-## testing with new parameter set. Changed dR dt and added in Rho. Much better. Seems to simulate actual infection dynamics captured in experiments. The conversion rate is also much lower. 
+## testing with new parameter set. Changed dR dt and added in Rho. Much better. Seems to simulate actual infection dynamics captured in experiments. The conversion rate is also much lower. Still, I am not sure the value of phin, given the weird y axis in their plots.
 ```{r}
 setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
 source("chabaudi_si_opt_fast.R")
@@ -1483,11 +1484,1153 @@ ch_si_i_I_20.opt_tsukushi_3_phin2 <- optimParallel(par = rep(0.5, 4),# new param
 
 stopCluster(cl) 
 end.time <- Sys.time()
+end.time-start.time #19.7743 mins
+ch_si_i_I_20.opt_tsukushi_3_phin2$par #1.479769 -305.409474  -28.886532   -1.489173
+ch_si_i_I_20.opt_tsukushi_3_phin2$value #-13.54399
+
+ch_si_i_I_20_tsukushi_3_phin2.cr <- par_to_df(ch_si_i_I_20.opt_tsukushi_3_phin2, cue_range)
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20_tsukushi_3_phin2.cr, aes(x = cue_range, y = cr)) +
+  theme_bw()
+
+# plotting infection dynamics
+ch_si_i_I_20.dyn_tsukushi_3_phin2 <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_3_phin2$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi3,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "I",
+                                         cue_range = cue_range,
+                                         solver = "lsoda",
+                                         dyn = TRUE,
+  integration = "trapezoid")
+
+# infection dynamics
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_3_phin2, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+## I think the positive larger phin is the correct one
+## See whether shortening cue_range does anything
+```{r}
+cue_range2 <- seq(0, 2000000, by = 1000) 
+
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_3_short <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi2,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range2,
+                      solver = "vode",
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+
+end.time-start.time #9.981977 mins
+ch_si_i_I_20.opt_tsukushi_3_short$par #.616375 -14.202095 112.612226   7.231653
+ch_si_i_I_20.opt_tsukushi_3_short$value #-7.857734. higher but different solver
+
+#plot cr vs cue
+ch_si_i_I_20_tsukushi_3_short.cr <- par_to_df(ch_si_i_I_20.opt_tsukushi_3_short, cue_range2)
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20_tsukushi_3_short.cr, aes(x = cue_range, y = cr)) +
+  theme_bw()
+
+## get infection dynamics
+ch_si_i_I_20.dyn_tsukushi_3_short <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_3_short$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi2,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "I",
+                                         cue_range = cue_range2,
+                                         solver = "vode",
+                                         dyn = TRUE,
+  integration = "trapezoid")
+
+# infection dynamics
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_3_short, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+## even shorter cue_range. Same lol
+```{r}
+cue_range3 <- seq(0, 1000000, by = 1000) 
+
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_3_short2 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi2,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range3,
+                      solver = "vode",
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+
+end.time-start.time #11.3569 mins
+ch_si_i_I_20.opt_tsukushi_3_short2$par #1.650313 -7.958943 27.811791  3.490711
+ch_si_i_I_20.opt_tsukushi_3_short2$value #-7.882489. higher
+
+#plot cr vs cue
+ch_si_i_I_20_tsukushi_3_short2.cr <- par_to_df(ch_si_i_I_20.opt_tsukushi_3_short2, cue_range3)
+
+# very similar
+ggplot() +
+  geom_line(data = ch_si_i_I_20_tsukushi_3_short2.cr, aes(x = cue_range, y = cr), color = "blue") +
+  geom_line(data = ch_si_i_I_20_tsukushi_3_short.cr, aes(x = cue_range, y = cr), color = "red") +
+  theme_bw()
+
+## get infection dynamics
+ch_si_i_I_20.dyn_tsukushi_3_short2 <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_3_short2$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi2,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "I",
+                                         cue_range = cue_range3,
+                                         solver = "vode",
+                                         dyn = TRUE,
+  integration = "trapezoid")
+
+# infection dynamics
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_3_short2, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+## higher df
+```{r}
+cue_range2 <- seq(0, 2000000, by = 1000) 
+
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_4_short <- optimParallel(par = rep(0.5, 5),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi2,
+                      time_range = time_range,
+                      df = 4,
+                      cue = "I",
+                      cue_range = cue_range2,
+                      solver = "lsoda",
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+
+end.time-start.time #36.09026 mins
+ch_si_i_I_20.opt_tsukushi_4_short$par #1.643224 -7.919851 60.709204  3.469604  0.500000
+ch_si_i_I_20.opt_tsukushi_4_short$value #-7.870702
+
+#plot cr vs cue
+ch_si_i_I_20_tsukushi_4_short.cr <- par_to_df(ch_si_i_I_20.opt_tsukushi_4_short, cue_range2)
+
+# slightly different but not really
+ggplot() +
+  geom_line(data = ch_si_i_I_20_tsukushi_4_short.cr, aes(x = cue_range, y = cr)) +
+  geom_line(data = ch_si_i_I_20_tsukushi_3_short.cr, aes(x = cue_range, y = cr), color = "blue") +
+  theme_bw()
+
+## get infection dynamics
+ch_si_i_I_20.dyn_tsukushi_4_short <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_4_short$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi2,
+                                         time_range = time_range,
+                                         df = 4,
+                                         cue = "I",
+                                         cue_range = cue_range2,
+                                         solver = "lsoda",
+                                         dyn = TRUE,
+  integration = "trapezoid")
+
+# infection dynamics. Very similar. seems like the big impact is cue range rather than degrees of freedom
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_4_short, aes(x = time, y = value), color = "black") +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_3_short, aes(x = time, y = value), color = "blue") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+
 
 ```
 
+## really short cue range
+```{r}
+cue_range4 <- seq(0, 500000, by = 100) 
+
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_3_short3 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi2,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range4,
+                      solver = "lsoda",
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+end.time-start.time #43.35133 mins
+ch_si_i_I_20.opt_tsukushi_3_short3$par #1.690811 -4.387426  4.644109  1.748226
+ch_si_i_I_20.opt_tsukushi_3_short3$value #-7.91632 higher
+
+#plot cr vs cue
+ch_si_i_I_20_tsukushi_3_short3.cr <- par_to_df(ch_si_i_I_20.opt_tsukushi_3_short3, cue_range4)
+
+# same lol
+ggplot() +
+  geom_line(data = ch_si_i_I_20_tsukushi_3_short3.cr, aes(x = cue_range, y = cr)) +
+  geom_line(data = ch_si_i_I_20_tsukushi_3_short2.cr, aes(x = cue_range, y = cr), color = "blue") +
+  theme_bw()
+
+# infection dynamics
+ch_si_i_I_20.dyn_tsukushi_3_short3 <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_3_short3$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi2,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "I",
+                                         cue_range = cue_range4,
+                                         solver = "lsoda",
+                                         dyn = TRUE,
+  integration = "trapezoid")
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_3_short3, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# getting better parameters for tsukushi's model
+```{r}
+library("rstan")
+library("lattice")
+library("gridExtra")
+
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/tsukushi_2020")
+load("output.rda")
+source("model_input.R")
+extracted_output=rstan::extract(output)
+
+reaction_norms=array(NA,dim=c(n_doses,7,length(extracted_output$dose_slope[,1])))
+
+for(i in 1:7){
+  reaction_norms[i,1,]=extracted_output$rho+       extracted_output$dose_slope[,1]*dose_slope_id[i];
+  reaction_norms[i,2,]=extracted_output$burst+     extracted_output$dose_slope[,2]*dose_slope_id[i];
+  reaction_norms[i,3,]=extracted_output$iota_N1+   extracted_output$dose_slope[,3]*dose_slope_id[i];
+  reaction_norms[i,4,]=extracted_output$iota_N2+   extracted_output$dose_slope[,4]*dose_slope_id[i];
+  reaction_norms[i,5,]=extracted_output$phi_N1+    extracted_output$dose_slope[,5]*dose_slope_id[i];
+  reaction_norms[i,6,]=extracted_output$phi_N2+    extracted_output$dose_slope[,6]*dose_slope_id[i];
+}
+
+reaction_norms_upper=array(NA,dim=c(n_doses,7))
+reaction_norms_lower=array(NA,dim=c(n_doses,7))
+reaction_norms_median=array(NA,dim=c(n_doses,7))
+
+for(i in 1:7){
+  for(v in 1:7){
+    reaction_norms_upper[i,v] = quantile(reaction_norms[i,v,],0.975,na.rm = T)
+    reaction_norms_lower[i,v] = quantile(reaction_norms[i,v,],0.025,na.rm = T)
+    reaction_norms_median[i,v] = median(reaction_norms[i,v,],na.rm = T)
+  }
+}
+ # v = 3 = activations strength general, v = 5 = half lifegeneral, v =1 = erythropoiesis, v = 2 burst size, v4 = activation strength targeted, v6 = half life targeted
+
+plot(seq(2,8, by = 1), reaction_norms_median[,3])
+reaction_norms_median[3,3] ## general RBC activation strength = 2.81495
+exp(reaction_norms_median[3,3])  #16.69234
+
+plot(seq(2,8, by = 1), reaction_norms_median[,4])
+reaction_norms_median[3,4] ## targeted activaion strength = -0.1705766
+exp(reaction_norms_median[3,4]) #0.8431785
+
+plot(seq(2,8, by = 1), reaction_norms_median[,5])
+reaction_norms_median[3,5] ## general half life = -3.346541
+exp(reaction_norms_median[3,5]) #0.03520591
+
+plot(seq(2,8, by = 1), reaction_norms_median[,6])
+reaction_norms_median[3,6] ## targeted half life 6.311448
+exp(reaction_norms_median[3,6]) ##550.842
+
+plot(seq(2,8, by = 1), reaction_norms_median[,1])
+reaction_norms_median[3,1] ## 0.0496112 for erythropoesis
+exp(reaction_norms_median[3,1])*0.25 #0.2627156
+
+plot(seq(2,8, by = 1), reaction_norms_median[,2])
+reaction_norms_median[3,2] ##-0.2016985
+exp(reaction_norms_median[3,2])*7 #5.721389
+```
+
+## ok update model with new parameters/ Also corrected cue formula
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_fast.R")
+
+# updated and accurate parameters
+parameters_tsukushi4 <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, # approximate
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6), # please surround with bracket. Or else R does wrong calculation
+                rho = 0.2627156)
+
+# start with whole range
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_updated <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi4,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range,
+                      solver = "vode",
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+
+ch_si_i_I_20.dyn_tsukushi_updated <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_updated$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi4,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "I",
+                                         cue_range = cue_range,
+                                         solver = "vode",
+                                         dyn = TRUE,
+  integration = "trapezoid")
 
 
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
 
+
+```
+
+## trying 10^5 parameters
+```{r}
+parameters_tsukushi5 <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = exp(reaction_norms_median[4,2])*7, # approximate
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = exp(reaction_norms_median[4,3]),
+                psiw = exp(reaction_norms_median[4,4]),
+                phin = exp(reaction_norms_median[4,5]), 
+                phiw = exp(reaction_norms_median[4,6]),
+                iota = 2.18*(10^6), # please surround with bracket. Or else R does wrong calculation
+                rho = exp(reaction_norms_median[4,1])*0.25)
+
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_fast.R")
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_updated2 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi5,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range,
+                      solver = "vode",
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+
+ch_si_i_I_20.dyn_tsukushi_updated2 <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_updated2$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi5,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "I",
+                                         cue_range = cue_range,
+                                         solver = "vode",
+                                         dyn = TRUE,
+  integration = "trapezoid")
+
+ch_si_i_I_20.dyn_tsukushi_updated2 %>% dplyr::filter(variable == "R")
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated2, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+
+ch_si_i_I_20.dyn_tsukushi_updated %>% 
+  dplyr::filter(variable=="I") %>% 
+  dplyr::arrange(desc(value))
+```
+
+## changed RBC replishment to original... nope
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_fast.R")
+# start with whole range
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_updated3 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi4,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range,
+                      solver = "vode",
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+
+ch_si_i_I_20.dyn_tsukushi_updated3 <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_updated3$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi4,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "I",
+                                         cue_range = cue_range,
+                                         solver = "vode",
+                                         dyn = TRUE,
+  integration = "trapezoid")
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated3, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# Fixed the equations of tsukushi's model in include sexual iRBC removal by indiscriminant RBC removal (forgot that)
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_fast.R")
+
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_updated4 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi4,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range,
+                      solver = "vode",
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+end.time-start.time #6.828209 mins
+ch_si_i_I_20.opt_tsukushi_updated4$par #1.6926425 -288.1998249   -3.9605169    0.2630436
+ch_si_i_I_20.opt_tsukushi_updated4$value #-11.62228
+
+ch_si_i_I_20.dyn_tsukushi_updated4 <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_updated4$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi4,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "I",
+                                         cue_range = cue_range,
+                                         solver = "vode",
+                                         dyn = TRUE,
+  integration = "trapezoid")
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated4, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+chabaudi_si_opt_fast
+```
+
+## try out if gametocyte is targeted by immune system
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_fast.R")
+
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_updated5 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi4,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range,
+                      solver = "vode",
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+end.time-start.time
+
+ch_si_i_I_20.opt_tsukushi_updated5$par #1.940619 -585.327007   -1.682000   -1.762249
+ch_si_i_I_20.opt_tsukushi_updated5$value #-7.964332
+
+ch_si_i_I_20_tsukushi_updated5.cr <- par_to_df(ch_si_i_I_20.opt_tsukushi_updated5, cue_range)
+
+ggplot(ch_si_i_I_20_tsukushi_updated5.cr) +
+  geom_line(aes(x = cue_range, y=cr)) +
+  xlim(0, 500000)
+
+ch_si_i_I_20.dyn_tsukushi_updated5 <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_updated5$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi4,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "I",
+                                         cue_range = cue_range,
+                                         solver = "vode",
+                                         dyn = TRUE,
+  integration = "trapezoid")
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated5, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+## shorter cue range
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_fast.R")
+
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_updated6 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi4,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = seq(0, 2.18*10^6, by = 1000),
+                      solver = "vode",
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+end.time-start.time
+
+ch_si_i_I_20.opt_tsukushi_updated6$par #2.1147080 -70.3984268 -13.0573976  -0.9477162
+ch_si_i_I_20.opt_tsukushi_updated6$value #-7.964732
+
+ch_si_i_I_20_tsukushi_updated6.cr <- par_to_df(ch_si_i_I_20.opt_tsukushi_updated6, seq(0, 2.18*10^6, by = 1000))
+
+ggplot(ch_si_i_I_20_tsukushi_updated6.cr) +
+  geom_line(aes(x = cue_range, y=cr)) +
+  xlim(0, 500000)
+
+ch_si_i_I_20.dyn_tsukushi_updated6 <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_updated6$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi4,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "I",
+                                         cue_range = seq(0, 2.18*10^6, by = 1000),
+                                         solver = "vode",
+                                         dyn = TRUE,
+  integration = "trapezoid")
+
+I_total <- ch_si_i_I_20.dyn_tsukushi_updated6 %>% 
+  dplyr::filter(variable == "I" | variable == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(I_total = sum(value))
+
+I_totaldf <- data.frame(variable = rep("I_total", nrow(I_total)), time = I_total$time, value = I_total$I_total)
+
+
+ch_si_i_I_20.dyn_tsukushi_updated6_2 <- rbind(ch_si_i_I_20.dyn_tsukushi_updated6, I_totaldf)
+
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated6_2, aes(x = time, y = log10(value)), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  ylim(0,7)+
+  xlim(0,20)+
+  theme_bw()
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated6_2, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+## trouble shooting tsukushi model. Why is I so low?? Here, conversion rate is higher to produce gametocyte but not produce too much infected RBC to control for immune response. Higher iRBC (lower conversion rate) leads to rapid innate immune response which decimate parasite population. 
+### Looking at parameter values
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_fast.R")
+# construct test cr so that we have a consistently low cr of 0.05
+dummy_y.vals <- rep(1.1, length(cue_range)) 
+dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
+
+dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3, df = 3))
+  
+dummy_cr.mod$coefficients #15e-02, 6.288615e-15, 3.149452e-19, 3.144150e-15
+  
+test.cr <- ch_si_i_I_20.opt_tsukushi_updated6
+test.cr$par <- dummy_cr.mod$coefficients
+test.crdf <- par_to_df(test.cr, cue_range)
+plot(test.crdf$cue_range, test.crdf$cr)
+
+# run test simulation with constant conversion rate. 
+test_par1 <- chabaudi_si_opt_fast(
+  parameters_cr = dummy_cr.mod$coefficients,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi4,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = cue_range,
+  solver = "vode",
+  dyn = TRUE,
+  integration = "trapezoid")
+
+# this looks good. I vs Ig looks normal and timing of infections looks normal. Although very low fitness 
+ggplot() +
+  geom_line(data = test_par1, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+
+# trying when sexually commited iRBC are only half as likely going to be removed targetetd
+test_par2 <- chabaudi_si_opt_fast(
+  parameters_cr = dummy_cr.mod$coefficients,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi4,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = cue_range,
+  solver = "vode",
+  dyn = TRUE,
+  integration = "trapezoid")
+
+# much higher fitness, no shit. 
+ggplot() +
+  #geom_line(data = test_par1, aes(x = time, y = value), color = "black") +
+  geom_line(data = test_par2, aes(x = time, y = value), color = "blue") +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated6_2, aes(x = time, y = value), color = "red") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+## trying optimization on new model
+```{r}
+## tring R based cue system. vode vs lsoda makes little difference
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_updated7 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi4,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "R",
+                      cue_range = seq(0, 8.89*10^6, by = 1000),
+                      solver = "lsoda",
+                      integration = "trapezoid")
+
+stopCluster(cl) 
+end.time <- Sys.time()
+end.time-start.time
+ch_si_i_I_20.opt_tsukushi_updated7$par #9.164356  33.327181 -19.870258  -8.444712
+ch_si_i_I_20.opt_tsukushi_updated7$value #-9.199341
+
+ch_si_i_I_20_tsukushi_updated7_cr <- par_to_df(ch_si_i_I_20.opt_tsukushi_updated7, seq(0, 8.89*10^6, by = 1000))
+ggplot() +
+  geom_line(data =ch_si_i_I_20_tsukushi_updated7_cr, aes(x = cue_range, y = cr))
+
+ch_si_i_I_20.dyn_tsukushi_updated7 <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_updated7$par,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi4,
+  time_range = time_range,
+  df = 3,
+  cue = "R",
+  cue_range = seq(0, 8.89*10^6, by = 1000),
+  solver = "vode",
+  dyn = TRUE,
+  integration = "trapezoid")
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated7, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# trying incorporating adaptive immunity with Tsukushi model
+```{r}
+# for 10^5 
+parameters_tsukushi6 <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = exp(reaction_norms_median[4,2])*7, # approximate
+                mum = 48, 
+                mug = 4, 
+                I0 = 438.5965, # 10 times the starting volume
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = exp(reaction_norms_median[4,3]),
+                psiw = exp(reaction_norms_median[4,4]),
+                phin = exp(reaction_norms_median[4,5]), 
+                phiw = exp(reaction_norms_median[4,6]),
+                iota = 2.18*(10^6), # please surround with bracket. Or else R does wrong calculation
+                rho = exp(reaction_norms_median[4,1])*0.25,
+                psia = 1,
+                epsilon = 2.5,
+                phia = exp(reaction_norms_median[4,5]), # put long half life here
+                theta = 7)
+
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_fast.R")
+
+## did not converge with vode or lsoda. Might need to change integration method. Also starting point changes shit. OMG
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_updated8 <- optimParallel(par = dummy_cr.mod$coefficients,# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi6,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range,
+                      solver = "lsoda",
+                      integration = "trapezoid",
+                      adaptive = TRUE)
+
+stopCluster(cl) 
+end.time <- Sys.time()
+
+## plotting infection dynamics
+ch_si_i_I_20.dyn_tsukushi_updated8 <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_updated8$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi6,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "t",
+                                         cue_range = time_range,
+                                         solver = "vode",
+                                         dyn = TRUE,
+  integration = "trapezoid",
+  adaptive = TRUE)
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated8, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# trying vode with better integration
+## also increased half life of adaptive 
+```{r}
+parameters_tsukushi7 <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = exp(reaction_norms_median[4,2])*7, # approximate
+                mum = 48, 
+                mug = 4, 
+                I0 = 438.5965, # 10 times the starting volume
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = exp(reaction_norms_median[4,3]),
+                psiw = exp(reaction_norms_median[4,4]),
+                phin = exp(reaction_norms_median[4,5]), 
+                phiw = exp(reaction_norms_median[4,6]),
+                iota = 2.18*(10^6), # please surround with bracket. Or else R does wrong calculation
+                rho = exp(reaction_norms_median[4,1])*0.25,
+                psia = 1,
+                epsilon = 2.5,
+                phia = exp(reaction_norms_median[4,6]), # put long half life here
+                theta = 7)
+
+## did not converge with vode or lsoda. Might need to change integration method. Also starting point changes shit. OMG
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_I_20.opt_tsukushi_updated9 <- optimParallel(par = dummy_cr.mod$coefficients,# paramter search space gives us all 0.05 cr
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi7,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = cue_range5, # max 2.18*10^6
+                      solver = "vode",
+                      integration = "simpson", # changed to simpson
+                      adaptive = TRUE)
+
+stopCluster(cl) 
+end.time <- Sys.time()
+ch_si_i_I_20.opt_tsukushi_updated9$value #-6.821705. Not converged!
+ch_si_i_I_20.opt_tsukushi_updated9$par #1.100000e+00, 6.282725e-17, 3.146502e-21,  3.141205e-17 
+
+ch_si_i_I_20.dyn_tsukushi_updated9 <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_i_I_20.opt_tsukushi_updated9$par,
+                                         immunity = "tsukushi",
+                                         parameters = parameters_tsukushi6,
+                                         time_range = time_range,
+                                         df = 3,
+                                         cue = "I",
+                                         cue_range = cue_range5,
+                                         solver = "vode",
+                                         dyn = TRUE,
+  integration = "simpson",
+  adaptive = TRUE)
+
+ggplot() +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated9, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# trying hybrid genetic algorithm
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_fast.R")
+
+# first test with no adaptive immune. Stuck mutation rate of 0.1
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+
+ch_si_ts_I_20.ga <- ga(type = "real-valued", 
+         fitness =  function(parameters_cr)
+           chabaudi_si_opt_fast(
+           parameters_cr, 
+           immunity = "tsukushi",
+           parameters = parameters_tsukushi6,
+           time_range = time_range,
+           df = 3,
+           cue = "I",
+           cue_range = cue_range5,
+           solver = "vode",
+           integration = "simpson"),
+         lower = rep(-500,4), 
+         upper = rep(500,4), 
+         popSize = 100, 
+         maxiter = 200, 
+         run = 30,
+         pmutation = 0.3, # higher given local minimum stuck
+         parallel = TRUE,
+         seed = 137,
+         keepBest = TRUE)
+stopCluster(cl)
+end.time <- Sys.time()
+end.time-start.time # 4.05263 hours
+
+
+ch_si_ts_I_20.ga@solution #16.9642 -492.382 -403.6787 -274.0575
+
+ch_si_ts_I_20_ga.cr <- par_to_df(ch_si_ts_I_20.ga@solution, cue_range5)
+
+ggplot() +
+  geom_line(data=ch_si_ts_I_20_ga.cr, aes(x = cue_range, y = cr)) +
+  xlim(0,50000)+
+  theme_bw()
+
+ch_si_ts_I_20_ga.dy <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_ts_I_20.ga@solution,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi6,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = cue_range5,
+  solver = "vode",
+  dyn = TRUE,
+  integration = "simpson")
+
+I_total <- ch_si_ts_I_20_ga.dy %>% 
+  dplyr::filter(variable == "I" | variable == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(I_total = sum(value))
+
+I_totaldf <- data.frame(variable = rep("I_total", nrow(I_total)), time = I_total$time, value = I_total$I_total)
+
+
+ch_si_ts_I_20_ga.dy_2 <- rbind(ch_si_ts_I_20_ga.dy, I_totaldf)
+
+ggplot() +
+  geom_line(data = ch_si_ts_I_20_ga.dy_2, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  geom_line(data = ch_si_i_I_20.dyn_tsukushi_updated7, aes(x = time, y = value), color = "blue") +
+  theme_bw()
+
+parameters_tsukushi4
+```
+
+# trying out new lags function
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("chabaudi_si_opt_lag.R")
+source("chabaudi_si_opt_fast.R")
+
+
+# very different!
+test <- sample(-100:100,4)
+
+# with 10^4 parameters with short 0cue range. 0.05 constant investment rate
+lag_test1.dyn <- chabaudi_si_opt_lag(
+  parameters_cr = ch_si_ts_I_20.ga@solution,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi4,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = cue_range5,
+  solver = "vode",
+  dyn = TRUE,
+  integration = "trapezoid")
+
+# repeat same with original model
+fast_test1.dyn <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_ts_I_20.ga@solution,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi4,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = cue_range5,
+  solver = "vode",
+  dyn = TRUE,
+  integration = "trapezoid")
+
+# same conversion rate... lagged model produce very different results???
+ggplot() +
+  geom_line(data = lag_test1.dyn, aes(x = time, y = value), color = "red") +
+  geom_line(data = fast_test1.dyn, aes(x = time, y = value), color = "blue") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# optimization
+```{r}
+# run optimization. cannot find convergence
+## by R
+R_range <- seq(0,8.89*10^6,by = 1000)
+
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_test1.opt <- optimParallel(par = dummy_cr.mod$coefficients,# paramter search space gives us all 0.05 cr
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi4,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "R",
+                      cue_range = R_range, 
+                      solver = "vode",
+                      integration = "simpson")
+stopCluster(cl)
+end.time <- Sys.time()
+lag_test1.opt$par # 9.120678,33.836034,-17.536676,-9.024782 
+lag_test1.opt$value #7.588328
+
+# get infection dynamics
+lag_test1.optdyn <- chabaudi_si_opt_lag(
+  parameters_cr = lag_test1.opt$par,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi4,
+  time_range = time_range,
+  df = 3,
+  cue = "R",
+  cue_range = R_range,
+  solver = "vode",
+  dyn = TRUE,
+  integration = "simpson")
+
+# convesion
+lag_test1.cr <- par_to_df(lag_test1.opt$par, R_range)
+
+ggplot()+
+  geom_line(data = lag_test1.cr, aes(x = cue_range, y = cr)) +
+  theme_bw()
+
+# plot
+ggplot() +
+  #geom_line(data = lag_test1.dyn, aes(x = time, y = value), color = "red") +
+  #geom_line(data = fast_test1.dyn, aes(x = time, y = value), color = "blue") +
+  geom_line(data = lag_test1.optdyn, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+
+parameters_tsukushi4
+```
+
+# testing with ga
+```{r}
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_test1.ga <- ga(type = "real-valued", 
+         fitness =  function(parameters_cr)
+           chabaudi_si_opt_lag(
+           parameters_cr, 
+           immunity = "tsukushi",
+           parameters = parameters_tsukushi4,
+           time_range = time_range,
+           df = 3,
+           cue = "I",
+           cue_range = cue_range5,
+           solver = "vode",
+           integration = "simpson"),
+         lower = rep(-500,4), 
+         upper = rep(500,4), 
+         popSize = 100, 
+         maxiter = 200, 
+         run = 30,
+         pmutation = 0.3, # higher given local minimum stuck
+         parallel = TRUE,
+         seed = 137,
+         keepBest = TRUE)
+stopCluster(cl)
+end.time <- Sys.time()
+end.time-start.time #1.353508 hours
+lag_test1.ga@solution #0.2744434 -28.84773 495.4096 153.2123
+lag_test1.ga@fitnessValue #7.323752
+
+lag_test1.gacr <- par_to_df(lag_test1.ga@solution, cue_range5)
+ggplot() +
+  geom_line(data = lag_test1.gacr, aes(x = cue_range, y = cr)) +
+  theme_bw()
+
+
+lag_test1.gadyn <- chabaudi_si_opt_lag(
+  parameters_cr = lag_test1.ga@solution,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi4,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = cue_range5,
+  solver = "vode",
+  dyn = TRUE,
+  integration = "simpson")
+
+ggplot() +
+  geom_line(data = lag_test1.optdyn, aes(x = time, y = value), color = "red") +
+  geom_line(data = lag_test1.gadyn, aes(x = time, y = value), color = "black") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# finding the appropriate search space
+Redefining spline transformation to normalization so that we can better interpret coefficients. Testing out appropraite search spaces. It seems that beyond -100:100, additional increase in coefficients have little effect on spline shape. honestly, even at 50, very little difference. But keep at 100 to play safe.
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("par_to_df.R") 
+
+# function to generate different parameter combinations
+test_par <- function(position, mutation_value){
+  par_ls <- rep(list(rep(1,4)), length(mutation_value))
+  for(i in 1:length(mutation_value)){
+    par_ls[[i]][position] <- mutation_value[i]
+  }
+  return(par_ls)
+}
+
+# no difference in position one. Huge effect in position 2 (cap at 100), 3 (100), 4 (100)
+par_results <- test_par(2,c(5,100,500,-5,-100,-500))
+
+test0 <- par_to_df(rep(1,4), time_range)
+test <- par_to_df(par_results[[1]], time_range)
+test1 <- par_to_df(par_results[[2]], time_range)
+test2 <- par_to_df(par_results[[3]], time_range)
+test3 <- par_to_df(par_results[[4]], time_range)
+test4 <- par_to_df(par_results[[5]], time_range)
+test5 <- par_to_df(par_results[[6]], time_range)
+
+ggplot() +
+  geom_line(data = test0, aes(x = cue_range, y = cr)) +
+  geom_line(data = test, aes(x = cue_range, y = cr), color = "red") + #5
+  geom_line(data = test1, aes(x = cue_range, y = cr), color = "orange") + #100
+  geom_line(data = test2, aes(x = cue_range, y = cr), color = "yellow") + #500
+  geom_line(data = test3, aes(x = cue_range, y = cr), color = "navy") + #-5
+  geom_line(data = test4, aes(x = cue_range, y = cr), color = "blue") + #-100
+  geom_line(data = test5, aes(x = cue_range, y = cr), color = "cyan") + #-500
+  theme_bw()
+```
 
 
