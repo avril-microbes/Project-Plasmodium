@@ -69,7 +69,8 @@
 # scale_y_continuous(labels = scales::scientific) +
 # theme_bw()                  
 
-chabaudi_ci_opt_lag <- function(parameters_cr,
+chabaudi_ci_opt_lag <- function(parameters_cr1,
+                                parameter_cr2,
                                 immunity,
                                 parameters,
                                 time_range,
@@ -100,56 +101,47 @@ chabaudi_ci_opt_lag <- function(parameters_cr,
   # Define initial condition
   #------------------------#
   if(immunity == "ni" || immunity == "i"){
-    state1 <- c(R1 = parameters[["R1"]],
+    state <- c(R = parameters[["R1"]],
                M1 = 0,
+               M2 = 0,
                Mg1 = 0,
+               Mg2 = 0,
                I1 = parameters[["I0"]]/2,
                Ig1 = 0,
                G1 = 0, 
-               A1 = 0)
-    state2 <- c(R2 = parameters[["R1"]],
-                M2 = 0,
-                Mg2 = 0,
-                I2 = parameters[["I0"]]/2,
-                Ig2 = 0,
-                G2 = 0, 
-                A2 = 0)
+               A = 0,
+               I2 = parameters[["I0"]]/2,
+               Ig2 = 0,
+               G2 = 0)
   } else if(immunity == "kochin"){
-    state1 <- c(R1 = parameters[["R1"]],
+    state <- c(R = parameters[["R1"]],
                M1 = 0,
+               M2 = 0,
                Mg1 = 0,
+               Mg2 = 0,
                I1 = parameters[["I0"]]/2,
                Ig1 = 0,
                G1 = 0,
-               E1 = 0,
-               A1 = 0)
-    state2 <- c(R2 = parameters[["R1"]],
-               M2 = 0,
-               Mg2 = 0,
+               E = 0,
+               A = 0,
                I2 = parameters[["I0"]]/2,
                Ig2 = 0,
-               G2 = 0,
-               E2 = 0,
-               A2 = 0)
+               G2 = 0)
   } else{
-    state1 <- c(R1 = parameters[["R1"]],
+    state <- c(R = parameters[["R1"]],
                M1 = 0,
+               M2 = 0,
                Mg1 = 0,
+               Mg2 = 0,
                I1 = parameters[["I0"]]/2,
                Ig1 = 0,
                G1 = 0,
-               N1 = 0, # general RBC removal
-               W1 = 0,
-               A1 = 0) # targeted RBC removal
-    state2 <- c(R2 = parameters[["R1"]],
-               M2 = 0,
-               Mg2 = 0,
+               N = 0, # general RBC removal
+               W = 0,
+               A = 0,
                I2 = parameters[["I0"]]/2,
                Ig2 = 0,
-               G2 = 0,
-               N2 = 0, # general RBC removal
-               W2 = 0,
-               A2 = 0) # targeted RBC removal
+               G2 = 0) 
   }
   
   #-------------------------#
@@ -159,12 +151,17 @@ chabaudi_ci_opt_lag <- function(parameters_cr,
   if (length(parameters_cr) != df+1) {
     stop("Conversion rate parameters must match degrees of freedom")
   }
+  ## Ensure length of initial parameter search space matches with df. 
+  if (length(parameters_cr_init) != df+1) {
+    stop("Initial conversion rate parameters must match degrees of freedom")
+  }
   ## Ensure immunity input is correct
   if (immunity != "ni" && immunity != "i" && immunity != "kochin" && immunity != "tsukushi") {
     stop("Immunity must be either 'ni', 'i', 'kochin,' or 'tsukushi'")
   }
   ## Ensure cue is correct
-  if (!(cue %in% names(state)) && !(cue %in% paste0("d", names(state))) && cue != "t") {
+  if (!(unlist(stringr::str_split(cue, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
+      !(cue %in% paste0("d", names(state))) && cue != "t") {
     stop("Cue must be one of the states, derivative of states, or time")
   }
   ## Ensure that time_range is used as cue_range when t is used
@@ -200,26 +197,37 @@ chabaudi_ci_opt_lag <- function(parameters_cr,
   ## fit basic cubic spline with no internal knots. Here, increasing df increases knots.
   ## degree defines shape of basis spline. This shouldn't have any impact on ultimate result
   ## What matter is the number of knots, or df. Increasing df should give us more complex reaction norm
-  dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3, df = df))
-  dummy_cr.mod$data <- dummy_cr.data
+  dummy_cr.mod1 <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3, df = df))
+  dummy_cr.mod1$data <- dummy_cr.data
+  
+  dummy_cr.mod2 <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3, df = df))
+  dummy_cr.mod2$data <- dummy_cr.data
   
   ## Assign coefficient to be optimized to the dummy conversion rate function
-  dummy_cr.mod$coefficients <- parameters_cr
+  dummy_cr.mod1$coefficients <- parameters_cr1
+  dumy_cr.mod2$coefficients <- parameters_cr2
   
   ## use spline function to predict cr 
   if(transformation == "norm"){
-    cr_fit <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
-    cr_fit_2 <- (cr_fit-min(cr_fit))/(max(cr_fit-min(cr_fit)))
+    cr_fit1 <- predict(dummy_cr.mod1, newdata = data.frame(cue_range))
+    cr_fit1 <- (cr_fit1-min(cr_fit1))/(max(cr_fit1-min(cr_fit1)))
+    
+    cr_fit2 <- predict(dummy_cr.mod2, newdata = data.frame(cue_range))
+    cr_fit2 <- (cr_fit2-min(cr_fit2))/(max(cr_fit2-min(cr_fit2)))
   } else if(transformation == "exp"){
-    cr_fit_2 <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
+    cr_fit1 <- exp(-exp(predict(dummy_cr.mod1, newdata = data.frame(cue_range))))
+    cr_fit2 <- exp(-exp(predict(dummy_cr.mod2, newdata = data.frame(cue_range))))
   } else{
-    cr_fit <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
-    cr_fit_2 <- 1 / (1 + exp(-cr_fit))
+    cr_fit1 <- predict(dummy_cr.mod1, newdata = data.frame(cue_range))
+    cr_fit1 <- 1 / (1 + exp(-cr_fit1))
+    
+    cr_fit2 <- predict(dummy_cr.mod2, newdata = data.frame(cue_range))
+    cr_fit2 <- 1 / (1 + exp(-cr_fit2))
   }
   
   ## Get spline function where cr ~ cue
-  cr <- splinefun(cbind(cue_range, cr_fit_norm))
-  
+  cr1 <- splinefun(cbind(cue_range, cr_fit1))
+  cr2 <- splinefun(cbind(cue_range, cr_fit2))
   #-------------------------#
   # Define integration method. Default to integrate. 
   #------------------------#
@@ -292,13 +300,18 @@ chabaudi_ci_opt_lag <- function(parameters_cr,
     }
     
     # rename states for cleaner code
-    R <- state["R"]
-    I <- state["I"]
-    Ig <- state["Ig"]
-    M <- state["M"]
-    G <- state["G"]
+    R <- state["R1"]
+    I1 <- state["I1"]
+    I2 <- state["I2"]
+    Ig1 <- state["Ig1"]
+    Ig2 <- state["Ig2"]
+    M1 <- state["M1"]
+    M2 <- state["M2"]
+    G1 <- state["G1"]
+    G2 <- state["G2"]
     A <- state["A"]
-    Mg <- state["Mg"]
+    Mg1 <- state["Mg1"]
+    Mg2 <- state["Mg2"]
     if (immunity == "kochin") {E <- state["E"]}
     if (immunity == "tsukushi"){
       N <- state["N"]
@@ -306,7 +319,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr,
     }
     
     ## Defining Pulse beta function based on current time
-    pulseBeta <- pulseBeta_fun(I0, sp, t)
+    pulseBeta <- pulseBeta_fun(I0/2, sp, t)
     
     ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
     if(t>alpha){lag1 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
@@ -317,11 +330,15 @@ chabaudi_ci_opt_lag <- function(parameters_cr,
     }
     
     ## get lag term index given cue. Cannot use else if given that during simulation, multiple iterations of cue_lag is used
-    ### Only get lag index when it is a state-based cue
+    ### Only get lag index when it is a state-based cue. Multiple indexes are returned
+    ### if multiple cues are given, multiple indexes are returned
     if(cue != "t") {
-      lag.i <- match(cue, names(state))}
+      lag.i <- match(unlist(stringr::str_split(cue, "\\+|\\-|\\*|\\/")), names(state))
+      }
     
     ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
+    ### For simple cues (if it does not contain special characters)
+    if(stringr::str_detect(cue, "\\+|\\-|\\*|\\/", negate = TRUE)){
     if(t>alpha && cue == "t"){
       cue_lag1 <- t-alpha} 
     
@@ -333,12 +350,29 @@ chabaudi_ci_opt_lag <- function(parameters_cr,
     
     if(t>alphag && cue != "t") {
       cue_lag2 <- lag2[lag.i]}
-    
-    ## convert cue to variable in state or just time
+      
+    ### convert cue to variable in state or just time
     if(cue == "t"){
       cue_state <- t}
     
-    if(cue != "t"){ cue_state <- state[cue]}
+    if(cue != "t"){cue_state <- state[cue]}
+    } else{ ### manually create lag values if cues contain special characteris
+      if(stringr::str_detect(cue, "\\+")){ # if it contains plus
+        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]]}
+        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]+lag2[lag.i[2]]}
+      }else if(stringr::str_detect(cue, "\\-")){ # if it contains -
+        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]-lag1[lag.i[2]]}
+        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]-lag2[lag.i[2]]}
+      }else if(stringr::str_detect(cue, "\\*")){ # if it contains multiplication
+        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]*lag1[lag.i[2]]}
+        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]*lag2[lag.i[2]]}
+      }else(stringr::str_detect(cue, "\\/")){ # if it contains division
+        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]/lag1[lag.i[2]]}
+        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]/lag2[lag.i[2]]}
+      }
+        ### get present states
+      if(cue != "t"){cue_state <- eval(parse(text = cue))}
+    }
     
     ## Define K, carrying capacity of RBC
     K <- lambda*R1/(lambda-mu*R1)
@@ -360,7 +394,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr,
       S <- exp(-mu*alpha)} 
     
     if(t>alpha && immunity =="i"){
-      integrand <- function(x) {mu+a/(b+I)}
+      integrand <- function(x) {mu+a/(b+(I1+I2))}
       integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
       if(integration == "integrate"){integrate_val <- integrate_val$value}
       S <- exp(-1*integrate_val)
@@ -384,7 +418,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr,
       S <- exp(-mu*t)} 
     
     if(t<=alpha && immunity == "i"){
-      integrand <- function(x) {mu+a/(b+I)}
+      integrand <- function(x) {mu+a/(b+(I1+I2))}
       integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
       if(integration == "integrate"){integrate_val <- integrate_val$value}
       S <- exp(-1*integrate_val)
@@ -440,67 +474,114 @@ chabaudi_ci_opt_lag <- function(parameters_cr,
     
     ## Define the models without lag terms. 
     if(immunity != "tsukushi"){
-      dR <- lambda*(1-(R/K))-(mu*R)-(p*R*M)-(p*R*Mg) # change in susceptible RBC
+      dR <- lambda*(1-(R/K))-(mu*R)-(p*R*M1)-(p*R*M2)-(p*R*Mg1)-(p*R*Mg2) # change in susceptible RBC
     } 
     
     if(immunity == "tsukushi"){ #Tsukushi exclusive ODEs
       #dR <- lambda*(1-R/K)-mu*R-p*R*M-(mu-log(1-N))*R
-      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N))*R-(p*R*M)-(p*R*Mg)
-      dI_nolag <- p*R*M-mu*I-(-log(1-N)-log(1-W)-log(1-A))*I
+      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N))*R-(p*R*M1)-(p*R*M2)-(p*R*Mg1)-(p*R*Mg2)
+      
+      dI1_nolag <- (p*R*M1)-(mu*I1)-(-log(1-N)-log(1-W)-log(1-A))*I1
+      dI2_nolag <- (p*R*M2)-(mu*I2)-(-log(1-N)-log(1-W)-log(1-A))*I2
       #dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig-(-log(1-N))*Ig #assume no targeted clearance
-      dIg_nolag <- p*R*Mg-mu*Ig-(-log(1-N)-log(1-W)-log(1-A))*Ig
+      dIg1_nolag <- (p*R*Mg1)-(mu*Ig1)-(-log(1-N)-log(1-W)-log(1-A))*Ig1
+      dIg2_nolag <- (p*R*Mg2)-(mu*Ig2)-(-log(1-N)-log(1-W)-log(1-A))*Ig2
       #dN <- psin*(I/iota)*(1-N)-(N/phin) # assume Ig does not elicit strong immune response. Not included in cue
-      dN <- psin*((I+Ig)/iota)*(1-N)-(N/phin)
+      dN <- psin*((I1+I2+Ig1+Ig2)/iota)*(1-N)-(N/phin)
       #dW <- psiw*(I/iota)*(1-W)-(W/phiw)
-      dW <- psiw*((I+Ig)/iota)*(1-W)-(W/phiw)
-      dM_nolag <- (-mum*M)-(p*R*M)
-      dMg_nolag <- (-mum*Mg)-(p*R*Mg)
-      dG_nolag <- -mug*G
+      dW <- psiw*((I1+I2+Ig1+Ig2)/iota)*(1-W)-(W/phiw)
+      
+      dM1_nolag <- (-mum*M1)-(p*R*M1)
+      dM2_nolag <- (-mum*M2)-(p*R*M2)
+      
+      dMg1_nolag <- (-mum*Mg1)-(p*R*Mg1)
+      dMg2_nolag <- (-mum*Mg1)-(p*R*Mg2)
+      
+      dG1_nolag <- -mug*G1
+      dG2_nolag <- -mug*G2
     }
     
     if(immunity =="kochin"){
       dE <- sigma*I*(1-E)-mue*E # change in innate immune strength
-      dI_nolag <- p*R*M-mu*I-gamma*E*I
-      dIg_nolag <- p*R*Mg-mu*Ig
-      dM_nolag <- -mum*M-p*R*M
-      dMg_nolag <- -mum*Mg-p*R*Mg
-      dG_nolag <- -mug*G
+      dI1_nolag <- (p*R*M1)-(mu*I1)-(gamma*E*I1)
+      dI2_nolag <- (p*R*M2)-(mu*I2)-(gamma*E*I2)
+      
+      dIg1_nolag <- (p*R*Mg1)-(mu*Ig1)
+      dIg2_nolag <- (p*R*Mg2)-(mu*Ig2)
+      
+      dM1_nolag <- (-mum*M1)-(p*R*M1)
+      dM2_nolag <- (-mum*M2)-(p*R*M2)
+      
+      dMg1_nolag <- (-mum*Mg1)-(p*R*Mg1)
+      dMg2_nolag <- (-mum*Mg2)-(p*R*Mg2)
+      
+      dG1_nolag <- -mug*G1
+      dG2_nolag <- -mug*G2
     }
     
     if(immunity == "ni"){
-      dI_nolag <- p*R*M-mu*I # change in infected RBC density
-      dIg_nolag <- p*R*Mg-mu*Ig
-      dM_nolag <- -mum*M-p*R*M
-      dMg_nolag <- -mum*Mg-p*R*Mg
-      dG_nolag <- -mug*G
+      dI1_nolag <- (p*R*M1)-(mu*I1) # change in infected RBC density
+      dI2_nolag <- (p*R*M2)-(mu*I2)
+      
+      dIg1_nolag <- (p*R*Mg1)-(mu*Ig1)
+      dIg2_nolag <- (p*R*Mg2)-(mu*Ig2)
+      
+      dM1_nolag <- (-mum*M1)-(p*R*M1)
+      dM2_nolag <- (-mum*M2)-(p*R*M2)
+      
+      dMg1_nolag <- (-mum*Mg1)-(p*R*Mg1)
+      dMg2_nolag <- (-mum*Mg2)-(p*R*Mg2)
+      
+      dG1_nolag <- -mug*G1
+      dG2_nolag <- -mug*G2
     }
     
     if(immunity == "i") {
-      dI_nolag <- p*R*M-mu*I-(a*I)/(b+I) # change in infected RBC density with immunity
-      dIg_nolag <- p*R*Mg-mu*Ig
-      dM_nolag <- -mum*M-p*R*M
-      dMg_nolag <- -mum*Mg-p*R*Mg
-      dG_nolag <- -mug*G
+      dI1_nolag <- (p*R*M1)-(mu*I1)-(a*I1)/(b+(I1+I2)) # change in infected RBC density with immunity
+      dI2_nolag <- (p*R*M2)-(mu*I2)-(a*I2)/(b+(I1+I2))
+      
+      dIg1_nolag <- (p*R*Mg1)-(mu*Ig1)
+      dIg2_nolag <- (p*R*Mg2)-(mu*Ig2)
+      
+      dM1_nolag <- (-mum*M1)-(p*R*M1)
+      dM2_nolag <- (-mum*M2)-(p*R*M2)
+      
+      dMg1_nolag <- (-mum*Mg1)-(p*R*Mg1)
+      dMg2_nolag <- (-mum*Mg2)-(p*R*Mg2)
+      
+      dG1_nolag <- -mug*G1
+      dG2_nolag <- -mug*G2
     } 
     
     ## Track states in initial cohort of infection
     if(t<=alpha){
-      dI <- dI_nolag-pulseBeta*S 
-      dM <- dM_nolag+beta*pulseBeta*S # all of them are asexual merozoite
-      dMg <- 0 # should have no Mg before day 1
-      dIg <- 0 #first wave starts on day alpha
-      dG <- 0 # first wave starts on day alpha+alphag
+      dI1 <- dI1_nolag-pulseBeta*S 
+      dI2 <- dI2_nolag-pulseBeta*S 
+      dM1 <- dM1_nolag+beta*pulseBeta*S # all of them are asexual merozoite
+      dM2 <- dM2_nolag+beta*pulseBeta*S
+      dMg1 <- 0 # should have no Mg before day 1
+      dMg2 <- 0
+      dIg1 <- 0 #first wave starts on day alpha
+      dIg2 <- 0
+      dG1 <- 0 # first wave starts on day alpha+alphag
+      dG2 <- 0
     }
     
     if(t<=alpha+alphag && t>alpha){
-      dG <- 0
-      dIg <- dIg_nolag
+      dG1 <- 0
+      dG2 <- 0
+      dIg1 <- dIg1_nolag
+      dIg2 <- dIg2_nolag
     }
     
     ## Track states after delay 
     if(t>alpha){
-      dI <- dI_nolag-p*lag1[1]*lag1[2]*S 
-      dM <- dM_nolag+beta*(1-cr(cue_lag1))*p*lag1[1]*lag1[2]*S 
+      dI1 <- dI1_nolag-p*lag1[1]*lag1[2]*S 
+      dI2 <- dI2_nolag-p*lag1[1]*lag1[3]*S
+      
+      dM1 <- dM1_nolag+beta*(1-cr(cue_lag1))*p*lag1[1]*lag1[2]*S 
+      dM2 <- dM2_nolag+beta*(1-cr(cue_lag1))*p*lag1[1]*lag1[3]*S 
+      
       dMg <- dMg_nolag+beta*cr(cue_lag1)*p*lag1[1]*lag1[2]*S 
     }
     
