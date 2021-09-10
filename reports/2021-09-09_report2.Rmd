@@ -25,7 +25,7 @@ source("chabaudi_si_opt_lag.R")
 ```
 #--------------------#
 # Replicating Greischar model
-# with saturating immunity
+# with saturating immunity (Figure 1)
 #--------------------#
 # define time range
 ```{r}
@@ -96,18 +96,24 @@ greischar.dyn_i <- chabaudi_si_opt_fast(
   dyn = TRUE)
 
 # success!
+colors <- c("My model" = "blue", "Greischar's model" = "red")
+
 ggplot() +
-  geom_line(data = ch_si_t_20.dyn_i, aes(x = time, y = value), color = "blue", alpha = 0.6) +
-  geom_line(data = greischar.dyn_i, aes(x = time, y = value), color = "red", alpha = 0.6) +
+  geom_line(data = ch_si_t_20.dyn_i, aes(x = time, y = value, color = "My model"), alpha = 0.6) +
+  geom_line(data = greischar.dyn_i, aes(x = time, y = value, color = "Greischar's model"), alpha = 0.6) +
   facet_wrap(~variable, scales = "free") +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "Legend") +
+  scale_color_manual(values = colors) +
   theme_bw()
 
 setwd("/Users/avrilwang/Desktop/Project_Plasmodium/figures/report2")
-ggsave("replicate_sat_immunity.png")
+ggsave("replicate_sat_immunity.png", width = 7, height = 5)
 ```
 
 #--------------------#
-# Test effects of lag model
+# Test effects of lag model (Figure 3)
 #--------------------#
 Seeing if introducing lag between conversion rate decision and infected RBC production leads to different conversion rate strategy.
 
@@ -141,17 +147,38 @@ lag_si_t_20.dyn_i <- chabaudi_si_opt_lag(
   dyn = TRUE)
 
 # same dynamics for time based
-ggplot() +
-  geom_line(data = lag_si_t_20.dyn_i, aes(x = time, y = value), color = "blue", alpha = 0.6) +
-  geom_line(data = ch_si_t_20.dyn_i, aes(x = time, y = value), color = "red", alpha = 0.6) +
+colors_fig3A <- c("Non-lag model" = "blue", "Lag model"= "red")
+
+fig3A <- ggplot() +
+  geom_line(data = lag_si_t_20.dyn_i, aes(x = time, y = value, color = "Lag model"), alpha = 0.6) +
+  geom_line(data = ch_si_t_20.dyn_i, aes(x = time, y = value, color = "Non-lag model"), alpha = 0.6) +
   facet_wrap(~variable, scales = "free") +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "Legend") +
+  scale_color_manual(values = colors_fig3A) +
   theme_bw()
 ```
 
 # infected RBC based cr
 ```{r}
+# not lagged. Did not converge
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-lag_si_t_20.opt_i <- optimParallel(par = rep(0.5,4),# new parameter search space
+ch_si_I_20.opt_i <- optimParallel(par = rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range,
+                      solver = "vode")
+stopCluster(cl)
+
+# lagged. Converged
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_i <- optimParallel(par = rep(0.5,4),# new parameter search space
                       fn = chabaudi_si_opt_lag, 
                       control = list(trace = 6, fnscale = -1),
                       immunity = "i",
@@ -159,31 +186,59 @@ lag_si_t_20.opt_i <- optimParallel(par = rep(0.5,4),# new parameter search space
                       time_range = time_range,
                       df = 3,
                       cue = "I",
-                      cue_range = time_range,
+                      cue_range = I_range,
                       solver = "vode")
 stopCluster(cl)
 
-lag_si_t_20.opt_i$par #9.676618 -22.741734   1.700253 -19.323945
-lag_si_t_20.opt_i$value #11.48145
+ch_si_I_20.opt_i$par # 1.871096 -42.642681   4.033986 -35.841590
+ch_si_I_20.opt_i$value  #11.19807
 
-lag_si_t_20.dyn_i <- chabaudi_si_opt_lag(
-  parameters_cr = lag_si_t_20.opt_i$par,
+lag_si_I_20.opt_i$par  # 1.31331 -37.34658 341.63819  73.72398
+lag_si_I_20.opt_i$value  #10.88715. Lower than the non-lag model. 
+
+# infection dynamics
+ch_si_I_20.dyn_i <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_I_20.opt_i$par,
   immunity = "i",
   parameters = parameters,
   time_range = time_range,
   df = 3,
-  cue = "t",
-  cue_range = time_range,
+  cue = "I",
+  cue_range = I_range,
   solver = "vode",
   dyn = TRUE)
 
-# same dynamics for time based
-ggplot() +
-  geom_line(data = lag_si_t_20.dyn_i, aes(x = time, y = value), color = "blue", alpha = 0.6) +
-  geom_line(data = ch_si_t_20.dyn_i, aes(x = time, y = value), color = "red", alpha = 0.6) +
+lag_si_I_20.dyn_i <- chabaudi_si_opt_lag(
+  parameters_cr = lag_si_I_20.opt_i$par,
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = I_range,
+  solver = "vode",
+  dyn = TRUE)
+
+# plot. Very different!
+fig3B <- ggplot() +
+  geom_line(data = lag_si_I_20.dyn_i, aes(x = time, y = value, color = "Lag model"), alpha = 0.6) +
+  geom_line(data = ch_si_I_20.dyn_i, aes(x = time, y = value, color = "Non-lag model"), alpha = 0.6) +
   facet_wrap(~variable, scales = "free") +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "Legend") +
+  scale_color_manual(values = colors_fig3A) +
   theme_bw()
 ```
+
+# plot together
+```{r}
+ggarrange(fig3A, fig3B, align = "hv", ncol = 1, common.legend = TRUE, labels = c("A", "B"))
+
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/figures/report2")
+ggsave("lag_model_diff.png", width = 7, height = 7)
+```
+
 
 #--------------------#
 # Run time-based cues with
