@@ -17,15 +17,208 @@ library(ggpubr)
 setwd("/Users/avrilwang/Desktop/Project-Plasmodium/functions")
 source("par_to_df.R")
 source("chabaudi_si_opt_fast.R")
+
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("par_to_df.R")
+source("chabaudi_si_opt_fast.R")
+source("chabaudi_si_opt_lag.R")
+```
+#--------------------#
+# Replicating Greischar model
+# with saturating immunity
+#--------------------#
+# define time range
+```{r}
+time_range <- seq(0, 20, by = 1e-3)
+```
+
+# define cye range
+```{r}
+# maximum infected RBC by Tsukushi's dosage paper (maximum infected RBC based on experimental results)
+I_range <- seq(0, 2.18*10^6, by = 1000)
+```
+
+
+```{r}
+parameters <- c(R1 = 8.5*10^6,
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 4*10^-6,
+                alpha = 1, 
+                alphag = 2, 
+                beta = 10, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1)
+
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_t_20.opt_i <- optimParallel(par = rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_fast, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range,
+                      solver = "vode")
+stopCluster(cl)
+
+ch_si_t_20.opt_i$par #13.684281 -28.161346  -3.578826 -20.693335. Very close to Greischar
+ch_si_t_20.opt_i$value #11.4814
+
+# get infection dynamics
+ch_si_t_20.dyn_i <- chabaudi_si_opt_fast(
+  parameters_cr = ch_si_t_20.opt_i$par,
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "t",
+  cue_range = time_range,
+  solver = "vode",
+  dyn = TRUE)
+
+# simulate infection dynamics using Greischar's parameters
+greischar.dyn_i <- chabaudi_si_opt_fast(
+  parameters_cr = c(13.46, -27.66, -3.62, -20.24),
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "t",
+  cue_range = time_range,
+  solver = "vode",
+  dyn = TRUE)
+
+# success!
+ggplot() +
+  geom_line(data = ch_si_t_20.dyn_i, aes(x = time, y = value), color = "blue", alpha = 0.6) +
+  geom_line(data = greischar.dyn_i, aes(x = time, y = value), color = "red", alpha = 0.6) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/figures/report2")
+ggsave("replicate_sat_immunity.png")
+```
+
+#--------------------#
+# Test effects of lag model
+#--------------------#
+Seeing if introducing lag between conversion rate decision and infected RBC production leads to different conversion rate strategy.
+
+# time based cr
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_t_20.opt_i <- optimParallel(par = rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range,
+                      solver = "vode")
+stopCluster(cl)
+
+lag_si_t_20.opt_i$par #9.676618 -22.741734   1.700253 -19.323945
+lag_si_t_20.opt_i$value #11.48145
+
+lag_si_t_20.dyn_i <- chabaudi_si_opt_lag(
+  parameters_cr = lag_si_t_20.opt_i$par,
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "t",
+  cue_range = time_range,
+  solver = "vode",
+  dyn = TRUE)
+
+# same dynamics for time based
+ggplot() +
+  geom_line(data = lag_si_t_20.dyn_i, aes(x = time, y = value), color = "blue", alpha = 0.6) +
+  geom_line(data = ch_si_t_20.dyn_i, aes(x = time, y = value), color = "red", alpha = 0.6) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# infected RBC based cr
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_t_20.opt_i <- optimParallel(par = rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = time_range,
+                      solver = "vode")
+stopCluster(cl)
+
+lag_si_t_20.opt_i$par #9.676618 -22.741734   1.700253 -19.323945
+lag_si_t_20.opt_i$value #11.48145
+
+lag_si_t_20.dyn_i <- chabaudi_si_opt_lag(
+  parameters_cr = lag_si_t_20.opt_i$par,
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "t",
+  cue_range = time_range,
+  solver = "vode",
+  dyn = TRUE)
+
+# same dynamics for time based
+ggplot() +
+  geom_line(data = lag_si_t_20.dyn_i, aes(x = time, y = value), color = "blue", alpha = 0.6) +
+  geom_line(data = ch_si_t_20.dyn_i, aes(x = time, y = value), color = "red", alpha = 0.6) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
 ```
 
 #--------------------#
 # Run time-based cues with
 # different innate immunity models
 #--------------------#
-# define time range
+# original model
 ```{r}
-time_range <- seq(0, 20, by = 1e-3)
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+ch_si_i_t_20.opt <- optimParallel(par = rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "t",
+                      cue_range = time_range,
+                      solver = "vode")
+stopCluster(cl)
+
+# converged
+ch_si_i_t_20.opt$par  #7.708424 -19.252262   2.682587 -16.857024
+ch_si_i_t_20.opt$value #11.96679
+
+ch_si_i_t_20.dyn <- chabaudi_si_opt_lag(
+  parameters_cr = ch_si_i_t_20.opt$par,
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "t",
+  cue_range = time_range,
+  solver = "vode",
+  dyn = TRUE,
+  integration = "trapezoid")
 ```
 
 # Kochins
@@ -49,9 +242,9 @@ parameters_kochin <- c(R1 = 8.89*10^6,
                 gamma = 133)
 
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-ch_si_i_t_20.opt_kochin <- optimParallel(par = c(13.46,-27.66,-3.62,-20.24),# new parameter search space
-                      fn = chabaudi_si_opt_fast, 
-                      control = list(trace = 6),
+ch_si_i_t_20.opt_kochin <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
                       immunity = "kochin",
                       parameters = parameters_kochin,
                       time_range = time_range,
@@ -59,13 +252,31 @@ ch_si_i_t_20.opt_kochin <- optimParallel(par = c(13.46,-27.66,-3.62,-20.24),# ne
                       cue = "t",
                       cue_range = time_range,
                       solver = "vode",
-                      integration = "trapezoid")
+                      integration = "simpson")
 stopCluster(cl)
+
+## converged
+ch_si_i_t_20.opt_kochin$par  #3.941907 -12.105016   4.385514 -11.371876
+ch_si_i_t_20.opt_kochin$value #13.01394
+
+ch_si_i_t_20.dyn_kochin <- chabaudi_si_opt_lag(
+  parameters_cr = ch_si_i_t_20.opt_kochin$par,
+  immunity = "kochin",
+  parameters = parameters_kochin,
+  time_range = time_range,
+  df = 3,
+  cue = "t",
+  cue_range = time_range,
+  solver = "vode",
+  dyn = TRUE,
+  integration = "trapezoid")
+
+
 ```
 
 # Kamiya
 ```{r}
-parameters_kamiya <- c(R1 = 8.89*10^6, # slightly higher
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
                 lambda = 3.7*10^5,
                 mu = 0.025, 
                 p = 8*10^-6, # doubled form original
@@ -87,11 +298,11 @@ parameters_kamiya <- c(R1 = 8.89*10^6, # slightly higher
                 rho = 0.2627156)
 
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-ch_si_i_t_20.opt_kochin <- optimParallel(par = c(13.46,-27.66,-3.62,-20.24),# new parameter search space
-                      fn = chabaudi_si_opt_fast, 
-                      control = list(trace = 6),
-                      immunity = "kochin",
-                      parameters = parameters_kochin,
+ch_si_i_t_20.opt_tsukushi <- optimParallel(par = c(0.5, 0.5, 0.5, 0.5),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi,
                       time_range = time_range,
                       df = 3,
                       cue = "t",
@@ -99,5 +310,34 @@ ch_si_i_t_20.opt_kochin <- optimParallel(par = c(13.46,-27.66,-3.62,-20.24),# ne
                       solver = "vode",
                       integration = "trapezoid")
 stopCluster(cl)
+
+# not converged!
+ch_si_i_t_20.opt_tsukushi$par  #4.311945 -12.460638   4.141877 -11.788003
+ch_si_i_t_20.opt_tsukushi$value #9.081061
+
+ch_si_i_t_20.dyn_tsukushi <- chabaudi_si_opt_lag(
+  parameters_cr = ch_si_i_t_20.opt_tsukushi$par,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue = "t",
+  cue_range = time_range,
+  solver = "vode",
+  dyn = TRUE,
+  integration = "trapezoid")
+```
+
+# plot together
+```{r}
+ggplot() +
+  geom_line(data = ch_si_i_t_20.dyn, aes(x = time, y = value), color = "black") +
+  geom_line(data = ch_si_i_t_20.dyn_kochin, aes(x = time, y = value), color = "blue") +
+  geom_line(data = ch_si_i_t_20.dyn_tsukushi, aes(x = time, y = value), color = "red") +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/figures/report2")
+ggsave("innate_immunity_time.png")
 ```
 
