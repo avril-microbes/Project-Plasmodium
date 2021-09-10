@@ -87,7 +87,7 @@ chabaudi_si_opt_fast <- function(parameters_cr,
   force(cue)
   force(cue_range)
   force(solver)
-  force(integration)
+  #force(integration)
   force(adaptive)
   
   #-------------------------#
@@ -532,9 +532,11 @@ chabaudi_si_opt_fast <- function(parameters_cr,
     chabaudi_si.df$cr <- cr.ls
 
     ### processing df for plotting
-    chabaudi_si.df2 <- chabaudi_si.df %>% tidyr::gather(key = "variable", value = "value", -time)
+    #### If no adaptive immunity, filter out adaptive immunity
+    if(!adaptive){chabaudi_si.df2 <- chabaudi_si.df %>% dplyr::select(-A)}
+    chabaudi_si.df3 <- chabaudi_si.df2 %>% tidyr::gather(key = "variable", value = "value", -time)
     
-    return(chabaudi_si.df2)
+    return(chabaudi_si.df3)
   }
 }
 

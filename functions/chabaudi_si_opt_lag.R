@@ -77,7 +77,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                                 cue,
                                 cue_range,
                                 solver = "lsoda",
-                                integration = "integrate",
+                                #integration = "integrate",
                                 transformation = "exp",
                                 adaptive = FALSE,
                                 dyn = FALSE) {
@@ -93,7 +93,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
   force(cue)
   force(cue_range)
   force(solver)
-  force(integration)
+  #force(integration)
   force(adaptive)
   
   #-------------------------#
@@ -103,14 +103,16 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     state <- c(R = parameters[["R1"]],
                M = 0,
                Mg = 0,
+               ID = 0,
                I = parameters[["I0"]],
                Ig = 0,
                G = 0, 
-               A = 0)
+               A = 0) # survival function. Just for tracking
   } else if(immunity == "kochin"){
     state <- c(R = parameters[["R1"]],
                M = 0,
                Mg = 0,
+               ID = 0,
                I = parameters[["I0"]],
                Ig = 0,
                G = 0,
@@ -120,6 +122,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     state <- c(R = parameters[["R1"]],
                M = 0,
                Mg = 0,
+               ID = 0,
                I = parameters[["I0"]],
                Ig = 0,
                G = 0,
@@ -147,10 +150,10 @@ chabaudi_si_opt_lag <- function(parameters_cr,
   if(cue == "t" && !isTRUE(all.equal(cue_range, time_range))){
     stop("Time is chosen as cue. Cue_range must equal to time_range")
   }
-  ## Ensure integration is entered correctly
-  if(integration != "integrate" && integration != "trapezoid" && integration != "simpson"){
-    stop("Please enter the correct integration method. Must be 'integrate', trapezoid', or 'simpson'")
-  }
+  ## Ensure integration is entered correctly. Deprecated
+  #if(integration != "integrate" && integration != "trapezoid" && integration != "simpson"){
+  #  stop("Please enter the correct integration method. Must be 'integrate', trapezoid', or 'simpson'")
+  #}
   ## Ensure spline transformation is entered correct
   if(transformation != "norm" && transformation != "exp" && transformation != "logit"){
     stop("Transformation must be either 'norm' or 'exp' or 'logit'")
@@ -194,32 +197,32 @@ chabaudi_si_opt_lag <- function(parameters_cr,
   }
   
   ## Get spline function where cr ~ cue
-  cr <- splinefun(cbind(cue_range, cr_fit_norm))
+  cr <- splinefun(cbind(cue_range, cr_fit_2))
   
   #-------------------------#
-  # Define integration method. Default to integrate. 
+  # Define integration method. Deprecated
   #------------------------#
-  if(integration == "integrate"){
-    integrate_fun <- stats::integrate
-  } else if (integration == "trapezoid"){
-    integrate_fun <- function(f, lower, upper) {
-      if (is.function(f) == FALSE) {
-        stop('f must be a function with one parameter (variable)')}
-      h <- upper - lower
-      fxdx <- (h / 2) * (f(lower) + f(upper))
-      return(fxdx)}
-  } else {
-    integrate_fun <- function(f, lower, upper) {
-      if (is.function(f) == FALSE) {
-        stop('f must be a function with one parameter (variable)')}
-      h <- (upper - lower) / 2
-      x0 <- lower
-      x1 <- lower + h
-      x2 <- upper
-      s <- (h / 3) * (f(x0) + 4 * f(x1) + f(x2))
-      return(s)
-    }
-  }
+  #if(integration == "integrate"){
+  #  integrate_fun <- stats::integrate
+  #} else if (integration == "trapezoid"){
+  #  integrate_fun <- function(f, lower, upper) {
+  #    if (is.function(f) == FALSE) {
+  #      stop('f must be a function with one parameter (variable)')}
+  #    h <- upper - lower
+  #    fxdx <- (h / 2) * (f(lower) + f(upper))
+  #    return(fxdx)}
+  #} else {
+  #  integrate_fun <- function(f, lower, upper) {
+  #    if (is.function(f) == FALSE) {
+  #      stop('f must be a function with one parameter (variable)')}
+  #    h <- (upper - lower) / 2
+  #    x0 <- lower
+  #    x1 <- lower + h
+  #    x2 <- upper
+  #    s <- (h / 3) * (f(x0) + 4 * f(x1) + f(x2))
+  #    return(s)
+  #  }
+  #}
   
   #-------------------------#
   # Define single-infection model
@@ -271,6 +274,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     R <- state["R"]
     I <- state["I"]
     Ig <- state["Ig"]
+    ID <- state["ID"]
     M <- state["M"]
     G <- state["G"]
     A <- state["A"]
@@ -336,10 +340,11 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       S <- exp(-mu*alpha)} 
     
     if(t>alpha && immunity =="i"){
-      integrand <- function(x) {mu+a/(b+I)}
-      integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
-      if(integration == "integrate"){integrate_val <- integrate_val$value}
-      S <- exp(-1*integrate_val)
+      #integrand <- function(x) {mu+a/(b+I)}
+      #integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
+      #if(integration == "integrate"){integrate_val <- integrate_val$value}
+      #S <- exp(-1*integrate_val)
+      S <- exp(-ID + lag1[4])
     }  
     
     if(t>alpha && immunity == "kochin"){
@@ -360,10 +365,11 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       S <- exp(-mu*t)} 
     
     if(t<=alpha && immunity == "i"){
-      integrand <- function(x) {mu+a/(b+I)}
-      integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
-      if(integration == "integrate"){integrate_val <- integrate_val$value}
-      S <- exp(-1*integrate_val)
+      #integrand <- function(x) {mu+a/(b+I)}
+      #integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
+      #if(integration == "integrate"){integrate_val <- integrate_val$value}
+      #S <- exp(-1*integrate_val)
+      S <- exp(-ID)
     }
     
     if(t<=alpha && immunity == "kochin"){
@@ -457,6 +463,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       dM_nolag <- -mum*M-p*R*M
       dMg_nolag <- -mum*Mg-p*R*Mg
       dG_nolag <- -mug*G
+      dID <- mu+a/(b+I)
     } 
     
     ## Track states in initial cohort of infection
@@ -486,11 +493,11 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     }
     
     ## Return the states. Must be in the same order as states!
-    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM, dMg, dI, dIg,dG, dA)))}
+    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM, dMg, dID, dI, dIg, dG, dA)))}
     
-    if (immunity == "kochin") {return(list(c(dR, dM, dMg, dI, dIg, dG, dE, dA)))}
+    if (immunity == "kochin") {return(list(c(dR, dM, dMg, dID, dI, dIg, dG, dE, dA)))}
     
-    if (immunity == "tsukushi") {return(list(c(dR, dM, dMg, dI, dIg, dG, dN, dW, dA)))}
+    if (immunity == "tsukushi") {return(list(c(dR, dM, dMg, dID, dI, dIg, dG, dN, dW, dA)))}
   }
   
   #-------------------------#
@@ -544,9 +551,11 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     chabaudi_si.df$cr <- cr.ls
     
     ### processing df for plotting
-    chabaudi_si.df2 <- chabaudi_si.df %>% tidyr::gather(key = "variable", value = "value", -time)
+    #### If no adaptive immunity, filter out adaptive immunity
+    if(!adaptive){chabaudi_si.df2 <- chabaudi_si.df %>% dplyr::select(-A)}
+    chabaudi_si.df3 <- chabaudi_si.df2 %>% tidyr::gather(key = "variable", value = "value", -time)
     
-    return(chabaudi_si.df2)
+    return(chabaudi_si.df3)
   }
 }
 
