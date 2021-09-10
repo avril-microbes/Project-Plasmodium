@@ -98,6 +98,7 @@ chabaudi_si_opt_fast <- function(parameters_cr,
              I = parameters[["I0"]],
              Ig = 0,
              M = 0,
+             ID = 0, # infected RBC death rate (natural + immunity)
              G = 0, 
              A = 0)
   }
@@ -109,6 +110,7 @@ chabaudi_si_opt_fast <- function(parameters_cr,
                I = parameters[["I0"]],
                Ig = 0,
                M = 0,
+               ID = 0, # infected RBC death rate (natural + immunity)
                G = 0,
                E = 0,
                A = 0)} # targeted RBC removal (proportion activated)
@@ -119,6 +121,7 @@ chabaudi_si_opt_fast <- function(parameters_cr,
                I = parameters[["I0"]],
                Ig = 0,
                M = 0,
+               ID = 0, # infected RBC death rate (natural + immunity)
                G = 0,
                N = 0, # general RBC removal
                W = 0,
@@ -269,6 +272,7 @@ chabaudi_si_opt_fast <- function(parameters_cr,
     I <- state["I"]
     Ig <- state["Ig"]
     M <- state["M"]
+    ID <- state["ID"]
     G <- state["G"]
     A <- state["A"]
     if (immunity == "kochin") {E <- state["E"]}
@@ -332,10 +336,11 @@ chabaudi_si_opt_fast <- function(parameters_cr,
       S <- exp(-mu*alpha)} 
     
     if(t>alpha && immunity =="i"){
-      integrand <- function(x) {mu+a/(b+I)}
-      integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
-      if(integration == "integrate"){integrate_val <- integrate_val$value}
-      S <- exp(-1*integrate_val)
+      #integrand <- function(x) {mu+a/(b+I)}
+      #integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
+      #if(integration == "integrate"){integrate_val <- integrate_val$value}
+      #S <- exp(-1*integrate_val)
+      S <- exp(-ID + lag1[5])
     }  
     
     if(t>alpha && immunity == "kochin"){
@@ -356,10 +361,11 @@ chabaudi_si_opt_fast <- function(parameters_cr,
       S <- exp(-mu*t)} 
     
     if(t<=alpha && immunity == "i"){
-      integrand <- function(x) {mu+a/(b+I)}
-      integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
-      if(integration == "integrate"){integrate_val <- integrate_val$value}
-      S <- exp(-1*integrate_val)
+      #integrand <- function(x) {mu+a/(b+I)}
+      #integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
+      #if(integration == "integrate"){integrate_val <- integrate_val$value}
+      #S <- exp(-1*integrate_val)
+      S <- exp(-ID)
     }
     
     if(t<=alpha && immunity == "kochin"){
@@ -434,6 +440,7 @@ chabaudi_si_opt_fast <- function(parameters_cr,
       dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig
       dM_nolag <- -mum*M-p*R*M
       dG_nolag <- -mug*G
+      dID = mu
     }
     
     if(immunity == "i") {
@@ -441,6 +448,7 @@ chabaudi_si_opt_fast <- function(parameters_cr,
       dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig
       dM_nolag <- -mum*M-p*R*M
       dG_nolag <- -mug*G
+      dID <- mu+a/(b+I)
       } 
 
     ## Track states in initial cohort of infection
@@ -466,11 +474,11 @@ chabaudi_si_opt_fast <- function(parameters_cr,
     }
     
     ## Return the states
-    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dI, dIg, dM, dG, dA)))}
+    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dI, dIg, dM, dID, dG, dA)))}
     
-    if (immunity == "kochin") {return(list(c(dR, dI, dIg, dM, dG, dE, dA)))}
+    if (immunity == "kochin") {return(list(c(dR, dI, dIg, dM, dID, dG, dE, dA)))}
     
-    if (immunity == "tsukushi") {return(list(c(dR, dI, dIg, dM, dG, dN, dW, dA)))}
+    if (immunity == "tsukushi") {return(list(c(dR, dI, dIg, dM, dID, dG, dN, dW, dA)))}
   }
   
   #-------------------------#
