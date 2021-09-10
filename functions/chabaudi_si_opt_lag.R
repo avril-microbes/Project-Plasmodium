@@ -339,53 +339,60 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     if(t>alpha && immunity == "ni"){
       S <- exp(-mu*alpha)} 
     
-    if(t>alpha && immunity =="i"){
+    if(t>alpha && immunity != "ni"){
+      S <- exp(-ID + lag1[4])
+    }
+    
+    #if(t>alpha && immunity =="i"){
       #integrand <- function(x) {mu+a/(b+I)}
       #integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
       #if(integration == "integrate"){integrate_val <- integrate_val$value}
       #S <- exp(-1*integrate_val)
-      S <- exp(-ID + lag1[4])
-    }  
+     # S <- exp(-ID + lag1[4])
+    #}  
     
-    if(t>alpha && immunity == "kochin"){
-      integrand <- function(x) {mu+gamma*E}
-      integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
-      if(integration == "integrate"){integrate_val <- integrate_val$value}
-      S <- exp(-1*integrate_val)} 
+    #if(t>alpha && immunity == "kochin"){
+    #  integrand <- function(x) {mu+gamma*E}
+    #  integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
+    #  if(integration == "integrate"){integrate_val <- integrate_val$value}
+    #  S <- exp(-1*integrate_val)} 
     
-    if(t>alpha && immunity == "tsukushi"){
-      integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)}
-      integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
-      if(integration == "integrate"){integrate_val <- integrate_val$value}
-      S <- exp(-1*integrate_val)} 
+   # if(t>alpha && immunity == "tsukushi"){
+    #  integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)}
+     # integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alpha, upper = t)
+      #if(integration == "integrate"){integrate_val <- integrate_val$value}
+      #S <- exp(-1*integrate_val)} 
     
     ################################
     
     if(t<=alpha && immunity == "ni"){
       S <- exp(-mu*t)} 
     
-    if(t<=alpha && immunity == "i"){
+    if(t<=alpha && immunity != "ni"){
+      S <- exp(-ID)} 
+    
+    #if(t<=alpha && immunity == "i"){
       #integrand <- function(x) {mu+a/(b+I)}
       #integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
       #if(integration == "integrate"){integrate_val <- integrate_val$value}
       #S <- exp(-1*integrate_val)
-      S <- exp(-ID)
-    }
+     # S <- exp(-ID)
+    #}
     
-    if(t<=alpha && immunity == "kochin"){
-      integrand <- function(x) {mu+gamma*E}
-      integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
-      if(integration == "integrate"){integrate_val <- integrate_val$value}
-      S <- exp(-1*integrate_val)}
+   # if(t<=alpha && immunity == "kochin"){
+     # integrand <- function(x) {mu+gamma*E}
+    #  integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
+    #  if(integration == "integrate"){integrate_val <- integrate_val$value}
+    #  S <- exp(-1*integrate_val)}
     
-    if(t<=alpha && immunity == "tsukushi"){
-      integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)} # assume targetted removal is half as effective
-      integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
-      if(integration == "integrate"){integrate_val <- integrate_val$value}
-      S <- exp(-1*integrate_val)}
+   # if(t<=alpha && immunity == "tsukushi"){
+     # integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)} # assume targetted removal is half as effective
+    #  integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
+     # if(integration == "integrate"){integrate_val <- integrate_val$value}
+     # S <- exp(-1*integrate_val)}
     
     ### Survival of gametocytes. We assume that infected
-    ### RBC with gametocyte is not removed by immune response
+    ### RBC with gametocyte is removed by immune response for Tsukushi's model.
     if(immunity != "tsukushi"){
       if(t<=alpha){
         Sg <- 0 # not relevent
@@ -405,19 +412,27 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       }
       
       if(t>alpha && t<=alpha+alphag){
-        #integrand <- function(x) {mu-log(1-N)}
-        integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)} 
-        integrate_val <- integrate_fun(Vectorize(integrand), lower = alpha, upper = t)
-        if(integration == "integrate"){integrate_val <- integrate_val$value}
-        Sg <- exp(-1*integrate_val)
-      } 
+        Sg <- exp(-ID + lag1[4])
+      }
       
       if(t>alpha+alphag){
-        #integrand <- function(x) {mu-log(1-N)}
-        integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)}
-        integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alphag, upper = t)
-        if(integration == "integrate"){integrate_val <- integrate_val$value}
-        Sg <- exp(-1*integrate_val)}
+        Sg <- exp(-ID + lag2[4])
+      }
+      
+      #if(t>alpha && t<=alpha+alphag){
+       # #integrand <- function(x) {mu-log(1-N)}
+      #  integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)} 
+       # integrate_val <- integrate_fun(Vectorize(integrand), lower = alpha, upper = t)
+      #  if(integration == "integrate"){integrate_val <- integrate_val$value}
+       # Sg <- exp(-1*integrate_val)
+      #} 
+      
+     # if(t>alpha+alphag){
+      #  #integrand <- function(x) {mu-log(1-N)}
+       # integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)}
+      #  integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alphag, upper = t)
+      #  if(integration == "integrate"){integrate_val <- integrate_val$value}
+      #  Sg <- exp(-1*integrate_val)}
     }
     
     ## Define the models without lag terms. 
@@ -438,6 +453,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       dM_nolag <- (-mum*M)-(p*R*M)
       dMg_nolag <- (-mum*Mg)-(p*R*Mg)
       dG_nolag <- -mug*G
+      dID <- mu-log(1-N)-log(1-W)-log(1-A)
     }
     
     if(immunity =="kochin"){
@@ -447,6 +463,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       dM_nolag <- -mum*M-p*R*M
       dMg_nolag <- -mum*Mg-p*R*Mg
       dG_nolag <- -mug*G
+      dID <- mu+gamma*E
     }
     
     if(immunity == "ni"){
