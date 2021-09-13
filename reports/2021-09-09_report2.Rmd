@@ -241,42 +241,10 @@ ggsave("lag_model_diff.png", width = 7, height = 7)
 
 
 #--------------------#
-# Run time-based cues with
-# different innate immunity models
+# Effects of different innate immunity functions
+# Figure 4
 #--------------------#
-# original model
-```{r}
-cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-ch_si_i_t_20.opt <- optimParallel(par = rep(0.5,4),# new parameter search space
-                      fn = chabaudi_si_opt_lag, 
-                      control = list(trace = 6, fnscale = -1),
-                      immunity = "i",
-                      parameters = parameters,
-                      time_range = time_range,
-                      df = 3,
-                      cue = "t",
-                      cue_range = time_range,
-                      solver = "vode")
-stopCluster(cl)
-
-# converged
-ch_si_i_t_20.opt$par  #7.708424 -19.252262   2.682587 -16.857024
-ch_si_i_t_20.opt$value #11.96679
-
-ch_si_i_t_20.dyn <- chabaudi_si_opt_lag(
-  parameters_cr = ch_si_i_t_20.opt$par,
-  immunity = "i",
-  parameters = parameters,
-  time_range = time_range,
-  df = 3,
-  cue = "t",
-  cue_range = time_range,
-  solver = "vode",
-  dyn = TRUE,
-  integration = "trapezoid")
-```
-
-# Kochins
+# Kochins times
 ```{r}
 parameters_kochin <- c(R1 = 8.89*10^6,
                 lambda = 3.7*10^5,
@@ -297,7 +265,7 @@ parameters_kochin <- c(R1 = 8.89*10^6,
                 gamma = 133)
 
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-ch_si_i_t_20.opt_kochin <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+lag_si_t_20.opt_kochin <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
                       fn = chabaudi_si_opt_lag, 
                       control = list(trace = 6, fnscale = -1),
                       immunity = "kochin",
@@ -306,16 +274,15 @@ ch_si_i_t_20.opt_kochin <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new paramete
                       df = 3,
                       cue = "t",
                       cue_range = time_range,
-                      solver = "vode",
-                      integration = "simpson")
+                      solver = "vode")
 stopCluster(cl)
 
 ## converged
-ch_si_i_t_20.opt_kochin$par  #3.941907 -12.105016   4.385514 -11.371876
-ch_si_i_t_20.opt_kochin$value #13.01394
+lag_si_t_20.opt_kochin$par  #3.960522 -12.107302   4.065275 -10.841533
+lag_si_t_20.opt_kochin$value #13.05322
 
-ch_si_i_t_20.dyn_kochin <- chabaudi_si_opt_lag(
-  parameters_cr = ch_si_i_t_20.opt_kochin$par,
+lag_si_t_20.dyn_kochin <- chabaudi_si_opt_lag(
+  parameters_cr = lag_si_t_20.opt_kochin$par,
   immunity = "kochin",
   parameters = parameters_kochin,
   time_range = time_range,
@@ -323,13 +290,10 @@ ch_si_i_t_20.dyn_kochin <- chabaudi_si_opt_lag(
   cue = "t",
   cue_range = time_range,
   solver = "vode",
-  dyn = TRUE,
-  integration = "trapezoid")
-
-
+  dyn = TRUE)
 ```
 
-# Kamiya
+# Kamiya times
 ```{r}
 parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
                 lambda = 3.7*10^5,
@@ -353,7 +317,7 @@ parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
                 rho = 0.2627156)
 
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-ch_si_i_t_20.opt_tsukushi <- optimParallel(par = c(0.5, 0.5, 0.5, 0.5),
+lag_si_t_20.opt_tsukushi <- optimParallel(par = c(0.5, 0.5, 0.5, 0.5),
                       fn = chabaudi_si_opt_lag, 
                       control = list(trace = 6, fnscale = -1),
                       immunity = "tsukushi",
@@ -362,16 +326,15 @@ ch_si_i_t_20.opt_tsukushi <- optimParallel(par = c(0.5, 0.5, 0.5, 0.5),
                       df = 3,
                       cue = "t",
                       cue_range = time_range,
-                      solver = "vode",
-                      integration = "trapezoid")
+                      solver = "vode")
 stopCluster(cl)
 
-# not converged!
-ch_si_i_t_20.opt_tsukushi$par  #4.311945 -12.460638   4.141877 -11.788003
-ch_si_i_t_20.opt_tsukushi$value #9.081061
+# converged
+lag_si_t_20.opt_tsukushi$par  #4.561687 -13.025658   4.161285 -11.963527
+lag_si_t_20.opt_tsukushi$value #9.787899
 
-ch_si_i_t_20.dyn_tsukushi <- chabaudi_si_opt_lag(
-  parameters_cr = ch_si_i_t_20.opt_tsukushi$par,
+lag_si_t_20.dyn_tsukushi <- chabaudi_si_opt_lag(
+  parameters_cr = lag_si_t_20.opt_tsukushi$par,
   immunity = "tsukushi",
   parameters = parameters_tsukushi,
   time_range = time_range,
@@ -379,20 +342,321 @@ ch_si_i_t_20.dyn_tsukushi <- chabaudi_si_opt_lag(
   cue = "t",
   cue_range = time_range,
   solver = "vode",
-  dyn = TRUE,
-  integration = "trapezoid")
+  dyn = TRUE)
+```
+
+# Kochin infected RBC
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_kochin <- optimParallel(par = c(0.9060162,  -55.3933591, 1065.6352372, 31.4803195),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "kochin",
+                      parameters = parameters_kochin,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range,
+                      solver = "vode")
+stopCluster(cl)
+
+# Did not converge! repeat with current value. Converged after
+lag_si_I_20.opt_kochin$par #0.9060162  -55.3933591 1065.6352372, 31.4803195
+# 0.9060127  -55.3933591 1065.6352372   31.4803195
+lag_si_I_20.opt_kochin$value #12.68539
+#12.68539 (no change lol)
+
+lag_si_I_20.dyn_kochin <- chabaudi_si_opt_lag(
+  parameters_cr = lag_si_I_20.opt_kochin$par,
+  immunity = "kochin",
+  parameters = parameters_kochin,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = I_range,
+  solver = "vode",
+  dyn = TRUE)
+```
+
+
+# Kamiya infected RBC
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi <- optimParallel(par = c(0.2588562, -26.8194060, 601.1017562,23.1934922),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range,
+                      solver = "vode")
+stopCluster(cl)
+
+# did not converge first time. Rerun with 1st parameters. Converged second time
+lag_si_I_20.opt_tsukushi$par #0.2588562 -26.8194060 601.1017562  23.1934922
+#0.2588557 -26.8194060 601.1017562  23.1934922
+lag_si_I_20.opt_tsukushi$value #8.720535 #8.720535
+
+lag_si_I_20.dyn_tsukushi <- chabaudi_si_opt_lag(
+  parameters_cr = lag_si_I_20.opt_tsukushi$par,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = I_range,
+  solver = "vode",
+  dyn = TRUE)
 ```
 
 # plot together
 ```{r}
-ggplot() +
-  geom_line(data = ch_si_i_t_20.dyn, aes(x = time, y = value), color = "black") +
-  geom_line(data = ch_si_i_t_20.dyn_kochin, aes(x = time, y = value), color = "blue") +
-  geom_line(data = ch_si_i_t_20.dyn_tsukushi, aes(x = time, y = value), color = "red") +
+# color 
+colors_fig4 <- c("Saturating immunity" = "black",
+                  "Kochin" = "blue",
+                  "Kamiya" = "red")
+
+# plot of time-based conversion rate strategy
+innate_immunity_t <- ggplot() +
+  geom_line(data = lag_si_t_20.dyn_i, aes(x = time, y = value, color = "Saturating immunity")) +
+  geom_line(data = lag_si_t_20.dyn_kochin, aes(x = time, y = value, color = "Kochin")) +
+  geom_line(data = lag_si_t_20.dyn_tsukushi, aes(x = time, y = value, color="Kamiya")) +
   facet_wrap(~variable, scales = "free") +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "Legend") +
+  scale_color_manual(values = colors_fig4) +
   theme_bw()
 
+
+#plot of infected RBC-based conversion rate strategy
+innate_immunity_I <- ggplot() +
+  geom_line(data = lag_si_I_20.dyn_i, aes(x = time, y = value, color = "Saturating immunity")) +
+  geom_line(data = lag_si_I_20.dyn_kochin, aes(x = time, y = value, color = "Kochin")) +
+  geom_line(data = lag_si_I_20.dyn_tsukushi, aes(x = time, y = value, color="Kamiya")) +
+  facet_wrap(~variable, scales = "free") +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "Legend") +
+  scale_color_manual(values = colors_fig4) +
+  theme_bw()
+
+ggarrange(innate_immunity_t, innate_immunity_I, align = "hv", ncol = 1, common.legend = TRUE, labels = c("A", "B"))
+
 setwd("/Users/avrilwang/Desktop/Project_Plasmodium/figures/report2")
-ggsave("innate_immunity_time.png")
+ggsave("innate_immunity_t_I.png", width = 7, height = 10)
 ```
+
+
+#--------------------#
+# Effects of different transformation methods
+# Figure 5A
+#--------------------#
+# using infected RBC as test
+```{r}
+# normalization
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_i_norm <- optimParallel(par = c(0.4979002,  1.1183273, -0.7884541,  0.4170063),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range,
+                      solver = "vode",
+                      transformation = "norm")
+stopCluster(cl)
+
+### not convergred. Did not converge 2nd time
+lag_si_I_20.opt_i_norm$par # 0.4979002  1.1183273 -0.7884541  0.4170063
+lag_si_I_20.opt_i_norm$value #10.59145
+
+lag_si_I_20.dyn_i_norm <- chabaudi_si_opt_lag(
+  parameters_cr = lag_si_I_20.opt_i_norm$par,
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = I_range,
+  solver = "vode",
+  dyn = TRUE,
+  transformation = "norm")
+
+# logistics
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_i_logit <- optimParallel(par = c(-3.114123,   66.052549, -624.723920,  -57.021729),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range,
+                      solver = "vode",
+                      transformation = "logit")
+stopCluster(cl)
+lag_si_I_20.opt_i_logit$par #-2.951903   59.704033 -527.379250  -59.785296
+#-3.114123   66.052549 -624.723920  -57.021729
+lag_si_I_20.opt_i_logit$value #10.66487 higher (lower than exp) ## did not converge though
+# 10.70449
+
+
+lag_si_I_20.dyn_i_logit <- chabaudi_si_opt_lag(
+  parameters_cr = lag_si_I_20.opt_i_logit$par,
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = I_range,
+  solver = "vode",
+  dyn = TRUE,
+  transformation = "logit")
+
+lag_si_I_20.opt_i
+```
+
+# plot together
+```{r}
+# get cr curve
+lag_si_I_20.cr_i <- par_to_df(lag_si_I_20.opt_i$par, I_range)
+lag_si_I_20.cr_i_norm <- par_to_df(lag_si_I_20.opt_i_norm$par, I_range, transformation = "norm")
+lag_si_I_20.cr_i_logit <- par_to_df(lag_si_I_20.opt_i_logit$par, I_range, transformation = "logit")
+
+# plot infection dynamics
+ggplot() +
+  geom_line(data = lag_si_I_20.dyn_i, aes(x = time, y = value, color = "Double exponential")) +
+  geom_line(data = lag_si_I_20.dyn_i_norm, aes(x = time, y = value, color = "Normalization")) +
+  geom_line(data = lag_si_I_20.dyn_i_logit, aes(x = time, y = value, color = "Logistic")) +
+  facet_wrap(~variable, scales = "free") +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "Legend") + 
+  theme_bw()
+
+# plot cr curves. Logistic and normalization is pretty similar to double exponential and has similar fitness. Stick with double exponential
+ggplot() +
+  geom_line(data = lag_si_I_20.cr_i, aes(x = cue_range, y = cr, color = "Double exponential")) +
+  geom_line(data = lag_si_I_20.cr_i_norm, aes(x = cue_range, y = cr, color = "Normalization")) +
+  geom_line(data = lag_si_I_20.cr_i_logit, aes(x = cue_range, y = cr, color = "Logistic")) +
+  theme_bw()
+```
+
+#--------------------#
+# Effects of cue range
+# Figure 5B
+#--------------------#
+```{r}
+# based on K
+I_range_large <- seq(0, (3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)), by = 1000) 
+
+# large cue range
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_i_large <- optimParallel(par = c(0.5,0.5,0.5,0.5),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range_large,
+                      solver = "vode")
+stopCluster(cl)
+lag_si_I_20.opt_i_large$par
+#0.8525727 -84.5341207  -2.1378408 0.3366813
+lag_si_I_20.opt_i_large$value #10.33804 (lower)
+
+# small cue range
+I_range_small <- seq(0, 1.5*10^6, by = 1000) # about half
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_i_small <- optimParallel(par = c(0.5,0.5,0.5,0.5),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range_small,
+                      solver = "vode")
+stopCluster(cl)
+
+#did not converge
+lag_si_I_20.opt_i_small$par #0.6011763 -4.4639660  4.8741573 -1.4995461
+lag_si_I_20.opt_i_small$value #9.745052
+```
+
+# plot
+```{r}
+lag_si_I_20.cr_i_large <- par_to_df(lag_si_I_20.opt_i_large$par, I_range_large)
+lag_si_I_20.cr_i_small <- par_to_df(lag_si_I_20.opt_i_small$par, I_range_small)
+
+ggplot() +
+  geom_line(data = lag_si_I_20.cr_i, aes(x = cue_range, y = cr, color = "2.18*10^6")) +
+  geom_line(data = lag_si_I_20.cr_i_large, aes(x = cue_range, y = cr, color = "2.0*10^7")) +
+  geom_line(data = lag_si_I_20.cr_i_small, aes(x = cue_range, y = cr, color = "1.5*10^6")) +
+  xlim(0,2000000) +
+  theme_bw()
+```
+
+#--------------------#
+# Degrees of freedom
+# Figure 5C
+#--------------------#
+```{r}
+# df = 4
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_i_4 <- optimParallel(par = c(1.281065,-18.195055,150.068764,-2.839632,4.023027),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 4,
+                      cue = "I",
+                      cue_range = I_range,
+                      solver = "vode")
+stopCluster(cl)
+
+# did not converge. converged second time
+lag_si_I_20.opt_i_4$par
+#1.281065,-18.195055,150.068764,-2.839632,4.023027
+#1.283670 -18.194529 150.068793  -2.839631 4.023027
+lag_si_I_20.opt_i_4$value #-10.840171 
+# 10.87755
+
+# df = 5
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_i_5 <- optimParallel(par = rep(0.5,6),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 5,
+                      cue = "I",
+                      cue_range = I_range,
+                      solver = "vode")
+stopCluster(cl)
+
+```
+
+```{r}
+lag_si_I_20.cr_i_4 <- par_to_df(lag_si_I_20.opt_i_4$par, I_range)
+
+ggplot() +
+  geom_line(data = lag_si_I_20.cr_i, aes(x = cue_range, y = cr, color = "df = 3")) +
+  geom_line(data = lag_si_I_20.cr_i_4, aes(x = cue_range, y = cr, color = "df = 4")) +
+  theme_bw()
+```
+
+
+
 
