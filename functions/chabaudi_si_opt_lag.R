@@ -143,7 +143,9 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     stop("Immunity must be either 'ni', 'i', 'kochin,' or 'tsukushi'")
   }
   ## Ensure cue is correct
-  if (!(cue %in% names(state)) && !(cue %in% paste0("d", names(state))) && cue != "t") {
+  ## Ensure cue is correct
+  if (!(unlist(stringr::str_split(cue, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
+      !(cue %in% paste0("d", names(state))) && cue != "t") {
     stop("Cue must be one of the states, derivative of states, or time")
   }
   ## Ensure that time_range is used as cue_range when t is used
@@ -297,28 +299,53 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     }
     
     ## get lag term index given cue. Cannot use else if given that during simulation, multiple iterations of cue_lag is used
-    ### Only get lag index when it is a state-based cue
+    ### Only get lag index when it is a state-based cue. Multiple indexes are returned
+    ### if multiple cues are given, multiple indexes are returned
     if(cue != "t") {
-      lag.i <- match(cue, names(state))}
+      lag.i <- match(unlist(stringr::str_split(cue, "\\+|\\-|\\*|\\/")), names(state))
+    }
     
     ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
-    if(t>alpha && cue == "t"){
-      cue_lag1 <- t-alpha} 
-    
-    if(t>alpha && cue != "t"){
-      cue_lag1 <- lag1[lag.i]} 
-    
-    if(t>alphag && cue == "t") {
-      cue_lag2 <- t-alphag} 
-    
-    if(t>alphag && cue != "t") {
-      cue_lag2 <- lag2[lag.i]}
-    
-    ## convert cue to variable in state or just time
-    if(cue == "t"){
-      cue_state <- t}
-    
-    if(cue != "t"){ cue_state <- state[cue]}
+    ### For simple cues (if it does not contain special characters)
+    if(stringr::str_detect(cue, "\\+|\\-|\\*|\\/", negate = TRUE)){
+      if(t>alpha && cue == "t"){
+        cue_lag1 <- t-alpha} 
+      
+      if(t>alpha && cue != "t"){
+        cue_lag1 <- lag1[lag.i]} 
+      
+      if(t>alphag && cue == "t") {
+        cue_lag2 <- t-alphag} 
+      
+      if(t>alphag && cue != "t") {
+        cue_lag2 <- lag2[lag.i]}
+      
+      ### convert cue to time if time-based conversion rate strategy is used
+      if(cue == "t"){
+        cue_state <- t}
+      
+      ### get cue_state if it is state-based
+      if(cue != "t"){cue_state <- state[cue]}
+    } else{ ### manually create lag values if cues contain special characters
+      if(stringr::str_detect(cue, "\\+")){ # if it contains plus
+        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]]}
+        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]+lag2[lag.i[2]]}
+      }
+      if(stringr::str_detect(cue, "\\-")){ # if it contains -
+        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]-lag1[lag.i[2]]}
+        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]-lag2[lag.i[2]]}
+      }
+      if(stringr::str_detect(cue, "\\*")){ # if it contains multiplication
+        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]*lag1[lag.i[2]]}
+        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]*lag2[lag.i[2]]}
+      }
+      if(stringr::str_detect(cue, "\\/")){ # if it contains division
+        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]/lag1[lag.i[2]]}
+        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]/lag2[lag.i[2]]}
+      }
+      ### get present states
+      if(cue != "t"){cue_state <- eval(parse(text = cue))}
+    }
     
     ## Define K, carrying capacity of RBC
     K <- lambda*R1/(lambda-mu*R1)
@@ -563,10 +590,14 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     chabaudi_si.df$tau_cum <- tau_cum.ls
     
     ### calculate CR based on cue
-    if(cue != "t"){cr.ls <- cr(chabaudi_si.df[, cue])}
+    if(cue != "t"){
+      cue_for_cr <- chabaudi_si.df %>% dplyr::mutate(cue_state = eval(parse(text = cue)))
+      cue_for_cr <- cue_for_cr$cue_state
+      cr.ls <- cr(cue_for_cr)}
+    
     if(cue == "t"){cr.ls <- cr(time_range)}
     chabaudi_si.df$cr <- cr.ls
-    
+
     ### processing df for plotting
     #### If no adaptive immunity, filter out adaptive immunity
     if(!adaptive){chabaudi_si.df2 <- chabaudi_si.df %>% dplyr::select(-A)}
