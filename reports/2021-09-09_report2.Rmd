@@ -657,6 +657,173 @@ ggplot() +
   theme_bw()
 ```
 
+#--------------------#
+# Optimization methods
+# Figure 5D
+#--------------------#
+# determine upper and lower search space
+```{r}
+test_par <- function(position, mutation_value){
+  par_ls <- rep(list(rep(1,4)), length(mutation_value))
+  for(i in 1:length(mutation_value)){
+    par_ls[[i]][position] <- mutation_value[i]
+  }
+  return(par_ls)
+}
+
+# search space determination
+# position 1 (-10:5)
+# position 2 (-500:100)
+# position 3 (-1000:500)
+# position 4 (-100000:500) # very large range???
+par_results <- test_par(c(3),c(5,100,500,-500,-1000,-2000))
+test0 <- par_to_df(rep(1,4), time_range)
+test <- par_to_df(par_results[[1]], time_range)
+test1 <- par_to_df(par_results[[2]], time_range)
+test2 <- par_to_df(par_results[[3]], time_range)
+test3 <- par_to_df(par_results[[4]], time_range)
+test4 <- par_to_df(par_results[[5]], time_range)
+test5 <- par_to_df(par_results[[6]], time_range)
+
+ggplot() +
+  geom_line(data = test0, aes(x = cue_range, y = cr), linetype = "dotted") +
+  geom_line(data = test, aes(x = cue_range, y = cr), color = "red") + #5
+  geom_line(data = test1, aes(x = cue_range, y = cr), color = "orange") + #100
+  geom_line(data = test2, aes(x = cue_range, y = cr), color = "yellow", linetype = "dotted") + #500
+  geom_line(data = test3, aes(x = cue_range, y = cr), color = "navy") + #-5
+  geom_line(data = test4, aes(x = cue_range, y = cr), color = "blue") + #-1000
+  geom_line(data = test5, aes(x = cue_range, y = cr), color = "cyan", linetype = "dotted") + #-2000
+  theme_bw()
+```
+
+# particle swarming
+```{r}
+library(hydroPSO)
+
+# PSO 
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+set.seed(137)
+lag_si_I_20.opt_i_PSO <- hydroPSO(fn = function(parameters_cr) chabaudi_si_opt_lag(
+  parameters_cr,
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = I_range,
+  solver = "vode"),
+  lower = c(-10, -500, -1000, -100000),
+  upper = c(5, 100, 500, 500),
+  control = list(MinMax = "max",
+                 parallel = "parallel",
+                 write2disk=FALSE,
+                 REPORT = 4)
+                      )
+stopCluster(cl)
+end.time <- Sys.time()
+lag_si_I_20.opt_i_PSO$par #0.4817513   -68.5080345  -516.9594417 -9706.1668189
+lag_si_I_20.opt_i_PSO$value #8.867265
+
+# 2nd run with L-BGFS-B
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_i_PSO2 <- optimParallel(par = lag_si_I_20.opt_i_PSO$par,# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range,
+                      solver = "vode")
+stopCluster(cl)
+
+lag_si_I_20.opt_i_PSO2$value #9.205448 (very low converged)
+lag_si_I_20.opt_i_PSO2$par #0.5321633   -41.3161835  -515.7597720 -9706.0613109 
+end.time-start.time #1.1 hours
+```
+
+# GA
+```{r}
+library(GA)
+start.time <- Sys.time()
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_i_GA <- ga(type = "real-valued", 
+         fitness =  function(parameters_cr)
+           chabaudi_si_opt_lag(
+           parameters_cr, 
+           immunity = "i",
+           parameters = parameters,
+           time_range = time_range,
+           df = 3,
+           cue = "I",
+           cue_range = I_range,
+           solver = "vode"),
+         lower = c(-10, -500, -1000, -100000), 
+         upper = c(5, 100, 500, 500), 
+         popSize = 100, 
+         maxiter = 500, 
+         run = 30, # increase if running for long
+         pmutation = 0.3, # higher given local minimum stuck
+         parallel = TRUE,
+         seed = 137,
+         keepBest = TRUE)
+stopCluster(cl)
+end.time <- Sys.time()
+
+lag_si_I_20.opt_i_GA@bestSol #1.066632 -33.9743 370.1039 -2525.583
+lag_si_I_20.opt_i_GA@fitnessValue #10.82247
+
+# second attempt with BFGS
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_i_GA2 <- optimParallel(par = c(1.066632, -33.9743, 370.1039, -2525.583),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range,
+                      solver = "vode")
+stopCluster(cl)
+
+# third attempt with Nelder Mead (need to try 2000 it)
+lag_si_I_20.opt_i_GA3 <- optim(par = c( 1.073746,   -33.973481,   370.103945, -2525.582999),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range,
+                      solver = "vode")
+
+
+lag_si_I_20.opt_i_GA3$par
+```
+
+# Nelder-mead with 2000 iterations
+```{r}
+start.time <- Sys.time()
+lag_si_I_20.opt_i_NM <- optim(par = rep(0.5, 4),
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, 
+                                     fnscale = -1,
+                                     maxit = 2000),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range,
+                      solver = "vode")
+end.time <- Sys.time()
+```
+
+
 
 
 
