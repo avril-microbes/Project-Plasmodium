@@ -209,7 +209,7 @@ ch_si_I_20.dyn_i <- chabaudi_si_opt_fast(
   dyn = TRUE)
 
 lag_si_I_20.dyn_i <- chabaudi_si_opt_lag(
-  parameters_cr = lag_si_I_20.opt_i$par,
+  parameters_cr = c(1.31331, -37.34658, 341.63819,  73.72398),
   immunity = "i",
   parameters = parameters,
   time_range = time_range,
@@ -218,6 +218,8 @@ lag_si_I_20.dyn_i <- chabaudi_si_opt_lag(
   cue_range = I_range,
   solver = "vode",
   dyn = TRUE)
+
+lag_si_I_20.cr_i <- par_to_df(c(1.31331, -37.34658, 341.63819,  73.72398), I_range)
 
 # plot. Very different!
 fig3B <- ggplot() +
@@ -476,7 +478,7 @@ lag_si_I_20.opt_i_norm$par # 0.4979002  1.1183273 -0.7884541  0.4170063
 lag_si_I_20.opt_i_norm$value #10.59145
 
 lag_si_I_20.dyn_i_norm <- chabaudi_si_opt_lag(
-  parameters_cr = lag_si_I_20.opt_i_norm$par,
+  parameters_cr = c(0.4979002,  1.1183273, -0.7884541,  0.4170063),
   immunity = "i",
   parameters = parameters,
   time_range = time_range,
@@ -508,7 +510,7 @@ lag_si_I_20.opt_i_logit$value #10.66487 higher (lower than exp) ## did not conve
 
 
 lag_si_I_20.dyn_i_logit <- chabaudi_si_opt_lag(
-  parameters_cr = lag_si_I_20.opt_i_logit$par,
+  parameters_cr = c(-3.114123,   66.052549, -624.723920,  -57.021729),
   immunity = "i",
   parameters = parameters,
   time_range = time_range,
@@ -525,9 +527,9 @@ lag_si_I_20.opt_i
 # plot together
 ```{r}
 # get cr curve
-lag_si_I_20.cr_i <- par_to_df(lag_si_I_20.opt_i$par, I_range)
-lag_si_I_20.cr_i_norm <- par_to_df(lag_si_I_20.opt_i_norm$par, I_range, transformation = "norm")
-lag_si_I_20.cr_i_logit <- par_to_df(lag_si_I_20.opt_i_logit$par, I_range, transformation = "logit")
+lag_si_I_20.cr_i <- par_to_df(c(1.31331, -37.34658, 341.63819,  73.72398), I_range)
+lag_si_I_20.cr_i_norm <- par_to_df(c(0.4979002,  1.1183273, -0.7884541,  0.4170063), I_range, transformation = "norm")
+lag_si_I_20.cr_i_logit <- par_to_df(c(-3.114123,   66.052549, -624.723920,  -57.021729), I_range, transformation = "logit")
 
 # plot infection dynamics
 ggplot() +
@@ -541,11 +543,16 @@ ggplot() +
   theme_bw()
 
 # plot cr curves. Logistic and normalization is pretty similar to double exponential and has similar fitness. Stick with double exponential
-ggplot() +
+fig5A <- ggplot() +
   geom_line(data = lag_si_I_20.cr_i, aes(x = cue_range, y = cr, color = "Double exponential")) +
   geom_line(data = lag_si_I_20.cr_i_norm, aes(x = cue_range, y = cr, color = "Normalization")) +
   geom_line(data = lag_si_I_20.cr_i_logit, aes(x = cue_range, y = cr, color = "Logistic")) +
-  theme_bw()
+  labs(x = "Asexually-committed infected RBC density",
+         y = "Conversion rate",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom", legend.box="vertical") +
+  guides(color = guide_legend(nrow = 2, byrow = TRUE))
 ```
 
 #--------------------#
@@ -595,15 +602,20 @@ lag_si_I_20.opt_i_small$value #9.745052
 
 # plot
 ```{r}
-lag_si_I_20.cr_i_large <- par_to_df(lag_si_I_20.opt_i_large$par, I_range_large)
-lag_si_I_20.cr_i_small <- par_to_df(lag_si_I_20.opt_i_small$par, I_range_small)
+lag_si_I_20.cr_i_large <- par_to_df(c(0.8525727, -84.5341207,  -2.1378408, 0.3366813), I_range_large)
+lag_si_I_20.cr_i_small <- par_to_df(c(0.6011763 ,-4.4639660 , 4.8741573, -1.4995461), I_range_small)
 
-ggplot() +
+fig5b <- ggplot() +
   geom_line(data = lag_si_I_20.cr_i, aes(x = cue_range, y = cr, color = "2.18*10^6")) +
   geom_line(data = lag_si_I_20.cr_i_large, aes(x = cue_range, y = cr, color = "2.0*10^7")) +
-  geom_line(data = lag_si_I_20.cr_i_small, aes(x = cue_range, y = cr, color = "1.5*10^6")) +
+  geom_line(data = lag_si_I_20.cr_i_small, aes(x = cue_range, y = cr, color = "1.5*10^6 (did not converge)")) +
   xlim(0,2000000) +
-  theme_bw()
+  labs(x = "Asexually-committed infected RBC density",
+         y = "Conversion rate",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom", legend.box="vertical") +
+  guides(color = guide_legend(nrow = 2, byrow = TRUE))
 ```
 
 #--------------------#
@@ -649,12 +661,16 @@ stopCluster(cl)
 ```
 
 ```{r}
-lag_si_I_20.cr_i_4 <- par_to_df(lag_si_I_20.opt_i_4$par, I_range)
+lag_si_I_20.cr_i_4 <- par_to_df(c(1.283670, -18.194529, 150.068793,  -2.839631, 4.023027), I_range)
 
-ggplot() +
+fig5c <- ggplot() +
   geom_line(data = lag_si_I_20.cr_i, aes(x = cue_range, y = cr, color = "df = 3")) +
   geom_line(data = lag_si_I_20.cr_i_4, aes(x = cue_range, y = cr, color = "df = 4")) +
-  theme_bw()
+  labs(x = "Asexually-committed infected RBC density",
+         y = "Conversion rate",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom", legend.box="vertical")
 ```
 
 #--------------------#
@@ -742,6 +758,8 @@ stopCluster(cl)
 lag_si_I_20.opt_i_PSO2$value #9.205448 (very low converged)
 lag_si_I_20.opt_i_PSO2$par #0.5321633   -41.3161835  -515.7597720 -9706.0613109 
 end.time-start.time #1.1 hours
+
+lag_si_I_20.cr_PSO <- par_to_df(c(0.5321633,   -41.3161835,  -515.7597720, -9706.0613109 ), I_range)
 ```
 
 # GA
@@ -792,7 +810,7 @@ stopCluster(cl)
 # third attempt with Nelder Mead (need to try 2000 it)
 lag_si_I_20.opt_i_GA3 <- optim(par = c( 1.073746,   -33.973481,   370.103945, -2525.582999),
                       fn = chabaudi_si_opt_lag, 
-                      control = list(trace = 6, fnscale = -1),
+                      control = list(trace = 6, fnscale = -1, maxit = 2000),
                       immunity = "i",
                       parameters = parameters,
                       time_range = time_range,
@@ -802,7 +820,24 @@ lag_si_I_20.opt_i_GA3 <- optim(par = c( 1.073746,   -33.973481,   370.103945, -2
                       solver = "vode")
 
 
-lag_si_I_20.opt_i_GA3$par
+lag_si_I_20.opt_i_GA3$par # 1.475974   -62.155826   950.857307 -2458.693986
+lag_si_I_20.opt_i_GA3$value #11.00415
+lag_si_I_20.opt_i_GA3$convergence #1 iteration limit maxit had been reached
+
+# get infection dynamics
+lag_si_I_20.dyn_i_GA <- chabaudi_si_opt_lag(
+  parameters_cr = lag_si_I_20.opt_i_GA3$par,
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = I_range,
+  solver = "vode",
+  dyn = TRUE)
+
+lag_si_I_20.cr_GA <- par_to_df(lag_si_I_20.opt_i_GA3$par, I_range)
+
 ```
 
 # Nelder-mead with 2000 iterations
@@ -821,7 +856,86 @@ lag_si_I_20.opt_i_NM <- optim(par = rep(0.5, 4),
                       cue_range = I_range,
                       solver = "vode")
 end.time <- Sys.time()
+
+lag_si_I_20.opt_i_NM$par #0.6313332  -9.6722573  33.9746276 -71.9437430
+lag_si_I_20.opt_i_NM$value #9.992368
+
+lag_si_I_20.opt_i_NM$convergence #10. region of parameter space that optim() is using to search for the optimum has collapsed to a lower dimension. Did not converge
+
+end.time-start.time #50.48298
+
+lag_si_I_20.dyn_i_NM <- chabaudi_si_opt_lag(
+  parameters_cr = lag_si_I_20.opt_i_NM$par,
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = I_range,
+  solver = "vode",
+  dyn = TRUE)
+
+lag_si_I_20.cr_i_NM <- par_to_df(lag_si_I_20.opt_i_NM$par, I_range)
 ```
+
+# plot
+```{r}
+# cr strategy
+fig5d <- ggplot() +
+  geom_line(data = lag_si_I_20.cr_i, aes(x = cue_range, y = cr, color = "L-BFGS-B")) +
+  geom_line(data = lag_si_I_20.cr_i_NM, aes(x = cue_range, y = cr, color = "NM (not converged)")) +
+  geom_line(data = lag_si_I_20.cr_GA, aes(x = cue_range, y = cr, color = "GA+L-BFGS-B+NM")) +
+  geom_line(data = lag_si_I_20.cr_PSO, aes(x = cue_range, y = cr, color = "PSO+L-BFGS-B*2")) +
+  labs(x = "Asexually-infected infected RBC density",
+         y = "Conversion rate",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom", legend.box="vertical") +
+  guides(color = guide_legend(nrow = 2, byrow = TRUE))
+
+# infection dynamics
+ggplot() +
+  geom_line(data = lag_si_I_20.dyn_i, aes(x = time, y = value, color = "L-BFGS-B")) +
+  geom_line(data = lag_si_I_20.dyn_i_NM, aes(x = time, y = value, color = "NM (not converged)")) +
+  geom_line(data = lag_si_I_20.dyn_i_GA, aes(x = time, y = value, color = "GA+L-BFGS-B+NM")) +
+  facet_wrap(~variable, scales = "free") +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom", legend.box="vertical")
+
+fig5d
+```
+#--------------------#
+# Create alteration graphics
+# Fig 5D
+#--------------------#
+```{r}
+alterations <- c("normalization", "logistic", "short\ncue range*", "long\ncue range", "df = 4", "genetics\nalgorithm*", "Nelder-Mead*", "PSO")
+fitness <- c(10.59145, 10.66487, 9.745052, 10.33804, 10.87755, 11.00415, 9.992368, 9.205448)
+fitness_diff <- fitness - 10.88715
+alterations.df <- data.frame(as.factor(alterations), fitness_diff)
+
+fig5e <- ggplot(alterations.df, aes(x = reorder(alterations, -fitness_diff), y = fitness_diff)) +
+  geom_bar(stat="identity") +
+  coord_flip() +
+  labs(x = "Alterations",
+       y = "Fitness difference") +
+  theme_bw()
+```
+
+# plot together figure 5
+```{r}
+# create alteration 
+fig5abcd <- cowplot::plot_grid(fig5A,fig5b,fig5c, fig5d, align = "hv", labels = c("A", "B", "C", "D"), ncol = 2)
+
+cowplot::plot_grid(fig5abcd, fig5e, ncol = 2, labels = c("", "E"), align = "hv", rel_widths = c(2:1))
+
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/figures/report2")
+ggsave("alterations_affects.png", width = 12, height = 7)
+```
+
 
 
 
