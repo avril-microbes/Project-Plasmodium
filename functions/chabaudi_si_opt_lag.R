@@ -313,15 +313,13 @@ chabaudi_si_opt_lag <- function(parameters_cr,
         cue_lag1 <- t-alpha} 
       
       if(t>alpha && cue != "t"){
-        if(!log_cue){cue_lag1 <- lag1[lag.i]}
-        if(log_cue){cue_lag1 <- log(lag1[lag.i])}} 
+        cue_lag1 <- lag1[lag.i]}
       
       if(t>alphag && cue == "t") {
         cue_lag2 <- t-alphag} 
       
       if(t>alphag && cue != "t") {
-        if(!log_cue){cue_lag2 <- lag2[lag.i]}
-        if(log_cue){cue_lag2 <- log(lag2[lag.i])}}
+        cue_lag2 <- lag2[lag.i]}
       
       ### convert cue to time if time-based conversion rate strategy is used
       if(cue == "t"){
@@ -329,11 +327,8 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       
       ### get cue_state if it is state-based
       if(cue != "t"){
-        if(!log_cue){cue_state <- state[cue]}
-        if(log_cue){cue_state <- log(state[cue])}
-        }
+        cue_state <- state[cue]}
     } else{### manually create lag values if cues contain special characters
-      if(!log_cue){ #### no logged cue
       if(stringr::str_detect(cue, "\\+")){ # if it contains plus
         if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]]}
         if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]+lag2[lag.i[2]]}
@@ -352,30 +347,6 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       }
       ### get present states
       if(cue != "t"){cue_state <- eval(parse(text = cue))}
-
-      } #### log cue if cue log is turned on
-      if(log_cue){
-        if(stringr::str_detect(cue, "\\+")){ # if it contains plus
-          if(t>alpha && cue != "t"){cue_lag1 <- log(lag1[lag.i[1]]+lag1[lag.i[2]])}
-          if(t>alphag && cue != "t") {cue_lag2 <- log(lag2[lag.i[1]]+lag2[lag.i[2]])}
-        }
-        if(stringr::str_detect(cue, "\\-")){ # if it contains -
-          if(t>alpha && cue != "t"){cue_lag1 <- log(lag1[lag.i[1]]-lag1[lag.i[2]])}
-          if(t>alphag && cue != "t") {cue_lag2 <- log(lag2[lag.i[1]]-lag2[lag.i[2]])}
-        }
-        if(stringr::str_detect(cue, "\\*")){ # if it contains multiplication
-          if(t>alpha && cue != "t"){cue_lag1 <- log(lag1[lag.i[1]]*lag1[lag.i[2]])}
-          if(t>alphag && cue != "t") {cue_lag2 <- log(lag2[lag.i[1]]*lag2[lag.i[2]])}
-        }
-        if(stringr::str_detect(cue, "\\/")){ # if it contains division
-          if(t>alpha && cue != "t"){cue_lag1 <- log(lag1[lag.i[1]]/lag1[lag.i[2]])}
-          if(t>alphag && cue != "t") {cue_lag2 <- log(lag2[lag.i[1]]/lag2[lag.i[2]])}
-        }
-        ### get present states
-        if(cue != "t"){cue_state <- log(eval(parse(text = cue)))}
-        ### log if cue log is turned on
-      }
-    }
     }
     
     ## Define K, carrying capacity of RBC
@@ -558,9 +529,14 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     ## Track states after delay 
     if(t>alpha){
       dI <- dI_nolag-p*lag1[1]*lag1[2]*S 
-      dM <- dM_nolag+beta*(1-cr(cue_lag1))*p*lag1[1]*lag1[2]*S 
-      dMg <- dMg_nolag+beta*cr(cue_lag1)*p*lag1[1]*lag1[2]*S 
-    }
+
+      if(log_cue){
+        dM <- dM_nolag+beta*(1-cr(log(cue_lag1)))*p*lag1[1]*lag1[2]*S
+        dMg <- dMg_nolag+beta*cr(log(cue_lag1))*p*lag1[1]*lag1[2]*S}
+      else{
+        dM <- dM_nolag+beta*(1-cr(cue_lag1))*p*lag1[1]*lag1[2]*S 
+        dMg <- dMg_nolag+beta*cr(cue_lag1)*p*lag1[1]*lag1[2]*S}
+      }
     
     if(t>alpha+alphag){
       dG <- dG_nolag+p*lag2[1]*lag2[3]*Sg
@@ -622,11 +598,17 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     
     ### calculate CR based on cue
     if(cue != "t"){
-      cue_for_cr <- chabaudi_si.df %>% dplyr::mutate(cue_state = eval(parse(text = cue)))
-      cue_for_cr <- cue_for_cr$cue_state
-      cr.ls <- cr(cue_for_cr)}
+      cue_for_cr.df <- chabaudi_si.df %>% dplyr::mutate(cue_state = eval(parse(text = cue)))
+      cue_for_cr <- cue_for_cr.df$cue_state
+
+      if(log_cue){
+        cr.ls <- cr(log(cue_for_cr))}
+      else{
+        cr.ls <- cr(cue_for_cr)}
+      }
     
     if(cue == "t"){cr.ls <- cr(time_range)}
+    
     chabaudi_si.df$cr <- cr.ls
 
     ### processing df for plotting
