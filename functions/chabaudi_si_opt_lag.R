@@ -80,7 +80,8 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                                 #integration = "integrate",
                                 transformation = "exp",
                                 adaptive = FALSE,
-                                dyn = FALSE) {
+                                dyn = FALSE,
+                                log_cue = FALSE) {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -312,21 +313,27 @@ chabaudi_si_opt_lag <- function(parameters_cr,
         cue_lag1 <- t-alpha} 
       
       if(t>alpha && cue != "t"){
-        cue_lag1 <- lag1[lag.i]} 
+        if(!log_cue){cue_lag1 <- lag1[lag.i]}
+        if(log_cue){cue_lag1 <- log(lag1[lag.i])}} 
       
       if(t>alphag && cue == "t") {
         cue_lag2 <- t-alphag} 
       
       if(t>alphag && cue != "t") {
-        cue_lag2 <- lag2[lag.i]}
+        if(!log_cue){cue_lag2 <- lag2[lag.i]}
+        if(log_cue){cue_lag2 <- log(lag2[lag.i])}}
       
       ### convert cue to time if time-based conversion rate strategy is used
       if(cue == "t"){
         cue_state <- t}
       
       ### get cue_state if it is state-based
-      if(cue != "t"){cue_state <- state[cue]}
-    } else{ ### manually create lag values if cues contain special characters
+      if(cue != "t"){
+        if(!log_cue){cue_state <- state[cue]}
+        if(log_cue){cue_state <- log(state[cue])}
+        }
+    } else{### manually create lag values if cues contain special characters
+      if(!log_cue){ #### no logged cue
       if(stringr::str_detect(cue, "\\+")){ # if it contains plus
         if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]]}
         if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]+lag2[lag.i[2]]}
@@ -345,6 +352,30 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       }
       ### get present states
       if(cue != "t"){cue_state <- eval(parse(text = cue))}
+
+      } #### log cue if cue log is turned on
+      if(log_cue){
+        if(stringr::str_detect(cue, "\\+")){ # if it contains plus
+          if(t>alpha && cue != "t"){cue_lag1 <- log(lag1[lag.i[1]]+lag1[lag.i[2]])}
+          if(t>alphag && cue != "t") {cue_lag2 <- log(lag2[lag.i[1]]+lag2[lag.i[2]])}
+        }
+        if(stringr::str_detect(cue, "\\-")){ # if it contains -
+          if(t>alpha && cue != "t"){cue_lag1 <- log(lag1[lag.i[1]]-lag1[lag.i[2]])}
+          if(t>alphag && cue != "t") {cue_lag2 <- log(lag2[lag.i[1]]-lag2[lag.i[2]])}
+        }
+        if(stringr::str_detect(cue, "\\*")){ # if it contains multiplication
+          if(t>alpha && cue != "t"){cue_lag1 <- log(lag1[lag.i[1]]*lag1[lag.i[2]])}
+          if(t>alphag && cue != "t") {cue_lag2 <- log(lag2[lag.i[1]]*lag2[lag.i[2]])}
+        }
+        if(stringr::str_detect(cue, "\\/")){ # if it contains division
+          if(t>alpha && cue != "t"){cue_lag1 <- log(lag1[lag.i[1]]/lag1[lag.i[2]])}
+          if(t>alphag && cue != "t") {cue_lag2 <- log(lag2[lag.i[1]]/lag2[lag.i[2]])}
+        }
+        ### get present states
+        if(cue != "t"){cue_state <- log(eval(parse(text = cue)))}
+        ### log if cue log is turned on
+      }
+    }
     }
     
     ## Define K, carrying capacity of RBC
@@ -426,7 +457,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       } 
       
       if(t>alpha && t<=alpha+alphag){
-        Sg <- exp(-mu*t+mu*alpha)}
+        Sg <- exp(-mu*t+mu*alpha)} # not relevent
       
       if(t>alpha+alphag){
         Sg <- exp(-mu*alphag)
@@ -439,7 +470,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       }
       
       if(t>alpha && t<=alpha+alphag){
-        Sg <- exp(-ID + lag1[4])
+        Sg <- 0 # not relevent
       }
       
       if(t>alpha+alphag){
