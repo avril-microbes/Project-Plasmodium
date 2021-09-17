@@ -1,0 +1,346 @@
+---
+title: "report3"
+output: html_document
+---
+
+# Load libraries
+```{r}
+library(deSolve)
+library(splines)
+library(optimParallel)
+library(ggplot2)
+library(ggpubr)
+library(tidyr)
+library(magrittr)
+library(Rcpp)
+library(microbenchmark)
+library(GA)
+```
+
+# Load functions
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("par_to_df.R")
+source("chabaudi_si_opt_fast.R")
+source("chabaudi_si_opt_lag.R")
+```
+# define parameters
+```{r}
+parameters <- c(R1 = 8.5*10^6,
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 4*10^-6,
+                alpha = 1, 
+                alphag = 2, 
+                beta = 10, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1)
+
+time_range <- seq(0, 20, by = 1e-3)
+I_range <- seq(0, 2.18*10^6, by = 1000) 
+I_range_large <- seq(0, (3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)), by = 1000) 
+I_range_mid <- seq(0, 5*10^6, by = 1000)
+I_range_mid2 <- seq(0, 4*10^6, by = 1000)
+I_range_mid4 <- seq(0, 6*10^6, by = (6*10^6)/5000)
+
+# logged counterpart
+I_range_mid2_log <- seq(0, log(4*10^6), by = log(4*10^6)/5000)
+I_range_mid3_log <- seq(0, log(5*10^6), by = log(5*10^6)/5000)
+I_range_mid4_log <- seq(0, log(6*10^6), by = log(6*10^6)/5000)
+I_range_large_log <- seq(0, log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6))), by = log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)))/10000)
+```
+
+#--------------------#
+# Effects of logging cues
+#--------------------#
+
+# testing out I+IG
+```{r}
+# without log
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_i_ig_20.opt <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I+Ig",
+                      cue_range = I_range,
+                      solver = "vode")
+stopCluster(cl)
+
+## didn't converge. Is it due to low I range?
+lag_si_i_ig_20.opt$par #1.139503  -19.734505   58.152185 -149.598714
+lag_si_i_ig_20.opt$value #10.72106
+
+# try with I_range large. Converged
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_i_ig_20.opt_large <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I+Ig",
+                      cue_range = I_range_large,
+                      solver = "vode")
+stopCluster(cl)
+lag_si_i_ig_20.opt_large$par #0.6110871 -37.8530875 352.8262597  28.2507776
+lag_si_i_ig_20.opt_large$value #10.03784 *not as large but still converged
+
+# repeat with mid I range 
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_i_ig_20.opt_mid <- optimParallel(par = c(0.7205704, -11.9927752,  18.7389358,   7.0955049),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I+Ig",
+                      cue_range = I_range_mid,
+                      solver = "vode")
+stopCluster(cl)
+ # did not converge first time
+lag_si_i_ig_20.opt_mid$par #0.7205704 -11.9927752  18.7389358   7.0955049
+lag_si_i_ig_20.opt_mid$value #10.19125
+
+# repeat with mid I range 2
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_Ig_20.opt_mid2 <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I+Ig",
+                      cue_range = I_range_mid2,
+                      solver = "vode")
+stopCluster(cl)
+
+# converged
+lag_si_I_Ig_20.opt_mid2$par #1.13936  -26.87043  134.66369 -565.44822
+lag_si_I_Ig_20.opt_mid2$value #10.66155
+
+lag_si_I_Ig_20.dyn_i_mid2 <- chabaudi_si_opt_lag(
+  parameters_cr = c(1.13936, -26.87043, 134.66369, -565.44822),
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "I+Ig",
+  cue_range = I_range_mid2,
+  solver = "vode",
+  dyn = TRUE)
+
+# repeat with mid4 range to match minimum range that ran for the logged sample
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_Ig_20.opt_mid4 <- optimParallel(par = c(0.6974646, -13.8881851,  29.3901588,  10.3551182),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I+Ig",
+                      cue_range = I_range_mid4,
+                      solver = "vode")
+stopCluster(cl)
+
+# did not converge. Converged after inserting it the second time???
+lag_si_I_Ig_20.opt_mid4$par #0.6974646 -13.8881851  29.3901588  10.3551182
+lag_si_I_Ig_20.opt_mid4$value #10.15578
+
+lag_si_I_Ig_20.dyn_i_mid4 <- chabaudi_si_opt_lag(
+  parameters_cr = c(0.6974646, -13.8881851,  29.3901588,  10.3551182),
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "I+Ig",
+  cue_range = I_range_mid4,
+  solver = "vode",
+  dyn = TRUE)
+
+lag_si_I_Ig_20.cr_i_mid4 <- par_to_df(c(0.6974646, -13.8881851,  29.3901588,  10.3551182), I_range_mid4)
+```
+
+# log
+## logging only I. Very little diffefrence with I+Ig optimal model. 
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_mid2_log <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range_mid2_log,
+                      solver = "vode",
+                      log_cue = TRUE)
+stopCluster(cl)
+
+# converged
+lag_si_I_20.opt_mid2_log$par #53.38506 -74.63229 -46.80107 -56.33301
+lag_si_I_20.opt_mid2_log$value # 11.52049
+
+lag_si_I_20.dyn_i_mid2_log <- chabaudi_si_opt_lag(
+  parameters_cr = c(53.38506, -74.63229, -46.80107, -56.33301),
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = I_range_mid2_log,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue = TRUE)
+```
+
+# retrying logging I+IG
+## stuck in iteration 1 when using I_range_mid2_log
+```{r}
+# is it problem with cue_range?
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_Ig_20.opt_log_large <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I+Ig",
+                      cue_range = I_range_large_log,
+                      solver = "vode",
+                      log_cue = TRUE)
+stopCluster(cl)
+
+# converged
+lag_si_I_Ig_20.opt_log_large$par #38.67440 -56.97096 -32.27843 -41.80728
+lag_si_I_Ig_20.opt_log_large$value #11.51344
+
+# infection dynamics
+lag_si_I_Ig_20.dyn_log_large <- chabaudi_si_opt_lag(
+  parameters_cr = c(38.67440, -56.97096, -32.27843, -41.80728),
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "I+Ig",
+  cue_range = I_range_large_log,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue = TRUE)
+
+# retry again with shorter cue range 
+## 5*10^6 max. doesn't run until 1 it
+## 6*10^6 max. runs!
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_Ig_20.opt_log_mid4 <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "i",
+                      parameters = parameters,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I+Ig",
+                      cue_range = I_range_mid4_log,
+                      solver = "vode",
+                      log_cue = TRUE)
+stopCluster(cl)
+
+# converged
+lag_si_I_Ig_20.opt_log_mid4$par #38.39625 -52.48414 -35.16696 -39.95028
+lag_si_I_Ig_20.opt_log_mid4$value #11.51343 (very little difference). Any way, very high nontheless!
+## much higher than #10.88715, which is the standard fitness for infected asexual RBC with 2.18*10^6
+
+# infection dynamics
+lag_si_I_Ig_20.dyn_log_mid4 <- chabaudi_si_opt_lag(
+  parameters_cr = c(38.39625, -52.48414, -35.16696, -39.95028),
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue = "I+Ig",
+  cue_range = I_range_mid4_log,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue = TRUE)
+
+# cr
+lag_si_I_Ig_20.cr_log_mid4 <- par_to_df(c(38.39625, -52.48414, -35.16696, -39.95028), I_range_mid4_log)
+```
+# plot
+```{r}
+# process data to get total infected RBC and merozoite
+total_parasite <- function(dyn){
+  dyn2 <- data.frame()
+  I <- dyn %>% 
+  dplyr::filter(variable == "I") %>% 
+  dplyr::select(value)
+  
+  Ig <- dyn %>% 
+  dplyr::filter(variable == "Ig") %>% 
+  dplyr::select(value)
+  
+  M <- dyn %>% 
+  dplyr::filter(variable == "M") %>% 
+  dplyr::select(value)
+  
+  Mg <- dyn %>% 
+  dplyr::filter(variable == "Mg") %>% 
+  dplyr::select(value)
+  
+  total_I <- data.frame(time = dyn$time, variable = rep("total_I", length(dyn)), value = I+Ig)
+  total_M <- data.frame(time = dyn$time, variable = rep("total_M", length(dyn)), value = M+Mg)
+  
+  dyn2 <- rbind(dyn, total_I, total_M)
+}
+total_I
+test <- total_parasite(lag_si_I_Ig_20.dyn_i_mid4)
+```
+
+
+```{r}
+# infection dynamics. All 6*10^6 max RBC with saturating immunity
+fig1A <- ggplot() +
+  geom_line(data = lag_si_I_Ig_20.dyn_i_mid4, aes(x = time, y = value, color = "I+Ig")) +
+  geom_line(data = lag_si_I_Ig_20.dyn_log_mid4, aes(x = time, y = value, color = "Log(I+Ig)")) +
+  facet_wrap(~variable, scales = "free", ncol = 5) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw()
+
+# cr at log scale
+ggplot() +
+  geom_line(data = lag_si_I_Ig_20.cr_i_mid4, aes(x = log(cue_range), y = cr, color = "I+Ig")) +
+  geom_line(data = lag_si_I_Ig_20.cr_log_mid4, aes(x = cue_range, y = cr, color = "Log(I+Ig)")) +
+  labs(x = "Total infected RBC density",
+         y = "Conversion rate",
+         color = "") +
+  theme_bw()
+
+# cr at normal scale
+ggplot() +
+  geom_line(data = lag_si_I_Ig_20.cr_i_mid4, aes(x = cue_range, y = cr, color = "I+Ig")) +
+  geom_line(data = lag_si_I_Ig_20.cr_log_mid4, aes(x = exp(cue_range), y = cr, color = "Log(I+Ig)")) +
+  labs(x = "Total infected RBC density",
+         y = "Conversion rate",
+         color = "") +
+  theme_bw()
+```
+
+
+
+
