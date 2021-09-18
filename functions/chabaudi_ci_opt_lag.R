@@ -677,8 +677,8 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   tau2.ls <- (exp(aval+bval*dens))/(1+exp(aval+bval*dens))*(gam_2/(gam_1+gam_2))
                                                             
   ## Get approximation of cumulative transmission potential
-  tau1.sum <- sum(tau1.ls*int)
-  tau2.sum <- sum(tau2.ls*int)
+  tau1.sum <- sum(tau1.ls*int, na.rm = TRUE)
+  tau2.sum <- sum(tau2.ls*int, na.rm = TRUE)
   
   # return cumulative transmission potential. Turn negative to maximize
   if(dyn == FALSE){return(tau1.sum)} # let tau1 be the optimizing strain
@@ -687,10 +687,10 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   # Simulating infection dynamics if Dyn == TRUE
   #------------------------# 
   if(dyn == TRUE) {
-    ### calculate cumulative transmission potential gain
-    tau_cum1.ls <- cumsum(tau1.ls*int)
-    tau_cum2.ls <- cumsum(tau2.ls*int)
-    
+    ### calculate cumulative transmission potential gain. NAs or became 0
+    tau_cum1.ls <- cumsum(ifelse(is.na(tau1.ls*int), 0, tau1.ls*int)) + tau1.ls*0
+    tau_cum2.ls <- cumsum(ifelse(is.na(tau2.ls*int), 0, tau2.ls*int)) + tau2.ls*0
+
     ### cbind results
     chabaudi_ci.df$tau1 <- tau1.ls
     chabaudi_ci.df$tau2 <- tau2.ls
