@@ -536,7 +536,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     }
     
     if(immunity =="kochin"){
-      if(gamete_immunity){
+      if(gamete_immune){
         dE <- sigma*(I1+I2+Ig1+Ig2)*(1-E)-mue*E
         dIg1_nolag <- p*R*Mg1-mu*Ig1-gamma*E*Ig1
         dIg2_nolag <- p*R*Mg2-mu*Ig2-gamma*E*Ig2} 
@@ -681,7 +681,8 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   tau2.sum <- sum(tau2.ls*int, na.rm = TRUE)
   
   # return cumulative transmission potential. Turn negative to maximize
-  if(dyn == FALSE){return(tau1.sum)} # let tau1 be the optimizing strain
+  if(dyn == FALSE){return(tau1.sum-tau2.sum)} # let tau1 be the optimizing strain. Optimize
+  # the fitness difference between strain 1 and strain 2
   
   #-------------------------#
   # Simulating infection dynamics if Dyn == TRUE
