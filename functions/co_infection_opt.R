@@ -4,7 +4,6 @@
 
 # By Avril Wang
 
-
 co_infection_opt <- function(parameters_cr,  # preliminary parameter set
                              limit, # minimum fitness difference between competing strains to break
                              model, # infection model
@@ -34,16 +33,14 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
                                                                  parameters_cr_2 = opt_parm_temp), # reassign resident parameter to optimal one
                                                             additional_arg))
     
-    ## print out message between each iterations
+    ## save output
     opt_parm_temp <- model_output$par
     opt_value_temp <- model_output$value
     index <- index + 1
-    print(index, opt_value_temp, opt_parm_temp)
     
     # exit loop if limit is reached
     if(opt_value_temp < limit) {
       return(model_output)
-      sprintf("Fitness difference is smaller than %f", limit)
       break
     }
   }
