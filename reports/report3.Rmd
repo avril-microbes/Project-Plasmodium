@@ -504,8 +504,17 @@ fig2b <- ggplot() +
   theme(legend.position="bottom")
 
 fig2c <- ggplot() +
-  geom_line(data = lag_ci_I_20.cr_log_tsukushi, aes(x = cue_range, y = cr, color = "Co-infection")) +
-  geom_line(data = lag_si_I_20.cr_log_tsukushi, aes(x = cue_range, y = cr, color = "Single infection")) +
+  geom_line(data = lag_ci_I_20.cr_log_tsukushi, aes(x = exp(cue_range), y = cr, color = "Co-infection")) +
+  geom_line(data = lag_si_I_20.cr_log_tsukushi, aes(x = exp(cue_range), y = cr, color = "Single infection")) +
+  labs(x = "Log(Asxually-infected RBC density)",
+         y = "Conversion rate",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom") 
+
+ggplot() +
+  geom_line(data = lag_ci_I_20.cr_log_tsukushi, aes(x = exp(cue_range), y = cr, color = "Co-infection")) +
+  geom_line(data = lag_si_I_20.cr_log_tsukushi, aes(x = exp(cue_range), y = cr, color = "Single infection")) +
   labs(x = "Log(Asxually-infected RBC density)",
          y = "Conversion rate",
          color = "") +
@@ -551,16 +560,60 @@ stopCluster(cl)
 # import in data file filled with parameter from each iteration and fitness difference
 setwd("/Users/avrilwang/Desktop/Project_Plasmodium/opt_parm")
 lag_si_I_20.opt_tsukushi_cycle <- read.csv("lag_si_I_20.opt_tsukushi_cycle.csv")
+lag_si_I_20.opt_tsukushi_cycle <- lag_si_I_20.opt_tsukushi_cycle %>% dplyr::select(-X, -X.1)
+lag_si_I_20.opt_tsukushi_cycle$fitness_diff <- lag_si_I_20.opt_tsukushi_cycle$fitness_diff*-1
 lag_si_I_20.opt_tsukushi_cycle$index <- seq(1, nrow(lag_si_I_20.opt_tsukushi_cycle), by = 1)
 
 
-# plot
-ggplot(lag_si_I_20.opt_tsukushi_cycle) +
-  geom_line(aes(x = index, y = par_1, color = "par 1")) +
-  geom_line(aes(x = index, y = par_2, color = "par 2")) +
-  geom_line(aes(x = index, y = par_3, color = "par 3")) +
-  geom_line(aes(x = index, y = par_4, color = "par 4")) +
+lag_si_I_20.opt_tsukushi_cycle_2 <- gather(lag_si_I_20.opt_tsukushi_cycle, key = parameter, value = value, -index)
+lag_si_I_20.opt_tsukushi_cycle_2$value <- as.numeric(lag_si_I_20.opt_tsukushi_cycle_2$value)
+
+# plot parameter fluctuations
+fig2d <- ggplot(lag_si_I_20.opt_tsukushi_cycle_2) +
+  geom_line(aes(x = index, y = value, color = parameter)) +
+  facet_wrap(~parameter, scales = "free", ncol = 3) +
+  xlim(15, 51) + # one cycle length
   theme_bw()
+
+# loop to get all conversion rate strategy
+#lag_si_I_20.cr_tsukushi_cycle 
+# create paralmeter list
+get_par <- function(df) {
+  par <- c(df[1], df[2], df[3], df[4])
+  return(par)
+}
+
+par_ls <- apply(lag_si_I_20.opt_tsukushi_cycle[, 1:4], 1, FUN = get_par)
+
+# loop to caculate conversion rate with cue
+cue_df_ls <- list()
+for(i in 1:nrow(lag_si_I_20.opt_tsukushi_cycle)){
+  
+  cue_df <- par_to_df(par_ls[, i], I_range_mid4)
+  cue_df$index <- rep(i, nrow(cue_df))
+  
+  cue_df_ls[[i]] <- cue_df
+}
+
+cr_df <- do.call(rbind, cue_df_ls)
+cr_df
+# plot
+cue_cycle_plot <- ggplot(cr_df) +
+  geom_line(aes(x = cue_range, y = cr, color = index)) +
+  labs(x = "Asexually infected RBC", y = "Conversion rate", color = "Iteration") +
+  theme_bw()
+
+#Circular motion with strategy (very similar to satuarting immunity with GA)
+library(gganimate)
+cue_cycle_anim <- cue_cycle_plot + 
+  transition_states(index) +
+  ease_aes('cubic-in-out') +
+  ggtitle('Now showing iteration {closest_state}',
+          subtitle = 'Iteration {frame} of {nframes}')
+
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/figures/report3")
+animate(cue_cycle_anim, nframes = 24, renderer = gifski_renderer("co_infection_cr_cycle.gif"))
+
 ```
 
 
@@ -590,8 +643,10 @@ ggplot() +
 
 # plotting together
 ```{r}
+ggarrange(fig2a, fig2b, fig2c, fig2d, align = "hv", labels = c("A", "B", "C", "D"))
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/figures/report3")
+ggsave("co_infection.png", width = 10, height = 7)
 
-ggarrange(fig2a, fig2b, fig2c, align = "hv", labels = c("A", "B", "C"))
 ```
 
 
