@@ -556,6 +556,9 @@ stopCluster(cl)
 ```
 
 # fascinating behaviour with non-logged model. L-BFGS enters a neverending cycle
+#-------------------#
+Code for creating conversion rate animation
+#-------------------#
 ```{r}
 # import in data file filled with parameter from each iteration and fitness difference
 setwd("/Users/avrilwang/Desktop/Project_Plasmodium/opt_parm")
@@ -612,7 +615,7 @@ cue_cycle_anim <- cue_cycle_plot +
           subtitle = 'Iteration {frame} of {nframes}')
 
 setwd("/Users/avrilwang/Desktop/Project_Plasmodium/figures/report3")
-animate(cue_cycle_anim, nframes = 24, renderer = gifski_renderer("co_infection_cr_cycle.gif"))
+animate(cue_cycle_anim, nframes = 52, renderer = gifski_renderer("co_infection_cr_cycle.gif"))
 
 ```
 
