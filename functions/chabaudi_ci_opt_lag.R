@@ -99,6 +99,8 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   force(solver)
   #force(integration)
   force(adaptive)
+  force(dyn)
+  force(log_cue)
   
   #-------------------------#
   # Define initial condition
@@ -178,6 +180,10 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   ## Ensure spline transformation is entered correct
   if(transformation != "norm" && transformation != "exp" && transformation != "logit"){
     stop("Transformation must be either 'norm' or 'exp' or 'logit'")
+  }
+  ## Ensure that cue transformation is entered correctly
+  if(log_cue != "none" && log_cue != "log" && log_cue != "log10"){
+    stop("log_cue must be either 'norne' or 'log' or 'log10'")
   }
   
   #-------------------------#
@@ -619,16 +625,21 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     if(t>alpha){
       dI1 <- dI1_nolag-p*lag1[1]*lag1[2]*S 
       dI2 <- dI2_nolag-p*lag1[1]*lag1[3]*S 
-      if(log_cue){
+      if(log_cue == "log"){
         dM1 <- dM1_nolag+beta*(1-cr_1(log(cue_lag1)))*p*lag1[1]*lag1[2]*S
         dM2 <- dM2_nolag+beta*(1-cr_2(log(cue_lag1)))*p*lag1[1]*lag1[3]*S
         dMg1 <- dMg1_nolag+beta*cr_1(log(cue_lag1))*p*lag1[1]*lag1[2]*S
         dMg2 <- dMg2_nolag+beta*cr_2(log(cue_lag1))*p*lag1[1]*lag1[3]*S}
-      else{
+      if(log_cue == "none"){
         dM1 <- dM1_nolag+beta*(1-cr_1(cue_lag1))*p*lag1[1]*lag1[2]*S 
         dM2 <- dM2_nolag+beta*(1-cr_2(cue_lag1))*p*lag1[1]*lag1[3]*S
         dMg1 <- dMg1_nolag+beta*cr_1(cue_lag1)*p*lag1[1]*lag1[2]*S
         dMg2 <- dMg2_nolag+beta*cr_2(cue_lag1)*p*lag1[1]*lag1[3]*S}
+      if(log_cue == "log10"){
+        dM1 <- dM1_nolag+beta*(1-cr_1(log10(cue_lag1)))*p*lag1[1]*lag1[2]*S
+        dM2 <- dM2_nolag+beta*(1-cr_2(log10(cue_lag1)))*p*lag1[1]*lag1[3]*S
+        dMg1 <- dMg1_nolag+beta*cr_1(log10(cue_lag1))*p*lag1[1]*lag1[2]*S
+        dMg2 <- dMg2_nolag+beta*cr_2(log10(cue_lag1))*p*lag1[1]*lag1[3]*S}
     }
     
     if(t>alpha+alphag){
@@ -704,13 +715,17 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       cue_for_cr.df <- chabaudi_ci.df %>% dplyr::mutate(cue_state = eval(parse(text = cue)))
       cue_for_cr <- cue_for_cr.df$cue_state
       
-      if(log_cue){
+      if(log_cue == "log"){
         cr1.ls <- cr_1(log(cue_for_cr))
         cr2.ls <- cr_2(log(cue_for_cr))}
 
-      else{
+      if(log_cue == "none"){
         cr1.ls <- cr_1(cue_for_cr)
         cr2.ls <- cr_2(cue_for_cr)}
+      
+      if(log_cue == "log10"){
+        cr1.ls <- cr_1(log10(cue_for_cr))
+        cr2.ls <- cr_2(log10(cue_for_cr))}
     }
     
     if(cue == "t"){

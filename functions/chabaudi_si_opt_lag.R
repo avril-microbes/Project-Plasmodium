@@ -81,7 +81,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                                 transformation = "exp",
                                 adaptive = FALSE,
                                 dyn = FALSE,
-                                log_cue = FALSE) {
+                                log_cue = "none") {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -96,6 +96,8 @@ chabaudi_si_opt_lag <- function(parameters_cr,
   force(solver)
   #force(integration)
   force(adaptive)
+  force(dyn)
+  force(log_cue)
   
   #-------------------------#
   # Define initial condition
@@ -160,6 +162,10 @@ chabaudi_si_opt_lag <- function(parameters_cr,
   ## Ensure spline transformation is entered correct
   if(transformation != "norm" && transformation != "exp" && transformation != "logit"){
     stop("Transformation must be either 'norm' or 'exp' or 'logit'")
+  }
+  ## Ensure that cue transformation is entered correctly
+  if(log_cue != "none" && log_cue != "log" && log_cue != "log10"){
+    stop("log_cue must be either 'norne' or 'log' or 'log10'")
   }
   
   #-------------------------#
@@ -530,12 +536,15 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     if(t>alpha){
       dI <- dI_nolag-p*lag1[1]*lag1[2]*S 
 
-      if(log_cue){
+      if(log_cue == "log"){
         dM <- dM_nolag+beta*(1-cr(log(cue_lag1)))*p*lag1[1]*lag1[2]*S
         dMg <- dMg_nolag+beta*cr(log(cue_lag1))*p*lag1[1]*lag1[2]*S}
-      else{
+      if(log_cue == "none"){
         dM <- dM_nolag+beta*(1-cr(cue_lag1))*p*lag1[1]*lag1[2]*S 
         dMg <- dMg_nolag+beta*cr(cue_lag1)*p*lag1[1]*lag1[2]*S}
+      if(log_cue == "log10"){
+        dM <- dM_nolag+beta*(1-cr(log10(cue_lag1)))*p*lag1[1]*lag1[2]*S
+        dMg <- dMg_nolag+beta*cr(log10(cue_lag1))*p*lag1[1]*lag1[2]*S}
       }
     
     if(t>alpha+alphag){
@@ -601,10 +610,12 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       cue_for_cr.df <- chabaudi_si.df %>% dplyr::mutate(cue_state = eval(parse(text = cue)))
       cue_for_cr <- cue_for_cr.df$cue_state
 
-      if(log_cue){
+      if(log_cue == "log"){
         cr.ls <- cr(log(cue_for_cr))}
-      else{
+      if(log_cue == "none"){
         cr.ls <- cr(cue_for_cr)}
+      if(log_cue == "log10"){
+        cr.ls <- cr(log10(cue_for_cr))}
       }
     
     if(cue == "t"){cr.ls <- cr(time_range)}
