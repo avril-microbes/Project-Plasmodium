@@ -7,6 +7,7 @@ library(here)
 
 source(here("functions/par_to_df.R"))
 source(here("functions/chabaudi_ci_opt_lag.R"))
+source(here("functions/co_infection_opt.R"))
 
 parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
                          lambda = 3.7*10^5,
@@ -40,10 +41,13 @@ lag_ci_R_20.opt_tsukushi <- co_infection_opt(parameters_cr = rep(0.5, 4),
                                              parameters = parameters_tsukushi,
                                              time_range = time_range,
                                              df = 3,
-                                             cue = "R",
-                                             cue_range = R_range,
+                                             cue_1 = "R",
+                                             cue_2 = "R",
+                                             cue_range_1 = R_range,
+                                             cue_range_2 = R_range,
                                              solver = "vode",
-                                             log_cue = FALSE)
+                                             log_cue_1 = "none",
+                                             log_cue_2 = "none")
 stopCluster(cl)
 
 print(lag_ci_R_20.opt_tsukushi)
