@@ -3,26 +3,183 @@ title: "report4"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# Load libraries
+```{r}
+library(deSolve)
+library(splines)
+library(optimParallel)
+library(ggplot2)
+library(ggpubr)
+library(tidyr)
+library(magrittr)
+library(Rcpp)
+library(microbenchmark)
+library(GA)
+library(here)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+# Load functions
+```{r}
+setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
+source("par_to_df.R")
+source("chabaudi_si_opt_fast.R")
+source("chabaudi_si_opt_lag.R")
+source("total_parasite.R")
+source("chabaudi_ci_opt_lag.R")
 ```
 
-## Including Plots
+# define parameters
+```{r}
+parameters <- c(R1 = 8.5*10^6,
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 4*10^-6,
+                alpha = 1, 
+                alphag = 2, 
+                beta = 10, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1)
 
-You can also embed plots, for example:
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+time_range <- seq(0, 20, by = 1e-3)
+I_range <- seq(0, 2.18*10^6, by = 1000) 
+I_range_large <- seq(0, (3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)), by = 1000) 
+I_range_mid <- seq(0, 5*10^6, by = 1000)
+I_range_mid2 <- seq(0, 4*10^6, by = 1000)
+I_range_mid4 <- seq(0, 6*10^6, by = (6*10^6)/5000)
+
+# logged counterpart
+I_range_mid2_log <- seq(0, log(4*10^6), by = log(4*10^6)/5000)
+I_range_mid3_log <- seq(0, log(5*10^6), by = log(5*10^6)/5000)
+I_range_mid4_log <- seq(0, log(6*10^6), by = log(6*10^6)/5000)
+I_range_mid4_log10 <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
+I_range_large_log <- seq(0, log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6))), by = log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)))/10000)
+
+I_range_mid4_log10
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+#-------------------------#
+# Log10 transformations of single infection and co-infection
+#-------------------------#
+## have no effect on optimal strategy
+# single infection run 
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_log10_tsukushi <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range_mid4_log10,
+                      solver = "vode",
+                      log_cue = "log10")
+stopCluster(cl)
+
+# converged
+lag_si_I_20.opt_log10_tsukushi$par #5.457834   2.379202 -17.737559   4.565501
+lag_si_I_20.opt_log10_tsukushi$value #9.494985 (almost the same with natural log)
+
+# plot convergence rate strategy
+lag_si_I_20.cr_log10_tsukushi <- par_to_df(c(5.457834,2.379202,-17.737559,4.565501), I_range_mid4_log10)
+
+## previous result with natural log
+lag_si_I_20.cr_log_tsukushi <- par_to_df(c(5.477084, 2.396156, -17.806718, 4.590146), I_range_mid4_log)
+
+```
+
+# reference no transformation run
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi <- optimParallel(par = c(0.1467794,  -44.3872660, 2286.5081690,   28.0751167),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi,
+                      time_range = time_range,
+                      df = 3,
+                      cue = "I",
+                      cue_range = I_range_mid4,
+                      solver = "vode")
+stopCluster(cl)
+
+# did not converge first. did not converge 2nd. converged 3rd
+lag_si_I_20.opt_tsukushi$par 
+#-0.1351109 -4.0711426  0.4454364  0.5001712
+# 0.1467794  -44.3872660 2286.5081690   28.0751167
+# 0.1467794  -44.3872660 2286.5081690   28.0751167
+lag_si_I_20.opt_tsukushi$value # much lower
+# 8.007537
+#8.540348
+#-8.540348 
+lag_si_I_20.opt_tsukushi
+
+lag_si_I_20.cr_tsukushi <- par_to_df(c(0.1467794,  -44.3872660, 2286.5081690,   28.0751167), I_range_mid4)
+
+# infection dynamics
+
+```
+
+# plot together
+```{r}
+# plot. Similar shape. non-logged model is less stiff.
+fig1 <- ggplot() +
+  geom_line(data = lag_si_I_20.cr_log10_tsukushi, aes(x = 10^cue_range, y = cr, color = "log10(I)")) +
+  geom_line(data = lag_si_I_20.cr_log_tsukushi, aes(x = exp(cue_range), y = cr, color = "log(I)"), linetype = 2) +
+  geom_line(data = lag_si_I_20.cr_tsukushi, aes(x = cue_range, y = cr, color = "I")) +
+  labs(x = "Asexual infected RBC density",
+         y = "Conversion rate",
+         color = "") +
+  xlim(0,10^6) +
+  theme_bw() +
+  theme(legend.position="bottom") 
+
+ggsave(here("figures/report4/log10.png"), width = 7, height = 5)
+```
+
+# why? Is it because spline is not flexible enough?
+```{r}
+# can we use spline to get optimal function of back transformed  optimal conversion rate from log() model?
+lag_si_I_20.cr_log10_tsukushi_tr <- lag_si_I_20.cr_log10_tsukushi
+lag_si_I_20.cr_log10_tsukushi_tr$cue_range <- 10^lag_si_I_20.cr_log10_tsukushi$cue_range
+test <- lm(cr ~ exp(-exp(splines2::bSpline(x = cue_range, degree = 3, df = 3))), data = lag_si_I_20.cr_log10_tsukushi_tr)
+test <- lm(cr ~ splines2::bSpline(x = cue_range, degree = 3, df = 3), data = lag_si_I_20.cr_log10_tsukushi_tr)
+# nope! Spline cannot accomodate stiff function
+plot(cr~cue_range, lag_si_I_20.cr_log10_tsukushi_tr)
+lines(lag_si_I_20.cr_log10_tsukushi_tr$cue_range, predict(test), col = "red")
+
+# if we back transformed cue
+test2 <- lm(exp(-exp(cr))~ splines2::bSpline(x = cue_range, degree = 3, df = 3), data = lag_si_I_20.cr_log10_tsukushi)
+plot(exp(-exp(cr))~cue_range, lag_si_I_20.cr_log10_tsukushi)
+lines(lag_si_I_20.cr_log10_tsukushi$cue_range, predict(test2), col = "red")
+```
+
+
+
