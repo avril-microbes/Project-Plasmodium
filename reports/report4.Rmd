@@ -20,12 +20,13 @@ library(here)
 
 # Load functions
 ```{r}
-setwd("/Users/avrilwang/Desktop/Project_Plasmodium/functions")
-source("par_to_df.R")
-source("chabaudi_si_opt_fast.R")
-source("chabaudi_si_opt_lag.R")
-source("total_parasite.R")
-source("chabaudi_ci_opt_lag.R")
+source(here("functions/test.R"))
+source(here("functions/chabaudi_ci_opt_lag.R"))
+source(here("functions/par_to_df.R"))
+source(here("functions/chabaudi_si_opt_lag.R"))
+source(here("functions/total_parasite.R"))
+
+
 ```
 
 # define parameters
@@ -180,8 +181,14 @@ lines(lag_si_I_20.cr_log10_tsukushi_tr$cue_range, predict(test), col = "red")
 test2 <- lm(exp(-exp(cr))~ splines2::bSpline(x = cue_range, degree = 3, df = 3), data = lag_si_I_20.cr_log10_tsukushi)
 plot(exp(-exp(cr))~cue_range, lag_si_I_20.cr_log10_tsukushi)
 lines(lag_si_I_20.cr_log10_tsukushi$cue_range, exp(-exp(predict(test2))), col = "red")
-
 ```
  
+#------------#
+is logged strategy better?
+#-------------#
+```{r}
+
+```
+
 
 
