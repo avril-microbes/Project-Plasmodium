@@ -82,7 +82,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                                 transformation = "exp",
                                 adaptive = FALSE,
                                 dyn = FALSE,
-                                log_cue = FALSE,
+                                log_cue = "none",
                                 gamete_immune = TRUE) {
   #-------------------------#
   # Ensure values we inputted 
