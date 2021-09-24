@@ -165,6 +165,7 @@ ggsave(here("figures/report4/log10.png"), width = 7, height = 5)
 ```
 
 # why? Is it because spline is not flexible enough?
+## let's come back to this another time
 ```{r}
 # can we use spline to get optimal function of back transformed  optimal conversion rate from log() model?
 lag_si_I_20.cr_log10_tsukushi_tr <- lag_si_I_20.cr_log10_tsukushi
@@ -178,8 +179,9 @@ lines(lag_si_I_20.cr_log10_tsukushi_tr$cue_range, predict(test), col = "red")
 # if we back transformed cue
 test2 <- lm(exp(-exp(cr))~ splines2::bSpline(x = cue_range, degree = 3, df = 3), data = lag_si_I_20.cr_log10_tsukushi)
 plot(exp(-exp(cr))~cue_range, lag_si_I_20.cr_log10_tsukushi)
-lines(lag_si_I_20.cr_log10_tsukushi$cue_range, predict(test2), col = "red")
-```
+lines(lag_si_I_20.cr_log10_tsukushi$cue_range, exp(-exp(predict(test2))), col = "red")
 
+```
+ 
 
 
