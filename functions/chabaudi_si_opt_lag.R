@@ -507,6 +507,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       dM_nolag <- -mum*M-p*R*M
       dMg_nolag <- -mum*Mg-p*R*Mg
       dG_nolag <- -mug*G
+      dID <- mu
     }
     
     if(immunity == "i") {
