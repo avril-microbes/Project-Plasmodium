@@ -1,3 +1,5 @@
+
+
 # co-infection strain infection model with Plasmodium chabaudi
 # By: Avril Wang. Code adapted from Greischar et al., 2016 Predicting optimal transmission investment in malaria parasites
 # the following script is altered to reflect next cycle conversion, where sexual commitment occurs in the previous
@@ -70,20 +72,23 @@
 # theme_bw()                  
 
 chabaudi_ci_opt_lag <- function(parameters_cr_1,
-                                parameters_cr_2,
-                                immunity,
-                                parameters,
-                                time_range,
-                                df,
-                                cue,
-                                cue_range,
-                                solver = "lsoda",
-                                #integration = "integrate",
-                                transformation = "exp",
-                                adaptive = FALSE,
-                                dyn = FALSE,
-                                log_cue = "none",
-                                gamete_immune = TRUE) {
+                                  parameters_cr_2,
+                                  immunity,
+                                  parameters,
+                                  time_range,
+                                  df,
+                                  cue_1,
+                                  cue_2,
+                                  cue_range_1,
+                                  cue_range_2,
+                                  solver = "lsoda",
+                                  #integration = "integrate",
+                                  transformation = "exp",
+                                  adaptive = FALSE,
+                                  dyn = FALSE,
+                                  log_cue_1 = "none",
+                                  log_cue_2 = "none",
+                                  gamete_immune = TRUE) {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -94,13 +99,17 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   force(parameters)
   force(time_range)
   force(df)
-  force(cue)
-  force(cue_range)
+  force(cue_1)
+  force(cue_2)
+  force(cue_range_1)
+  force(cue_range_2)
   force(solver)
   #force(integration)
   force(adaptive)
   force(dyn)
-  force(log_cue)
+  force(log_cue_1)
+  force(log_cue_2)
+  
   
   #-------------------------#
   # Define initial condition
@@ -165,13 +174,22 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   }
   ## Ensure cue is correct
   ## Ensure cue is correct
-  if (!(unlist(stringr::str_split(cue, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
-      !(cue %in% paste0("d", names(state))) && cue != "t") {
-    stop("Cue must be one of the states, derivative of states, or time")
+  if (!(unlist(stringr::str_split(cue_1, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
+      !(cue_1 %in% paste0("d", names(state))) && cue_1 != "t") {
+    stop("Cue 1 must be one of the states, derivative of states, or time")
   }
+  
+  if (!(unlist(stringr::str_split(cue_2, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
+      !(cue_2 %in% paste0("d", names(state))) && cue_2 != "t") {
+    stop("Cue 2 must be one of the states, derivative of states, or time")
+  }
+  
   ## Ensure that time_range is used as cue_range when t is used
-  if(cue == "t" && !isTRUE(all.equal(cue_range, time_range))){
-    stop("Time is chosen as cue. Cue_range must equal to time_range")
+  if(cue_1 == "t" && (!isTRUE(all.equal(cue_range_1, time_range)))){
+    stop("Time is chosen as cue_1. Cue_range_1 must equal to time_range")
+  }
+  if(cue_2 == "t" && (!isTRUE(all.equal(cue_range_2, time_range)))){
+    stop("Time is chosen as cue_2. Cue_range_2 must equal to time_range")
   }
   ## Ensure integration is entered correctly. Deprecated
   #if(integration != "integrate" && integration != "trapezoid" && integration != "simpson"){
@@ -182,9 +200,13 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     stop("Transformation must be either 'norm' or 'exp' or 'logit'")
   }
   ## Ensure that cue transformation is entered correctly
-  if(log_cue != "none" && log_cue != "log" && log_cue != "log10"){
-    stop("log_cue must be either 'norne' or 'log' or 'log10'")
+  if(log_cue_1 != "none" && log_cue_1 != "log" && log_cue_1 != "log10"){
+    stop("log_cue_1 must be either 'none' or 'log' or 'log10'")
   }
+  if(log_cue_2 != "none" && log_cue_2 != "log" && log_cue_2 != "log10"){
+    stop("log_cue_1 must be either 'none' or 'log' or 'log10'")
+  }
+  
   
   #-------------------------#
   # Function to describe population 
@@ -200,17 +222,20 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   # Simplified to increase performance. 
   #------------------------#
   ## Define dummy data of conversion rate
-  dummy_y.vals <- rep(0, length(cue_range)) 
-  dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
+  dummy_y.vals_1 <- rep(0, length(cue_range_1)) 
+  dummy_cr.data_1 <- as.data.frame(cbind(cue_range_1, dummy_y.vals_1))
+  
+  dummy_y.vals_2 <- rep(0, length(cue_range_2)) 
+  dummy_cr.data_2 <- as.data.frame(cbind(cue_range_2, dummy_y.vals_2))
   
   ## fit basic cubic spline with no internal knots. Here, increasing df increases knots.
   ## degree defines shape of basis spline. This shouldn't have any impact on ultimate result
   ## What matter is the number of knots, or df. Increasing df should give us more complex reaction norm
-  dummy_cr.mod_1 <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3, df = df))
-  dummy_cr.mod_1$data <- dummy_cr.data
+  dummy_cr.mod_1 <- lm(dummy_y.vals_1 ~ splines2::bSpline(x = cue_range_1, degree = 3, df = df))
+  dummy_cr.mod_1$data <- dummy_cr.data_1
   
-  dummy_cr.mod_2 <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3, df = df))
-  dummy_cr.mod_2$data <- dummy_cr.data
+  dummy_cr.mod_2 <- lm(dummy_y.vals_2 ~ splines2::bSpline(x = cue_range_2, degree = 3, df = df))
+  dummy_cr.mod_2$data <- dummy_cr.data_2
   
   ## Assign coefficient to be optimized to the dummy conversion rate function
   dummy_cr.mod_1$coefficients <- parameters_cr_1
@@ -218,26 +243,26 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   
   ## use spline function to predict cr 
   if(transformation == "norm"){
-    cr_fit_1 <- predict(dummy_cr.mod_1, newdata = data.frame(cue_range))
+    cr_fit_1 <- predict(dummy_cr.mod_1, newdata = data.frame(cue_range_1))
     cr_fit_t_1 <- (cr_fit_1-min(cr_fit_1))/(max(cr_fit_1-min(cr_fit_1)))
     
-    cr_fit_2 <- predict(dummy_cr.mod_2, newdata = data.frame(cue_range))
+    cr_fit_2 <- predict(dummy_cr.mod_2, newdata = data.frame(cue_range_2))
     cr_fit_t_2 <- (cr_fit_2-min(cr_fit_2))/(max(cr_fit_2-min(cr_fit_2)))
     
   } else if(transformation == "exp"){
-    cr_fit_t_1 <- exp(-exp(predict(dummy_cr.mod_1, newdata = data.frame(cue_range))))
-    cr_fit_t_2 <- exp(-exp(predict(dummy_cr.mod_2, newdata = data.frame(cue_range))))
+    cr_fit_t_1 <- exp(-exp(predict(dummy_cr.mod_1, newdata = data.frame(cue_range_1))))
+    cr_fit_t_2 <- exp(-exp(predict(dummy_cr.mod_2, newdata = data.frame(cue_range_2))))
   } else{
-    cr_fit_1 <- predict(dummy_cr.mod_1, newdata = data.frame(cue_range))
+    cr_fit_1 <- predict(dummy_cr.mod_1, newdata = data.frame(cue_range_1))
     cr_fit_t_1 <- 1 / (1 + exp(-cr_fit_1))
     
-    cr_fit_2 <- predict(dummy_cr.mod_2, newdata = data.frame(cue_range))
+    cr_fit_2 <- predict(dummy_cr.mod_2, newdata = data.frame(cue_range_2))
     cr_fit_t_2 <- 1 / (1 + exp(-cr_fit_2))
   }
   
   ## Get spline function where cr ~ cue
-  cr_1 <- splinefun(cbind(cue_range, cr_fit_t_1))
-  cr_2 <- splinefun(cbind(cue_range, cr_fit_t_2))
+  cr_1 <- splinefun(cbind(cue_range_1, cr_fit_t_1))
+  cr_2 <- splinefun(cbind(cue_range_2, cr_fit_t_2))
   
   #-------------------------#
   # Define integration method. Deprecated
@@ -333,62 +358,121 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     ## Defining Pulse beta function based on current time
     pulseBeta <- pulseBeta_fun(I0/2, sp, t)
     
-    ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
-    if(t>alpha){lag1 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
-    if(t>alphag){lag2 = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
+    ## Define the lag terms.
+    if(t>alpha){lag_a = deSolve::lagvalue(t-alpha)} # lag state for asexual development
+    if(t>alphag){lag_b = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
     ### extra lag term for adaptive immunity
     if(adaptive){
-      if(t>epsilon){lag3 = deSolve::lagvalue(t-epsilon)}
+      if(t>epsilon){lag_c = deSolve::lagvalue(t-epsilon)}
     }
     
     ## get lag term index given cue. Cannot use else if given that during simulation, multiple iterations of cue_lag is used
     ### Only get lag index when it is a state-based cue. Multiple indexes are returned
     ### if multiple cues are given, multiple indexes are returned
-    if(cue != "t") {
-      lag.i <- match(unlist(stringr::str_split(cue, "\\+|\\-|\\*|\\/")), names(state))
+    if(cue_1 != "t") {
+      lag.i_1 <- match(unlist(stringr::str_split(cue_1, "\\+|\\-|\\*|\\/")), names(state)) # cue for strain 1
+    }
+    
+    if(cue_2 != "t") {
+      lag.i_2 <- match(unlist(stringr::str_split(cue_2, "\\+|\\-|\\*|\\/")), names(state)) # cue for strain 1
     }
     
     ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
     ### For simple cues (if it does not contain special characters)
-    if(stringr::str_detect(cue, "\\+|\\-|\\*|\\/", negate = TRUE)){
-      if(t>alpha && cue == "t"){
-        cue_lag1 <- t-alpha} 
+    if(stringr::str_detect(cue_1, "\\+|\\-|\\*|\\/", negate = TRUE)){
+      if(t>alpha && cue_1 == "t"){
+        cue_lag_a1 <- t-alpha
+      } 
       
-      if(t>alpha && cue != "t"){
-        cue_lag1 <- lag1[lag.i]}
+      if(t>alpha && cue_1 != "t"){
+        cue_lag_a1 <- lag_a[lag.i_1]
+      }
       
-      if(t>alphag && cue == "t") {
-        cue_lag2 <- t-alphag} 
+      if(t>alphag && cue_1 == "t") {
+        cue_lag_b1 <- t-alphag
+      } 
       
-      if(t>alphag && cue != "t") {
-        cue_lag2 <- lag2[lag.i]}
+      if(t>alphag && cue_1 != "t") {
+        cue_lag_b1 <- lag_b[lag.i_1]
+      }
       
       ### convert cue to time if time-based conversion rate strategy is used
-      if(cue == "t"){
-        cue_state <- t}
+      if(cue_1 == "t"){
+        cue_state_1 <- t
+      }
       
       ### get cue_state if it is state-based
-      if(cue != "t"){
-        cue_state <- state[cue]}
+      if(cue_1 != "t"){
+        cue_state_1 <- state[cue_1]
+      }
+      
     } else{### manually create lag values if cues contain special characters
-      if(stringr::str_detect(cue, "\\+")){ # if it contains plus
-        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]]}
-        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]+lag2[lag.i[2]]}
+      if(stringr::str_detect(cue_1, "\\+")){ # if it contains plus. strain 1
+        if(t>alpha && cue_1 != "t"){cue_lag_a1 <- lag_a[lag.i_1[1]]+lag_a[lag.i_1[2]]}
+        if(t>alphag && cue_1 != "t") {cue_lag_b1 <- lag_b[lag.i_1[1]]+lag_b[lag.i_1[2]]}
       }
-      if(stringr::str_detect(cue, "\\-")){ # if it contains -
-        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]-lag1[lag.i[2]]}
-        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]-lag2[lag.i[2]]}
+      if(stringr::str_detect(cue_1, "\\-")){ # if it contains -. strain 1
+        if(t>alpha && cue_1 != "t"){cue_lag_a1 <- lag_a[lag.i_1[1]]-lag_a[lag.i_1[2]]}
+        if(t>alphag && cue_1 != "t") {cue_lag_b1 <- lag_b[lag.i_1[1]]-lag_b[lag.i_1[2]]}
       }
-      if(stringr::str_detect(cue, "\\*")){ # if it contains multiplication
-        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]*lag1[lag.i[2]]}
-        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]*lag2[lag.i[2]]}
+      if(stringr::str_detect(cue_1, "\\*")){  # if it contains multiplication. strain 1
+        if(t>alpha && cue_1 != "t"){cue_lag_a1 <- lag_a[lag.i_1[1]]*lag_a[lag.i_1[2]]}
+        if(t>alphag && cue_1 != "t") {cue_lag_b1 <- lag_b[lag.i_1[1]]*lag_b[lag.i_1[2]]}
       }
-      if(stringr::str_detect(cue, "\\/")){ # if it contains division
-        if(t>alpha && cue != "t"){cue_lag1 <- lag1[lag.i[1]]/lag1[lag.i[2]]}
-        if(t>alphag && cue != "t") {cue_lag2 <- lag2[lag.i[1]]/lag2[lag.i[2]]}
+      if(stringr::str_detect(cue_1, "\\/")){  # if it contains divide. strain 1
+        if(t>alpha && cue_1 != "t"){cue_lag_a1 <- lag_a[lag.i_1[1]]/lag_a[lag.i_1[2]]}
+        if(t>alphag && cue_1 != "t") {cue_lag_b1 <- lag_b[lag.i_1[1]]/lag_b[lag.i_1[2]]}
       }
       ### get present states
-      if(cue != "t"){cue_state <- eval(parse(text = cue))}
+      if(cue_1 != "t"){cue_state_1 <- eval(parse(text = cue_1))}
+    }
+    
+    #### strain 2
+    if(stringr::str_detect(cue_2, "\\+|\\-|\\*|\\/", negate = TRUE)){
+      if(t>alpha && cue_2 == "t"){
+        cue_lag_a2 <- t-alpha
+      } 
+      
+      if(t>alpha && cue_2 != "t"){
+        cue_lag_a2 <- lag_a[lag.i_2]
+      }
+      
+      if(t>alphag && cue_2 == "t") {
+        cue_lag_b2 <- t-alphag
+      } 
+      
+      if(t>alphag && cue_2 != "t") {
+        cue_lag_b2 <- lag_b[lag.i_2]
+      }
+      
+      ### convert cue to time if time-based conversion rate strategy is used
+      if(cue_2 == "t"){
+        cue_state_2 <- t
+      }
+      ### get cue_state if it is state-based
+      if(cue_2 != "t"){
+        cue_state_2 <- state[cue_2]
+      }
+      
+    } else{### manually create lag values if cues contain special characters
+      if(stringr::str_detect(cue_2, "\\+")){ # if it contains plus. strain 1
+        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a[lag.i_2[1]]+lag_a[lag.i_2[2]]}
+        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b[lag.i_2[1]]+lag_b[lag.i_2[2]]}
+      }
+      if(stringr::str_detect(cue_2, "\\-")){ # if it contains -. strain 1
+        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a[lag.i_2[1]]-lag_a[lag.i_2[2]]}
+        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b[lag.i_2[1]]-lag_b[lag.i_2[2]]}
+      }
+      if(stringr::str_detect(cue_2, "\\*")){  # if it contains multiplication. strain 1
+        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a[lag.i_2[1]]*lag_a[lag.i_2[2]]}
+        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b[lag.i_2[1]]*lag_b[lag.i_2[2]]}
+      }
+      if(stringr::str_detect(cue_2, "\\/")){  # if it contains divide. strain 1
+        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a[lag.i_2[1]]/lag_a[lag.i_2[2]]}
+        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b[lag.i_2[1]]/lag_b[lag.i_2[2]]}
+      }
+      ### get present states
+      if(cue_2 != "t"){cue_state_2 <- eval(parse(text = cue_2))}
     }
     
     ## Define K, carrying capacity of RBC
@@ -411,7 +495,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       S <- exp(-mu*alpha)} 
     
     if(t>alpha && immunity != "ni"){
-      S <- exp(-ID + lag1[6])
+      S <- exp(-ID + lag_a[6])
     }
     
     #if(t>alpha && immunity =="i"){
@@ -487,7 +571,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       }
       
       if(t>alpha+alphag){
-        Sg <- exp(-ID + lag2[6])
+        Sg <- exp(-ID + lag_b[6])
       }
       
       #if(t>alpha && t<=alpha+alphag){
@@ -573,6 +657,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       dMg2_nolag <- -mum*Mg2-p*R*Mg2
       dG1_nolag <- -mug*G1
       dG2_nolag <- -mug*G2
+      dID <- mu
     }
     
     if(immunity == "i") {
@@ -596,7 +681,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       dMg2_nolag <- -mum*Mg2-p*R*Mg2
       dG1_nolag <- -mug*G1
       dG2_nolag <- -mug*G2
-
+      
     } 
     
     ## Track states in initial cohort of infection
@@ -623,31 +708,47 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     
     ## Track states after delay 
     if(t>alpha){
-      dI1 <- dI1_nolag-p*lag1[1]*lag1[2]*S 
-      dI2 <- dI2_nolag-p*lag1[1]*lag1[3]*S 
-      if(log_cue == "log"){
-        dM1 <- dM1_nolag+beta*(1-cr_1(log(cue_lag1)))*p*lag1[1]*lag1[2]*S
-        dM2 <- dM2_nolag+beta*(1-cr_2(log(cue_lag1)))*p*lag1[1]*lag1[3]*S
-        dMg1 <- dMg1_nolag+beta*cr_1(log(cue_lag1))*p*lag1[1]*lag1[2]*S
-        dMg2 <- dMg2_nolag+beta*cr_2(log(cue_lag1))*p*lag1[1]*lag1[3]*S}
-      if(log_cue == "none"){
-        dM1 <- dM1_nolag+beta*(1-cr_1(cue_lag1))*p*lag1[1]*lag1[2]*S 
-        dM2 <- dM2_nolag+beta*(1-cr_2(cue_lag1))*p*lag1[1]*lag1[3]*S
-        dMg1 <- dMg1_nolag+beta*cr_1(cue_lag1)*p*lag1[1]*lag1[2]*S
-        dMg2 <- dMg2_nolag+beta*cr_2(cue_lag1)*p*lag1[1]*lag1[3]*S}
-      if(log_cue == "log10"){
-        dM1 <- dM1_nolag+beta*(1-cr_1(log10(cue_lag1)))*p*lag1[1]*lag1[2]*S
-        dM2 <- dM2_nolag+beta*(1-cr_2(log10(cue_lag1)))*p*lag1[1]*lag1[3]*S
-        dMg1 <- dMg1_nolag+beta*cr_1(log10(cue_lag1))*p*lag1[1]*lag1[2]*S
-        dMg2 <- dMg2_nolag+beta*cr_2(log10(cue_lag1))*p*lag1[1]*lag1[3]*S}
+      dI1 <- dI1_nolag-p*lag_a[1]*lag_a[2]*S 
+      dI2 <- dI2_nolag-p*lag_a[1]*lag_a[3]*S 
+      
+      if(log_cue_1 == "log"){
+        dM1 <- dM1_nolag+beta*(1-cr_1(log(cue_lag_a1)))*p*lag_a[1]*lag_a[2]*S
+        dMg1 <- dMg1_nolag+beta*cr_1(log(cue_lag_a1))*p*lag_a[1]*lag_a[2]*S
+      }
+      
+      if(log_cue_2 == "log"){
+        dM2 <- dM2_nolag+beta*(1-cr_2(log(cue_lag_a2)))*p*lag_a[1]*lag_a[3]*S
+        dMg2 <- dMg2_nolag+beta*cr_2(log(cue_lag_a2))*p*lag_a[1]*lag_a[3]*S
+      }
+      
+      if(log_cue_1 == "none"){
+        dM1 <- dM1_nolag+beta*(1-cr_1(cue_lag_a1))*p*lag_a[1]*lag_a[2]*S 
+        dMg1 <- dMg1_nolag+beta*cr_1(cue_lag_a1)*p*lag_a[1]*lag_a[2]*S
+      }
+      
+      if(log_cue_2 == "none"){
+        dM2 <- dM2_nolag+beta*(1-cr_2(cue_lag_a2))*p*lag_a[1]*lag_a[3]*S
+        dMg2 <- dMg2_nolag+beta*cr_2(cue_lag_a2)*p*lag_a[1]*lag_a[3]*S
+      }
+      
+      if(log_cue_1 == "log10"){
+        dM1 <- dM1_nolag+beta*(1-cr_1(log10(cue_lag_a1)))*p*lag_a[1]*lag_a[2]*S
+        dMg1 <- dMg1_nolag+beta*cr_1(log10(cue_lag_a1))*p*lag_a[1]*lag_a[2]*S
+      }
+      
+      if(log_cue_2 == "log10"){
+        dM2 <- dM2_nolag+beta*(1-cr_2(log10(cue_lag_a2)))*p*lag_a[1]*lag_a[3]*S
+        dMg2 <- dMg2_nolag+beta*cr_2(log10(cue_lag_a2))*p*lag_a[1]*lag_a[3]*S
+      }
     }
     
     if(t>alpha+alphag){
-      dG1 <- dG1_nolag+p*lag2[1]*lag2[4]*Sg
-      dG2 <- dG2_nolag+p*lag2[1]*lag2[5]*Sg
-      dIg1 <- dIg1_nolag-p*lag2[1]*lag2[4]*Sg
-      dIg2 <- dIg2_nolag-p*lag2[1]*lag2[5]*Sg
+      dG1 <- dG1_nolag+p*lag_b[1]*lag_b[4]*Sg
+      dG2 <- dG2_nolag+p*lag_b[1]*lag_b[5]*Sg
+      dIg1 <- dIg1_nolag-p*lag_b[1]*lag_b[4]*Sg
+      dIg2 <- dIg2_nolag-p*lag_b[1]*lag_b[5]*Sg
     }
+    
     
     ## Return the states. Must be in the same order as states!
     if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dA)))}
@@ -686,7 +787,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   ## Calculate the transmission potential at each time t
   tau1.ls <- (exp(aval+bval*dens))/(1+exp(aval+bval*dens))*(gam_1/(gam_1+gam_2))
   tau2.ls <- (exp(aval+bval*dens))/(1+exp(aval+bval*dens))*(gam_2/(gam_1+gam_2))
-                                                            
+  
   ## Get approximation of cumulative transmission potential
   tau1.sum <- sum(tau1.ls*int, na.rm = TRUE)
   tau2.sum <- sum(tau2.ls*int, na.rm = TRUE)
@@ -702,7 +803,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     ### calculate cumulative transmission potential gain. NAs or became 0
     tau_cum1.ls <- cumsum(ifelse(is.na(tau1.ls*int), 0, tau1.ls*int)) + tau1.ls*0
     tau_cum2.ls <- cumsum(ifelse(is.na(tau2.ls*int), 0, tau2.ls*int)) + tau2.ls*0
-
+    
     ### cbind results
     chabaudi_ci.df$tau1 <- tau1.ls
     chabaudi_ci.df$tau2 <- tau2.ls
@@ -711,27 +812,30 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     chabaudi_ci.df$tau_cum2 <- tau_cum2.ls
     
     ### calculate CR based on cue
-    if(cue != "t"){
-      cue_for_cr.df <- chabaudi_ci.df %>% dplyr::mutate(cue_state = eval(parse(text = cue)))
-      cue_for_cr <- cue_for_cr.df$cue_state
+    if(cue_1 != "t"){
+      # get cue calculation
+      cue_for_cr.df <- chabaudi_ci.df %>% dplyr::mutate(cue_state_1 = eval(parse(text = cue_1)))
+      cue_for_cr_1 <- cue_for_cr.df$cue_state_1
       
-      if(log_cue == "log"){
-        cr1.ls <- cr_1(log(cue_for_cr))
-        cr2.ls <- cr_2(log(cue_for_cr))}
-
-      if(log_cue == "none"){
-        cr1.ls <- cr_1(cue_for_cr)
-        cr2.ls <- cr_2(cue_for_cr)}
-      
-      if(log_cue == "log10"){
-        cr1.ls <- cr_1(log10(cue_for_cr))
-        cr2.ls <- cr_2(log10(cue_for_cr))}
+      # log if necessary 
+      if(log_cue_1 == "log"){cr1.ls <- cr_1(log(cue_for_cr_1))}
+      if(log_cue_1 == "none"){cr1.ls <- cr_1(cue_for_cr_1)}
+      if(log_cue_1 == "log10"){cr1.ls <- cr_1(log10(cue_for_cr_1))}
     }
     
-    if(cue == "t"){
-      cr1.ls <- cr_1(time_range)
-      cr2.ls <- cr_2(time_range)
-      }
+    if(cue_2 != "t"){
+      # get cue calculation
+      cue_for_cr.df <- chabaudi_ci.df %>% dplyr::mutate(cue_state_2 = eval(parse(text = cue_2)))
+      cue_for_cr_2 <- cue_for_cr.df$cue_state_2
+      
+      # log if necessary 
+      if(log_cue_2 == "log"){cr2.ls <- cr_2(log(cue_for_cr_2))}
+      if(log_cue_2 == "none"){cr2.ls <- cr_2(cue_for_cr_2)}
+      if(log_cue_2 == "log10"){cr2.ls <- cr_2(log10(cue_for_cr_2))}
+    }
+    
+    if(cue_1 == "t"){cr1.ls <- cr_1(time_range)}
+    if(cue_2 == "t"){cr2.ls <- cr_2(time_range)}
     
     chabaudi_ci.df$cr1 <- cr1.ls
     chabaudi_ci.df$cr2 <- cr2.ls
@@ -748,5 +852,6 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     return(chabaudi_ci.df4)
   }
 }
+
 
 
