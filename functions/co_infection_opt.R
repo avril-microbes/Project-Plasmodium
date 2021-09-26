@@ -15,6 +15,7 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
   
   # assign iteration index
   index <- 1
+  output_ls <- list()
   
   # do-while loop to continue to optimize until fitness difference between 
   # strain1 and strain2 is below limit
@@ -29,18 +30,28 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
     ## code to execute parallel LGBF-GS optimization
     model_output <- do.call(optimParallel::optimParallel, c(list(par = parameters_cr,
                                                                  fn = model,
-                                                                 control = list(trace = 6, fnscale = -1),
+                                                                 control = list(trace = 0, fnscale = -1),
                                                                  parameters_cr_2 = opt_parm_temp), # reassign resident parameter to optimal one
                                                             additional_arg))
     
     ## save output
+    opt_parm_conv <- model_output$convergence
     opt_parm_temp <- model_output$par
     opt_value_temp <- model_output$value
     index <- index + 1
+    output <- list(index, opt_parm_temp, opt_value_temp, opt_parm_conv)
+    output_ls[[index]] <- output
+    print(output)
     
     # exit loop if limit is reached
     if(opt_value_temp < limit) {
-      return(model_output)
+      opt_parm_conv <- model_output$convergence
+      opt_parm_temp <- model_output$par
+      opt_value_temp <- model_output$value
+      index <- index + 1
+      output <- list(index, opt_parm_temp, opt_value_temp, opt_parm_conv)
+      output_ls[[index]] <- output
+      return(model_output, output_ls)
       break
     }
   }
