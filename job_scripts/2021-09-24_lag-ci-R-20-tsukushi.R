@@ -31,23 +31,23 @@ parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
                          rho = 0.2627156)
 
 time_range <- seq(0, 20, 1e-3)
-R_range <- seq(0, 8.89*10^6, by = 1000)
+R_range_log10 <- seq(0, log10(8.89*10^6), by = log10(8.89*10^6)/10000)
 
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-lag_ci_R_20.opt_tsukushi <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                                             limit = 0.01, 
-                                             model = chabaudi_ci_opt_lag,
-                                             immunity = "tsukushi",
-                                             parameters = parameters_tsukushi,
-                                             time_range = time_range,
-                                             df = 3,
-                                             cue_1 = "R",
-                                             cue_2 = "R",
-                                             cue_range_1 = R_range,
-                                             cue_range_2 = R_range,
-                                             solver = "vode",
-                                             log_cue_1 = "none",
-                                             log_cue_2 = "none")
+lag_ci_I_20.opt_tsukushi_log10_R <- co_infection_opt(parameters_cr = rep(0.5, 4),
+                                                     limit = 0.01, 
+                                                     model = chabaudi_ci_opt_lag,
+                                                     immunity = "tsukushi",
+                                                     parameters = parameters_tsukushi,
+                                                     time_range = time_range,
+                                                     df = 3,
+                                                     cue_1 = "R",
+                                                     cue_2 = "R",
+                                                     cue_range_1 = R_range_log10,
+                                                     cue_range_2 = R_range_log10,
+                                                     solver = "vode",
+                                                     log_cue_1 = "log10",
+                                                     log_cue_2 = "log10")
 stopCluster(cl)
 
-print(lag_ci_R_20.opt_tsukushi)
+print(lag_ci_I_20.opt_tsukushi_log10_R)
