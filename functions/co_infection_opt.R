@@ -28,9 +28,12 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
       parameters_cr <- opt_parm_temp
     }
     ## code to execute parallel LGBF-GS optimization
+    output <- list()
+    index <- index + 1
+    print(paste("starting iteration", index))
     model_output <- do.call(optimParallel::optimParallel, c(list(par = parameters_cr,
                                                                  fn = model,
-                                                                 control = list(trace = 0, fnscale = -1),
+                                                                 control = list(trace = 6, fnscale = -1),
                                                                  parameters_cr_2 = opt_parm_temp), # reassign resident parameter to optimal one
                                                             additional_arg))
     
@@ -38,21 +41,18 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
     opt_parm_conv <- model_output$convergence
     opt_parm_temp <- model_output$par
     opt_value_temp <- model_output$value
-    index <- index + 1
     output <- list(index, opt_parm_temp, opt_value_temp, opt_parm_conv)
     output_ls[[index]] <- output
     print(output)
     
     # exit loop if limit is reached
-    if(opt_value_temp < limit) {
-      opt_parm_conv <- model_output$convergence
-      opt_parm_temp <- model_output$par
-      opt_value_temp <- model_output$value
-      index <- index + 1
-      output <- list(index, opt_parm_temp, opt_value_temp, opt_parm_conv)
-      output_ls[[index]] <- output
-      return(model_output, output_ls)
-      break
-    }
+    if(opt_value_temp < limit) {break}
   }
+  opt_parm_conv <- model_output$convergence
+  opt_parm_temp <- model_output$par
+  opt_value_temp <- model_output$value
+  index <- index + 1
+  output <- list(index, opt_parm_temp, opt_value_temp, opt_parm_conv)
+  output_ls[[index]] <- output
+  return(output_ls)
 }
