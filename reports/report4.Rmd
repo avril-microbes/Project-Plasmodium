@@ -20,13 +20,11 @@ library(here)
 
 # Load functions
 ```{r}
-source(here("functions/test.R"))
 source(here("functions/chabaudi_ci_opt_lag.R"))
+source(here("functions/co_infection_opt.R"))
 source(here("functions/par_to_df.R"))
 source(here("functions/chabaudi_si_opt_lag.R"))
 source(here("functions/total_parasite.R"))
-
-
 ```
 
 # define parameters
@@ -81,11 +79,14 @@ I_range_mid4_log <- seq(0, log(6*10^6), by = log(6*10^6)/5000)
 I_range_mid4_log10 <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
 I_range_large_log <- seq(0, log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6))), by = log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)))/10000)
 
-I_range_mid4_log10
+
+# R_range
+R_range_log10 <- seq(0, log10(8.89*10^6), by = log10(8.89*10^6)/10000)
 ```
 
 #-------------------------#
 # Log10 transformations of single infection and co-infection
+# fig 1
 #-------------------------#
 ## have no effect on optimal strategy
 # single infection run 
@@ -183,12 +184,291 @@ plot(exp(-exp(cr))~cue_range, lag_si_I_20.cr_log10_tsukushi)
 lines(lag_si_I_20.cr_log10_tsukushi$cue_range, exp(-exp(predict(test2))), col = "red")
 ```
  
+ 
+  
 #------------#
-is logged strategy better?
+# how does co-infection fare in single-infection scenario?
+# figure 2
 #-------------#
 ```{r}
+lag_si_I_20.opt_log_tsukushi$par #5.477084   2.396156 -17.806718   4.590146
+lag_si_I_20.opt_log_tsukushi$value #9.495
 
+# single infection best strategy
+lag_si_I_20.dyn_log_tsukushi <- chabaudi_si_opt_lag(
+  parameters_cr = c(5.477084,   2.396156, -17.806718,   4.590146),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = I_range_mid4_log,
+  solver = "vode",
+  log_cue = "log",
+  dyn = TRUE)
+
+# co-infection strategu in single infection
+lag_si_I_20.dyn_log_tsukushi_ci <- chabaudi_si_opt_lag(
+  parameters_cr = c(332.4361, -428.8672, -302.7355, -341.7225),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue = "I",
+  cue_range = I_range_mid4_log,
+  solver = "vode",
+  log_cue = "log",
+  dyn = TRUE)
+
+# put 2 dfs together for ploting
+lag_si_I_20.dyn_log_tsukushi$strategy <- rep("single infection", nrow(lag_si_I_20.dyn_log_tsukushi))
+lag_si_I_20.dyn_log_tsukushi_ci$strategy <- rep("co-infection", nrow(lag_si_I_20.dyn_log_tsukushi_ci))
+
+lag_si_I_20.comp_log_tsukushi_si_ci <- rbind(lag_si_I_20.dyn_log_tsukushi, lag_si_I_20.dyn_log_tsukushi_ci)
+
+# in a single infection scenario, coninfection losses lol.
+ggplot() +
+  geom_line(data = lag_si_I_20.comp_log_tsukushi_si_ci, aes(x = time, y = value, color = strategy)) +
+  facet_wrap(~variable, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "Strategy") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+ggsave(here("figures/report4/comp_si_ci_in-si.png"), width = 7, height = 5)
 ```
+
+
+#------------#
+is logged strategy better?
+# figure 3
+#-------------#
+
+## updated co-infection model. Run test
+```{r}
+test <-  chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(0.1467794,  -44.3872660, 2286.5081690,   28.0751167),
+  parameters_cr_2 = rep(0.5,4),
+  immunity = "i",
+  parameters = parameters,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "none",
+  log_cue_2 = "log10")
+
+ggplot() +
+  geom_line(data = test, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt
+             
+             , scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+```
+
+## pit alternative strategy log vs no-log [FIGURE]
+# compete all iterations of non-logged strategy with log
+```{r}
+# get csv of all parameter
+lag_ci_20_none_cycle <- read.csv(here("data/lag_ci_I_20.opt_tsukushi_cycle.csv"))
+
+# get all parameters as list
+non_log_par_ls <- as.list(as.data.frame(t(lag_ci_20_none_cycle[,1:4])))
+
+log_none_compete_ls <- list()
+
+for(i in 1:length(non_log_par_ls)){
+  # get non-loogged parameter
+  non_par <- non_log_par_ls[[i]]
+  
+  # run coinfection
+  compete <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(332.4361, -428.8672, -302.7355, -341.7225), # strain is log
+  parameters_cr_2 = non_par, 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log,
+  cue_range_2 = I_range_mid4,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log",
+  log_cue_2 = "none")
+  
+  compete$non_par <- rep(toString(non_par), nrow(compete))
+  
+  log_none_compete_ls[[i]] <- compete
+  
+}
+# bind together database
+log_none_compete_df <- do.call(rbind, log_none_compete_ls)
+
+## very large file. save as parquet
+#arrow::write_parquet(log_none_compete_df, here("data/lag_ci_I_20_tsukushi_comp_log_none.parquet"))
+
+# plot only tau cum
+log_none_compete_df <- arrow::read_parquet(here("data/lag_ci_I_20_tsukushi_comp_log_none.parquet"))
+
+log_none_compete_df %>% 
+  dplyr::filter(variable_alt == "tau_cum") %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = value, color = as.factor(strain))) +
+  facet_wrap(~non_par, scales = "free", ncol = 6) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "Strain") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+ggsave(here("figures/report4/log_vs_none.png"), width = 20, height = 20)
+```
+
+#---------------------#
+investigation oscillating nature.
+#----------------------#
+
+## there is little point in investigation non-logged cue for now given their low fitness.
+## it would be interesting to check whether logged ones also exhibit oscillation
+
+# repeat with different R. didnt oscillate
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_ci_I_20.opt_tsukushi_log10_R <- co_infection_opt(parameters_cr = rep(0.5, 4),
+                 limit = 0.01, 
+                 model = chabaudi_ci_opt_lag,
+                 immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 df = 3,
+                 cue_1 = "R",
+                 cue_2 = "R",
+                 cue_range_1 = R_range_log10,
+                 cue_range_2 = R_range_log10,
+                 solver = "vode",
+                 log_cue_1 = "log10",
+                 log_cue_2 = "log10")
+stopCluster(cl)
+
+# converged
+lag_ci_I_20.opt_tsukushi_log10_R #222.0953  824.4820 -286.8107 -220.5057
+#0.004819359
+lag_ci_I_20.par_tsukushi_log10_R <- par_to_df(c(222.0953,  824.4820, -286.8107, -220.5057), R_range_log10)
+
+ggplot(lag_ci_I_20.par_tsukushi_log10_R) +
+  geom_line(aes(x = 10^cue_range, y = cr)) +
+  theme_bw()
+```
+
+# just for fun, compete R with I. I wins
+```{r}
+lag_ci_20_tsukushi.comp_I_R <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(332.4361, -428.8672, -302.7355, -341.7225), # I
+  parameters_cr_2 = c(222.0953,  824.4820, -286.8107, -220.5057), # R
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "R",
+  cue_range_1 = I_range_mid4_log,
+  cue_range_2 = R_range_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log",
+  log_cue_2 = "log10")
+
+ggplot() +
+  geom_line(data = lag_ci_20_tsukushi.comp_I_R, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+# fitness diff
+lag_ci_20_tsukushi.comp_I_R %>% 
+  dplyr::filter(variable_alt == "tau_cum") %>%
+  na.omit() %>% 
+  dplyr::group_by(strain) %>% 
+  dplyr::summarise(max = max(value))
+
+2.054353	- 1.888376	
+```
+
+# more definitve proof that none-log strain cannot outcompete logged strain
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_ci_I_20.opt_log_tsukushi <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_ci_opt_lag, 
+                      parameters_cr_2 = c(332.4361, -428.8672, -302.7355, -341.7225),
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                      parameters = parameters_tsukushi,
+                      time_range = time_range,
+                      df = 3,
+                      cue_1 = "I1+I2",
+                      cue_2 = "I1+I2",
+                      cue_range_1 = I_range_mid4,
+                      cue_range_2 = I_range_mid4_log,
+                      solver = "vode",
+                      log_cue_1 = "none",
+                      log_cue_2 = "log")
+stopCluster(cl)
+
+lag_si_I_20.opt_log_tsukushi # -0.07956089
+#2.025445 -34.975162 339.525900  17.465552
+
+lag_ci_I_20.dyn_log_none_tsukushi <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(2.025445, -34.975162, 339.525900,  17.465552), 
+  parameters_cr_2 = c(332.4361, -428.8672, -302.7355, -341.7225), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4,
+  cue_range_2 = I_range_mid4_log,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "none",
+  log_cue_2 = "log")
+
+lag_ci_I_20.cr_log_none_tsukushi <- par_to_df(c(2.025445, -34.975162, 339.525900,  17.465552), I_range_mid4)
+
+ggplot(lag_ci_I_20.cr_log_none_tsukushi)+
+  geom_line(aes(x = cue_range, y = cr)) +
+  theme_bw()
+
+ggplot() +
+  geom_line(data = lag_ci_I_20.dyn_log_none_tsukushi, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+```
+
+```{r}
+detectCores()
+```
+
+
+
 
 
 
