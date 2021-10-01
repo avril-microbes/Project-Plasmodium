@@ -25,13 +25,13 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
       opt_parm_temp <- parameters_cr
     } else{ # reassign parameters_cr (invader starting strategy) to optimal value after first iteration
             # In the future, we could slightly alter this to prevent trapping into local optimum
-      parameters_cr <- opt_parm_temp
+      parameters_cr <- opt_parm_temp # only reassign when strain 1 is better
     }
     ## code to execute parallel LGBF-GS optimization
     output <- list()
     index <- index + 1
     print(paste("starting iteration", index))
-    model_output <- do.call(optimParallel::optimParallel, c(list(par = parameters_cr,
+    model_output <- do.call(optimParallel::optimParallel, c(list(par = parameters_cr, # competing parameter
                                                                  fn = model,
                                                                  control = list(trace = 6, fnscale = -1),
                                                                  parameters_cr_2 = opt_parm_temp), # reassign resident parameter to optimal one
@@ -45,8 +45,11 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
     output_ls[[index]] <- output
     print(output)
     
-    # exit loop if limit is reached
-    if(opt_value_temp < limit) {break}
+    # exit loop IF
+    if(opt_value_temp > 0 && opt_value_temp < limit) {break} # strain 1 is fitter than strain 2, but difference is small
+    if(opt_value_temp <= 0 && 
+       abs(output_ls[[index]][[3]] - output_ls[[index-1]][[3]]) = limit) 
+      {break} # strain 1 is less fit than strain 2 but difference cannot be improved
   }
   opt_parm_conv <- model_output$convergence
   opt_parm_temp <- model_output$par
