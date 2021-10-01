@@ -3,26 +3,320 @@ title: "report5"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+# Load libraries
+```{r}
+library(deSolve)
+library(splines)
+library(optimParallel)
+library(ggplot2)
+library(ggpubr)
+library(tidyr)
+library(magrittr)
+library(Rcpp)
+library(microbenchmark)
+library(GA)
+library(here)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+# Load functions
+```{r}
+source(here("functions/chabaudi_ci_opt_lag.R"))
+source(here("functions/co_infection_opt.R"))
+source(here("functions/par_to_df.R"))
+source(here("functions/chabaudi_si_opt_lag.R"))
+source(here("functions/total_parasite.R"))
 ```
 
-## Including Plots
+# define parameters
+```{r}
+parameters <- c(R1 = 8.5*10^6,
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 4*10^-6,
+                alpha = 1, 
+                alphag = 2, 
+                beta = 10, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1)
 
-You can also embed plots, for example:
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+time_range <- seq(0, 20, by = 1e-3)
+I_range <- seq(0, 2.18*10^6, by = 1000) 
+I_range_large <- seq(0, (3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)), by = 1000) 
+I_range_mid <- seq(0, 5*10^6, by = 1000)
+I_range_mid2 <- seq(0, 4*10^6, by = 1000)
+I_range_mid4 <- seq(0, 6*10^6, by = (6*10^6)/5000)
+
+# logged counterpart
+I_range_mid2_log <- seq(0, log(4*10^6), by = log(4*10^6)/5000)
+I_range_mid3_log <- seq(0, log(5*10^6), by = log(5*10^6)/5000)
+I_range_mid4_log <- seq(0, log(6*10^6), by = log(6*10^6)/5000)
+I_range_mid4_log10 <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
+I_range_large_log <- seq(0, log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6))), by = log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)))/10000)
+
+
+# R_range
+R_range_log10 <- seq(0, log10(8.89*10^6), by = log10(8.89*10^6)/10000)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+#-----------------#
+Exploring starting doses dynamics
+#------------------#
+
+#10^4 of one strain and 10^5 of residence strain
+# oops. Some errors with previous model. Previous has starting density of 10^2 parasites each.
+
+
+# testing single strain lagged model as proof of concept. What we did: for all conditional equation, add delay. Delayed the pulse beta function
+```{r}
+source(here("functions/chabaudi_si_opt_lag.R"))
+source(here("functions/test2.R"))
+
+
+# testing with 0.5 parameters of original
+orig <- chabaudi_si_opt_lag(parameters_cr = rep(0.5,4),
+                                immunity = "tsukushi",
+                                parameters = parameters_tsukushi,
+                                time_range,
+                                df = 3,
+                                cue = "I",
+                                cue_range = I_range_mid4_log10,
+                                solver = "vode",
+                                dyn = TRUE,
+                                log_cue = "log10") 
+
+# testing lagged model with no lag. Should the same\
+test_0 <- chabaudi_si_opt_lag_2(parameters_cr = rep(0.5,4),
+                                immunity = "tsukushi",
+                                parameters = parameters_tsukushi,
+                                time_range,
+                                df = 3,
+                                cue = "I",
+                                cue_range = I_range_mid4_log10,
+                                solver = "vode",
+                                dyn = TRUE,
+                                log_cue = "log10",
+                              delay = 0) 
+
+# testing lagged model with 1 day lag
+test_1 <- chabaudi_si_opt_lag_2(parameters_cr = rep(0.5,4),
+                                immunity = "tsukushi",
+                                parameters = parameters_tsukushi,
+                                time_range,
+                                df = 3,
+                                cue = "I",
+                                cue_range = I_range_mid4_log10,
+                                solver = "vode",
+                                dyn = TRUE,
+                                log_cue = "log10",
+                              delay = 1) 
+
+test_5 <- chabaudi_si_opt_lag(parameters_cr = rep(0.5,4),
+                                immunity = "tsukushi",
+                                parameters = parameters_tsukushi,
+                                time_range,
+                                df = 3,
+                                cue = "I",
+                                cue_range = I_range_mid4_log10,
+                                solver = "vode",
+                                dyn = TRUE,
+                                log_cue = "log10",
+                              delay = 5) 
+
+# original and no delay is the same function. Delay leads to same dynamics just later.
+ggplot() +
+  geom_line(data = orig, aes(x = time, y = value, color = "original")) +
+  #geom_line(data = test_0, aes(x = time, y = value, color = "test_0")) +
+  #geom_line(data = test_1, aes(x = time, y = value, color = "test_1")) +
+  facet_wrap(~variable, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+ggplot() +
+  #geom_line(data = orig, aes(x = time, y = value, color = "original")) +
+  geom_line(data = test_0, aes(x = time, y = value, color = "test_0")) +
+  geom_line(data = test_1, aes(x = time, y = value, color = "test_1")) +
+  geom_line(data = test_5, aes(x = time, y = value, color = "test_5")) +
+  facet_wrap(~variable, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+```
+
+# testing delayed co=infection model
+```{r}
+source(here("functions/chabaudi_ci_opt_lag.R"))
+source(here("functions/test.R"))
+
+orig <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = rep(0.5,4), 
+  parameters_cr_2 = rep(0.1,4), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10")
+
+test_0 <- chabaudi_ci_opt_lag_2(
+  parameters_cr_1 = rep(0.5,4), 
+  parameters_cr_2 = rep(0.1,4), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10",
+  delay = 0)
+
+test_1 <- chabaudi_ci_opt_lag_2(
+  parameters_cr_1 = rep(0.5,4), 
+  parameters_cr_2 = rep(0.1,4), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10",
+  delay = 1)
+
+# no difference
+ggplot() +
+  geom_line(data = orig, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+ggplot() +
+  geom_line(data = test_0, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+```
+
+# rerun co-infection without split dosage
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_ci_I_20.opt_tsukushi_I <- co_infection_opt(parameters_cr = rep(0.5, 4),
+                 limit = 0.01, 
+                 model = chabaudi_ci_opt_lag,
+                 immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 df = 3,
+                 cue_1 = "I1+I2",
+                 cue_2 = "I1+I2",
+                 cue_range_1 = I_range_mid4_log10 ,
+                 cue_range_2 = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue_1 = "log10",
+                 log_cue_2 = "log10")
+stopCluster(cl)
+
+lag_ci_I_20.opt_tsukushi_I
+#360.8702 -468.8403 -327.0151 -371.5277
+#0.001814631
+```
+
+
+```{r}
+# run with 1 day delay (alpha), did not optimize well given that first strain optimization still had lower fitness
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_ci_I_20.opt_tsukushi_I_d1 <- co_infection_opt(parameters_cr = rep(0.5, 4),
+                 limit = 0.01, 
+                 model = chabaudi_ci_opt_lag,
+                 immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 df = 3,
+                 cue_1 = "I1+I2",
+                 cue_2 = "I1+I2",
+                 cue_range_1 = I_range_mid4_log10 ,
+                 cue_range_2 = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue_1 = "log10",
+                 log_cue_2 = "log10",
+                 delay = 1)
+stopCluster(cl)
+
+lag_ci_I_20.opt_tsukushi_I_d1 
+```
+
+
+```{r}
+# run with 3 day delay (alpha+alphag)
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_ci_I_20.opt_tsukushi_I_d3 <- co_infection_opt(parameters_cr = rep(0.5, 4),
+                 limit = 0.01, 
+                 model = chabaudi_ci_opt_lag,
+                 immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 df = 3,
+                 cue_1 = "I1+I2",
+                 cue_2 = "I1+I2",
+                 cue_range_1 = I_range_mid4_log10 ,
+                 cue_range_2 = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue_1 = "log10",
+                 log_cue_2 = "log10",
+                 delay = 3)
+stopCluster(cl)
+
+lag_ci_I_20.opt_tsukushi_I_d3[[]]
+```
+
