@@ -88,7 +88,8 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                                   dyn = FALSE,
                                   log_cue_1 = "none",
                                   log_cue_2 = "none",
-                                  gamete_immune = TRUE) {
+                                  gamete_immune = TRUE,
+                                  delay = 0) {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -109,6 +110,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   force(dyn)
   force(log_cue_1)
   force(log_cue_2)
+  force(delay)
   
   
   #-------------------------#
@@ -121,8 +123,8 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                Mg1 = 0,
                Mg2 = 0,
                ID = 0,
-               I1 = parameters[["I0"]]/2,
-               I2 = parameters[["I0"]]/2,
+               I1 = parameters[["I0"]],
+               I2 = parameters[["I0"]],
                Ig1 = 0,
                Ig2 = 0,
                G1 = 0, 
@@ -135,8 +137,8 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                Mg1 = 0,
                Mg2 = 0,
                ID = 0,
-               I1 = parameters[["I0"]]/2,
-               I2 = parameters[["I0"]]/2,
+               I1 = parameters[["I0"]],
+               I2 = parameters[["I0"]],
                Ig1 = 0,
                Ig2 = 0,
                G1 = 0,
@@ -150,8 +152,8 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                Mg1 = 0,
                Mg2 = 0,
                ID = 0,
-               I1 = parameters[["I0"]]/2,
-               I2 = parameters[["I0"]]/2,
+               I1 = parameters[["I0"]],
+               I2 = parameters[["I0"]],
                Ig1 = 0,
                Ig2 = 0,
                G1 = 0,
@@ -205,6 +207,10 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   }
   if(log_cue_2 != "none" && log_cue_2 != "log" && log_cue_2 != "log10"){
     stop("log_cue_1 must be either 'none' or 'log' or 'log10'")
+  }
+  ## Ensure delay is not longer then infection period
+  if(delay > max(time_range)){
+    stop("Delay must be before infection period ends")
   }
   
   
@@ -356,11 +362,15 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     }
     
     ## Defining Pulse beta function based on current time
-    pulseBeta <- pulseBeta_fun(I0/2, sp, t)
+    pulseBeta_1 <- pulseBeta_fun(I0, sp, t-delay) # only strain 1 can experience delay
+    pulseBeta_2 <- pulseBeta_fun(I0, sp, t)
     
     ## Define the lag terms.
-    if(t>alpha){lag_a = deSolve::lagvalue(t-alpha)} # lag state for asexual development
-    if(t>alphag){lag_b = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
+    if(t>alpha){lag_a_2 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
+    if(t>alphag){lag_b_2 = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
+    
+    if(t>alpha+delay){lag_a_1 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
+    if(t>alphag+delay){lag_b_1 = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
     ### extra lag term for adaptive immunity
     if(adaptive){
       if(t>epsilon){lag_c = deSolve::lagvalue(t-epsilon)}
@@ -380,20 +390,20 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
     ### For simple cues (if it does not contain special characters)
     if(stringr::str_detect(cue_1, "\\+|\\-|\\*|\\/", negate = TRUE)){
-      if(t>alpha && cue_1 == "t"){
+      if(t>alpha+delay && cue_1 == "t"){
         cue_lag_a1 <- t-alpha
       } 
       
-      if(t>alpha && cue_1 != "t"){
-        cue_lag_a1 <- lag_a[lag.i_1]
+      if(t>alpha+delay && cue_1 != "t"){
+        cue_lag_a1 <- lag_a_1[lag.i_1]
       }
       
-      if(t>alphag && cue_1 == "t") {
+      if(t>alphag+delay && cue_1 == "t") {
         cue_lag_b1 <- t-alphag
       } 
       
-      if(t>alphag && cue_1 != "t") {
-        cue_lag_b1 <- lag_b[lag.i_1]
+      if(t>alphag+delay && cue_1 != "t") {
+        cue_lag_b1 <- lag_b_1[lag.i_1]
       }
       
       ### convert cue to time if time-based conversion rate strategy is used
@@ -408,20 +418,20 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       
     } else{### manually create lag values if cues contain special characters
       if(stringr::str_detect(cue_1, "\\+")){ # if it contains plus. strain 1
-        if(t>alpha && cue_1 != "t"){cue_lag_a1 <- lag_a[lag.i_1[1]]+lag_a[lag.i_1[2]]}
-        if(t>alphag && cue_1 != "t") {cue_lag_b1 <- lag_b[lag.i_1[1]]+lag_b[lag.i_1[2]]}
+        if(t>alpha+delay && cue_1 != "t"){cue_lag_a1 <- lag_a_1[lag.i_1[1]]+lag_a_1[lag.i_1[2]]}
+        if(t>alphag+delay && cue_1 != "t") {cue_lag_b1 <- lag_b_1[lag.i_1[1]]+lag_b_1[lag.i_1[2]]}
       }
       if(stringr::str_detect(cue_1, "\\-")){ # if it contains -. strain 1
-        if(t>alpha && cue_1 != "t"){cue_lag_a1 <- lag_a[lag.i_1[1]]-lag_a[lag.i_1[2]]}
-        if(t>alphag && cue_1 != "t") {cue_lag_b1 <- lag_b[lag.i_1[1]]-lag_b[lag.i_1[2]]}
+        if(t>alpha+delay && cue_1 != "t"){cue_lag_a1 <- lag_a_1[lag.i_1[1]]-lag_a_1[lag.i_1[2]]}
+        if(t>alphag+delay && cue_1 != "t") {cue_lag_b1 <- lag_b_1[lag.i_1[1]]-lag_b_1[lag.i_1[2]]}
       }
       if(stringr::str_detect(cue_1, "\\*")){  # if it contains multiplication. strain 1
-        if(t>alpha && cue_1 != "t"){cue_lag_a1 <- lag_a[lag.i_1[1]]*lag_a[lag.i_1[2]]}
-        if(t>alphag && cue_1 != "t") {cue_lag_b1 <- lag_b[lag.i_1[1]]*lag_b[lag.i_1[2]]}
+        if(t>alpha+delay && cue_1 != "t"){cue_lag_a1 <- lag_a_1[lag.i_1[1]]*lag_a_1[lag.i_1[2]]}
+        if(t>alphag+delay && cue_1 != "t") {cue_lag_b1 <- lag_b_1[lag.i_1[1]]*lag_b_1[lag.i_1[2]]}
       }
       if(stringr::str_detect(cue_1, "\\/")){  # if it contains divide. strain 1
-        if(t>alpha && cue_1 != "t"){cue_lag_a1 <- lag_a[lag.i_1[1]]/lag_a[lag.i_1[2]]}
-        if(t>alphag && cue_1 != "t") {cue_lag_b1 <- lag_b[lag.i_1[1]]/lag_b[lag.i_1[2]]}
+        if(t>alpha+delay && cue_1 != "t"){cue_lag_a1 <- lag_a_1[lag.i_1[1]]/lag_a_1[lag.i_1[2]]}
+        if(t>alphag+delay && cue_1 != "t") {cue_lag_b1 <- lag_b_1[lag.i_1[1]]/lag_b_1[lag.i_1[2]]}
       }
       ### get present states
       if(cue_1 != "t"){cue_state_1 <- eval(parse(text = cue_1))}
@@ -434,7 +444,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       } 
       
       if(t>alpha && cue_2 != "t"){
-        cue_lag_a2 <- lag_a[lag.i_2]
+        cue_lag_a2 <- lag_a_2[lag.i_2]
       }
       
       if(t>alphag && cue_2 == "t") {
@@ -442,7 +452,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       } 
       
       if(t>alphag && cue_2 != "t") {
-        cue_lag_b2 <- lag_b[lag.i_2]
+        cue_lag_b2 <- lag_b_2[lag.i_2]
       }
       
       ### convert cue to time if time-based conversion rate strategy is used
@@ -456,20 +466,20 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       
     } else{### manually create lag values if cues contain special characters
       if(stringr::str_detect(cue_2, "\\+")){ # if it contains plus. strain 1
-        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a[lag.i_2[1]]+lag_a[lag.i_2[2]]}
-        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b[lag.i_2[1]]+lag_b[lag.i_2[2]]}
+        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]+lag_a_2[lag.i_2[2]]}
+        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b_2[lag.i_2[1]]+lag_b_2[lag.i_2[2]]}
       }
       if(stringr::str_detect(cue_2, "\\-")){ # if it contains -. strain 1
-        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a[lag.i_2[1]]-lag_a[lag.i_2[2]]}
-        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b[lag.i_2[1]]-lag_b[lag.i_2[2]]}
+        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]-lag_a_2[lag.i_2[2]]}
+        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b_2[lag.i_2[1]]-lag_b_2[lag.i_2[2]]}
       }
       if(stringr::str_detect(cue_2, "\\*")){  # if it contains multiplication. strain 1
-        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a[lag.i_2[1]]*lag_a[lag.i_2[2]]}
-        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b[lag.i_2[1]]*lag_b[lag.i_2[2]]}
+        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]*lag_a_2[lag.i_2[2]]}
+        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b_2[lag.i_2[1]]*lag_b_2[lag.i_2[2]]}
       }
       if(stringr::str_detect(cue_2, "\\/")){  # if it contains divide. strain 1
-        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a[lag.i_2[1]]/lag_a[lag.i_2[2]]}
-        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b[lag.i_2[1]]/lag_b[lag.i_2[2]]}
+        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]/lag_a_2[lag.i_2[2]]}
+        if(t>alphag && cue_2 != "t") {cue_lag_b2 <- lag_b_2[lag.i_2[1]]/lag_b_2[lag.i_2[2]]}
       }
       ### get present states
       if(cue_2 != "t"){cue_state_2 <- eval(parse(text = cue_2))}
@@ -491,11 +501,18 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     
     ## Define survival functions
     ### Survival of infected asexual RBC
+    if(t>alpha+delay && immunity == "ni"){
+      S_1 <- exp(-mu*alpha)} 
+    
+    if(t>alpha+delay && immunity != "ni"){
+      S_1 <- exp(-ID + lag_a_1[6])
+    }
+    
     if(t>alpha && immunity == "ni"){
-      S <- exp(-mu*alpha)} 
+      S_2 <- exp(-mu*alpha)} 
     
     if(t>alpha && immunity != "ni"){
-      S <- exp(-ID + lag_a[6])
+      S_2 <- exp(-ID + lag_a_2[6])
     }
     
     #if(t>alpha && immunity =="i"){
@@ -520,11 +537,17 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     
     ################################
     
+    if(t<=alpha+delay && immunity == "ni"){
+      S_1 <- exp(-mu*t)} 
+    
+    if(t<=alpha+delay && immunity != "ni"){
+      S_1 <- exp(-ID)} 
+    
     if(t<=alpha && immunity == "ni"){
-      S <- exp(-mu*t)} 
+      S_2 <- exp(-mu*t)} 
     
     if(t<=alpha && immunity != "ni"){
-      S <- exp(-ID)} 
+      S_2 <- exp(-ID)} 
     
     #if(t<=alpha && immunity == "i"){
     #integrand <- function(x) {mu+a/(b+I)}
@@ -549,29 +572,52 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     ### Survival of gametocytes. We assume that infected
     ### RBC with gametocyte is removed by immune response for Tsukushi's model.
     if(immunity != "tsukushi"){
-      if(t<=alpha){
-        Sg <- 0 # not relevent
+      if(t<=alpha+delay){
+        Sg_1 <- 0 # not relevent
       } 
       
+      if(t<=alpha){
+        Sg_2 <- 0 # not relevent
+      } 
+      
+      if(t>alpha+delay && t<=alpha+alphag+delay){
+        Sg_1 <- exp(-mu*t+mu*alpha)} # not relevent
+      
       if(t>alpha && t<=alpha+alphag){
-        Sg <- exp(-mu*t+mu*alpha)} # not relevent
+        Sg_2 <- exp(-mu*t+mu*alpha)}
+      
+      if(t>alpha+alphag+delay){
+        Sg_1 <- exp(-mu*alphag)
+      }
       
       if(t>alpha+alphag){
-        Sg <- exp(-mu*alphag)
+        Sg_2 <- exp(-mu*alphag)
       }
     }
     
     if(immunity == "tsukushi"){
+      if(t<=alpha+delay){
+        Sg_1 <- 0 # not relevent
+      }
+      
       if(t<=alpha){
-        Sg <- 0 # not relevent
+        Sg_2 <- 0 # not relevent
+      }
+      
+      if(t>alpha+delay && t<=alpha+alphag+delay){
+        Sg_1 <- 0 # not relevent
       }
       
       if(t>alpha && t<=alpha+alphag){
-        Sg <- 0 # not relevent
+        Sg_2 <- 0 # not relevent
+      }
+      
+      if(t>alpha+alpha+delay){
+        Sg_1 <- exp(-ID + lag_b_1[6])
       }
       
       if(t>alpha+alphag){
-        Sg <- exp(-ID + lag_b[6])
+        Sg_2 <- exp(-ID + lag_b_2[6])
       }
       
       #if(t>alpha && t<=alpha+alphag){
@@ -684,69 +730,81 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       
     } 
     
-    ## Track states in initial cohort of infection
+    ## Track states in initial cohort of infection. Before alpha, meaning no bursting of infected RBC yet
     if(t<=alpha){
-      dI1 <- dI1_nolag-pulseBeta*S 
-      dI2 <- dI2_nolag-pulseBeta*S 
-      
-      dM1 <- dM1_nolag+beta*pulseBeta*S # all of them are asexual merozoite
-      dM2 <- dM2_nolag+beta*pulseBeta*S
-      dMg1 <- 0 # should have no Mg before day 1
+      dI2 <- dI2_nolag-pulseBeta_2*S_2 
+      dM2 <- dM2_nolag+beta*pulseBeta_2*S_2
       dMg2 <- 0
-      dIg1 <- 0 #first wave starts on day alpha
       dIg2 <- 0
-      dG1 <- 0 # first wave starts on day alpha+alphag
       dG2 <- 0
+    }
+    ### for strain 1 if delayed. Everything should happen delay days after (delay = day of injection)
+    if(t<=alpha+delay){
+      dI1 <- dI1_nolag-pulseBeta_1*S_1
+      dM1 <- dM1_nolag+beta*pulseBeta_1*S_1 # all of them are asexual merozoite
+      dMg1 <- 0 # should have no Mg before day 1
+      dIg1 <- 0 #first wave starts on day alpha+delay
+      dG1 <- 0 # first wave starts on day alpha+alphag
     }
     
     if(t<=alpha+alphag && t>alpha){
-      dG1 <- 0
       dG2 <- 0
-      dIg1 <- dIg1_nolag
       dIg2 <- dIg2_nolag
     }
     
+    if(t<=alpha+alphag+delay && t>alpha+delay){
+      dG1 <- 0
+      dIg1 <- dIg1_nolag
+    }
+    
     ## Track states after delay 
+    ### strain 2
     if(t>alpha){
-      dI1 <- dI1_nolag-p*lag_a[1]*lag_a[2]*S 
-      dI2 <- dI2_nolag-p*lag_a[1]*lag_a[3]*S 
-      
-      if(log_cue_1 == "log"){
-        dM1 <- dM1_nolag+beta*(1-cr_1(log(cue_lag_a1)))*p*lag_a[1]*lag_a[2]*S
-        dMg1 <- dMg1_nolag+beta*cr_1(log(cue_lag_a1))*p*lag_a[1]*lag_a[2]*S
-      }
-      
+      dI2 <- dI2_nolag-p*lag_a_2[1]*lag_a_2[3]*S_2 
       if(log_cue_2 == "log"){
-        dM2 <- dM2_nolag+beta*(1-cr_2(log(cue_lag_a2)))*p*lag_a[1]*lag_a[3]*S
-        dMg2 <- dMg2_nolag+beta*cr_2(log(cue_lag_a2))*p*lag_a[1]*lag_a[3]*S
-      }
-      
-      if(log_cue_1 == "none"){
-        dM1 <- dM1_nolag+beta*(1-cr_1(cue_lag_a1))*p*lag_a[1]*lag_a[2]*S 
-        dMg1 <- dMg1_nolag+beta*cr_1(cue_lag_a1)*p*lag_a[1]*lag_a[2]*S
+        dM2 <- dM2_nolag+beta*(1-cr_2(log(cue_lag_a2)))*p*lag_a_2[1]*lag_a_2[3]*S_2
+        dMg2 <- dMg2_nolag+beta*cr_2(log(cue_lag_a2))*p*lag_a_2[1]*lag_a_2[3]*S_2
       }
       
       if(log_cue_2 == "none"){
-        dM2 <- dM2_nolag+beta*(1-cr_2(cue_lag_a2))*p*lag_a[1]*lag_a[3]*S
-        dMg2 <- dMg2_nolag+beta*cr_2(cue_lag_a2)*p*lag_a[1]*lag_a[3]*S
-      }
-      
-      if(log_cue_1 == "log10"){
-        dM1 <- dM1_nolag+beta*(1-cr_1(log10(cue_lag_a1)))*p*lag_a[1]*lag_a[2]*S
-        dMg1 <- dMg1_nolag+beta*cr_1(log10(cue_lag_a1))*p*lag_a[1]*lag_a[2]*S
+        dM2 <- dM2_nolag+beta*(1-cr_2(cue_lag_a2))*p*lag_a_2[1]*lag_a_2[3]*S_2
+        dMg2 <- dMg2_nolag+beta*cr_2(cue_lag_a2)*p*lag_a_2[1]*lag_a_2[3]*S_2
       }
       
       if(log_cue_2 == "log10"){
-        dM2 <- dM2_nolag+beta*(1-cr_2(log10(cue_lag_a2)))*p*lag_a[1]*lag_a[3]*S
-        dMg2 <- dMg2_nolag+beta*cr_2(log10(cue_lag_a2))*p*lag_a[1]*lag_a[3]*S
+        dM2 <- dM2_nolag+beta*(1-cr_2(log10(cue_lag_a2)))*p*lag_a_2[1]*lag_a_2[3]*S_2
+        dMg2 <- dMg2_nolag+beta*cr_2(log10(cue_lag_a2))*p*lag_a_2[1]*lag_a_2[3]*S_2
+      }
+    }
+    
+    ### strain_1
+    if(t>alpha+delay){
+      dI1 <- dI1_nolag-p*lag_a_1[1]*lag_a_1[2]*S_1 
+      
+      if(log_cue_1 == "log"){
+        dM1 <- dM1_nolag+beta*(1-cr_1(log(cue_lag_a1)))*p*lag_a_1[1]*lag_a_1[2]*S_1
+        dMg1 <- dMg1_nolag+beta*cr_1(log(cue_lag_a1))*p*lag_a_1[1]*lag_a_1[2]*S_1
+      }
+      
+      if(log_cue_1 == "none"){
+        dM1 <- dM1_nolag+beta*(1-cr_1(cue_lag_a1))*p*lag_a_1[1]*lag_a_1[2]*S_1 
+        dMg1 <- dMg1_nolag+beta*cr_1(cue_lag_a1)*p*lag_a_1[1]*lag_a_1[2]*S_1
+      }
+      
+      if(log_cue_1 == "log10"){
+        dM1 <- dM1_nolag+beta*(1-cr_1(log10(cue_lag_a1)))*p*lag_a_1[1]*lag_a_1[2]*S_1
+        dMg1 <- dMg1_nolag+beta*cr_1(log10(cue_lag_a1))*p*lag_a_1[1]*lag_a_1[2]*S_1
       }
     }
     
     if(t>alpha+alphag){
-      dG1 <- dG1_nolag+p*lag_b[1]*lag_b[4]*Sg
-      dG2 <- dG2_nolag+p*lag_b[1]*lag_b[5]*Sg
-      dIg1 <- dIg1_nolag-p*lag_b[1]*lag_b[4]*Sg
-      dIg2 <- dIg2_nolag-p*lag_b[1]*lag_b[5]*Sg
+      dG2 <- dG2_nolag+p*lag_b_2[1]*lag_b_2[5]*Sg_2
+      dIg2 <- dIg2_nolag-p*lag_b_2[1]*lag_b_2[5]*Sg_2
+    }
+    
+    if(t>alpha+alphag+delay){
+      dG1 <- dG1_nolag+p*lag_b_1[1]*lag_b_1[4]*Sg_1
+      dIg1 <- dIg1_nolag-p*lag_b_1[1]*lag_b_1[4]*Sg_1
     }
     
     
