@@ -293,12 +293,20 @@ lag_ci_I_20.opt_tsukushi_I_d1 <- co_infection_opt(parameters_cr = rep(0.5, 4),
                  delay = 1)
 stopCluster(cl)
 
-lag_ci_I_20.opt_tsukushi_I_d1 
+# didn't optimize well in the first run
+# 9.2410163  23.7270963 -28.7509275  -0.6576926
+# -2.170863
+
+lag_ci_I_20.opt_tsukushi_I_d1[[2]][[3]]
+# after redoing the optimization script, strain 1 will always have lower fitness
+# 13.03617  31.68603 -20.33286 -14.64685
+#-1.939776 
+
 ```
 
 
 ```{r}
-# run with 3 day delay (alpha+alphag)
+# run with 3 day delay (alpha+alphag). add option to exist cucle after repeated non-convergence
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
 lag_ci_I_20.opt_tsukushi_I_d3 <- co_infection_opt(parameters_cr = rep(0.5, 4),
                  limit = 0.01, 
@@ -317,6 +325,442 @@ lag_ci_I_20.opt_tsukushi_I_d3 <- co_infection_opt(parameters_cr = rep(0.5, 4),
                  delay = 3)
 stopCluster(cl)
 
-lag_ci_I_20.opt_tsukushi_I_d3[[]]
+lag_ci_I_20.opt_tsukushi_I_d3
+# same as above
+# 10.79808  29.87309  11.53456 -44.28374
+#-1.674299
+
+co_infection_opt
 ```
+
+#---------------------#
+Getting serious here
+#----------------------#
+
+Previous model used 10^2 starting dose for co-infection. Double that (10^4) for more realism
+
+# rerun co-infection model with larger infection dose
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_ci_I_20.opt_tsukushi_log10_I <- co_infection_opt(parameters_cr = rep(0.5, 4),
+                 limit = 0.01, 
+                 model = chabaudi_ci_opt_lag,
+                 immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 df = 3,
+                 cue_1 = "I1+I2",
+                 cue_2 = "I1+I2",
+                 cue_range_1 = I_range_mid4_log10,
+                 cue_range_2 = I_range_mid4_log10,
+                 solver = "vode",
+                 log_cue_1 = "log10",
+                 log_cue_2 = "log10")
+stopCluster(cl)
+
+lag_ci_I_20.opt_tsukushi_log10_I[[4]]
+# 360.3151 -470.3701 -325.4047 -371.3250
+# 0.001814631
+
+lag_ci_I_20.par_tsukushi_log10_I <- par_to_df(c(360.3151, -470.3701, -325.4047, -371.3250), I_range_mid4_log10)
+
+ggplot(lag_ci_I_20.par_tsukushi_log10_I) +
+  geom_line(aes(x = 10^cue_range, y = cr)) +
+  theme_bw()
+
+# plot infection dynamics
+lag_ci_I_20.dyn_tsukushi_log10_I <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(360.3151, -470.3701, -325.4047, -371.3250), 
+  parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10")
+
+# similar dynamics lol
+ggplot() +
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_log10_I , aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+```
+
+# run co-infection model with residence adopting constant optimal co-infection strategy and 
+# delayed invasion strain trying to catch. Lower fitness
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_ci_I_20.opt_tsukushi_I_d1 <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_ci_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                      parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250),
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 df = 3,
+                 cue_1 = "I1+I2",
+                 cue_2 = "I1+I2",
+                 cue_range_1 = I_range_mid4_log10 ,
+                 cue_range_2 = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue_1 = "log10",
+                 log_cue_2 = "log10",
+                 delay = 1)
+stopCluster(cl)
+
+lag_ci_I_20.opt_tsukushi_I_d1
+# 4.295189  7.956306 -5.266505 -5.881120
+# -2.441984
+
+lag_ci_I_20.par_tsukushi_I_d1 <- par_to_df(c(4.295189,  7.956306, -5.266505, -5.881120), I_range_mid4_log10)
+
+# lower conversion rate??
+ggplot() +
+  geom_line(data = lag_ci_I_20.par_tsukushi_I_d1, aes(x = 10^cue_range, y = cr, color = "Delayed 1 day")) +
+  geom_line(data = lag_ci_I_20.par_tsukushi_log10_I, aes(x = 10^cue_range, y = cr, color = "No delays")) +
+  theme_bw()
+
+# infection dynamics
+lag_ci_I_20.dyn_tsukushi_log10_d1 <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(4.295189,  7.956306, -5.266505, -5.881120), 
+  parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10",
+  delay = 1)
+
+# infection dynamics. Faster drop in conversion rate with the delayed strain
+ggplot() +
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_log10_d1 , aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+```
+
+# 2 days delay
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_ci_I_20.opt_tsukushi_I_d2 <- optimParallel(par = c(492.266, 982.791, 257.823, -1147.83),# new parameter search space
+                      fn = chabaudi_ci_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                      parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250),
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 df = 3,
+                 cue_1 = "I1+I2",
+                 cue_2 = "I1+I2",
+                 cue_range_1 = I_range_mid4_log10 ,
+                 cue_range_2 = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue_1 = "log10",
+                 log_cue_2 = "log10",
+                 delay = 2)
+stopCluster(cl)
+
+# first round of optimization did not converge
+lag_ci_I_20.opt_tsukushi_I_d2
+#492.266 982.791 257.823 -1147.83 
+#-3.681177 
+
+# second run converged
+# 492.269 982.792 257.817 -1147.83 
+#-3.681177 
+
+lag_ci_I_20.par_tsukushi_I_d2 <- par_to_df(c(492.269, 982.792, 257.817, -1147.83), I_range_mid4_log10)
+
+# infection dynamics
+lag_ci_I_20.dyn_tsukushi_log10_d2 <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(492.269, 982.792, 257.817, -1147.83), 
+  parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10",
+  delay = 2)
+
+# infection dynamics. Faster drop in conversion rate with the delayed strain
+ggplot() +
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_log10_d2 , aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+```
+
+
+# 3 days delay (alpha + alphag)
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_ci_I_20.opt_tsukushi_I_d3 <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_ci_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                      parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250),
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 df = 3,
+                 cue_1 = "I1+I2",
+                 cue_2 = "I1+I2",
+                 cue_range_1 = I_range_mid4_log10 ,
+                 cue_range_2 = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue_1 = "log10",
+                 log_cue_2 = "log10",
+                 delay = 3)
+stopCluster(cl)
+
+lag_ci_I_20.opt_tsukushi_I_d3
+#582.6043  1212.4571   828.0902 -1721.5282
+#-4.277388
+
+lag_ci_I_20.par_tsukushi_I_d3 <- par_to_df(c(582.6043,  1212.4571,   828.0902, -1721.5282), I_range_mid4_log10)
+
+
+# infection dynamics
+lag_ci_I_20.dyn_tsukushi_log10_d3 <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(582.6043,  1212.4571,   828.0902, -1721.5282), 
+  parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10",
+  delay = 3)
+
+ggplot() +
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_log10_d3, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+```
+
+# typical infection dynamics of delayed strian (mild, 1 day)
+```{r}
+#With each other
+lag_ci_I_20.dyn_tsukushi_log10_d1_co <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(4.295189,  7.956306, -5.266505, -5.881120), 
+  parameters_cr_2 = c(4.295189,  7.956306, -5.266505, -5.881120), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10",
+  delay = 0)
+
+# very sharp cr lol at 100% suddenly. Probably not realistic
+ggplot() +
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_log10_d1_co, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+# with optimal strategy but without delays
+lag_ci_I_20.dyn_tsukushi_log10_d1_no <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(4.295189,  7.956306, -5.266505, -5.881120), 
+  parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10",
+  delay = 0)
+
+# slightly higher parasite density. Strain 2 still more fit
+ggplot()+
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_log10_d1_no, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+```
+
+# typical infection dynamics of delayed strain (extreme)
+```{r}
+#With each other
+lag_ci_I_20.dyn_tsukushi_log10_d3_co <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(582.6043,  1212.4571,   828.0902, -1721.5282), 
+  parameters_cr_2 = c(582.6043,  1212.4571,   828.0902, -1721.5282), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10",
+  delay = 0)
+
+# very sharp cr lol at 100% suddenly. Probably not realistic
+ggplot() +
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_log10_d3_co, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+# with optimal strategy but without delays
+lag_ci_I_20.dyn_tsukushi_log10_d3_no <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(582.6043,  1212.4571,   828.0902, -1721.5282), 
+  parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10",
+  delay = 0)
+
+# acute infection
+ggplot() +
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_log10_d3_no, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free", ncol = 4) +
+  labs(x = "Time post-infection (days)",
+         y = "Values",
+         color = "") +
+  theme_bw() +
+  theme(legend.position="bottom")
+```
+
+# fill in gaps (0.5 days delay)
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_ci_I_20.opt_tsukushi_I_d05 <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_ci_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                      parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250),
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 df = 3,
+                 cue_1 = "I1+I2",
+                 cue_2 = "I1+I2",
+                 cue_range_1 = I_range_mid4_log10 ,
+                 cue_range_2 = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue_1 = "log10",
+                 log_cue_2 = "log10",
+                 delay = 0.5)
+stopCluster(cl)
+lag_ci_I_20.par_tsukushi_I_d05 <- par_to_df(c(4.147487, 11.913968, -9.956518, -2.885871),I_range_mid4_log10)
+lag_ci_I_20.opt_tsukushi_I_d05 
+#4.147487 11.913968 -9.956518 -2.885871
+#-1.332852
+```
+
+# fill in gaps (1.5 days)
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_ci_I_20.opt_tsukushi_I_d15 <- optimParallel(par = c(0.5,0.5,0.5,0.5),# new parameter search space
+                      fn = chabaudi_ci_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                      parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250),
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 df = 3,
+                 cue_1 = "I1+I2",
+                 cue_2 = "I1+I2",
+                 cue_range_1 = I_range_mid4_log10 ,
+                 cue_range_2 = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue_1 = "log10",
+                 log_cue_2 = "log10",
+                 delay = 1.5)
+stopCluster(cl)
+lag_ci_I_20.par_tsukushi_I_d15 <- par_to_df(c(3.136412,  7.879766,  1.556591, -8.556005),I_range_mid4_log10)
+lag_ci_I_20.opt_tsukushi_I_d15
+#3.136412  7.879766  1.556591 -8.556005
+#-3.22277
+```
+
+
+# plot together
+```{r}
+# reaction norms. Increasing transmission delays with time
+ggplot() +
+  geom_line(data = lag_ci_I_20.par_tsukushi_I_d05, aes(x = cue_range, y = cr, color = "Delayed 0.5 day")) +
+  geom_line(data = lag_ci_I_20.par_tsukushi_I_d1, aes(x = cue_range, y = cr, color = "Delayed 1 day")) +
+  geom_line(data = lag_ci_I_20.par_tsukushi_I_d15, aes(x = cue_range, y = cr, color = "Delayed 1.5 day")) +
+  geom_line(data = lag_ci_I_20.par_tsukushi_I_d2, aes(x = cue_range, y = cr, color = "Delayed 2 days")) +
+  geom_line(data = lag_ci_I_20.par_tsukushi_I_d3, aes(x = cue_range, y = cr, color = "Delayed 3 days")) +
+  geom_line(data = lag_ci_I_20.par_tsukushi_log10_I, aes(x = cue_range, y = cr, color = "No delays")) +
+  theme_bw()
+
+```
+
 
