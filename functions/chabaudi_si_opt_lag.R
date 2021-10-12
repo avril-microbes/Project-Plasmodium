@@ -70,19 +70,21 @@
 # theme_bw()                  
 
 chabaudi_si_opt_lag <- function(parameters_cr,
-                                  immunity,
-                                  parameters,
-                                  time_range,
-                                  df,
-                                  cue,
-                                  cue_range,
-                                  solver = "lsoda",
-                                  #integration = "integrate",
-                                  transformation = "exp",
-                                  adaptive = FALSE,
-                                  dyn = FALSE,
-                                  log_cue = "none",
-                                  delay = 0) {
+                                 immunity,
+                                 parameters,
+                                 time_range,
+                                 df,
+                                 cue,
+                                 cue_range,
+                                 solver = "lsoda",
+                                 #integration = "integrate",
+                                 transformation = "exp",
+                                 adaptive = FALSE,
+                                 dyn = FALSE,
+                                 log_cue = "none",
+                                 delay = 0,
+                                 drug = 0,
+                                 admin = 0) {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -100,6 +102,8 @@ chabaudi_si_opt_lag <- function(parameters_cr,
   force(dyn)
   force(log_cue)
   force(delay)
+  force(drug)
+  force(admin)
   
   #-------------------------#
   # Define initial condition
@@ -109,6 +113,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                M = 0,
                Mg = 0,
                ID = 0,
+               S = 0,
                I = parameters[["I0"]],
                Ig = 0,
                G = 0, 
@@ -118,6 +123,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                M = 0,
                Mg = 0,
                ID = 0,
+               S = 0,
                I = parameters[["I0"]],
                Ig = 0,
                G = 0,
@@ -128,6 +134,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                M = 0,
                Mg = 0,
                ID = 0,
+               S = 0,
                I = parameters[["I0"]],
                Ig = 0,
                G = 0,
@@ -169,6 +176,10 @@ chabaudi_si_opt_lag <- function(parameters_cr,
   if(log_cue != "none" && log_cue != "log" && log_cue != "log10"){
     stop("log_cue must be either 'norne' or 'log' or 'log10'")
   }
+  ## Ensure administration time is above 0 if drug is administered
+  if(drug > 0 && admin <= 0){
+    stop("Drug administration date must be above 0!")
+  }
   
   #-------------------------#
   # Function to describe population 
@@ -178,6 +189,8 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     res = rep(NA, length(t))
     res = I0*(dbeta(t, sp, sp))
   }
+  
+  
   
   #-------------------------#
   # Define conversion rate function. 
@@ -255,6 +268,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     a <- parameters["a"]
     b <- parameters["b"]
     sp <- parameters["sp"]
+    if(drug > 0){mud <- parameters["mud"]} # if drug action is included, add drug length
     
     ## Additional parameters in Kochin
     if (immunity == "kochin"){ 
@@ -286,6 +300,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     I <- state["I"]
     Ig <- state["Ig"]
     ID <- state["ID"]
+    S <- state["S"]
     M <- state["M"]
     G <- state["G"]
     A <- state["A"]
@@ -295,6 +310,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       N <- state["N"]
       W <- state["W"]
     }
+    # threshold or not
     
     ## Defining Pulse beta function based on current time
     pulseBeta <- pulseBeta_fun(I0, sp, t-delay)
@@ -359,6 +375,22 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     
     ## Define K, carrying capacity of RBC
     K <- lambda*R1/(lambda-mu*R1)
+    
+    #-------------------------#
+    # Function to describe pyremethamine
+    # length of action from https://onlinelibrary.wiley.com/doi/10.1111/eva.12516
+    #------------------------#
+    if(drug > 0){
+      pyr_length = 3.557-2.586/(1+exp(-8.821+drug))
+      if(t > admin && t< admin + 1 + pyr_length) {
+        P = mud
+      }else{
+        P = 0
+      }
+    }else{
+      P = 0
+    }
+    
     
     ## Define adaptive immunity
     if(adaptive == FALSE){
@@ -472,6 +504,8 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       #  Sg <- exp(-1*integrate_val)}
     }
     
+    dS <- S
+    
     ## Define the models without lag terms. 
     if(immunity != "tsukushi"){
       dR <- lambda*(1-(R/K))-(mu*R)-(p*R*M)-(p*R*Mg) # change in susceptible RBC
@@ -490,7 +524,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       dM_nolag <- (-mum*M)-(p*R*M)
       dMg_nolag <- (-mum*Mg)-(p*R*Mg)
       dG_nolag <- -mug*G
-      dID <- mu-log(1-N)-log(1-W)-log(1-A)
+      dID <- mu-log(1-N)-log(1-W)-log(1-A)+P
     }
     
     if(immunity =="kochin"){
@@ -500,7 +534,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       dM_nolag <- -mum*M-p*R*M
       dMg_nolag <- -mum*Mg-p*R*Mg
       dG_nolag <- -mug*G
-      dID <- mu+gamma*E
+      dID <- mu+gamma*E+P
     }
     
     if(immunity == "ni"){
@@ -509,7 +543,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       dM_nolag <- -mum*M-p*R*M
       dMg_nolag <- -mum*Mg-p*R*Mg
       dG_nolag <- -mug*G
-      dID <- mu
+      dID <- mu+P
     }
     
     if(immunity == "i") {
@@ -518,7 +552,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       dM_nolag <- -mum*M-p*R*M
       dMg_nolag <- -mum*Mg-p*R*Mg
       dG_nolag <- -mug*G
-      dID <- mu+a/(b+I)
+      dID <- mu+a/(b+I)+P
     } 
     
     ## Track states in initial cohort of infection
@@ -556,11 +590,11 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     }
     
     ## Return the states. Must be in the same order as states!
-    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM, dMg, dID, dI, dIg, dG, dA)))}
+    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM, dMg, dID, dS, dI, dIg, dG, dA)))}
     
-    if (immunity == "kochin") {return(list(c(dR, dM, dMg, dID, dI, dIg, dG, dE, dA)))}
+    if (immunity == "kochin") {return(list(c(dR, dM, dMg, dID,  dS, dI,dIg, dG, dE, dA)))}
     
-    if (immunity == "tsukushi") {return(list(c(dR, dM, dMg, dID, dI, dIg, dG, dN, dW, dA)))}
+    if (immunity == "tsukushi") {return(list(c(dR, dM, dMg, dID, dS, dI, dIg, dG, dN, dW, dA)))}
   }
   
   #-------------------------#
@@ -627,7 +661,11 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     
     ### processing df for plotting
     #### If no adaptive immunity, filter out adaptive immunity
-    if(!adaptive){chabaudi_si.df2 <- chabaudi_si.df %>% dplyr::select(-A)}
+    if(!adaptive){chabaudi_si.df2 <- chabaudi_si.df %>% 
+      dplyr::select(-A) %>% 
+      dplyr::mutate(S_new = (S - dplyr::lag(S)*1000)) %>% 
+      dplyr::select(-S)}
+    
     chabaudi_si.df3 <- chabaudi_si.df2 %>% tidyr::gather(key = "variable", value = "value", -time)
     
     return(chabaudi_si.df3)
