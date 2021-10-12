@@ -82,14 +82,16 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                                   cue_range_1,
                                   cue_range_2,
                                   solver = "lsoda",
-                                  #integration = "integrate",
+                                 # integration = "integrate",
                                   transformation = "exp",
                                   adaptive = FALSE,
                                   dyn = FALSE,
+                                  diff = TRUE, # return fitness difference or pure fitness
                                   log_cue_1 = "none",
                                   log_cue_2 = "none",
                                   gamete_immune = TRUE,
-                                  delay = 0) {
+                                  delay = 0,
+                                  ratio = 1) {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -111,7 +113,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   force(log_cue_1)
   force(log_cue_2)
   force(delay)
-  
+  force(ratio)
   
   #-------------------------#
   # Define initial condition
@@ -123,7 +125,9 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                Mg1 = 0,
                Mg2 = 0,
                ID = 0,
-               I1 = parameters[["I0"]],
+               S1 = 0,
+               S2 = 0,
+               I1 = parameters[["I0"]]*ratio,
                I2 = parameters[["I0"]],
                Ig1 = 0,
                Ig2 = 0,
@@ -137,7 +141,9 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                Mg1 = 0,
                Mg2 = 0,
                ID = 0,
-               I1 = parameters[["I0"]],
+               S1 = 0,
+               S2 = 0,
+               I1 = parameters[["I0"]]*ratio,
                I2 = parameters[["I0"]],
                Ig1 = 0,
                Ig2 = 0,
@@ -152,7 +158,9 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                Mg1 = 0,
                Mg2 = 0,
                ID = 0,
-               I1 = parameters[["I0"]],
+               S1 = 0,
+               S2 = 0,
+               I1 = parameters[["I0"]]*ratio,
                I2 = parameters[["I0"]],
                Ig1 = 0,
                Ig2 = 0,
@@ -196,7 +204,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   ## Ensure integration is entered correctly. Deprecated
   #if(integration != "integrate" && integration != "trapezoid" && integration != "simpson"){
   #  stop("Please enter the correct integration method. Must be 'integrate', trapezoid', or 'simpson'")
-  #}
+ # }
   ## Ensure spline transformation is entered correct
   if(transformation != "norm" && transformation != "exp" && transformation != "logit"){
     stop("Transformation must be either 'norm' or 'exp' or 'logit'")
@@ -281,9 +289,9 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   #      stop('f must be a function with one parameter (variable)')}
   #    h <- upper - lower
   #    fxdx <- (h / 2) * (f(lower) + f(upper))
-  #    return(fxdx)}
-  #} else {
-  #  integrate_fun <- function(f, lower, upper) {
+ #     return(fxdx)}
+ # } else {
+   # integrate_fun <- function(f, lower, upper) {
   #    if (is.function(f) == FALSE) {
   #      stop('f must be a function with one parameter (variable)')}
   #    h <- (upper - lower) / 2
@@ -291,9 +299,9 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   #    x1 <- lower + h
   #    x2 <- upper
   #    s <- (h / 3) * (f(x0) + 4 * f(x1) + f(x2))
-  #    return(s)
+   #   return(s)
   #  }
-  #}
+ # }
   
   #-------------------------#
   # Define single-infection model
@@ -348,6 +356,8 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     Ig1 <- state["Ig1"]
     Ig2 <- state["Ig2"]
     ID <- state["ID"]
+    S1 <- state["S1"]
+    S2 <- state["S2"]
     M1 <- state["M1"]
     M2 <- state["M2"]
     G1 <- state["G1"]
@@ -362,7 +372,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     }
     
     ## Defining Pulse beta function based on current time
-    pulseBeta_1 <- pulseBeta_fun(I0, sp, t-delay) # only strain 1 can experience delay
+    pulseBeta_1 <- pulseBeta_fun(I0*ratio, sp, t-delay) # only strain 1 can experience delay
     pulseBeta_2 <- pulseBeta_fun(I0, sp, t)
     
     ## Define the lag terms.
@@ -500,7 +510,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     }
     
     ## Define survival functions
-    ### Survival of infected asexual RBC
+    ### Survival of infected asexual RBC afte alpha 
     if(t>alpha+delay && immunity == "ni"){
       S_1 <- exp(-mu*alpha)} 
     
@@ -549,25 +559,6 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     if(t<=alpha && immunity != "ni"){
       S_2 <- exp(-ID)} 
     
-    #if(t<=alpha && immunity == "i"){
-    #integrand <- function(x) {mu+a/(b+I)}
-    #integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
-    #if(integration == "integrate"){integrate_val <- integrate_val$value}
-    #S <- exp(-1*integrate_val)
-    # S <- exp(-ID)
-    #}
-    
-    # if(t<=alpha && immunity == "kochin"){
-    # integrand <- function(x) {mu+gamma*E}
-    #  integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
-    #  if(integration == "integrate"){integrate_val <- integrate_val$value}
-    #  S <- exp(-1*integrate_val)}
-    
-    # if(t<=alpha && immunity == "tsukushi"){
-    # integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)} # assume targetted removal is half as effective
-    #  integrate_val <- integrate_fun(Vectorize(integrand), lower = 0, upper = t)
-    # if(integration == "integrate"){integrate_val <- integrate_val$value}
-    # S <- exp(-1*integrate_val)}
     
     ### Survival of gametocytes. We assume that infected
     ### RBC with gametocyte is removed by immune response for Tsukushi's model.
@@ -612,29 +603,41 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
         Sg_2 <- 0 # not relevent
       }
       
-      if(t>alpha+alpha+delay){
-        Sg_1 <- exp(-ID + lag_b_1[6])
+      if(t>alpha+alphag+delay){
+       Sg_1 <- exp(-ID + lag_b_1[6])
       }
       
       if(t>alpha+alphag){
         Sg_2 <- exp(-ID + lag_b_2[6])
       }
       
-      #if(t>alpha && t<=alpha+alphag){
-      # #integrand <- function(x) {mu-log(1-N)}
-      #  integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)} 
-      # integrate_val <- integrate_fun(Vectorize(integrand), lower = alpha, upper = t)
-      #  if(integration == "integrate"){integrate_val <- integrate_val$value}
-      # Sg <- exp(-1*integrate_val)
-      #} 
+      #if(gamete_immune){ # sexually commited infected RBC can either be sujected to immunity or no
+      # if(t>alpha+alphag+delay){
+      #  integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)}
+       # integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alphag, upper = t)
+       # if(integration == "integrate"){integrate_val <- integrate_val$value}
+       # Sg_1 <- exp(-1*integrate_val)}
       
-      # if(t>alpha+alphag){
-      #  #integrand <- function(x) {mu-log(1-N)}
-      # integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)}
-      #  integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alphag, upper = t)
+     # if(t>alpha+alphag){
+     #   integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)}
+     #   integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alphag, upper = t)
       #  if(integration == "integrate"){integrate_val <- integrate_val$value}
-      #  Sg <- exp(-1*integrate_val)}
+      #  Sg_2 <- exp(-1*integrate_val)}
+     # } else{
+     #   if(t>alpha+alphag+delay){
+     #     Sg_1 <- exp(-mu*alphag)
+      #  }
+     #   
+     #   if(t>alpha+alphag){
+     #     Sg_2 <- exp(-mu*alphag)
+    #    }
+      #}
+      
     }
+    
+    # keep track of these
+    dS1 <- S_1
+    dS2 <- S_2
     
     ## Define the models without lag terms. 
     if(immunity != "tsukushi"){
@@ -809,11 +812,11 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     
     
     ## Return the states. Must be in the same order as states!
-    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dA)))}
+    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dS1, dS2, dI1, dI2, dIg1, dIg2, dG1, dG2, dA)))}
     
-    if (immunity == "kochin") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dE, dA)))}
+    if (immunity == "kochin") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dS1, dS2, dI1, dI2, dIg1, dIg2, dG1, dG2, dE, dA)))}
     
-    if (immunity == "tsukushi") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dN, dW, dA)))}
+    if (immunity == "tsukushi") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dS1, dS2, dI1, dI2, dIg1, dIg2, dG1, dG2, dN, dW, dA)))}
   }
   
   #-------------------------#
@@ -851,7 +854,8 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   tau2.sum <- sum(tau2.ls*int, na.rm = TRUE)
   
   # return cumulative transmission potential. Turn negative to maximize
-  if(dyn == FALSE){return(tau1.sum-tau2.sum)} # let tau1 be the optimizing strain. Optimize
+  if(dyn == FALSE && diff == TRUE){return(tau1.sum-tau2.sum)}
+  if(dyn == FALSE && diff == FALSE){return(tau1.sum)}
   # the fitness difference between strain 1 and strain 2
   
   #-------------------------#
@@ -900,7 +904,11 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     
     ### processing df for plotting
     #### If no adaptive immunity, filter out adaptive immunity
-    if(!adaptive){chabaudi_ci.df2 <- chabaudi_ci.df %>% dplyr::select(-A)}
+    if(!adaptive){chabaudi_ci.df2 <- chabaudi_ci.df %>% 
+      dplyr::select(-A) %>% 
+      dplyr::mutate(S1_new = (S1 - dplyr::lag(S1))*1000,
+                                     S2_new = (S2 - dplyr::lag(S2))*1000) %>% 
+      dplyr::select(-S1, -S2)}
     chabaudi_ci.df3 <- chabaudi_ci.df2 %>% tidyr::gather(key = "variable", value = "value", -time)
     #### processing to separate stran from variable
     chabaudi_ci.df4 <- chabaudi_ci.df3 %>% 
