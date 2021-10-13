@@ -742,8 +742,20 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       dG2 <- 0
     }
     ### for strain 1 if delayed. Everything should happen delay days after (delay = day of injection)
+    if(t<delay){
+      dI1 <- 0
+    }
+    
+    ### treat strain 1 injection as instantaenous
+    #if(t == delay && t <= delay +0.001){
+    #  dI1 = (I0*ratio)/0.001
+   # }
+    
     if(t<=alpha+delay){
       dI1 <- dI1_nolag-pulseBeta_1*S_1
+    }
+    
+    if(t<=alpha+delay){
       dM1 <- dM1_nolag+beta*pulseBeta_1*S_1 # all of them are asexual merozoite
       dMg1 <- 0 # should have no Mg before day 1
       dIg1 <- 0 #first wave starts on day alpha+delay
