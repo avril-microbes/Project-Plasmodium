@@ -72,26 +72,26 @@
 # theme_bw()                  
 
 chabaudi_ci_opt_lag <- function(parameters_cr_1,
-                                  parameters_cr_2,
-                                  immunity,
-                                  parameters,
-                                  time_range,
-                                  df,
-                                  cue_1,
-                                  cue_2,
-                                  cue_range_1,
-                                  cue_range_2,
-                                  solver = "lsoda",
+                                 parameters_cr_2,
+                                 immunity,
+                                 parameters,
+                                 time_range,
+                                 df,
+                                 cue_1,
+                                 cue_2,
+                                 cue_range_1,
+                                 cue_range_2,
+                                 solver = "lsoda",
                                  # integration = "integrate",
-                                  transformation = "exp",
-                                  adaptive = FALSE,
-                                  dyn = FALSE,
-                                  diff = TRUE, # return fitness difference or pure fitness
-                                  log_cue_1 = "none",
-                                  log_cue_2 = "none",
-                                  gamete_immune = TRUE,
-                                  delay = 0,
-                                  ratio = 1) {
+                                 transformation = "exp",
+                                 adaptive = FALSE,
+                                 dyn = FALSE,
+                                 diff = TRUE, # return fitness difference or pure fitness
+                                 log_cue_1 = "none",
+                                 log_cue_2 = "none",
+                                 gamete_immune = TRUE,
+                                 delay = 0,
+                                 ratio = 1) {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -127,7 +127,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                ID = 0,
                S1 = 0,
                S2 = 0,
-               I1 = parameters[["I0"]]*ratio,
+               I1 = 0, # set to 0 for delayed infection. If not delayed, parasite inject @ 0.001
                I2 = parameters[["I0"]],
                Ig1 = 0,
                Ig2 = 0,
@@ -143,7 +143,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                ID = 0,
                S1 = 0,
                S2 = 0,
-               I1 = parameters[["I0"]]*ratio,
+               I1 = 0, # set to 0 for delayed infection. If not delayed, parasite inject @ 0.001
                I2 = parameters[["I0"]],
                Ig1 = 0,
                Ig2 = 0,
@@ -160,7 +160,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                ID = 0,
                S1 = 0,
                S2 = 0,
-               I1 = parameters[["I0"]]*ratio,
+               I1 = 0, # set to 0 for delayed infection. If not delayed, parasite inject @ 0.001
                I2 = parameters[["I0"]],
                Ig1 = 0,
                Ig2 = 0,
@@ -204,7 +204,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   ## Ensure integration is entered correctly. Deprecated
   #if(integration != "integrate" && integration != "trapezoid" && integration != "simpson"){
   #  stop("Please enter the correct integration method. Must be 'integrate', trapezoid', or 'simpson'")
- # }
+  # }
   ## Ensure spline transformation is entered correct
   if(transformation != "norm" && transformation != "exp" && transformation != "logit"){
     stop("Transformation must be either 'norm' or 'exp' or 'logit'")
@@ -289,9 +289,9 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   #      stop('f must be a function with one parameter (variable)')}
   #    h <- upper - lower
   #    fxdx <- (h / 2) * (f(lower) + f(upper))
- #     return(fxdx)}
- # } else {
-   # integrate_fun <- function(f, lower, upper) {
+  #     return(fxdx)}
+  # } else {
+  # integrate_fun <- function(f, lower, upper) {
   #    if (is.function(f) == FALSE) {
   #      stop('f must be a function with one parameter (variable)')}
   #    h <- (upper - lower) / 2
@@ -299,9 +299,9 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
   #    x1 <- lower + h
   #    x2 <- upper
   #    s <- (h / 3) * (f(x0) + 4 * f(x1) + f(x2))
-   #   return(s)
+  #   return(s)
   #  }
- # }
+  # }
   
   #-------------------------#
   # Define single-infection model
@@ -604,7 +604,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       }
       
       if(t>alpha+alphag+delay){
-       Sg_1 <- exp(-ID + lag_b_1[6])
+        Sg_1 <- exp(-ID + lag_b_1[6])
       }
       
       if(t>alpha+alphag){
@@ -614,23 +614,23 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
       #if(gamete_immune){ # sexually commited infected RBC can either be sujected to immunity or no
       # if(t>alpha+alphag+delay){
       #  integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)}
-       # integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alphag, upper = t)
-       # if(integration == "integrate"){integrate_val <- integrate_val$value}
-       # Sg_1 <- exp(-1*integrate_val)}
+      # integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alphag, upper = t)
+      # if(integration == "integrate"){integrate_val <- integrate_val$value}
+      # Sg_1 <- exp(-1*integrate_val)}
       
-     # if(t>alpha+alphag){
-     #   integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)}
-     #   integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alphag, upper = t)
+      # if(t>alpha+alphag){
+      #   integrand <- function(x) {mu-log(1-N)-log(1-W)-log(1-A)}
+      #   integrate_val <- integrate_fun(Vectorize(integrand), lower = t-alphag, upper = t)
       #  if(integration == "integrate"){integrate_val <- integrate_val$value}
       #  Sg_2 <- exp(-1*integrate_val)}
-     # } else{
-     #   if(t>alpha+alphag+delay){
-     #     Sg_1 <- exp(-mu*alphag)
+      # } else{
+      #   if(t>alpha+alphag+delay){
+      #     Sg_1 <- exp(-mu*alphag)
       #  }
-     #   
-     #   if(t>alpha+alphag){
-     #     Sg_2 <- exp(-mu*alphag)
-    #    }
+      #   
+      #   if(t>alpha+alphag){
+      #     Sg_2 <- exp(-mu*alphag)
+      #    }
       #}
       
     }
@@ -749,7 +749,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     ### treat strain 1 injection as instantaenous
     #if(t == delay && t <= delay +0.001){
     #  dI1 = (I0*ratio)/0.001
-   # }
+    # }
     
     if(t<=alpha+delay){
       dI1 <- dI1_nolag-pulseBeta_1*S_1
@@ -831,6 +831,14 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     if (immunity == "tsukushi") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dS1, dS2, dI1, dI2, dIg1, dIg2, dG1, dG2, dN, dW, dA)))}
   }
   
+  #--------------------------#
+  # Create event for strain 1 injection (delayed)
+  #--------------------------#
+  delay_injection <- data.frame(var = "I1",
+                                time = delay,
+                                value = parameters["I0"]*ratio,
+                                method = "add")
+  
   #-------------------------#
   # Run single-infection model
   #------------------------#
@@ -839,6 +847,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
                                                 func = chabaudi_ci_model_lag,
                                                 p = parameters,
                                                 method = solver,
+                                                events = list(data = delay_injection),
                                                 control=list(mxhist = 1e6)))
   
   #-------------------------#
@@ -919,7 +928,7 @@ chabaudi_ci_opt_lag <- function(parameters_cr_1,
     if(!adaptive){chabaudi_ci.df2 <- chabaudi_ci.df %>% 
       dplyr::select(-A) %>% 
       dplyr::mutate(S1_new = (S1 - dplyr::lag(S1))*1000,
-                                     S2_new = (S2 - dplyr::lag(S2))*1000) %>% 
+                    S2_new = (S2 - dplyr::lag(S2))*1000) %>% 
       dplyr::select(-S1, -S2)}
     chabaudi_ci.df3 <- chabaudi_ci.df2 %>% tidyr::gather(key = "variable", value = "value", -time)
     #### processing to separate stran from variable
