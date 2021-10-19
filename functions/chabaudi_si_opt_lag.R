@@ -371,20 +371,36 @@ chabaudi_si_opt_lag <- function(parameters_cr,
         cue_state <- state[cue]}
     } else{### manually create lag values if cues contain special characters
       if(stringr::str_detect(cue, "\\+")){ # if it contains plus
-        if(t>alpha+delay && cue != "t"){cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]]}
-        if(t>alphag+delay && cue != "t") {cue_lag2 <- lag2[lag.i[1]]+lag2[lag.i[2]]}
+        if(lag_deriv == FALSE){
+          if(t>alpha+delay && cue != "t"){cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]]}
+          if(t>alphag+delay && cue != "t") {cue_lag2 <- lag2[lag.i[1]]+lag2[lag.i[2]]}}
+        if(lag_deriv == TRUE){
+          if(t>alpha+delay && cue != "t"){cue_lag1 <- dlag1[lag.i[1]]+dlag1[lag.i[2]]}
+          if(t>alphag+delay && cue != "t") {cue_lag2 <- dlag2[lag.i[1]]+dlag2[lag.i[2]]}}
       }
       if(stringr::str_detect(cue, "\\-")){ # if it contains -
-        if(t>alpha+delay && cue != "t"){cue_lag1 <- lag1[lag.i[1]]-lag1[lag.i[2]]}
-        if(t>alphag+delay && cue != "t") {cue_lag2 <- lag2[lag.i[1]]-lag2[lag.i[2]]}
+        if(lag_deriv == FALSE){
+          if(t>alpha+delay && cue != "t"){cue_lag1 <- lag1[lag.i[1]]-lag1[lag.i[2]]}
+          if(t>alphag+delay && cue != "t") {cue_lag2 <- lag2[lag.i[1]]-lag2[lag.i[2]]}}
+        if(lag_deriv == TRUE){
+          if(t>alpha+delay && cue != "t"){cue_lag1 <- dlag1[lag.i[1]]-dlag1[lag.i[2]]}
+          if(t>alphag+delay && cue != "t") {cue_lag2 <- dlag2[lag.i[1]]-dlag2[lag.i[2]]}}
       }
       if(stringr::str_detect(cue, "\\*")){ # if it contains multiplication
-        if(t>alpha+delay && cue != "t"){cue_lag1 <- lag1[lag.i[1]]*lag1[lag.i[2]]}
-        if(t>alphag+delay && cue != "t") {cue_lag2 <- lag2[lag.i[1]]*lag2[lag.i[2]]}
+        if(lag_deriv == FALSE){
+          if(t>alpha+delay && cue != "t"){cue_lag1 <- lag1[lag.i[1]]*lag1[lag.i[2]]}
+          if(t>alphag+delay && cue != "t") {cue_lag2 <- lag2[lag.i[1]]*lag2[lag.i[2]]}}
+        if(lag_deriv == TRUE){
+          if(t>alpha+delay && cue != "t"){cue_lag1 <- dlag1[lag.i[1]]*dlag1[lag.i[2]]}
+          if(t>alphag+delay && cue != "t") {cue_lag2 <- dlag2[lag.i[1]]*dlag2[lag.i[2]]}}
       }
       if(stringr::str_detect(cue, "\\/")){ # if it contains division
-        if(t>alpha+delay && cue != "t"){cue_lag1 <- lag1[lag.i[1]]/lag1[lag.i[2]]}
-        if(t>alphag+delay && cue != "t") {cue_lag2 <- lag2[lag.i[1]]/lag2[lag.i[2]]}
+        if(lag_deriv == FALSE){
+          if(t>alpha+delay && cue != "t"){cue_lag1 <- lag1[lag.i[1]]/lag1[lag.i[2]]}
+          if(t>alphag+delay && cue != "t") {cue_lag2 <- lag2[lag.i[1]]/lag2[lag.i[2]]}}
+        if(lag_deriv == TRUE){
+          if(t>alpha+delay && cue != "t"){cue_lag1 <- dlag1[lag.i[1]]/dlag1[lag.i[2]]}
+          if(t>alphag+delay && cue != "t") {cue_lag2 <- dlag2[lag.i[1]]/dlag2[lag.i[2]]}}
       }
       ### get present states
       if(cue != "t"){cue_state <- eval(parse(text = cue))}
