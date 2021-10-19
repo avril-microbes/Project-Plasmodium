@@ -84,7 +84,9 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                                  log_cue = "none",
                                  delay = 0,
                                  drug = 0,
-                                 admin = 0) {
+                                 admin = 0,
+                                 ratio = 1,
+                                 lag_deriv = FALSE) {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -104,6 +106,8 @@ chabaudi_si_opt_lag <- function(parameters_cr,
   force(delay)
   force(drug)
   force(admin)
+  force(ratio)
+  force(lag_deriv)
   
   #-------------------------#
   # Define initial condition
@@ -114,7 +118,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                Mg = 0,
                ID = 0,
                S = 0,
-               I = parameters[["I0"]],
+               I = 0,
                Ig = 0,
                G = 0, 
                A = 0) # survival function. Just for tracking
@@ -124,7 +128,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                Mg = 0,
                ID = 0,
                S = 0,
-               I = parameters[["I0"]],
+               I = 0,
                Ig = 0,
                G = 0,
                E = 0,
@@ -135,7 +139,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                Mg = 0,
                ID = 0,
                S = 0,
-               I = parameters[["I0"]],
+               I = 0,
                Ig = 0,
                G = 0,
                N = 0, # general RBC removal
@@ -269,6 +273,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     b <- parameters["b"]
     sp <- parameters["sp"]
     if(drug > 0){mud <- parameters["mud"]} # if drug action is included, add drug length
+    if(drug == 0){mud <- 0} # assign no drug induced death if no drugs
     
     ## Additional parameters in Kochin
     if (immunity == "kochin"){ 
@@ -313,11 +318,17 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     # threshold or not
     
     ## Defining Pulse beta function based on current time
-    pulseBeta <- pulseBeta_fun(I0, sp, t-delay)
+    pulseBeta <- pulseBeta_fun(I0*ratio, sp, t-delay)
     
     ## Define the lag terms. lag[1] = R, lag[2] = I, lag[3] = Ig, lag[4] = M, lag[5] = G
-    if(t>alpha+delay){lag1 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
-    if(t>alphag+delay){lag2 = deSolve::lagvalue(t-alphag)} # lag state for gametocyte development
+    if(t>alpha+delay){
+      lag1 = deSolve::lagvalue(t-alpha)
+      dlag1 = deSolve::lagderiv(t-alpha)
+    } # lag state for asexual development
+    if(t>alphag+delay){
+      lag2 = deSolve::lagvalue(t-alphag)
+      dlag2 = deSolve::lagderiv(t-alphag)
+    } # lag state for gametocyte development
     ### extra lag term for adaptive immunity
     if(adaptive == TRUE){
       if(t>epsilon+delay){lag3 = deSolve::lagvalue(t-epsilon)}
@@ -337,13 +348,19 @@ chabaudi_si_opt_lag <- function(parameters_cr,
         cue_lag1 <- t-alpha} 
       
       if(t>alpha+delay && cue != "t"){
-        cue_lag1 <- lag1[lag.i]}
+        if(lag_deriv == FALSE){cue_lag1 <- lag1[lag.i]}
+        if(lag_deriv == TRUE){cue_lag1 <- dlag1[lag.i]}
+      }
       
       if(t>alphag+delay && cue == "t") {
-        cue_lag2 <- t-alphag} 
+        cue_lag2 <- t-alphag
+      } 
       
       if(t>alphag+delay && cue != "t") {
-        cue_lag2 <- lag2[lag.i]}
+        if(lag_deriv == FALSE){cue_lag2 <- lag2[lag.i]}
+        if(lag_deriv == TRUE){cue_lag2 <- dlag2[lag.i]}
+      }
+      
       
       ### convert cue to time if time-based conversion rate strategy is used
       if(cue == "t"){
@@ -382,14 +399,15 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     #------------------------#
     if(drug > 0){
       pyr_length = 3.557-2.586/(1+exp(-8.821+drug))
-      if(t > admin && t< admin + 1 + pyr_length) {
-        P = mud
-      }else{
-        P = 0
+      if(t<=admin){P <- 0}
+      if(t > admin && t <= admin + 1 + pyr_length) {
+        P <- mud # only drug action after drug administration and within active time frame
       }
-    }else{
-      P = 0
+      
+      if(t> admin + 1 + pyr_length){P <- 0}
     }
+    
+    if(drug == 0){P <- 0}
     
     
     ## Define adaptive immunity
@@ -406,7 +424,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     ## Define survival functions
     ### Survival of infected asexual RBC
     if(t>alpha+delay && immunity == "ni"){
-      S <- exp(-mu*alpha)} 
+      S <- exp(-ID + lag1[4])} 
     
     if(t>alpha+delay && immunity != "ni"){
       S <- exp(-ID + lag1[4])
@@ -435,7 +453,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     ################################
     
     if(t<=alpha+delay && immunity == "ni"){
-      S <- exp(-mu*t)} 
+      S <- exp(-ID)} 
     
     if(t<=alpha+delay && immunity != "ni"){
       S <- exp(-ID)} 
@@ -468,10 +486,10 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       } 
       
       if(t>alpha+delay && t<=alpha+alphag+delay){
-        Sg <- exp(-mu*t+mu*alpha)} # not relevent
+        Sg <- 0} # does not appear in our equation until first infected RBC burst, which is delay+alpha+alphag
       
       if(t>alpha+alphag+delay){
-        Sg <- exp(-mu*alphag)
+        Sg <- exp(-ID + lag2[4]) # only due to intrinsic cell death
       }
     }
     
@@ -514,9 +532,9 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     if(immunity == "tsukushi"){ #Tsukushi exclusive ODEs
       #dR <- lambda*(1-R/K)-mu*R-p*R*M-(mu-log(1-N))*R
       dR <- R1*mu+rho*(R1-R)-(mu-log(1-N))*R-(p*R*M)-(p*R*Mg)
-      dI_nolag <- p*R*M-mu*I-(-log(1-N)-log(1-W)-log(1-A))*I
+      dI_nolag <- p*R*M-mu*I-(-log(1-N)-log(1-W)-log(1-A))*I-P*I
       #dIg_nolag <- cr(cue_state)*p*R*M-mu*Ig-(-log(1-N))*Ig #assume no targeted clearance
-      dIg_nolag <- p*R*Mg-mu*Ig-(-log(1-N)-log(1-W)-log(1-A))*Ig
+      dIg_nolag <- p*R*Mg-mu*Ig-(-log(1-N)-log(1-W)-log(1-A))*Ig-P*Ig
       #dN <- psin*(I/iota)*(1-N)-(N/phin) # assume Ig does not elicit strong immune response. Not included in cue
       dN <- psin*((I+Ig)/iota)*(1-N)-(N/phin)
       #dW <- psiw*(I/iota)*(1-W)-(W/phiw)
@@ -529,8 +547,8 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     
     if(immunity =="kochin"){
       dE <- sigma*I*(1-E)-mue*E # change in innate immune strength
-      dI_nolag <- p*R*M-mu*I-gamma*E*I
-      dIg_nolag <- p*R*Mg-mu*Ig
+      dI_nolag <- p*R*M-mu*I-gamma*E*I-P*I
+      dIg_nolag <- p*R*Mg-mu*Ig-P*Ig
       dM_nolag <- -mum*M-p*R*M
       dMg_nolag <- -mum*Mg-p*R*Mg
       dG_nolag <- -mug*G
@@ -538,8 +556,8 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     }
     
     if(immunity == "ni"){
-      dI_nolag <- p*R*M-mu*I # change in infected RBC density
-      dIg_nolag <- p*R*Mg-mu*Ig
+      dI_nolag <- p*R*M-mu*I-P*I # change in infected RBC density
+      dIg_nolag <- p*R*Mg-mu*Ig-P*Ig
       dM_nolag <- -mum*M-p*R*M
       dMg_nolag <- -mum*Mg-p*R*Mg
       dG_nolag <- -mug*G
@@ -547,13 +565,17 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     }
     
     if(immunity == "i") {
-      dI_nolag <- p*R*M-mu*I-(a*I)/(b+I) # change in infected RBC density with immunity
-      dIg_nolag <- p*R*Mg-mu*Ig
+      dI_nolag <- p*R*M-mu*I-(a*I)/(b+I)-P*I # change in infected RBC density with immunity
+      dIg_nolag <- p*R*Mg-mu*Ig-P*Ig
       dM_nolag <- -mum*M-p*R*M
       dMg_nolag <- -mum*Mg-p*R*Mg
       dG_nolag <- -mug*G
       dID <- mu+a/(b+I)+P
     } 
+    
+    if(t<delay){
+      dI <- 0
+    }
     
     ## Track states in initial cohort of infection
     if(t<=alpha+delay){
@@ -596,6 +618,13 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     
     if (immunity == "tsukushi") {return(list(c(dR, dM, dMg, dID, dS, dI, dIg, dG, dN, dW, dA)))}
   }
+  #--------------------------#
+  # Create event for strain 1 injection (delayed)
+  #--------------------------#
+  delay_injection <- data.frame(var = "I",
+                                time = delay,
+                                value = parameters["I0"]*ratio,
+                                method = "add")
   
   #-------------------------#
   # Run single-infection model
@@ -605,6 +634,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                                                 func = chabaudi_si_model_lag,
                                                 p = parameters,
                                                 method = solver,
+                                                events = list(data = delay_injection),
                                                 control=list(mxhist = 1e6)))
   
   #-------------------------#
@@ -644,8 +674,17 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     
     ### calculate CR based on cue
     if(cue != "t"){
-      cue_for_cr.df <- chabaudi_si.df %>% dplyr::mutate(cue_state = eval(parse(text = cue)))
-      cue_for_cr <- cue_for_cr.df$cue_state
+      if(lag_deriv == FALSE){
+        cue_for_cr.df <- chabaudi_si.df %>% dplyr::mutate(cue_state = eval(parse(text = cue)))
+        cue_for_cr <- cue_for_cr.df$cue_state}
+      
+      if(lag_deriv == TRUE){
+        cue_for_cr.df <- chabaudi_si.df %>% 
+          dplyr::mutate(cue_state = eval(parse(text = cue))) %>% 
+          dplyr::mutate(cue_dif = (cue_state-dplyr::lag(cue_state))/0.001)
+        
+        cue_for_cr <- cue_for_cr.df$cue_dif
+      }
       
       if(log_cue == "log"){
         cr.ls <- cr(log(cue_for_cr))}
