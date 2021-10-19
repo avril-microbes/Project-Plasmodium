@@ -1,0 +1,420 @@
+---
+title: "report6"
+output: html_document
+---
+# Load libraries
+```{r}
+library(deSolve)
+library(splines)
+library(optimParallel)
+library(ggplot2)
+library(ggpubr)
+library(tidyr)
+library(magrittr)
+library(Rcpp)
+library(microbenchmark)
+library(GA)
+library(here)
+```
+
+# Load functions
+```{r}
+source(here("functions/chabaudi_ci_opt_lag.R"))
+source(here("functions/co_infection_opt.R"))
+source(here("functions/par_to_df.R"))
+source(here("functions/chabaudi_si_opt_lag.R"))
+source(here("functions/total_parasite.R"))
+source(here("functions/test.R"))
+```
+
+# define parameters
+```{r}
+parameters <- c(R1 = 8.5*10^6,
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 4*10^-6,
+                alpha = 1, 
+                alphag = 2, 
+                beta = 10, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1)
+
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156,
+                mud = -log(1-0.94)) # drug induced action. 94% death per day
+
+time_range <- seq(0, 20, by = 1e-3)
+I_range <- seq(0, 2.18*10^6, by = 1000) 
+I_range_large <- seq(0, (3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)), by = 1000) 
+I_range_mid <- seq(0, 5*10^6, by = 1000)
+I_range_mid2 <- seq(0, 4*10^6, by = 1000)
+I_range_mid4 <- seq(0, 6*10^6, by = (6*10^6)/5000)
+
+# logged counterpart
+I_range_mid2_log <- seq(0, log(4*10^6), by = log(4*10^6)/5000)
+I_range_mid3_log <- seq(0, log(5*10^6), by = log(5*10^6)/5000)
+I_range_mid4_log <- seq(0, log(6*10^6), by = log(6*10^6)/5000)
+I_range_mid4_log10 <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
+I_range_large_log <- seq(0, log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6))), by = log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)))/10000)
+
+
+# R_range
+R_range_log10 <- seq(0, log10(8.89*10^6), by = log10(8.89*10^6)/10000)
+```
+
+
+#-------------------#
+# continue on drug journey with pyr
+#------------------#
+
+#-----10 mg/kg injected at various time------#
+# The threshold for parasite fitness (cannot continue after)
+# fixed drug action
+
+# checking whether lengthening infection period for late period works out
+# we might have low parasite density for a while after infection but does not contribute significantly to fitness
+# parasite density kept low due to targeted removal
+```{r}
+# injected 18th day and only run to 25 th day
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_18 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 25, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 18)
+stopCluster(cl)
+
+# converged
+#5.480456   2.272511 -17.190359   3.760723
+#8.714361
+
+# does recrudescence occur? We don't have adaptive immunity
+lag_si_I_20.dyn_tsukushi_pyr10_18 <- chabaudi_si_opt_lag2(par = c(5.480456, 2.272511, -17.190359,   3.760723),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 100, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10,
+                             solver = "vode",
+                             log_cue = "log10",
+                             drug = 10,
+                             admin = 18,
+                             dyn = TRUE)
+
+ggplot() +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_18, aes(x = time, y = value)) +
+  facet_wrap(~variable, scale = "free") +
+  theme_bw()
+
+lag_si_I_20.dyn_tsukushi_pyr10_18 %>% 
+  dplyr::filter(variable == "I") %>% 
+  dplyr::arrange(desc(time))
+
+```
+
+# simulate infection for 25 days to keep it safe
+# dose 10
+```{r}
+# 2ne day injection
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_2 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 25, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 2)
+stopCluster(cl)
+
+# converged
+#8.201441  -2.213959 -17.284309  -1.756720
+#6.925899
+
+# 4th day
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_4 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 25, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 4)
+stopCluster(cl)
+# did not converge
+#8.884780   5.476731 -26.454276   3.662227
+#6.747646
+
+# 6th day
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_6 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 25, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 6)
+stopCluster(cl)
+# converged
+#3.6628282  3.9509224 -9.8626175 -0.9511553
+#5.650961
+
+# 8th day
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_8 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 25, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 8)
+stopCluster(cl)
+# converged
+#7.189790   3.242118 -22.455428   6.506670
+#4.169689
+
+# 10th day
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_10 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 25, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 10)
+stopCluster(cl)
+
+# converged
+#0.8449114  7.4291292 -4.9521758 -7.1852526
+#3.115435
+
+# 12th day
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_12 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 25, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 12)
+stopCluster(cl)
+
+# did not converge
+#4.2893474   3.6860976 -13.0873430   0.8359934
+#4.628532
+
+# 14th day
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_14 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 25, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 14)
+stopCluster(cl)
+# did not converger
+# 4.462580   3.192333 -13.850210   1.720987
+#6.1532
+
+# 16th day
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_16 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 25, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 146)
+stopCluster(cl)
+                 
+```
+
+
+
+#-----------------------#
+# testing out different cues
+#-----------------------#
+
+# get derviative range
+```{r}
+# get derivative range estimation
+# simulate best no drug infection
+lag_si_I_20.opt_tsukushi_I <- chabaudi_si_opt_lag(par = c(5.511734, 2.394041,-17.890312,4.598348),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE)
+
+
+ggplot() +
+  geom_line(data = lag_si_I_20.opt_tsukushi_I, aes(x = time, y = value)) +
+  facet_wrap(~variable, scale = "free") +
+  theme_bw()
+
+# time series. This oscillates a lot due to bursting of iRBC
+lag_si_I_20.opt_tsukushi_I %>% 
+  dplyr::filter(variable == "I") %>% 
+  dplyr::mutate(deriv_est = (value-dplyr::lag(value))/0.001) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = deriv_est)) +
+  xlim(0.01, 20) +
+  theme_bw()
+
+lag_si_I_20.opt_tsukushi_I %>% 
+  dplyr::filter(variable == "I") %>% 
+  dplyr::mutate(deriv_est = (value-dplyr::lag(value))/0.001) %>% 
+  dplyr::arrange(desc(deriv_est)) # max @ 250000
+
+lag_si_I_20.opt_tsukushi_I %>% 
+  dplyr::filter(variable == "I") %>% 
+  dplyr::mutate(deriv_est = (value-dplyr::lag(value))/0.001) %>% 
+  dplyr::arrange(deriv_est)  # min @ -250000
+
+
+# how about ID?
+lag_si_I_20.opt_tsukushi_I %>% 
+  dplyr::filter(variable == "ID") %>% 
+  dplyr::mutate(deriv_est = (value-dplyr::lag(value))/0.001) %>% 
+  dplyr::arrange(desc(deriv_est)) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = deriv_est)) +
+  theme_bw()
+
+
+# explore other cues
+lag_si_I_20.opt_tsukushi_I %>% 
+  dplyr::filter(variable == "I") %>% 
+  dplyr::mutate(deriv_est = value-dplyr::lag(value)) %>% 
+  dplyr::mutate(mean_deriv = zoo::rollmean(deriv_est, 1000, fill = NA)) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = mean_deriv)) +
+  theme_bw()
+```
+
+# trying first optimization without drugs
+# derivative of ID ()
+```{r}
+source(here("functions/test.R"))
+
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_dID_5 <- optimParallel(par =rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_lag2, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 20, 1e-3),
+                 df = 3,
+                 cue = "ID",
+                 cue_range = seq(0, 5, by =5/5000),
+                 solver = "vode",
+                 log_cue = "none",
+                 lag_deriv = TRUE)
+stopCluster(cl)
+lag_si_I_20.opt_tsukushi_dID_5 
+
+# trying 
+test <- chabaudi_si_opt_lag2(par = c(-0.1398883, -0.4292982, -4.2839183, -1.0800704),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             df = 3,
+                             cue = "ID",
+                             cue_range = seq(0, 5, by =5/5000),
+                             solver = "vode",
+                             log_cue = "none", 
+                             dyn = TRUE,
+                             lag_deriv = TRUE)
+
+
+ggplot() +
+  geom_line(data = test, aes(x = time, y = value)) +
+  facet_wrap(~variable, scale = "free") +
+  theme_bw()
+```
+
+
