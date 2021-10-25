@@ -1608,6 +1608,8 @@ fig2a <- ggplot() +
   geom_line(data = lag_ci_I_20.par_tsukushi_I_r01, aes(x = cue_range, y = cr, color = "0.1")) +
   labs(x = "Log(iRBC)", y = "Conversion rate", color = "Ratio")+
   theme_bw()
+
+lag_ci_I_20.par_tsukushi_log10_I
 ```
 
 # get time series cr

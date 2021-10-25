@@ -78,7 +78,7 @@ I_range_mid2_log <- seq(0, log(4*10^6), by = log(4*10^6)/5000)
 I_range_mid3_log <- seq(0, log(5*10^6), by = log(5*10^6)/5000)
 I_range_mid4_log <- seq(0, log(6*10^6), by = log(6*10^6)/5000)
 I_range_mid4_log10 <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
-I_range_large_log <- seq(0, log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6))), by = log((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)))/10000)
+I_range_large_log10 <- seq(0, log10((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6))), by = log10((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)))/10000)
 
 
 # R_range
@@ -170,7 +170,7 @@ stopCluster(cl)
 
 # 4th day
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-lag_si_I_20.opt_tsukushi_pyr10_4 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+lag_si_I_20.opt_tsukushi_pyr10_4 <- optimParallel(par = c(8.884780,   5.476731, -26.454276 ,  3.662227),# new parameter search space
                       fn = chabaudi_si_opt_lag, 
                       control = list(trace = 6, fnscale = -1),
                       immunity = "tsukushi",
@@ -184,9 +184,9 @@ lag_si_I_20.opt_tsukushi_pyr10_4 <- optimParallel(par = rep(0.5, 4),# new parame
                  drug = 10,
                  admin = 4)
 stopCluster(cl)
-# did not converge
-#8.884780   5.476731 -26.454276   3.662227
-#6.747646
+# converged
+#8.88473 5.47671 -26.4543 3.6622 
+#6.74765
 
 # 6th day
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
@@ -230,7 +230,7 @@ stopCluster(cl)
 
 # 10th day
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-lag_si_I_20.opt_tsukushi_pyr10_10 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+lag_si_I_20.opt_tsukushi_pyr10_10 <- optimParallel(par = c(5.511734, 2.394041,-17.890312,4.598348),# new parameter search space
                       fn = chabaudi_si_opt_lag, 
                       control = list(trace = 6, fnscale = -1),
                       immunity = "tsukushi",
@@ -249,9 +249,13 @@ stopCluster(cl)
 #0.8449114  7.4291292 -4.9521758 -7.1852526
 #3.115435
 
+# bettter converged
+#32.6085 -12.2148 -75.6596 13.0708 
+#3.986852 
+
 # 12th day
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-lag_si_I_20.opt_tsukushi_pyr10_12 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+lag_si_I_20.opt_tsukushi_pyr10_12 <- optimParallel(par = c(5.511734, 2.394041,-17.890312,4.598348),# new parameter search space
                       fn = chabaudi_si_opt_lag, 
                       control = list(trace = 6, fnscale = -1),
                       immunity = "tsukushi",
@@ -266,13 +270,16 @@ lag_si_I_20.opt_tsukushi_pyr10_12 <- optimParallel(par = rep(0.5, 4),# new param
                  admin = 12)
 stopCluster(cl)
 
-# did not converge
+# cannot converge
 #4.2893474   3.6860976 -13.0873430   0.8359934
 #4.628532
 
+#4.850076   3.648551 -14.512506   1.059028
+#4.62879
+
 # 14th day
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-lag_si_I_20.opt_tsukushi_pyr10_14 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+lag_si_I_20.opt_tsukushi_pyr10_14 <- optimParallel(par = c(4.462580,   3.192333, -13.850210 ,  1.720987),# new parameter search space
                       fn = chabaudi_si_opt_lag, 
                       control = list(trace = 6, fnscale = -1),
                       immunity = "tsukushi",
@@ -286,13 +293,14 @@ lag_si_I_20.opt_tsukushi_pyr10_14 <- optimParallel(par = rep(0.5, 4),# new param
                  drug = 10,
                  admin = 14)
 stopCluster(cl)
-# did not converger
-# 4.462580   3.192333 -13.850210   1.720987
-#6.1532
+# converged
+#  4.462606   3.192332 -13.850205   1.720999
+
+#6.153198
 
 # 16th day
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-lag_si_I_20.opt_tsukushi_pyr10_16 <- optimParallel(par = rep(0.5, 4),# new parameter search space
+lag_si_I_20.opt_tsukushi_pyr10_16 <- optimParallel(par = c( 5.416194,   2.763396, -16.706357,  2.931294),# new parameter search space
                       fn = chabaudi_si_opt_lag, 
                       control = list(trace = 6, fnscale = -1),
                       immunity = "tsukushi",
@@ -304,10 +312,262 @@ lag_si_I_20.opt_tsukushi_pyr10_16 <- optimParallel(par = rep(0.5, 4),# new param
                  solver = "vode",
                  log_cue = "log10",
                  drug = 10,
-                 admin = 146)
+                 admin = 16)
 stopCluster(cl)
-                 
+# cannot converge
+# 5.416194   2.763396 -16.706357   2.931294       
+#7.513438
 ```
+
+# plotting out
+```{r}
+# reaction norm
+lag_ci_I_20.par_tsukushi_I <- par_to_df(c(360.3151, -470.3701, -325.4047, -371.3250), I_range_mid4_log10)
+
+lag_si_I_20.par_tsukushi_pyr0 <-  par_to_df(c(5.511734, 2.394041,-17.890312,4.598348), I_range_mid4_log10)
+
+lag_si_I_20.par_tsukushi_pyr10_2 <- par_to_df(c(8.201441,  -2.213959, -17.284309,  -1.756720), I_range_mid4_log10)
+
+lag_si_I_20.par_tsukushi_pyr10_4 <- par_to_df(c(8.884728,   5.476709, -26.454302,   3.662202), I_range_mid4_log10)
+
+lag_si_I_20.par_tsukushi_pyr10_6 <- par_to_df(c(3.6628282,  3.9509224, -9.8626175, -0.9511553), I_range_mid4_log10)
+
+lag_si_I_20.par_tsukushi_pyr10_8 <- par_to_df(c(7.189790,   3.242118, -22.455428,   6.506670), I_range_mid4_log10)
+
+lag_si_I_20.par_tsukushi_pyr10_10 <- par_to_df(c(0.8449114,  7.4291292, -4.9521758, -7.1852526), I_range_mid4_log10)
+
+lag_si_I_20.par_tsukushi_pyr10_12 <- par_to_df(c(4.2893474 ,  3.6860976, -13.0873430,   0.8359934), I_range_mid4_log10)
+
+lag_si_I_20.par_tsukushi_pyr10_14 <- par_to_df(c(4.462606,   3.192332, -13.850205,   1.720999), I_range_mid4_log10)
+
+lag_si_I_20.par_tsukushi_pyr10_16 <- par_to_df(c(5.416104,   2.763324, -16.706358,   2.931262), I_range_mid4_log10)
+
+fig1a <- ggplot() +
+  geom_line(data = lag_ci_I_20.par_tsukushi_I , aes(x = cue_range, y = cr, color = "co-infection")) +
+  geom_line(data = lag_si_I_20.par_tsukushi_pyr0 , aes(x = cue_range, y = cr, color = "single infection")) +
+  geom_line(data = lag_si_I_20.par_tsukushi_pyr10_10 , aes(x = cue_range, y = cr, color = "10")) +
+  geom_line(data = lag_si_I_20.par_tsukushi_pyr10_12, aes(x = cue_range, y = cr, color = "12")) +
+  geom_line(data = lag_si_I_20.par_tsukushi_pyr10_14, aes(x = cue_range, y = cr, color = "14")) +
+  geom_line(data = lag_si_I_20.par_tsukushi_pyr10_16, aes(x = cue_range, y = cr, color = "16")) +
+  labs(x = "Log(iRBC)", y = "Conversion rate", color = "Drug administration\ndate") +
+  theme_bw()
+```
+
+# infection dynamics
+```{r}
+lag_ci_I_20.dyn_tsukushi_I <- chabaudi_si_opt_lag(par = c(360.3151, -470.3701, -325.4047, -371.3250),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 0,
+                             admin = 0)
+
+lag_si_I_20.dyn_tsukushi_pyr10_0 <- chabaudi_si_opt_lag(par = c(5.511734, 2.394041,-17.890312,4.598348),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 0,
+                             admin = 0)
+
+lag_si_I_20.dyn_tsukushi_pyr10_2 <- chabaudi_si_opt_lag(par = c(8.201441,  -2.213959, -17.284309,  -1.756720),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 10,
+                             admin = 2)
+
+
+lag_si_I_20.dyn_tsukushi_pyr10_4 <- chabaudi_si_opt_lag(par = c(8.884728,   5.476709, -26.454302,   3.662202),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 10,
+                             admin = 4)
+
+lag_si_I_20.dyn_tsukushi_pyr10_6 <- chabaudi_si_opt_lag(par = c(3.6628282,  3.9509224, -9.8626175, -0.9511553),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 10,
+                             admin = 6)
+
+lag_si_I_20.dyn_tsukushi_pyr10_8 <- chabaudi_si_opt_lag(par = c(7.189790,   3.242118, -22.455428,   6.506670),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 10,
+                             admin = 8)
+
+lag_si_I_20.dyn_tsukushi_pyr10_10 <- chabaudi_si_opt_lag(par = c(0.8449114,  7.4291292, -4.9521758, -7.1852526),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 10,
+                             admin = 10)
+
+lag_si_I_20.dyn_tsukushi_pyr10_12 <- chabaudi_si_opt_lag(par =c(4.2893474 ,  3.6860976, -13.0873430,   0.8359934),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 10,
+                             admin = 12)
+
+lag_si_I_20.dyn_tsukushi_pyr10_14 <- chabaudi_si_opt_lag(par = c(4.462606,   3.192332, -13.850205,   1.720999),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 10,
+                             admin = 14)
+
+lag_si_I_20.dyn_tsukushi_pyr10_16 <- chabaudi_si_opt_lag(par = c(5.416104,   2.763324, -16.706358,   2.931262),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 10,
+                             admin = 16)
+
+
+fig1b <- ggplot() +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_0 %>% dplyr::filter(variable == "I" | variable == "G"| variable == "tau_cum"), aes(x = time, y = value, color = "Single infection")) +
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_I %>% dplyr::filter(variable == "I" | variable == "G"| variable == "tau_cum"), aes(x = time, y = value, color = "Co-infection")) +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_10 %>% dplyr::filter(variable == "I" | variable == "G"| variable == "tau_cum"), aes(x = time, y = value, color = "10")) +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_12 %>% dplyr::filter(variable == "I" | variable == "G"| variable == "tau_cum"), aes(x = time, y = value, color = "12")) +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_14 %>% dplyr::filter(variable == "I" | variable == "G"| variable == "tau_cum"), aes(x = time, y = value, color = "14")) +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_16 %>% dplyr::filter(variable == "I" | variable == "G"| variable == "tau_cum"), aes(x = time, y = value, color = "16")) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+```{r}
+fig1 <- ggarrange(fig1a, fig1b, ncol = 1, align = "hv", labels =c("A", "B"), common.legend = TRUE)
+
+ggsave(here("figures/report6/pyr_admin.png"))
+```
+
+
+
+ # previous optimization time range is too short. Increase to 40. cannot perform for early infection 
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr14_2 <- optimParallel(par = c(11.319349, -12.358769, -17.637675,  -3.926793
+),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 40, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 14,
+                 admin = 2)
+stopCluster(cl)
+
+lag_si_I_20.opt_tsukushi_pyr14_2
+#13.18801
+#11.31935 -12.35874 -17.63767  -3.92678
+
+# early infection really makes it hard to stimulate infection. They also delay
+lag_si_I_20.dyn_tsukushi_pyr14_2 <- chabaudi_si_opt_lag(par =c(11.31935, -12.35874, -17.63767,  -3.92678),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 40, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 14,
+                             admin = 2)
+
+
+
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr14_4 <- optimParallel(par = rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 40, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10 ,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 14,
+                 admin = 4)
+stopCluster(cl)
+
+lag_si_I_20.opt_tsukushi_pyr14_4 
+# did not converge
+lag_si_I_20.opt_tsukushi_pyr14_4 
+#7.939777  -2.291238 -20.926156   4.802397
+#12.87422
+```
+
 
 
 
@@ -367,12 +627,20 @@ lag_si_I_20.opt_tsukushi_I %>%
 
 
 # explore other cues
-lag_si_I_20.opt_tsukushi_I %>% 
+lag_ci_I_20.dyn_tsukushi_I %>% 
   dplyr::filter(variable == "I") %>% 
   dplyr::mutate(deriv_est = value-dplyr::lag(value)) %>% 
-  dplyr::mutate(mean_deriv = zoo::rollmean(deriv_est, 1000, fill = NA)) %>% 
+  dplyr::mutate(mean_deriv = zoo::rollmean(deriv_est, 100, fill = NA)) %>% 
   ggplot() +
   geom_line(aes(x = time, y = mean_deriv)) +
+  theme_bw()
+
+lag_si_I_20.opt_tsukushi_I %>% 
+  dplyr::filter(variable == "G") %>% 
+  dplyr::mutate(deriv_est = (value/dplyr::lag(value))) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = deriv_est)) +
+  xlim(0.01, 20) +
   theme_bw()
 ```
 
@@ -414,6 +682,493 @@ test <- chabaudi_si_opt_lag2(par = c(-0.1398883, -0.4292982, -4.2839183, -1.0800
 ggplot() +
   geom_line(data = test, aes(x = time, y = value)) +
   facet_wrap(~variable, scale = "free") +
+  theme_bw()
+```
+
+# what does cues look in typical infection?
+```{r}
+#I
+I_deriv <- lag_ci_I_20.dyn_tsukushi_I %>% 
+  dplyr::filter(variable == "I") %>% 
+  dplyr::mutate(deriv_est = (value-dplyr::lag(value))/0.001) %>% 
+  dplyr::arrange(desc(deriv_est)) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = deriv_est, color ="dI/dt"))
+
+I_deriv2 <- I_deriv + 
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_I %>% 
+  dplyr::filter(variable == "I"), aes(x = time, y = value, color = "I")) +
+  labs(y="Parasite density") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+#I+Ig
+I_Ig_deriv <- lag_ci_I_20.dyn_tsukushi_I %>% 
+  dplyr::filter(variable == "I" | variable == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(I_Ig = sum(value)) %>% 
+  dplyr::mutate(deriv_est = (I_Ig -dplyr::lag(I_Ig))/0.001) %>% 
+  dplyr::arrange(desc(deriv_est)) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = deriv_est, color = "d(I+Ig)/dt"))
+
+I_Ig_deriv2 <- I_Ig_deriv + 
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_I %>% 
+  dplyr::filter(variable == "I"| variable == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(I_Ig = sum(value)), aes(x = time, y = I_Ig, color = "I+Ig")) +
+  theme_bw() +
+  labs(y="Parasite density") +
+  theme(legend.position="bottom")
+
+# R
+R_deriv <- lag_ci_I_20.dyn_tsukushi_I %>% 
+  dplyr::filter(variable == "R") %>% 
+  dplyr::mutate(deriv_est = (value-dplyr::lag(value))/0.001) %>% 
+  dplyr::arrange(desc(deriv_est)) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = deriv_est, color = "dR/dt")) 
+
+R_deriv2 <- R_deriv + 
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_I %>% 
+  dplyr::filter(variable == "R"), aes(x = time, y = value, color = "R")) +
+  labs(y="RBC density") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+# G
+G_deriv <- lag_ci_I_20.dyn_tsukushi_I %>% 
+  dplyr::filter(variable == "G") %>% 
+  dplyr::mutate(deriv_est = (value-dplyr::lag(value))/0.001) %>% 
+  dplyr::arrange(desc(deriv_est)) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = deriv_est, color= "dG/dt")) 
+  
+G_deriv2 <- G_deriv + 
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_I %>% 
+  dplyr::filter(variable == "G"), aes(x = time, y = value, color = "G")) +
+  labs(y="Parasite density") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+# M+Mg
+M_deriv <- lag_ci_I_20.dyn_tsukushi_I %>% 
+  dplyr::filter(variable == "M" | variable == "Mg") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(M_Mg = sum(value)) %>% 
+  dplyr::mutate(deriv_est = (M_Mg -dplyr::lag(M_Mg))/0.001) %>% 
+  dplyr::arrange(desc(deriv_est)) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = deriv_est, color = "d(M+Mg)/dt"))
+
+M_deriv2 <- M_deriv + 
+  geom_line(data = lag_ci_I_20.dyn_tsukushi_I %>% dplyr::filter(variable == "M" | variable == "Mg") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(M_Mg = sum(value)), aes(x = time, y = M_Mg, color = "M+Mg")) +
+  labs(y="Parasite density") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+# ID
+ID_deriv <- lag_ci_I_20.dyn_tsukushi_I %>% 
+  dplyr::filter(variable == "ID") %>% 
+  dplyr::mutate(deriv_est = (value-dplyr::lag(value))/0.001) %>% 
+  dplyr::arrange(desc(deriv_est)) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = deriv_est, color = "ID"))
+
+ID_deriv2 <- ID_deriv + geom_line(data = lag_ci_I_20.dyn_tsukushi_I %>% 
+  dplyr::filter(variable == "I"| variable == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(I_Ig = sum(value)*0.000001), aes(x = time, y = I_Ig, color = "I+Ig")) +
+  theme_bw() +
+  labs(y="iRBC death rate") +
+  theme(legend.position="bottom")
+
+fig2 <- ggarrange(I_deriv2, I_Ig_deriv2, R_deriv2, G_deriv2, M_deriv2, ID_deriv2, align = "hv", labels = c("A", "B", "C", "D", "E","F"))
+
+ggsave(here("figures/report6/deriv_cue.png"), width = 10)
+```
+
+#--------------------------#
+# can different cue mitigate drug?
+#---------------------------#
+# all day 11 administration of 10 mg/kg
+```{r}
+# R
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_11_R <- optimParallel(par = c(-73.254962,2.631611,-135.619506,73.919067),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 30, 1e-3),
+                 df = 3,
+                 cue = "R",
+                 cue_range = R_range_log10,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 11)
+stopCluster(cl)
+lag_si_I_20.opt_tsukushi_pyr10_11_R
+
+#-73.254962    2.631611 -135.619506   73.919067
+#3.294881
+
+lag_si_I_20.dyn_tsukushi_pyr10_11_R <- chabaudi_si_opt_lag(par = c(-73.254962, 2.631611, -135.619506,73.919067),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 30, 1e-3),
+                             df = 3,
+                             cue = "R",
+                             cue_range = R_range_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 10,
+                             admin = 11)
+
+#I+Ig. get's stuck???
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_11_I_Ig <- optimParallel(par = rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 30, 1e-3),
+                 df = 3,
+                 cue = "I+Ig",
+                 cue_range = seq(0, log10(9*10^6), by = log10(9*10^6)/5000),
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 11)
+stopCluster(cl)
+
+
+#I
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_11_I <- optimParallel(par = rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 30, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = I_range_mid4_log10,
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 11)
+stopCluster(cl)
+
+lag_si_I_20.dyn_tsukushi_pyr10_11_I <- chabaudi_si_opt_lag(par = c(0.8875819,  6.2973026, -3.9530508, -6.5406467),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 30, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = I_range_mid4_log10, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 10,
+                             admin = 11)
+
+lag_si_I_20.opt_tsukushi_pyr10_11_I
+# converged
+#0.8875819  6.2973026 -3.9530508 -6.5406467
+#5.805649
+
+# M
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_11_M <- optimParallel(par = rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 30, 1e-3),
+                 df = 3,
+                 cue = "M+Mg",
+                 cue_range = seq(0, log10(6*10^6), by = log10(6*10^6)/5000),
+                 solver = "vode",
+                 log_cue = "log10",
+                 drug = 10,
+                 admin = 11)
+stopCluster(cl)
+#4.938258  -3.516126 -13.334655  -4.535565
+# 5.768384
+
+lag_si_I_20.dyn_tsukushi_pyr10_11_M <- chabaudi_si_opt_lag(par = c(4.938258,  -3.516126, -13.334655,  -4.535565),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 30, 1e-3),
+                             df = 3,
+                             cue = "M",
+                             cue_range = seq(0, log10(6*10^6), by = log10(6*10^6)/5000), 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                             drug = 10,
+                             admin = 11)
+```
+
+```{r}
+source(here("functions/chabaudi_si_opt_lag.R"))
+# dID
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_11_ID <- optimParallel(par = c(-0.161194,  1.869208,  0.481625,  3.964128),# new parameter search space
+                      fn = chabaudi_si_opt_lag, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 30, 1e-3),
+                 df = 3,
+                 cue = "ID",
+                 cue_range = seq(0, 2.5, by =10/5000),
+                 solver = "vode",
+                 drug = 10,
+                 admin = 11,
+                 lag_deriv = TRUE)
+stopCluster(cl)
+
+lag_si_I_20.opt_tsukushi_pyr10_11_ID 
+# converged.0 tp 10
+#-0.1521433  6.4120496 -3.0036225 -1.6109051
+#4.810219
+# for 0- 5
+#-0.1534741  3.2479656  2.0883729  1.4109624
+# for 0-2.5
+#4.863561
+
+# converged
+#-0.160375 1.8604 0.460809 3.97016
+# 4.86414
+
+lag_si_I_20.dyn_tsukushi_pyr10_11_ID <- chabaudi_si_opt_lag(par = c(-0.160375, 1.8604, 0.460809, 3.97016),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 30, 1e-3),
+                             df = 3,
+                             cue = "ID",
+                             cue_range = seq(0, 2.5, by =10/5000), 
+                             solver = "vode",
+                             dyn = TRUE,
+                             drug = 10,
+                             lag_deriv = TRUE,
+                             admin = 11)
+
+ggplot()+
+  geom_line(data = par_to_df(c(-0.161194,  1.869208,  0.481625,  3.964128), seq(0, 5, by =10/5000)),
+                            aes(x = cue_range, y = cr))
+
+# dI
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_11_dI <- optimParallel(par = rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_lag2, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 30, 1e-3),
+                 df = 3,
+                 cue = "I",
+                 cue_range = seq(-2*10^6, 2*10^6, by = (4*10^6)/5000),
+                 solver = "vode",
+                 drug = 10,
+                 admin = 11,
+                 lag_deriv = TRUE)
+stopCluster(cl)
+lag_si_I_20.opt_tsukushi_pyr10_11_dI
+# conevrged
+# 20.562468  -2.735518 -80.384610 -23.135320
+#3.032146
+
+# converged with lower range
+#19.95631  102.18622  -99.14671 -158.16532
+#4.217703
+
+lag_si_I_20.dyn_tsukushi_pyr10_11_dI <- chabaudi_si_opt_lag(par = c(19.95631,  102.18622, -99.14671 ,-158.16532),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 30, 1e-3),
+                             df = 3,
+                             cue = "I",
+                             cue_range = seq(-2*10^6, 2*10^6, by = (4*10^6)/5000), 
+                             solver = "vode",
+                             dyn = TRUE,
+                             drug = 10,
+                             lag_deriv = TRUE,
+                             admin = 11)
+
+# dR
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_I_20.opt_tsukushi_pyr10_11_dR <- optimParallel(par = rep(0.5,4),# new parameter search space
+                      fn = chabaudi_si_opt_lag2, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 30, 1e-3),
+                 df = 3,
+                 cue = "R",
+                 cue_range = seq(-3*10^6, 3*10^6, by = (6*10^6)/5000),
+                 solver = "vode",
+                 drug = 10,
+                 admin = 11,
+                 lag_deriv = TRUE)
+stopCluster(cl)
+
+lag_si_I_20.opt_tsukushi_pyr10_11_dR
+# did not converge
+#-5.028762 -32.724232  36.997739  30.875582
+#4.545271
+
+lag_si_I_20.dyn_tsukushi_pyr10_11_dR <- chabaudi_si_opt_lag(par = c(-5.028762, -32.724232,  36.997739,  30.875582),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 30, 1e-3),
+                             df = 3,
+                             cue = "R",
+                             cue_range = seq(-3*10^6, 3*10^6, by = (6*10^6)/5000) ,
+                             solver = "vode",
+                             dyn = TRUE,
+                             drug = 10,
+                             lag_deriv = TRUE,
+                             admin = 11)
+
+```
+
+# plot
+```{r}
+# I panel
+fig3a1 <- ggplot() +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_11_I %>% 
+              dplyr::filter(variable == "I" | variable == "G" | variable == "cr" | variable == "tau_cum"),
+            aes(x = time, y = value, color = "I")) +
+  facet_wrap(~variable, scales = "free") +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_11_dI %>% 
+              dplyr::filter(variable == "I" | variable == "G" | variable == "cr"| variable == "tau_cum"),
+            aes(x = time, y = value, color = "dI")) +
+  facet_wrap(~variable, scales = "free") +
+    geom_vline(xintercept = 11) +
+  geom_vline(xintercept= 11+1+2.94869) +
+  theme_bw()
+
+fig3a2 <- ggplot() +
+  geom_line(data = par_to_df(c(0.8875819,  6.2973026, -3.9530508, -6.5406467), I_range_mid4_log10), 
+            aes(x = cue_range, y = cr)) +
+  labs(y = "Conversion rate", x = "Log10(I)") +
+  geom_rug(data = lag_si_I_20.dyn_tsukushi_pyr10_11_I %>% dplyr::filter(variable == "I"), aes(x = log10(value)), inherit.aes = FALSE) +
+  theme_bw()
+
+fig3a3 <- ggplot() +
+  geom_line(data = par_to_df(c(19.95631,  102.18622,  -99.14671, -158.16532), seq(-1*10^6, 1*10^6, by = (4*10^6)/5000)), 
+            aes(x = cue_range, y = cr)) +
+  labs(y = "Conversion rate", x = "dI/dt") +
+  geom_rug(data = lag_si_I_20.dyn_tsukushi_pyr10_11_dI %>% 
+             dplyr::filter(variable == "I") %>% 
+             dplyr::mutate(dI = (value - dplyr::lag(value)) / 0.001), 
+           aes(x = dI), inherit.aes = FALSE) +
+  theme_bw()
+
+fig3a23 <- ggarrange(fig3a2,fig3a3, ncol = 1)
+fig3a <- ggarrange(fig3a1,fig3a23)
+
+
+# R panel
+fig3b1 <- ggplot() +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_11_R %>% 
+              dplyr::filter(variable == "I" | variable == "G" | variable == "cr" | variable == "tau_cum"),
+            aes(x = time, y = value, color = "R")) +
+  facet_wrap(~variable, scales = "free") +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_11_dR %>% 
+              dplyr::filter(variable == "I" | variable == "G" | variable == "cr"| variable == "tau_cum"),
+            aes(x = time, y = value, color = "dR")) +
+  facet_wrap(~variable, scales = "free") +
+    geom_vline(xintercept = 11) +
+  geom_vline(xintercept= 11+1+2.94869) +
+  theme_bw()
+
+fig3b2 <- ggplot() +
+  geom_line(data = par_to_df( c(-73.254962, 2.631611, -135.619506,73.919067), R_range_log10), 
+            aes(x = cue_range, y = cr)) +
+  labs(y = "Conversion rate", x = "Log10(R)") +
+  geom_rug(data = lag_si_I_20.dyn_tsukushi_pyr10_11_R %>% dplyr::filter(variable == "R"), aes(x = log10(value)), inherit.aes = FALSE) +
+  theme_bw()
+
+fig3b3 <- ggplot() +
+  geom_line(data = par_to_df(c(-5.028762, -32.724232,  36.997739,  30.875582),seq(-3*10^6, 3*10^6, by = (6*10^6)/5000)), 
+            aes(x = cue_range, y = cr)) +
+  labs(y = "Conversion rate", x = "dR/dt") +
+  geom_rug(data = lag_si_I_20.dyn_tsukushi_pyr10_11_dR %>% 
+             dplyr::filter(variable == "R") %>% 
+             dplyr::mutate(dR = (value - dplyr::lag(value)) / 0.001), 
+           aes(x = dR), inherit.aes = FALSE) +
+  theme_bw()
+
+fig3b23 <- ggarrange(fig3b2,fig3b3, ncol = 1)
+fig3b <- ggarrange(fig3b1,fig3b23)
+fig3b
+# ID
+fig3c1 <- ggplot() +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_11_ID %>% 
+              dplyr::filter(variable == "I" | variable == "G" | variable == "cr" | variable == "tau_cum"),
+            aes(x = time, y = value, color = "ID")) +
+  facet_wrap(~variable, scales = "free") +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_11_I %>% 
+              dplyr::filter(variable == "I" | variable == "G" | variable == "cr"| variable == "tau_cum"),
+            aes(x = time, y = value, color = "I")) +
+  facet_wrap(~variable, scales = "free") +
+  geom_vline(xintercept = 11) +
+  geom_vline(xintercept= 11+1+2.94869) +
+  theme_bw()
+
+
+fig3c2 <- ggplot() +
+  geom_line(data = par_to_df(c(-0.160375, 1.8604, 0.460809, 3.97016),seq(0, 2.5, by = 2.5/5000)), 
+            aes(x = cue_range, y = cr)) +
+  labs(y = "Conversion rate", x = "ID") +
+  geom_rug(data = lag_si_I_20.dyn_tsukushi_pyr10_11_ID %>% 
+             dplyr::filter(variable == "ID") %>% 
+             dplyr::mutate(dID = (value - dplyr::lag(value)) / 0.001), 
+           aes(x = dID), inherit.aes = FALSE) +
+  theme_bw()
+
+fig3c <- ggarrange(fig3c1,fig3c2)
+
+fig3 <- ggarrange(fig3a,fig3b,fig3c,labels = c("A",  "B","C"), ncol = 1, align = "hv")
+fig3
+ggsave(here("figures/report6/derivative_cues.png"), height = 10, width = 10)
+```
+
+```{r}
+fig3a
+fig3b
+fig3c
+```
+
+# trouble shooting
+```{r}
+ggplot() +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_11_dI %>% 
+              dplyr::filter(variable == "I"),
+            aes(x = time, y = value, color = "dI")) +
+  theme_bw()
+
+lag_si_I_20.dyn_tsukushi_pyr10_11_dI  %>% 
+  dplyr::filter(variable == "I") %>% 
+  dplyr::mutate(deriv_est = (value-dplyr::lag(value))/0.001) %>% 
+  dplyr::arrange(desc(deriv_est)) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = deriv_est, color = "dI/dt")) +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_11_dI %>% 
+              dplyr::filter(variable == "I"),
+           aes(x = time, y = value, color = "I")) +
+  theme_bw()
+
+ggplot() +
+  geom_line(data = par_to_df(c(-0.160375, 1.8604, 0.460809, 3.97016), seq(0,2.5, by = 2.5/5000)), aes(x = cue_range, y = cr)) +
   theme_bw()
 ```
 
