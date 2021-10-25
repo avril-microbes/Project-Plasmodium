@@ -86,7 +86,8 @@ chabaudi_si_opt_lag <- function(parameters_cr,
                                  drug = 0,
                                  admin = 0,
                                  ratio = 1,
-                                 lag_deriv = FALSE) {
+                                 lag_deriv = FALSE,
+                                 lag_smooth = 0) {
   #-------------------------#
   # Ensure values we inputted 
   # are available in environment
@@ -108,6 +109,7 @@ chabaudi_si_opt_lag <- function(parameters_cr,
   force(admin)
   force(ratio)
   force(lag_deriv)
+  force(lag_smooth)
   
   #-------------------------#
   # Define initial condition
@@ -183,6 +185,14 @@ chabaudi_si_opt_lag <- function(parameters_cr,
   ## Ensure administration time is above 0 if drug is administered
   if(drug > 0 && admin <= 0){
     stop("Drug administration date must be above 0!")
+  }
+  ## for now, lag smooth only implemented for derivative cue
+  if(lag_smooth > 0 && lag_deriv == FALSE){
+    stop("lag smoothing only available for derivative based cue")
+  }
+  ## stop if lag smooth is negative
+  if(lag_smooth < 0){
+    stop("lag smooth must be 0 or positive!")
   }
   
   #-------------------------#
@@ -324,6 +334,8 @@ chabaudi_si_opt_lag <- function(parameters_cr,
     if(t>alpha+delay){
       lag1 = deSolve::lagvalue(t-alpha)
       dlag1 = deSolve::lagderiv(t-alpha)
+      dlagsmooth = deSolve::lagvalue(t-lag_smooth) # for derivative based cue smoothing
+      
     } # lag state for asexual development
     if(t>alphag+delay){
       lag2 = deSolve::lagvalue(t-alphag)
@@ -341,6 +353,16 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       lag.i <- match(unlist(stringr::str_split(cue, "\\+|\\-|\\*|\\/")), names(state))
     }
     
+    
+    
+    ### convert cue to time if time-based conversion rate strategy is used
+    if(cue == "t"){
+      cue_state <- t}
+    
+    ### get cue_state if it is state-based
+    if(cue != "t"){
+      cue_state <- state[cue]}
+    
     ### define lagged cue. Lag1 = alpha times ago, lag2 = alphag times ago
     ### For simple cues (if it does not contain special characters)
     if(stringr::str_detect(cue, "\\+|\\-|\\*|\\/", negate = TRUE)){
@@ -349,7 +371,13 @@ chabaudi_si_opt_lag <- function(parameters_cr,
       
       if(t>alpha+delay && cue != "t"){
         if(lag_deriv == FALSE){cue_lag1 <- lag1[lag.i]}
-        if(lag_deriv == TRUE){cue_lag1 <- dlag1[lag.i]}
+        if(lag_deriv == TRUE){
+          if(lag_smooth == 0){
+            cue_lag1 <- dlag1[lag.i]} # cue is perceived instatenous deriv alpha days ago
+          if(lag_smooth > 0){ # cue is the average deriv over smoothing period. Recall average of derivative is integral/period. 
+            cue_lag1 <- (cue_state-dlagsmooth[lag.i])/lag_smooth
+          }
+        }
       }
       
       if(t>alphag+delay && cue == "t") {
@@ -361,14 +389,6 @@ chabaudi_si_opt_lag <- function(parameters_cr,
         if(lag_deriv == TRUE){cue_lag2 <- dlag2[lag.i]}
       }
       
-      
-      ### convert cue to time if time-based conversion rate strategy is used
-      if(cue == "t"){
-        cue_state <- t}
-      
-      ### get cue_state if it is state-based
-      if(cue != "t"){
-        cue_state <- state[cue]}
     } else{### manually create lag values if cues contain special characters
       if(stringr::str_detect(cue, "\\+")){ # if it contains plus
         if(lag_deriv == FALSE){
@@ -695,11 +715,18 @@ chabaudi_si_opt_lag <- function(parameters_cr,
         cue_for_cr <- cue_for_cr.df$cue_state}
       
       if(lag_deriv == TRUE){
-        cue_for_cr.df <- chabaudi_si.df %>% 
-          dplyr::mutate(cue_state = eval(parse(text = cue))) %>% 
-          dplyr::mutate(cue_dif = (cue_state-dplyr::lag(cue_state))/0.001)
         
-        cue_for_cr <- cue_for_cr.df$cue_dif
+        if(lag_smooth == 0){
+          cue_for_cr.df <- chabaudi_si.df %>% 
+            dplyr::mutate(cue_state = eval(parse(text = cue))) %>% 
+            dplyr::mutate(cue_dif = (cue_state-dplyr::lag(cue_state))/0.001)
+          cue_for_cr <- cue_for_cr.df$cue_dif}
+        
+        if(lag_smooth >0){
+          cue_for_cr.df <- chabaudi_si.df %>% 
+            dplyr::mutate(cue_state = eval(parse(text = cue))) %>% 
+            dplyr::mutate(cue_dif = (cue_state-dplyr::lag(cue_state, (lag_smooth/0.001)))/lag_smooth)
+          cue_for_cr <- cue_for_cr.df$cue_dif}
       }
       
       if(log_cue == "log"){
