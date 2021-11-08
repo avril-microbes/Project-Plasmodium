@@ -1269,26 +1269,176 @@ library(splines2)
 library(fields)
 library(MBA)
 
-# fields package
-cue_range1 <- seq(0,10^5, by =10^5/20)
-cue_range2 <- seq(0,5,by = 5/20)
+# define cue range. Might need 
+cue_range1 <- seq(0,10^5, by =10^5/100)
+cue_range2 <- seq(0,5,by = 5/100)
+
+# get grid for cue range. rename
 cr_grid <- expand.grid(cue_range1, cue_range2)
 names(cr_grid) <- c("cue_range1", "cue_range2")
 
+# build model
 dummy_y.vals <- rep(0, length(cue_range1)) 
 dummy_cr.data <- as.data.frame(cbind(cue_range1, dummy_y.vals))
 
 dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range1, degree = 3, df = 3)*
                      splines2::bSpline(x = cue_range2, degree = 3, df = 3))
 
-dummy_y.vals2 <- rep(0, nrow(cr_grid)) 
-dummy_cr.mod$coefficients <- rep(0.5,10)
+# assign coefficient. Need 10 for df 3
+dummy_cr.mod$coefficients <- rep(0.2,10)
 
-
+# visualize
 cr_fit_1 <- exp(-exp(predict(dummy_cr.mod, newdata = cr_grid)))
+
+
 cr_df <- data.frame(cr_grid, cr_fit_1)
 ggplot() +
   geom_tile(data = cr_df, aes(x = cue_range1, y = cue_range2, fill = cr_fit_1))
+
+# get data for cr
+cr <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range1 = 0, cue_range2 = 1))))[[1]]
+
+
+# df = 2
+dummy_cr.mod2 <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range1, degree = 2, df = 2)*
+                     splines2::bSpline(x = cue_range2, degree = 2, df = 2))
+
+# assign coefficient. Need 7 for df2
+dummy_cr.mod2$coefficients <- rep(0.2,7)
+
+exp(-exp(predict(dummy_cr.mod2, newdata = cr_grid)))
+sink()
+cr_df2 <- data.frame(cr_grid, cr_fit_2)
+
+ggplot() +
+  geom_tile(data = cr_df, aes(x = cue_range1, y = cue_range2, fill = cr_fit_1))
+ggplot() +
+  geom_tile(data = cr_df2, aes(x = cue_range1, y = cue_range2, fill = cr_fit_2))
+
+
+# make cr into a function
+cr <- function(cue1, cue2){
+  result <- suppressWarnings(exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range1 = cue1, cue_range2 = cue2))))[[1]])
+  return(result)
+}
+
+df <- cbind(cue1 = c(1,2,3,4),cue2 = c(1,2,3,4))
+
+apply(df, 2, cr)
+mapply(cr,c(1,2,3,4),c(1,2,3,4) )
+```
+
+# testing out the new single infection dual cue
+```{r}
+source(here("functions/test.R"))
+test <- chabaudi_si_opt_lag2(parameters_cr = rep(0.5, 7),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 20, 1e-3),
+                             df = 2,
+                             dual_cue = TRUE,
+                             cue = "I",
+                             cue_b = "W",
+                             cue_range = seq(0, log10(6*10^6), by = log10(6*10^6)/500), 
+                             cue_range_b = seq(0, 5, by = 5/500),
+                             solver = "vode",
+                             log_cue = "log10", 
+                             log_cue_b = "none",
+                             dyn = TRUE)
+
+test2 <- chabaudi_si_opt_lag2(parameters_cr = rep(0.5, 4),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 20, 1e-3),
+                             df = 3,
+                             dual_cue = FALSE,
+                             cue = "I",
+                             cue_range = seq(0, log10(6*10^6), by = log10(6*10^6)/500), 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE)
+
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_IW_20.opt_tsukushi <- optimParallel(par = rep(0.5, 7),# new parameter search space
+                      fn = chabaudi_si_opt_lag2, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 25, 1e-3),
+                 df = 2,
+                 cue = "I",
+                 cue_b = "W",
+                 cue_range = I_range_mid4_log10,
+                 cue_range_b = seq(0, log10(5), by = log10(5)/5000),
+                 solver = "vode",
+                 log_cue = "log10",
+                 log_cue_b = "none",
+                 dual_cue = TRUE)
+stopCluster(cl)
+# start at 3:30
+
+lag_si_IW_20.opt_tsukushi
+# converged with W up to 10
+#20.447157 -35.094702 -11.944307   0.500000   0.500000   8.171446  -9.203955
+#11.83851
+
+lag_si_IW_20.dyn_tsukushi<- chabaudi_si_opt_lag2(parameters_cr = c(20.447157, -35.094702, -11.944307,   0.500000,   0.500000 ,  8.171446 , -9.203955),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 2,
+                             dual_cue = TRUE,
+                             cue = "I",
+                             cue_b = "W",
+                             cue_range = seq(0, log10(6*10^6), by = log10(6*10^6)/5000), 
+                             cue_range_b = seq(0, 10, by = 10/5000),
+                             solver = "vode",
+                             log_cue = "log10", 
+                             log_cue_b = "none",
+                             dyn = TRUE)
+
+# dual cue vs single cue
+fig2a <- ggplot() +
+  geom_line(data = lag_si_IW_20.dyn_tsukushi %>% 
+              dplyr::filter(variable != "S_new"),
+            aes(x = time, y = value, color = "I,W")) +
+  geom_line(data = lag_si_I_20.dyn_tsukushi_pyr10_0%>% 
+              dplyr::filter(variable != "S_new"),
+            aes(x = time, y = value, color = "I si")) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+
+# plot out reaction norm
+source(here("functions/dual_to_df.R"))
+
+lag_si_IW_20.par_tsukushi <- dual_to_df(
+  c(20.447157, -35.094702, -11.944307,   0.500000,   0.500000 ,  8.171446 , -9.203955),
+  seq(0, log10(6*10^6), by = log10(6*10^6)/500),
+  seq(0, 10, by = 10/500),
+  df = 2)
+
+lag_si_I_20.par_tsukushi_pyr10_0 <- par_to_df(c(5.511734, 2.394041,-17.890312,4.598348),
+                                             I_range_mid4_log10 )
+
+
+fig2b1 <- ggplot() +
+  geom_tile(data = lag_si_IW_20.par_tsukushi, aes(x = cue_range, y = cue_range_b, fill = cr_fit)) +
+  labs(x = "Log10(I)", y = "W", fill = "Conversion rate") +
+  theme_bw() +
+  theme(legend.position="bottom")
+
+fig2b2 <- ggplot() +
+  geom_line(data = lag_si_I_20.par_tsukushi_pyr10_0, aes(x = cue_range, y = cr)) +
+  labs(x = "Log10(I)", y = "Conversion rate") +
+  theme_bw()
+
+fig2b <- ggarrange(fig2b1, fig2b2, ncol = 1, align = "h")
+
+fig2 <- ggarrange(fig2a, fig2b, ncol = 1, labels = c("A", "B"))
+ggsave(here("figures/report7/dual_cue.png"), height = 10, width = 7)
+
+seq(log10(-Inf), log10(5), by= log10(5)/10 )
+log10(0.2)
 ```
 
 

@@ -1,0 +1,168 @@
+---
+title: "report8"
+output: html_document
+---
+
+# Load libraries
+```{r}
+library(deSolve)
+library(splines)
+library(optimParallel)
+library(ggplot2)
+library(ggpubr)
+library(tidyr)
+library(magrittr)
+library(Rcpp)
+library(microbenchmark)
+library(GA)
+library(here)
+```
+
+# Load functions
+```{r}
+source(here("functions/chabaudi_ci_opt_lag.R"))
+source(here("functions/co_infection_opt.R"))
+source(here("functions/par_to_df.R"))
+source(here("functions/chabaudi_si_opt_lag.R"))
+source(here("functions/total_parasite.R"))
+source(here("functions/test.R"))
+```
+
+# define parameters
+```{r}
+parameters <- c(R1 = 8.5*10^6,
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 4*10^-6,
+                alpha = 1, 
+                alphag = 2, 
+                beta = 10, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1)
+
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156,
+                mud = -log(1-0.94)) # drug induced action. 94% death per day
+
+time_range <- seq(0, 20, by = 1e-3)
+I_range <- seq(0, 2.18*10^6, by = 1000) 
+I_range_large <- seq(0, (3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)), by = 1000) 
+I_range_mid <- seq(0, 5*10^6, by = 1000)
+I_range_mid2 <- seq(0, 4*10^6, by = 1000)
+I_range_mid4 <- seq(0, 6*10^6, by = (6*10^6)/5000)
+
+# logged counterpart
+I_range_mid2_log <- seq(0, log(4*10^6), by = log(4*10^6)/5000)
+I_range_mid3_log <- seq(0, log(5*10^6), by = log(5*10^6)/5000)
+I_range_mid4_log <- seq(0, log(6*10^6), by = log(6*10^6)/5000)
+I_range_mid4_log10 <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
+I_range_large_log10 <- seq(0, log10((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6))), by = log10((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5*10^6)))/10000)
+```
+
+
+#-----------------------------#
+# continue with dual axis optimization
+#------------------------------#
+
+```{r}
+model <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = df, df = 3))
+
+model$coefficients <- c(1,0.5,1,0.5)
+
+plot(predict(model, new_data=cue_range))
+
+```
+
+# testing gam. Better! 
+```{r}
+# basic set up
+cue_range <- seq(0,100,1)
+cue_rangeb <- seq(0,1,0.01)
+cr_grid <- expand.grid(cue_range, cue_rangeb)
+names(cr_grid) <- c("cue_range", "cue_rangeb") # must have the same name!!!
+y <- runif(length(cue_rangeb), 0, 1)
+
+df <- data.frame(cue_range,cue_rangeb,y)
+
+# run gam model with tensor product smooth. 3 basis spline for each variable. Tensor product smooth makes more sense for different unit variables.
+mod3 <- mgcv::gam(y ~ te(cue_range, cue_rangeb, k = c(3,3)), data = df, method = "REML")
+mod32 <- mgcv::gam(y ~ te(cue_range, cue_rangeb, k = c(3,3)), data = df, method = "REML")
+
+# assign coefficient. Takes 9!
+mod3$coefficients <- rep(0.5, 9)
+mod32$coefficients <- rep(-1, 9)
+
+# predict
+cr_df3 <- data.frame(pred = mgcv::predict.gam(mod3, newdata = cr_grid), cr_grid)
+cr_df32 <- data.frame(pred = mgcv::predict.gam(mod32, newdata = cr_grid), cr_grid)
+
+# plot
+ggplot() +
+  geom_tile(data = cr_df3, aes(x = cue_range, y = cue_rangeb, fill = pred)) +
+  viridis::scale_fill_viridis() +
+  theme_bw() +
+  theme(legend.position="bottom")
+vis.gam(mod3, c("cue_range", "cue_rangeb"), plot.type = "contour")
+
+ggplot() +
+  geom_tile(data = cr_df32, aes(x = cue_range, y = cue_rangeb, fill = pred)) +
+  viridis::scale_fill_viridis() +
+  theme_bw() +
+  theme(legend.position="bottom")
+vis.gam(mod32, c("cue_range", "cue_rangeb"), plot.type = "contour")
+
+# write function for later
+cr <- function(mod, cue_1, cue_2){
+  res <- 
+mgcv::predict.gam(mod, newdata = data.frame("cue_range"=cue_1,"cue_rangeb"=cue_2))
+  return(res)
+}
+
+
+```
+
+
+
+```{r}
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+lag_si_IW_20.opt_tsukushi <- optimParallel(par = rep(0.5, 7),# new parameter search space
+                      fn = chabaudi_si_opt_lag2, 
+                      control = list(trace = 6, fnscale = -1),
+                      immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = seq(0, 25, 1e-3),
+                 df = 2,
+                 cue = "I",
+                 cue_b = "W",
+                 cue_range = I_range_mid4_log10,
+                 cue_range_b = seq(0, log10(5), by = log10(5)/5000),
+                 solver = "vode",
+                 log_cue = "log10",
+                 log_cue_b = "none",
+                 dual_cue = TRUE)
+stopCluster(cl)
+```
+
