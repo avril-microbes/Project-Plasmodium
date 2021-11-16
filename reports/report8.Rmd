@@ -87,17 +87,9 @@ I_range_large_log10 <- seq(0, log10((3.7*10^5)*(8.5*10^6)/((3.7*10^5)-0.025*(8.5
 # continue with dual axis optimization
 #------------------------------#
 
-```{r}
-model <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = df, df = 3))
-
-model$coefficients <- c(1,0.5,1,0.5)
-
-plot(predict(model, new_data=cue_range))
-
-```
-
 # testing gam. Better! 
 ```{r}
+library(mgcv)
 # basic set up
 cue_range <- seq(0,100,1)
 cue_rangeb <- seq(0,1,0.01)
@@ -110,9 +102,11 @@ df <- data.frame(cue_range,cue_rangeb,y)
 # run gam model with tensor product smooth. 3 basis spline for each variable. Tensor product smooth makes more sense for different unit variables.
 mod3 <- mgcv::gam(y ~ te(cue_range, cue_rangeb, k = c(3,3)), data = df, method = "REML")
 mod32 <- mgcv::gam(y ~ te(cue_range, cue_rangeb, k = c(3,3)), data = df, method = "REML")
+mod4 <- mgcv::bam(y ~ te(cue_range, cue_rangeb, k = c(3,3)), data = df, method = "REML")
 
 # assign coefficient. Takes 9!
 mod3$coefficients <- rep(0.5, 9)
+mod4$coefficients <- rep(0.5, 9)
 mod32$coefficients <- rep(-1, 9)
 
 # predict
@@ -141,11 +135,81 @@ mgcv::predict.gam(mod, newdata = data.frame("cue_range"=cue_1,"cue_rangeb"=cue_2
   return(res)
 }
 
+cr2 <- function(mod, cue_1, cue_2){
+  res <- predict(mod, newdata = data.frame("cue_range"=cue_1,"cue_rangeb"=cue_2))
+  return(res)
+}
+
+
+cr3 <- function(mod, cue_1, cue_2){
+  res <- predict(mod, newdata = data.frame("cue_range"=cue_1,"cue_rangeb"=cue_2))
+  return(res)
+}
+
+cr5 <- function(mod, cue_1, cue_2){
+  df <- data.frame("cue_range"=cue_1,"cue_rangeb"=cue_2)
+  res <- predict(mod, newdata = df)
+  return(res)
+}
+
+cr6 <- function(mod, cue_1, cue_2){
+  res <- exp(-exp(predict(mod, newdata = data.frame("cue_range"=cue_1,"cue_rangeb"=cue_2))))
+  return(res)
+}
+
 
 ```
 
+# trying to fasten the function
+```{r}
+# using mgcv to predict while double exponentiating it
+cr_df3 <- data.frame(pred = exp(-exp(mgcv::predict.gam(mod3, newdata = c(1,100)))), cr_grid)
+cr(mod3, 0, 0.1)
+
+# alternative approach. Using grid expand then thin plate interplating it
+library(fields)
+cr_df3 <- data.frame(pred = mgcv::predict.gam(mod3, newdata = cr_grid), cr_grid) # predict whole grid
+x = data.matrix(cr_df3 %>% dplyr::select(cue_range, cue_rangeb))
+Tps(x = x, Y = cr_df3$pred, df = 3)
+
+# trying akima interpolation
+library(akima)
+n_interpolation <- 200
+x <- cr_df3$cue_range
+y <- cr_df3$cue_rangeb
+z <- cr_df3$pred
+int <- interp(x, y, z, xo=seq(min(x), max(x), length = n_interpolation),
+                              yo=seq(min(y), max(y), length = n_interpolation),
+                              linear = FALSE, extrap = TRUE)
 
 
+# match closest one from dataframe?
+## finer grid and get nearest result
+cue_range <- seq(0,100,0.1)
+cue_rangeb <- seq(0,1,0.001)
+cr_grid <- expand.grid(cue_range, cue_rangeb)
+names(cr_grid) <- c("cue_range", "cue_rangeb") 
+cr_df4 <- data.frame(pred = mgcv::predict.gam(mod3, newdata = cr_grid), cr_grid) 
+
+cr4 <- function(cue_1, cue_2){
+  nearest_x <- cr_df4$cue_range[which.min(abs(cue_1 - cr_df4$cue_range))]
+  nearest_y <- cr_df4$cue_rangeb[which.min(abs(cue_2 - cr_df4$cue_rangeb))]
+  res <- cr_df4$pred[cr_df4$cue_range == nearest_x & cr_df4$cue_rangeb == nearest_y]
+  return(res)
+}
+
+cr4(0,0.1)
+cr(mod3, 0, 0.1)
+cr2(mod3,0, 0.1)
+cr(mod4, 0,0.1)
+
+# bench mark speed
+library(microbenchmark)
+microbenchmark(cr(mod3, 0, 0.1),
+               cr(mod4, 0,0.1))
+```
+
+# testing speed
 ```{r}
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
 lag_si_IW_20.opt_tsukushi <- optimParallel(par = rep(0.5, 7),# new parameter search space
@@ -164,5 +228,24 @@ lag_si_IW_20.opt_tsukushi <- optimParallel(par = rep(0.5, 7),# new parameter sea
                  log_cue_b = "none",
                  dual_cue = TRUE)
 stopCluster(cl)
+
+source(here("functions/test.R"))
+
+test <- chabaudi_si_opt_lag2(parameters_cr = rep(0.5, 9),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = seq(0, 25, 1e-3),
+                             df = 3,
+                             dual_cue = TRUE,
+                             cue = "I",
+                             cue_b = "W",
+                             cue_range = seq(0, log10(6*10^6), by = log10(6*10^6)/5000), 
+                             cue_range_b = seq(0, 2, by = 2/5000),
+                             solver = "vode",
+                             log_cue = "log10", 
+                             log_cue_b = "none",
+                             dyn = TRUE)
+
+
 ```
 

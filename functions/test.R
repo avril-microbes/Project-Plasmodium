@@ -165,7 +165,7 @@ chabaudi_si_opt_lag2 <- function(parameters_cr,
     stop("Conversion rate parameters must match degrees of freedom")
   }
   ## If dual cue, ensure length is correct
-  if (dual_cue == TRUE && length(parameters_cr) != 5) {
+  if (dual_cue == TRUE && length(parameters_cr) != 9) {
     stop("Must have 9 conversion rate parameters for dual cue!")
   }
   ## Ensure immunity input is correct
@@ -246,7 +246,7 @@ chabaudi_si_opt_lag2 <- function(parameters_cr,
   }
   
   ## Get spline function where cr ~ cue
-  cr <- splinefun(cbind(cue_range, cr_fit_2))}
+  cr_fun <- splinefun(cbind(cue_range, cr_fit_2))}
   
   if(dual_cue == TRUE){
     # using gam with tensor product smoothing k = c(3,3)
@@ -275,7 +275,7 @@ chabaudi_si_opt_lag2 <- function(parameters_cr,
     dummy_cr.mod$coefficients <- parameters_cr
     
     # exponential transformation for now
-    cr <- function(cue_1, cue_2){
+    cr_fun <- function(cue_1, cue_2){
       res <- exp(-exp(mgcv::predict.gam(dummy_cr.mod, 
                                         newdata = data.frame("cue_range" = cue_1,
                                                              "cue_range_b" = cue_2))))
@@ -530,6 +530,28 @@ chabaudi_si_opt_lag2 <- function(parameters_cr,
     K <- lambda*R1/(lambda-mu*R1)
     
     #-------------------------#
+    # Function to define conversion rate
+    #-------------------------#
+    ## get conversion rate to increase speed
+    ### process cue
+    if(log_cue == "log"){cue_lag1_p <- log(cue_lag1)}
+    if(log_cue == "log10"){cue_lag1_p <- log10(cue_lag1)}
+    if(log_cue == "none"){cue_lag1_p <- cue_lag1}
+    
+    ### single cue conversion rate
+    if(dual_cue == FALSE){
+      cr <- cr_fun(cue_lag1_p)
+    }
+    
+    if(dual_cue == TRUE){
+      if(log_cue_b == "log"){cue_lag1_b_p <- log(cue_lag1_b)}
+      if(log_cue_b == "log10"){cue_lag1_b_p <- log10(cue_lag1_b)}
+      if(log_cue_b == "none"){cue_lag1_b_p <- cue_lag1_b}
+      
+      cr <- cr_fun(cue_lag1_p, cue_lag1_b_p)
+    }
+    
+    #-------------------------#
     # Function to describe pyremethamine
     # length of action from https://onlinelibrary.wiley.com/doi/10.1111/eva.12516
     #------------------------#
@@ -730,28 +752,9 @@ chabaudi_si_opt_lag2 <- function(parameters_cr,
     ## Track states after delay 
     if(t>alpha+delay){
       dI <- dI_nolag-p*lag1[1]*lag1[2]*S 
-      
-      # process cue for transformation
-      if(log_cue == "log"){cue_lag1_p <- log(cue_lag1)}
-      if(log_cue == "log10"){cue_lag1_p <- log10(cue_lag1)}
-      if(log_cue == "none"){cue_lag1_p <- cue_lag1}
-      
-      if(dual_cue == TRUE){
-        if(log_cue_b == "log"){cue_lag1_b_p <- log(cue_lag1_b)}
-        if(log_cue_b == "log10"){cue_lag1_b_p <- log10(cue_lag1_b)}
-        if(log_cue_b == "none"){cue_lag1_b_p <- cue_lag1_b}
-      }
-      
-      if(dual_cue == FALSE){
-          dM <- dM_nolag+beta*(1-cr(cue_lag1_p))*p*lag1[1]*lag1[2]*S
-          dMg <- dMg_nolag+beta*cr(cue_lag1_p)*p*lag1[1]*lag1[2]*S
-      }
-      
-      # dual cr if dual_cue is used
-      if(dual_cue == TRUE){
-        dM <- dM_nolag+beta*(1-cr(cue_lag1_p, cue_lag1_b_p))*p*lag1[1]*lag1[2]*S
-        dMg <- dMg_nolag+beta*cr(cue_lag1_p, cue_lag1_b_p)*p*lag1[1]*lag1[2]*S
-      }
+
+      dM <- dM_nolag+beta*(1-cr)*p*lag1[1]*lag1[2]*S
+      dMg <- dMg_nolag+beta*cr*p*lag1[1]*lag1[2]*S
     }
     
     if(t>alpha+alphag+delay){
@@ -864,11 +867,11 @@ chabaudi_si_opt_lag2 <- function(parameters_cr,
       }
       
       # get cr
-      if(dual_cue == FALSE){cr.ls <- cr(cue_for_cr_p)}
+      if(dual_cue == FALSE){cr.ls <- cr_fun(cue_for_cr_p)}
       if(dual_cue == TRUE){cr.ls <- mapply(cr, cue_for_cr_p, cue_for_cr_b_p)}
     }
     
-    if(cue == "t"){cr.ls <- cr(time_range)}
+    if(cue == "t"){cr.ls <- cr_fun(time_range)}
     chabaudi_si.df$cr <- cr.ls
     
     ### processing df for plotting
