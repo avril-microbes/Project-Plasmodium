@@ -165,8 +165,8 @@ chabaudi_si_opt_lag2 <- function(parameters_cr,
     stop("Conversion rate parameters must match degrees of freedom")
   }
   ## If dual cue, ensure length is correct
-  if (dual_cue == TRUE && length(parameters_cr) != 9) {
-    stop("Must have 9 conversion rate parameters for dual cue!")
+  if (dual_cue == TRUE && length(parameters_cr) != 5) {
+    stop("Must have 5 conversion rate parameters for dual cue!")
   }
   ## Ensure immunity input is correct
   if (immunity != "ni" && immunity != "i" && immunity != "kochin" && immunity != "tsukushi") {
@@ -753,8 +753,8 @@ chabaudi_si_opt_lag2 <- function(parameters_cr,
     if(t>alpha+delay){
       dI <- dI_nolag-p*lag1[1]*lag1[2]*S 
 
-      dM <- dM_nolag+beta*(1-cr)*p*lag1[1]*lag1[2]*S
-      dMg <- dMg_nolag+beta*cr*p*lag1[1]*lag1[2]*S
+      dM <- dM_nolag+beta*(1-cr_fun(log10(cue_lag1), cue_lag1_b))*p*lag1[1]*lag1[2]*S
+      dMg <- dMg_nolag+beta*cr_fun(log10(cue_lag1), cue_lag1_b)*p*lag1[1]*lag1[2]*S
     }
     
     if(t>alpha+alphag+delay){
@@ -868,7 +868,7 @@ chabaudi_si_opt_lag2 <- function(parameters_cr,
       
       # get cr
       if(dual_cue == FALSE){cr.ls <- cr_fun(cue_for_cr_p)}
-      if(dual_cue == TRUE){cr.ls <- mapply(cr, cue_for_cr_p, cue_for_cr_b_p)}
+      if(dual_cue == TRUE){cr.ls <- mapply(cr_fun, cue_for_cr_p, cue_for_cr_b_p)}
     }
     
     if(cue == "t"){cr.ls <- cr_fun(time_range)}
