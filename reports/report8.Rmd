@@ -16,6 +16,7 @@ library(Rcpp)
 library(microbenchmark)
 library(GA)
 library(here)
+library(caTools)
 ```
 
 # Load functions
@@ -248,4 +249,129 @@ test <- chabaudi_si_opt_lag2(parameters_cr = rep(0.5, 9),
 
 
 ```
+
+
+#-----------------------#
+# Quantifying state differentiation and noise in a range of cues
+#-----------------------#
+
+# get typical infection using optimal co-infection parameters
+```{r}
+ci_dynamics <- chabaudi_ci_opt_lag(
+  parameters_cr_1 = c(360.3151, -470.3701, -325.4047, -371.3250), 
+  parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10")
+```
+
+# get timing of growth, parasetemia and decline
+```{r}
+# get timing of growth, parasetemia, and decline
+ci_dynamics %>% 
+  dplyr::filter(variable_alt == "I" | variable_alt == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(sum_I = sum(value)) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = sum_I)) +
+  theme_bw()
+
+## peak timing
+ci_dynamics %>% 
+  dplyr::filter(variable_alt == "I" | variable_alt == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(sum_I = sum(value)) %>% 
+  dplyr::arrange(desc(sum_I)) # 8.581, 725620.6	
+
+## average I during growth and decline
+growth_I <- ci_dynamics %>% 
+  dplyr::filter(variable_alt == "I" | variable_alt == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(sum_I = sum(value)) %>% 
+  dplyr::filter(time <= 8.581) 
+
+mean(growth_I$sum_I) #  136906.3
+
+decline_I <- ci_dynamics %>% 
+  dplyr::filter(variable_alt == "I" | variable_alt == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(sum_I = sum(value)) %>% 
+  dplyr::filter(time >= 8.581) 
+
+mean(decline_I$sum_I) # 174519.9
+
+# signal to noise ratio (mean/sd running average with 0.01 days)
+ci_I <- ci_dynamics %>% 
+  dplyr::filter(variable_alt == "I" | variable_alt == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(sum_I = sum(value))
+
+test <- ci_dynamics %>% 
+  dplyr::filter(variable_alt == "I") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(sum_G = sum(value)) %>% 
+  dplyr::mutate(G_mean = runmean(sum_G, 1000),
+                G_sd = runsd(sum_G, 1000)) %>% 
+  dplyr::mutate(SNR = G_mean/G_sd) %>% 
+  na.omit() 
+
+is.finite(test$SNR)
+mean(is.finite(test$SNR), na.rm = T)
+```
+
+# function to parse through this automatically
+```{r}
+evaluate_cue <- function(cue) {
+  # get filtered database
+  df <- ci_dynamics %>% 
+    dplyr::filter(variable_alt == cue) %>% 
+    dplyr::group_by(time) %>% 
+    dplyr::summarise(sum_cue = sum(value)) 
+  
+  # state differentiation (normalized value)
+  ## get max value for noramlzation
+  max_cue <- max(df$sum_cue)
+  min_cue <- min(df$sum_cue)
+  
+  ## normalization
+  df_norm <- df %>% 
+    dplyr::mutate(cue_norm = (sum_cue - min_cue)/(max_cue - min_cue))
+  
+  ## get average growth value
+  df.growth <- df_norm %>% dplyr::filter(time <= 8.581) 
+  df.decline <- df_norm %>% dplyr::filter(time >= 8.581)
+  
+  ## get average growth and decline values
+  growth <- mean(df.growth$cue_norm)
+  decline <- mean(df.decline$cue_norm)
+  
+  # calculate SNR (smoothed mean / smoothed standard deviation)
+  SNR_df <- df %>% 
+    dplyr::mutate(cue_mean = runmean(sum_cue, 1000),
+                cue_sd = runsd(sum_cue, 1000)) %>% 
+    dplyr::mutate(SNR = cue_mean/cue_sd) 
+  
+  SNR_avg <- mean(SNR_df$SNR[is.finite(SNR_df$SNR)], na.rm = TRUE)
+  
+  # return interesting values
+  res <- c(growth, decline, SNR_avg)
+}
+```
+
+# test function
+```{r}
+test <- lapply(c("I", "G", "Ig", "M", "Mg", "R"), evaluate_cue)
+test
+```
+
+
 
