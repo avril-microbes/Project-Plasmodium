@@ -89,8 +89,8 @@ chabaudi_si_opt_lag2 <- function(parameters_cr,
                                 lag_deriv = FALSE, # derivative of cue
                                 lag_smooth = 0, # smoothing distance for derivative based cue
                                 dual_cue = FALSE, # 2 cues? If true, df is set to c(3,3)
-                                cue_range_b = rep(0,4),
-                                cue_b = "X",
+                                cue_range_b = rep(0,4), # de
+                                cue_b = "X", #define second cue
                                 log_cue_b = "none") {
   #-------------------------#
   # Ensure values we inputted 
@@ -753,8 +753,8 @@ chabaudi_si_opt_lag2 <- function(parameters_cr,
     if(t>alpha+delay){
       dI <- dI_nolag-p*lag1[1]*lag1[2]*S 
 
-      dM <- dM_nolag+beta*(1-cr_fun(log10(cue_lag1), cue_lag1_b))*p*lag1[1]*lag1[2]*S
-      dMg <- dMg_nolag+beta*cr_fun(log10(cue_lag1), cue_lag1_b)*p*lag1[1]*lag1[2]*S
+      dM <- dM_nolag+beta*(1-cr)*p*lag1[1]*lag1[2]*S
+      dMg <- dMg_nolag+beta*cr*p*lag1[1]*lag1[2]*S
     }
     
     if(t>alpha+alphag+delay){

@@ -252,6 +252,7 @@ test <- chabaudi_si_opt_lag2(parameters_cr = rep(0.5, 9),
 
 
 #-----------------------#
+# Figure 1
 # Quantifying state differentiation and noise in a range of cues
 #-----------------------#
 
@@ -274,68 +275,27 @@ ci_dynamics <- chabaudi_ci_opt_lag(
   log_cue_2 = "log10")
 ```
 
-# get timing of growth, parasetemia and decline
-```{r}
-# get timing of growth, parasetemia, and decline
-ci_dynamics %>% 
-  dplyr::filter(variable_alt == "I" | variable_alt == "Ig") %>% 
-  dplyr::group_by(time) %>% 
-  dplyr::summarise(sum_I = sum(value)) %>% 
-  ggplot() +
-  geom_line(aes(x = time, y = sum_I)) +
-  theme_bw()
-
-## peak timing
-ci_dynamics %>% 
-  dplyr::filter(variable_alt == "I" | variable_alt == "Ig") %>% 
-  dplyr::group_by(time) %>% 
-  dplyr::summarise(sum_I = sum(value)) %>% 
-  dplyr::arrange(desc(sum_I)) # 8.581, 725620.6	
-
-## average I during growth and decline
-growth_I <- ci_dynamics %>% 
-  dplyr::filter(variable_alt == "I" | variable_alt == "Ig") %>% 
-  dplyr::group_by(time) %>% 
-  dplyr::summarise(sum_I = sum(value)) %>% 
-  dplyr::filter(time <= 8.581) 
-
-mean(growth_I$sum_I) #  136906.3
-
-decline_I <- ci_dynamics %>% 
-  dplyr::filter(variable_alt == "I" | variable_alt == "Ig") %>% 
-  dplyr::group_by(time) %>% 
-  dplyr::summarise(sum_I = sum(value)) %>% 
-  dplyr::filter(time >= 8.581) 
-
-mean(decline_I$sum_I) # 174519.9
-
-# signal to noise ratio (mean/sd running average with 0.01 days)
-ci_I <- ci_dynamics %>% 
-  dplyr::filter(variable_alt == "I" | variable_alt == "Ig") %>% 
-  dplyr::group_by(time) %>% 
-  dplyr::summarise(sum_I = sum(value))
-
-test <- ci_dynamics %>% 
-  dplyr::filter(variable_alt == "I") %>% 
-  dplyr::group_by(time) %>% 
-  dplyr::summarise(sum_G = sum(value)) %>% 
-  dplyr::mutate(G_mean = runmean(sum_G, 1000),
-                G_sd = runsd(sum_G, 1000)) %>% 
-  dplyr::mutate(SNR = G_mean/G_sd) %>% 
-  na.omit() 
-
-is.finite(test$SNR)
-mean(is.finite(test$SNR), na.rm = T)
-```
 
 # function to parse through this automatically
 ```{r}
 evaluate_cue <- function(cue) {
+  
+  # process cue list for complex and simple ones
+  cue.p <- strsplit(gsub("[^[:alnum:] ]", "", cue), " +")[[1]]
+  
+  # remove log10 from cue.p
+  cue.p <- stringr::str_remove(cue.p, "log10")
+  
   # get filtered database
   df <- ci_dynamics %>% 
-    dplyr::filter(variable_alt == cue) %>% 
+    dplyr::filter(variable_alt %in% cue.p) %>% 
     dplyr::group_by(time) %>% 
-    dplyr::summarise(sum_cue = sum(value)) 
+    dplyr::summarise(sum_cue = sum(value))
+  
+  #log transform if cue contains log string
+  if(stringr::str_detect(cue, "log10")){
+    df$sum_cue <- log10(df$sum_cue+1)
+  }
   
   # state differentiation (normalized value)
   ## get max value for noramlzation
@@ -353,6 +313,7 @@ evaluate_cue <- function(cue) {
   ## get average growth and decline values
   growth <- mean(df.growth$cue_norm)
   decline <- mean(df.decline$cue_norm)
+  growth_decline <- growth-decline
   
   # calculate SNR (smoothed mean / smoothed standard deviation)
   SNR_df <- df %>% 
@@ -363,15 +324,72 @@ evaluate_cue <- function(cue) {
   SNR_avg <- mean(SNR_df$SNR[is.finite(SNR_df$SNR)], na.rm = TRUE)
   
   # return interesting values
-  res <- c(growth, decline, SNR_avg)
+  res <- c(cue, as.numeric(growth_decline), as.numeric(SNR_avg))
 }
 ```
 
-# test function
+
+
+# basic density-based cues
 ```{r}
-test <- lapply(c("I", "G", "Ig", "M", "Mg", "R"), evaluate_cue)
-test
+# note: all log10 are log10(cue+1)
+cue_basic.ls <- lapply(c("I", "log10(I)", "Ig", "log10(Ig)", "I + Ig", "log10(I + Ig)",
+                 "G", "log10(G)",
+                 "M", "log10(M)", "Mg", "log10(Mg)", "M + Mg", "log10(M + Mg)",
+                 "R", "log10(R)"), evaluate_cue) # R and log(R) not used because high SNR
+
+
+cue_basic.df <- data.frame(do.call(rbind, cue_basic.ls))
+names(cue_basic.df) <- c("Cue", "Growth_Decline", "SNR")
+cue_basic.df$Growth_Decline <- as.numeric(cue_basic.df$Growth_Decline)
+cue_basic.df$SNR <- as.numeric(cue_basic.df$SNR)
+
+# add column to shown R and R in zoom 
+cue_basic.df <- cue_basic.df %>% 
+  dplyr::mutate(zoom = ifelse(stringr::str_detect(Cue, "R"), FALSE, TRUE)) 
+
+fig1a <- ggplot() +
+  geom_point(data = cue_basic.df %>% 
+               dplyr::filter(zoom == TRUE), aes(x = Growth_Decline, y = SNR, color = Cue)) +
+  geom_vline(xintercept = 0) +
+  geom_hline(yintercept = median(cue_basic.df$SNR)) +
+  ggrepel::geom_text_repel(data = cue_basic.df %>% 
+               dplyr::filter(zoom == TRUE), aes(x = Growth_Decline, y = SNR, label = Cue),
+                            box.padding = 0.5, max.overlaps = Inf) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+fig1b <- ggplot() +
+  geom_point(data = cue_basic.df, aes(x = Growth_Decline, y = SNR, color = Cue)) +
+  geom_vline(xintercept = 0) +
+  geom_hline(yintercept = median(cue_basic.df$SNR)) +
+  ggrepel::geom_text_repel(data = cue_basic.df %>% 
+                             dplyr::filter(stringr::str_detect(Cue, "R")),
+                           aes(x = Growth_Decline, y = SNR, label = Cue),
+                           box.padding = 0.5, max.overlaps = Inf) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+ggarrange(fig1a, fig1b, ncol = 2, widths = c(2,0.75))
+
 ```
 
+# calculating harder cues
+## reticulocyte density
+```{r}
+ci_dynamics.long <- ci_dynamics %>% 
+  dplyr::select(-variable_alt, -strain) %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value)
+
+ci_dynamics.ret <- ci_dynamics.long %>% 
+  dplyr::mutate(sr = exp(2.500000e-02-log(1-N)-(8.000000e-06*(M1+Mg1+M2+Mg2)))) %>% 
+  dplyr::mutate(lag_R = dplyr::lag(R, n = 1000)) %>% 
+  dplyr::mutate(Reticulocyte = ((8.890000e+06*2.500000e-02)+(2.627156e-01*(8.890000e+06-lag_R)))*sr)
+  
+ggplot(ci_dynamics.ret) +
+  geom_line(aes(x = time, y = R, color = "RBC")) +
+  geom_line(aes(x = time, y = Reticulocyte, color = "Reticulocyte")) +
+  theme_bw()
+```
 
 
