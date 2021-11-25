@@ -273,6 +273,24 @@ ci_dynamics <- chabaudi_ci_opt_lag(
   dyn = TRUE,
   log_cue_1 = "log10",
   log_cue_2 = "log10")
+
+source(here("functions/test_ci.R"))
+ # incorporaite burst intestiy
+ci_dynamics2 <- chabaudi_ci_opt_lag2(
+  parameters_cr_1 = c(360.3151, -470.3701, -325.4047, -371.3250), 
+  parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250), 
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  df = 3,
+  cue_1 = "I1+I2",
+  cue_2 = "I1+I2",
+  cue_range_1 = I_range_mid4_log10,
+  cue_range_2 = I_range_mid4_log10,
+  solver = "vode",
+  dyn = TRUE,
+  log_cue_1 = "log10",
+  log_cue_2 = "log10")
 ```
 
 
@@ -287,7 +305,7 @@ evaluate_cue <- function(cue) {
   cue.p <- stringr::str_remove(cue.p, "log10")
   
   # get filtered database
-  df <- ci_dynamics %>% 
+  df <- ci_dynamics2 %>% 
     dplyr::filter(variable_alt %in% cue.p) %>% 
     dplyr::group_by(time) %>% 
     dplyr::summarise(sum_cue = sum(value))
@@ -328,20 +346,19 @@ evaluate_cue <- function(cue) {
 }
 ```
 
-
-
 # basic density-based cues
 ```{r}
 # note: all log10 are log10(cue+1)
 cue_basic.ls <- lapply(c("I", "log10(I)", "Ig", "log10(Ig)", "I + Ig", "log10(I + Ig)",
                  "G", "log10(G)",
                  "M", "log10(M)", "Mg", "log10(Mg)", "M + Mg", "log10(M + Mg)",
-                 "R", "log10(R)"), evaluate_cue) # R and log(R) not used because high SNR
+                 "R", "log10(R)",
+                 "W", "BI", "BIg", "BIt"), evaluate_cue) # R and log(R) not used because high SNR
 
 
 cue_basic.df <- data.frame(do.call(rbind, cue_basic.ls))
-names(cue_basic.df) <- c("Cue", "Growth_Decline", "SNR")
-cue_basic.df$Growth_Decline <- as.numeric(cue_basic.df$Growth_Decline)
+names(cue_basic.df) <- c("Cue", "State_differentiation", "SNR")
+cue_basic.df$State_differentiation <- as.numeric(cue_basic.df$State_differentiation)
 cue_basic.df$SNR <- as.numeric(cue_basic.df$SNR)
 
 # add column to shown R and R in zoom 
@@ -350,46 +367,166 @@ cue_basic.df <- cue_basic.df %>%
 
 fig1a <- ggplot() +
   geom_point(data = cue_basic.df %>% 
-               dplyr::filter(zoom == TRUE), aes(x = Growth_Decline, y = SNR, color = Cue)) +
+               dplyr::filter(zoom == TRUE), aes(x = State_differentiation, y = SNR, color = Cue)) +
   geom_vline(xintercept = 0) +
   geom_hline(yintercept = median(cue_basic.df$SNR)) +
   ggrepel::geom_text_repel(data = cue_basic.df %>% 
-               dplyr::filter(zoom == TRUE), aes(x = Growth_Decline, y = SNR, label = Cue),
+               dplyr::filter(zoom == TRUE), aes(x = State_differentiation, y = SNR, label = Cue),
                             box.padding = 0.5, max.overlaps = Inf) +
   theme_bw() +
   theme(legend.position = "none")
 
 fig1b <- ggplot() +
-  geom_point(data = cue_basic.df, aes(x = Growth_Decline, y = SNR, color = Cue)) +
+  geom_point(data = cue_basic.df, aes(x = State_differentiation, y = SNR, color = Cue)) +
   geom_vline(xintercept = 0) +
   geom_hline(yintercept = median(cue_basic.df$SNR)) +
   ggrepel::geom_text_repel(data = cue_basic.df %>% 
                              dplyr::filter(stringr::str_detect(Cue, "R")),
-                           aes(x = Growth_Decline, y = SNR, label = Cue),
+                           aes(x = State_differentiation, y = SNR, label = Cue),
                            box.padding = 0.5, max.overlaps = Inf) +
   theme_bw() +
   theme(legend.position = "none")
 
 ggarrange(fig1a, fig1b, ncol = 2, widths = c(2,0.75))
-
+ggsave(here("figures/report8/cue_quadrant.png"), width = 8, height = 6)
 ```
 
-# calculating harder cues
+
+
 ## reticulocyte density
 ```{r}
 ci_dynamics.long <- ci_dynamics %>% 
   dplyr::select(-variable_alt, -strain) %>% 
   tidyr::pivot_wider(names_from = variable, values_from = value)
+ 
 
-ci_dynamics.ret <- ci_dynamics.long %>% 
-  dplyr::mutate(sr = exp(2.500000e-02-log(1-N)-(8.000000e-06*(M1+Mg1+M2+Mg2)))) %>% 
-  dplyr::mutate(lag_R = dplyr::lag(R, n = 1000)) %>% 
-  dplyr::mutate(Reticulocyte = ((8.890000e+06*2.500000e-02)+(2.627156e-01*(8.890000e+06-lag_R)))*sr)
-  
-ggplot(ci_dynamics.ret) +
-  geom_line(aes(x = time, y = R, color = "RBC")) +
-  geom_line(aes(x = time, y = Reticulocyte, color = "Reticulocyte")) +
-  theme_bw()
+
+# checking burst intensirty. Correlate well with targeted immunity
+ci_dynamics2 %>% 
+  dplyr::filter(variable == "BI" | variable == "W" | variable == "BIg" | variable == "BIt") %>% 
+  ggplot() + 
+  geom_line(aes(x = time, y = value)) +
+  facet_wrap(~variable, scale = "free")
 ```
+
+
+#------------------------#
+# figure 2
+#-----------------------#
+```{r}
+evaluate_cue2 <- function(cue) {
+  
+  # process cue list for complex and simple ones
+  cue.p <- strsplit(gsub("[^[:alnum:] ]", "", cue), " +")[[1]]
+  
+  # remove log10 from cue.p
+  cue.p <- stringr::str_remove(cue.p, "log10")
+  
+  # get filtered database
+  df <- ci_dynamics2 %>% 
+    dplyr::filter(variable_alt %in% cue.p) %>% 
+    dplyr::group_by(time) %>% 
+    dplyr::summarise(sum_cue = sum(value)) 
+  
+  #log transform if cue contains log string
+  if(stringr::str_detect(cue, "log10")){
+    df$sum_cue <- log10(df$sum_cue+1)
+  }
+
+  #  added benefit of smoothing
+  ## get smoothed cue (from 1 day before)
+  smooth_cue <- as.data.frame(dplyr::lag(zoo::rollapplyr(df$sum_cue, 1000, mean, partial = TRUE)))
+
+  names(smooth_cue) <- "smooth_cue"
+  
+  # state differentiation (normalized value)
+  ## get max value for noramlzation
+  max_cue <- max(df$sum_cue)
+  min_cue <- min(df$sum_cue)
+  
+  ## normalization
+  df_norm <- df %>% 
+    dplyr::mutate(cue_norm = (sum_cue - min_cue)/(max_cue - min_cue))
+  
+  ## get average growth value
+  df.growth <- df_norm %>% dplyr::filter(time <= 8.581) 
+  df.decline <- df_norm %>% dplyr::filter(time >= 8.581)
+  
+  ## get average growth and decline values
+  growth <- mean(df.growth$cue_norm)
+  decline <- mean(df.decline$cue_norm)
+  growth_decline <- growth-decline
+  
+  # future reliability
+  ## get lagged cue  and calculate relative change in one day
+  df_norm <- df_norm %>% 
+    dplyr::mutate(cue_norm_lag = dplyr::lag(cue_norm, 1000),
+                  cue_norm_diff = abs(cue_norm - cue_norm_lag))
+  ## get average
+  lag_diff_avg <- mean(df_norm$cue_norm_diff[is.finite(df_norm$cue_norm_diff)], na.rm = TRUE)
+  
+  # calculate SNR (smoothed mean / smoothed standard deviation)
+  SNR_df <- df %>% 
+    dplyr::mutate(cue_mean = runmean(sum_cue, 1000),
+                cue_sd = runsd(sum_cue, 1000)) %>% 
+    dplyr::mutate(SNR = cue_mean/cue_sd) 
+  
+  SNR_avg <- mean(SNR_df$SNR[is.finite(SNR_df$SNR)], na.rm = TRUE)
+  
+  # calculate SNR of smoothed dataset
+  SNR_smooth <- smooth_cue %>% 
+    dplyr::mutate(cue_mean = runmean(smooth_cue, 1000),
+                cue_sd = runsd(smooth_cue, 1000)) %>% 
+    dplyr::mutate(SNR = cue_mean/cue_sd) 
+  
+  SNR_smooth_avg <- mean(SNR_smooth$SNR[is.finite(SNR_smooth$SNR)], na.rm = TRUE)
+  
+  SNR_diff <- SNR_smooth_avg-SNR_avg
+  
+  # return interesting values
+  res <- c(cue, as.numeric(growth_decline), as.numeric(SNR_avg), as.numeric(SNR_smooth_avg), as.numeric(SNR_diff), as.numeric(lag_diff_avg))
+}
+```
+
+```{r}
+cue_basic.ls2 <- lapply(c("I", "log10(I)", "Ig", "log10(Ig)", "I + Ig", "log10(I + Ig)",
+                 "G", "log10(G)",
+                 "M", "log10(M)", "Mg", "log10(Mg)", "M + Mg", "log10(M + Mg)",
+                 "R", "log10(R)",
+                 "W", "BI", "BIg", "BIt"), evaluate_cue2)
+
+cue_basic.df2 <- data.frame(do.call(rbind, cue_basic.ls2))
+names(cue_basic.df2) <- c("Cue", "State_differentiation", "SNR", "Smooth_SNR", "SNR_diff","Lag_diff")
+
+cue_basic.df2$State_differentiation <- as.numeric(cue_basic.df2$State_differentiation)
+cue_basic.df2$SNR <- as.numeric(cue_basic.df2$SNR)
+cue_basic.df2$Smooth_SNR <- as.numeric(cue_basic.df2$Smooth_SNR)
+cue_basic.df2$SNR_diff <- as.numeric(cue_basic.df2$SNR_diff)
+cue_basic.df2$Lag_diff <- as.numeric(cue_basic.df2$Lag_diff)
+
+fig2a <- ggplot() +
+  geom_point(data = cue_basic.df2, aes(x = SNR_diff, y = Lag_diff, color = Cue)) +
+  ggrepel::geom_text_repel(data = cue_basic.df2,
+                           aes(x = SNR_diff, y = Lag_diff, label = Cue),
+                           box.padding = 0.5, max.overlaps = Inf) +
+  xlim(-50,150) +
+  theme_bw() +
+  labs(x = "SNR post-smoothing", y = "Cue deviation post-lag") +
+  theme(legend.position = "none")
+
+fig2b <- ggplot() +
+  geom_point(data = cue_basic.df2, aes(x = SNR_diff, y = Lag_diff, color = Cue)) +
+  ggrepel::geom_text_repel(data = cue_basic.df2 %>% 
+                             dplyr::filter(Cue == "log10(R)" | Cue == "R"),
+                           aes(x = SNR_diff, y = Lag_diff, label = Cue),
+                           box.padding = 0.5, max.overlaps = Inf) +
+  theme_bw() +
+  labs(x = "SNR post-smoothing", y = "Cue deviation post-lag") +
+  theme(legend.position = "none")
+
+ggarrange(fig2a, fig2b, ncol = 2, widths = c(2,0.75))
+ggsave(here("figures/report8/SNR_lag_diff.png"), width = 8, height = 6)
+```
+
 
 
