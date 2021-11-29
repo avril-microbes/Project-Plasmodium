@@ -159,7 +159,6 @@ chabaudi_si_lag_clean <- function(
     # Redefine parameters for cleaner code
     #----------------------#
     ## Rename parameters for cleaner code. With.list not used to speed up computation
-    lambda <- parameters["lambda"] # maximum RBC replenishment rate
     if(immunity == "tsukushi"){
       R1 <- parameters["R1"] # maximum RBC density at homeostasis
       rho <- parameters["rho"] # proportion of RBC deviation from R1 restored/day
@@ -184,6 +183,8 @@ chabaudi_si_lag_clean <- function(
       a <- parameters["a"] # maximum rate of iRBC removal/day with saturating immunity
       b <- parameters["b"] # iRBC density needed to achieve half maximum iRBC removal rate
     }
+
+    if(immunity != "tsukushi"){lambda <- parameters["lambda"]} # maximum RBC replenishment rate
 
     if(drug_dose > 0){mud <- parameters["mud"]} # if drug action is included, add drug induced death rate
     if(drug_dose == 0){mud <- 0} # if no drug is administered, no drug-induced mortality
