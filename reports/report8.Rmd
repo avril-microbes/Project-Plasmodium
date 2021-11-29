@@ -258,7 +258,8 @@ test <- chabaudi_si_opt_lag2(parameters_cr = rep(0.5, 9),
 
 # get typical infection using optimal co-infection parameters
 ```{r}
-ci_dynamics <- chabaudi_ci_opt_lag(
+source(here("functions/test_ci.R"))
+ci_dynamics <- chabaudi_ci_opt_lag2(
   parameters_cr_1 = c(360.3151, -470.3701, -325.4047, -371.3250), 
   parameters_cr_2 = c(360.3151, -470.3701, -325.4047, -371.3250), 
   immunity = "tsukushi",
@@ -336,7 +337,8 @@ evaluate_cue <- function(cue) {
 cue_basic.ls <- lapply(c("I", "log10(I)", "Ig", "log10(Ig)", "I + Ig", "log10(I + Ig)",
                  "G", "log10(G)",
                  "M", "log10(M)", "Mg", "log10(Mg)", "M + Mg", "log10(M + Mg)",
-                 "R", "log10(R)"), evaluate_cue) # R and log(R) not used because high SNR
+                 "R", "log10(R)",
+                 "BI", "BIt", "BIg"), evaluate_cue) # R and log(R) not used because high SNR
 
 
 cue_basic.df <- data.frame(do.call(rbind, cue_basic.ls))
@@ -391,5 +393,27 @@ ggplot(ci_dynamics.ret) +
   geom_line(aes(x = time, y = Reticulocyte, color = "Reticulocyte")) +
   theme_bw()
 ```
+
+```{r}
+unique(ci_dynamics$variable_alt)
+
+ci_dynamics %>% 
+  dplyr::filter(variable == "I") %>%
+  ggplot() +
+  geom_line(aes(x = time, y = value))
+
+test <- ci_dynamics %>% 
+  dplyr::filter(variable_alt == "I") %>%
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(I_sum = sum(value))
+
+
+I_smooth <- zoo::rollmean(test$I_sum, k = 1000)
+
+plot(test$I_sum)
+plot(I_smooth)
+
+```
+
 
 

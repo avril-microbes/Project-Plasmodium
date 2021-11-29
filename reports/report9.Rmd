@@ -1,0 +1,88 @@
+---
+title: "report9"
+output: html_document
+---
+
+
+```{r}
+library(here)
+library(ggplot2)
+library(magrittr)
+```
+
+```{r}
+source(here("functions/chabaudi_si_clean.R"))
+source(here("functions/chabaudi_si_opt_lag.R"))
+```
+
+```{r}
+parameters_tsukushi <- c(R1 = 8.89*10^6, #slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, #doubled from original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156,
+                mud = -log(1-0.94)) 
+```
+
+
+# code review
+## single infection
+```{r}
+source(here("functions/chabaudi_si_clean.R"))
+test_tsukushi <- chabaudi_si_lag_clean(
+  parameters_cr = rep(0.5,4), 
+  parameters = parameters_tsukushi,
+  immunity = "tsukushi", # immunity selection. Tsukushi's model, saturating immunity, or no immunity possible
+  time_range = seq(0, 20, 1e-3), # time that simulation is ran for
+  cue = "I", # cue that parasite use to change conversion rate
+  log_cue = "log10", # whether to log10 transform cue
+  cue_range = seq(0, log10(6*10^6), by = log10(6*10^6)/5000), # range that cue is active against
+  solver = "vode", # solver used for numerical integration. "vode" is often faster
+  delay = 0, # the time at which merozoite is injected into the host
+  drug = "none", # whether drug action is simulated. 
+  drug_dose = 0, # drug dosage in mg/kg
+  drug_admin = 0, # day at which drug is administered
+  cue_b = "none", # if second cue is incorporated
+  cue_b_range = "none", # if second cue is used, the range of cue that parasite use to adjust conversion rate to
+  log_cue_b = "none",  # whether to log10 transform cue_b
+  dyn = TRUE)
+
+# original function
+test_tsukushi2 <- chabaudi_si_opt_lag(parameters_cr = rep(0.5,4), 
+  parameters = parameters_tsukushi,
+  df = 3,
+  immunity = "tsukushi", # immunity selection. Tsukushi's model, saturating immunity, or no immunity possible
+  time_range = seq(0, 20, 1e-3), # time that simulation is ran for
+  cue = "I", # cue that parasite use to change conversion rate
+  log_cue = "log10", # whether to log10 transform cue
+  cue_range = seq(0, log10(6*10^6), by = log10(6*10^6)/5000), # range that cue is active against
+  solver = "vode", # solver used for numerical integration. "vode" is often faster
+  dyn = TRUE)
+
+ggplot() +
+  geom_line(data = test_tsukushi, aes(x = time, y = value)) +
+  geom_line(data = test_tsukushi2, aes(x = time, y = value, color = "red")) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# co-infection model
+```{r}
+
+```
+
+
