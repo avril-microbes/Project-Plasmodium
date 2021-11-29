@@ -249,7 +249,9 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     Mg1 <- state["Mg1"] # sexual merozoite density of strain 1
     Mg2 <- state["Mg2"] # sexual merozoite density of strain 2
     G1 <- state["G1"] # gametocyte density of strain 1
-    G2 <- state["G2"]  # gametocyte density of strain 2d
+    G2 <- state["G2"]  # gametocyte density of strain 2
+    cr_t1 <- state["cr_t1"] # track conversion rate of strain 1
+    cr_t2 <- state["cr_t2"] # track conversion rate of strain 2
 
     if (immunity == "tsukushi"){
       N <- state["N"] # extent of indiscriminant RBC removal
@@ -440,8 +442,8 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     dG2_nolag <- -mug*G2
     
     # tracks cr 
-    if(t>alpha+delay){dcr_t1 <- cr_1}
-    if(t>alpha){dcr_t2 <- cr_2}
+    if(t>alpha+delay){dcr_t1 <- cr_1} else{dcr_t1 <- 0}
+    if(t>alpha){dcr_t2 <- cr_2} else{dcr_t2 <- 0}
     
     # ODEs exclusive to tsukushi's model
     if(immunity == "tsukushi"){ #Tsukushi exclusive ODEs
@@ -483,13 +485,13 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     ## Strain 1
     if(t<=alpha+delay){
       dI1 <- dI1_nolag-(pulseBeta_1*S_1)
-      ## tracking burst extent. does not feed back into system
-      dBI <- mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(pulseBeta_1*S_1)+(pulseBeta_2*S_2)
-      dBIt <- mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(pulseBeta_1*S_1)+(pulseBeta_2*S_2)
       dM1 <- dM1_nolag+(beta*pulseBeta_1*S_1) # all of them are asexual merozoite
       dMg1 <- 0 # should have no Mg before day alpha
       dIg1 <- 0 #first wave starts on day alpha+delay
       dG1 <- 0 # first wave starts on day alpha+alphag+delay
+      ## tracking burst extent. does not feed back into system
+      dBI <- mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(pulseBeta_1*S_1)+(pulseBeta_2*S_2)
+      dBIt <- mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(pulseBeta_1*S_1)+(pulseBeta_2*S_2)
       dBIg <- 0 # just tracking burst intensity
     }
     
@@ -524,6 +526,8 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       dI1 <- dI1_nolag-(p*lag_a_1[1]*lag_a_1[2]*S_1)
       dM1 <- dM1_nolag+(beta*(1-cr_1)*p*lag_a_1[1]*lag_a_1[2]*S_1)
       dMg1 <- dMg1_nolag+(beta*cr_1*p*lag_a_1[1]*lag_a_1[2]*S_1)
+      dBI <- mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(p*lag_a_1[1]*lag_a_1[2]*S_1)+(p*lag_a_2[1]*lag_a_2[3]*S_2)
+      
       }
     
     ## Strain 2
@@ -552,8 +556,8 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     #----------------------#
     # Return the states
     #----------------------#
-    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dBI, dBIg, dBIt)))}
-    if (immunity == "tsukushi") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dN, dW, dBI, dBIg, dBIt)))}
+    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dBI, dBIg, dBIt, dcr_t1, dcr_t2)))}
+    if (immunity == "tsukushi") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dN, dW, dBI, dBIg, dBIt, dcr_t1, dcr_t2)))}
   }
   
   #----------------------------#
@@ -626,19 +630,26 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     
     #------Calculate cr------#
     ## time-based conversion rate
-    if(cue == "t"){
+    if(cue_1 == "t"){
       cr.ls1 <- cr_1_fun(time_range)
+      chabaudi_ci.df$cr_1 <- cr.ls1
+
+    }
+    
+    if(cue_2 == "t"){
       cr.ls2 <- cr_2_fun(time_range)
-      chabaudi_si.df$cr_1 <- cr.ls1
-      chabaudi_si.df$cr_2 <- cr.ls2
+      chabaudi_ci.df$cr_2 <- cr.ls2
     }
 
     ## state-based conversion rate
-    if(cue != "t"){
-      chabaudi_si.df <- chabaudi_si.df %>% 
-        dplyr::mutate(
-          cr_1 = (cr_t1 - dplyr::lag(cr_t1))*1000,
-          cr_2 = (cr_t2 - dplyr::lag(cr_t2))*1000)
+    if(cue_1 != "t"){
+      chabaudi_ci.df <- chabaudi_ci.df %>% 
+        dplyr::mutate(cr_1 = (cr_t1 - dplyr::lag(cr_t1))*1000)
+    }
+    
+    if(cue_2 != "t"){
+      chabaudi_ci.df <- chabaudi_ci.df %>% 
+        dplyr::mutate(cr_2 = (cr_t2 - dplyr::lag(cr_t2))*1000)
     }
     
     #-----Process for better looking df------#
