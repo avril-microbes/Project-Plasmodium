@@ -82,7 +82,54 @@ ggplot() +
 
 # co-infection model
 ```{r}
+source(here("functions/chabaudi_ci_clean.R"))
+test_ci <- chabaudi_ci_clean(parameters_cr_1 = rep(0.5,4), # parameters for strain 1 conversion rate strategy
+                              parameters_cr_2 = rep(100,4), # parameters for strain 2 conversion rate strategy
+                              immunity = "tsukushi", # mode of immunity. ni, i, or tsukushi available
+                              parameters = parameters_tsukushi, # parameters for model
+                              time_range = seq(0,20,1e-3), # time range at which infection is simulated
+                              cue_1 = "I1+I2", # cue of strain 1
+                              cue_2="I1+I2", # cue of strain 2
+                              cue_range_1=seq(0, log10(6*10^6), by = log10(6*10^6)/5000) , # cue range of strain 1
+                              cue_range_2=seq(0, log10(6*10^6), by = log10(6*10^6)/5000), # cue range of strain 2
+                              log_cue_1 = "log10", # whether to log transform cue 1
+                              log_cue_2 = "log10", # whether to log transform cue 2
+                              solver = "vode", # solver for numerical integration. Vode often gives faster runs
+                              dyn = TRUE, # whether to simulate infection dynamics (false for optimization)
+                              delay = 0, # when strain 1 injection occurs days-post infection
+                              ratio = 1)
 
+source(here("functions/chabaudi_ci_opt_lag.R"))
+
+ 
+test_ci2 <- chabaudi_ci_opt_lag(parameters_cr_1 = rep(0.5,4), # parameters for strain 1 conversion rate strategy
+                              parameters_cr_2 = rep(100,4),
+                              df = 3,# parameters for strain 2 conversion rate strategy
+                              immunity = "tsukushi", # mode of immunity. ni, i, or tsukushi available
+                              parameters = parameters_tsukushi, # parameters for model
+                              time_range = seq(0,20,1e-3), # time range at which infection is simulated
+                              cue_1 = "I1+I2", # cue of strain 1
+                              cue_2="I1+I2", # cue of strain 2
+                              cue_range_1=seq(0, log10(6*10^6), by = log10(6*10^6)/5000) , # cue range of strain 1
+                              cue_range_2=seq(0, log10(6*10^6), by = log10(6*10^6)/5000), # cue range of strain 2
+                              log_cue_1 = "log10", # whether to log transform cue 1
+                              log_cue_2 = "log10", # whether to log transform cue 2
+                              solver = "vode", # solver for numerical integration. Vode often gives faster runs
+                              dyn = TRUE, # whether to simulate infection dynamics (false for optimization)
+                              delay = 0, # when strain 1 injection occurs days-post infection
+                              ratio = 1)
+
+ggplot() +
+  geom_line(data = test_ci, aes(x = time, y = value, color = strain)) +
+  #geom_line(data = test_ci2, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free") +
+  theme_bw()
+
+ggplot() +
+  #geom_line(data = test_ci, aes(x = time, y = value, color = strain)) +
+  geom_line(data = test_ci2, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free") +
+  theme_bw()
 ```
 
 
