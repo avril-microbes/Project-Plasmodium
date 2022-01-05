@@ -8,6 +8,10 @@ output: html_document
 library(dplyr)
 library(ggplot2)
 library(here)
+library(npreg)
+library(splines)
+library(forecast)
+library(hts)
 ```
 
 # read in experimental data
@@ -29,6 +33,256 @@ plos_2013_2 <- readxl::read_xlsx(here("experimental_data/Huijben_2013_PLoS.xlsx"
 # import in https://onlinelibrary.wiley.com/doi/10.1111/j.1420-9101.2011.02369.x
 ## (2011 in Journal of Evolutionary Biology)
 eseb_2011 <- readxl::read_xls(here("experimental_data/Huijben_2011_eseb.xls"), sheet = 1)
+```
+
+# clean data for single infection
+```{r}
+## for EMPH 2018 study, include only infection series without drugs were R-inoculum is administered by itself, which includes 6, 7, 8, 9, 10. Box 6 has a starting inoculum number of 10^6, which is most similar to other studies. Filtering between day 3-21 because those are the days where we have single day data.
+emph_2018_ss.df <- emph_2018 %>% 
+  filter(Box %in% seq(6, 10) &
+         dplyr::between(Day, 3, 21)) %>% 
+  mutate(dose = case_when(
+    Box == 6 ~ 10^6,
+    Box == 7 ~ 10^5,
+    Box == 8 ~ 10^3,
+    Box == 9 | Box == 10 ~ 10^1
+  )) %>% 
+  mutate(strain = "As6p",
+         study = "emph2018",
+         study_strain = paste0(strain, study),
+         id = paste0(study, strain, Box, Mouse, 1)) %>%
+  select(day = Day,
+         mouse = Mouse, 
+         RBC, 
+         asex = Rasex,
+         gam = Rgam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+## for 2011 eseb, only day 3-17 data are analyzed because those are the days where gametocyte data are available
+eseb_2011_ss.df <- eseb_2011 %>% 
+  filter(Clones == "R" & between(Day, 3, 17) &
+           Drugs == "N") %>% 
+  mutate(dose = 10^6,
+         strain = "As8p",
+         study = "eseb2011",
+         study_strain = paste0(strain, study),
+         id = paste0(study, strain, Box, Mouse, 2)) %>% 
+  select(day = Day,
+         mouse = Mouse,
+         RBC,
+         asex = R.asex,
+         gam = R.gam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+## for evolution_2010, single infection data for both resistant and susceptible clones are available without drug treatment
+evolution_2010_ss.df <- evo_2010 %>% 
+  filter(Clone == "R" | Clone == "S") %>%
+  filter(between(Day, 3, 21) &
+           Drugs == "nodrugs") %>% 
+  mutate(asex = R.asex + S.asex,
+         gam = R.gam + S.gam,
+         dose = 10^6,
+         study = "evol2011",
+         strain = ifelse(Clone == "R", "As12", "AJ51"),
+         study_strain = paste0(strain, "_", study),
+         id = paste0(study, strain, Box, Mouse, 3)) %>% 
+  select(day = Day,
+         mouse = Mouse,
+         RBC,
+         asex,
+         gam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+# rbind
+exp_ss.df <- rbind(emph_2018_ss.df, eseb_2011_ss.df, evolution_2010_ss.df)
+
+# correct RBC to actual density (in unit of RBC/uL)
+exp_ss.df$RBC <- exp_ss.df$RBC * (10^6)
+exp_ss_dose.df <- exp_ss.df %>% filter(dose == 10^6)
+
+# add logged parameters
+exp_ss_dose.df <- exp_ss_dose.df %>% 
+  mutate(log10_asex = log10(asex+1),
+         log10_RBC =  log10(RBC+1),
+         log10_gam = log10(gam+1))
+
+# get dataset with only resistance strain
+exp_ss_R.df <- exp_ss_dose.df %>% filter(strain != "AJ51")
+```
+
+# data visualization
+## filtering by same dosage leads to pretty heterogenous results
+```{r}
+ggplot(exp_ss.df %>% filter(dose == 10^6)) +
+  geom_line(aes(x = day, y = log10(asex), color = id)) +
+  facet_wrap(~study) +
+  theme_bw()
+
+ggplot(exp_ss.df %>% filter(dose == 10^6)) +
+  geom_line(aes(x = day, y = log10(gam), color = id)) +
+  facet_wrap(~study) +
+  theme_bw()
+
+ggplot(exp_ss.df %>% filter(dose == 10^6)) +
+  geom_line(aes(x = day, y = log10(RBC), color = id)) +
+  facet_wrap(~study) +
+  theme_bw()
+
+## visualizing diffreent dosage
+ggplot(exp_ss.df %>% filter(dose != 10^6)) +
+  geom_line(aes(x = day, y = asex, color = id)) +
+  theme_bw()
+
+ggplot(exp_ss.df %>% filter(dose != 10^6)) +
+  geom_line(aes(x = day, y = RBC, color = id)) +
+  theme_bw()
+
+
+## visualization time series variance
+
+```
+
+# Quantifying "noise"
+Noise are data in the time series that remain after the data has been detrended (removal of longe term trends, seasonality) and where the data does not exhibit short term autocorrelation. However, what kind of noises are we quantifying here? Is it white noise, where the magnitude of noise is independent from one time point to the next. Or will our noise be more or a ranndom walk, where the extent of noise depends on the extent of noise from a previous time point? I argue that white noise is more appropriate. Certain stochastic processes such as RBC number of gametocyte density do not accumulate. Thus, the extent of stochasticity in one cycle of RBC/gametocyte prdocution do not directly contribute to the extent of stochasticity in the next cycle. You can argue that asexual density could be a random walk process given that the number of merozoite influence the number of merozoite in the next cycle.
+
+How should we group data when we analyze the data? Studies definitely should be segregated. However, the question is whether we analyze by individual mice or with aggregated data of same parasite strain on different mice. The latter option would introduce external noise. Perhaps categorizing the data into an hierarchial structure makes sense, such that we have 3 studies (we could eliminate the non-resistant strain in evo_2011 to cutback on variation), and the individual mice.
+
+# functions for processing data for hts
+```{r}
+process_hts <- function(df, variable){
+  df2 <- df %>%  
+  dplyr::group_by(id) %>% 
+  dplyr::arrange(day, .by_group = T) %>% 
+  dplyr::ungroup() %>% 
+  tidyr::spread(key = id, value = variable) %>% 
+  janitor::remove_empty(which = "rows") %>% 
+  select(c(9:24)) 
+  
+  df3 <- data.table::data.table(test)[, lapply(.SD, function(x) x[order(is.na(x))])]
+  df4 <- zoo::na.trim(test3, is.na = "all")
+}
+```
+
+# function for calculating SNR and fitting arima model to a bunch of time series data
+```{r}
+# write function to perform auto arima for groups
+bulk_arima <- function(df, variable){
+  
+  #------------------------#
+  # df processing
+  #---------------------#
+  # get sample size
+  n <- n_distinct(df$id)
+  
+  # split df by unique id
+  df.ls <- split(df, df$id)
+  
+  # get variable data
+  data <- lapply(df.ls, function(x) x %>% 
+                   arrange(day) %>% 
+                   select(variable))
+
+  #--------------------#
+  # Detrending using ARIMA
+  #--------------------#
+  # auto arima
+  arima.mod <- lapply(data, auto.arima, stepwise = FALSE, approximation = FALSE, parallel = TRUE)
+  
+  # store parameters
+  coef.ls <- lapply(arima.mod, arimaorder)
+  coef.df <- do.call(rbind, coef.ls)
+  
+  # plot residue plot (should be within)
+  residual.ls <- lapply(arima.mod, "residuals")
+
+  # check whether residual is independent using Ljung-Box test (one of the Portmonteau tests. P-value should be above 0.05)
+  lb.test <- lapply(lapply(residual.ls, Box.test, type = "Ljung-Box"), function(x) x$p.value)
+  ## print message to redo arima if any of the Ljung-Box returns a p-value of below 0.05
+  if(any(lb.test < 0.05)){print("Ljung-Box test p-value returns a p-value of below 0.05! Redo arima.")}
+  
+  #----------------------#
+  # Predictability calculation
+  #----------------------#
+  #----------RMSE (for noise quantification)------------------#
+  # calculate RMSE, which is the standard deviation for residue
+  rmse.ls <- lapply(residual.ls, sd)
+  
+  # calculate SNR
+  fitted.ls <- lapply(arima.mod, "fitted")
+  snr.ls <- mapply(function(x,y) ((abs(x)+1)^2)/((abs(y)+1)^2), fitted.ls, residual.ls)
+  snr_mean.ls <- lapply(snr.ls, median)
+  
+  # turn to df
+  res.df <- data.frame(coef = coef.df, 
+                       RMSE = unlist(rmse.ls), 
+                        SNR = unlist(snr_mean.ls),
+                        variable = variable)
+  
+  return(res.df)
+
+}
+```
+
+
+# Analyze data
+```{r}
+asex <- bulk_arima(exp_ss_dose.df, "asex")
+gam <- bulk_arima(exp_ss_dose.df, "gam")
+rbc <- bulk_arima(exp_ss_dose.df, "RBC")
+
+log10_asex <- bulk_arima(exp_ss_dose.df, "log10_asex") # not good ARIMA. Pontmorteau sig for 1 sample. However, given we are repeating test for 16 series, this is expected
+log10_rbc <- bulk_arima(exp_ss_dose.df, "log10_RBC")
+log10_gam <- bulk_arima(exp_ss_dose.df, "log10_gam")
+
+
+arima.df <- rbind(asex, gam, rbc, log10_asex, log10_rbc, log10_gam)
+arima.df <- arima.df %>% 
+  mutate(pq = paste0(coef.p, coef.q),
+         pdq = paste0(coef.p, coef.d, coef.q))
+```
+
+## parameter of ARIMA
+Interestingly, RBC tend to be modelled as an AR process with models either having significant correlation of PACF at lag of 1 day or 2 days. Most gametocyte is modelled as an AR process. However, a sizable proportion of gametocyte are not AR process, meaning that gametocyte concentration cannot be predicted from even a day ago. 
+
+Vast majority of gametocytes are best described by its value a day ago with no MA processes. Similar with RBC and asexual iRBC. However, a sizable porportion of RBC can also be predicted by its value 2 days ago (p = 2). Asexual iRBC exhibit some predictability with 2 days lag but not by much.
+
+interestingly, logging stuff actually made tons of processes random walk (0,1,0). It  seems that the message is clear, intercue predictability is highest for RBC, where we can predict future RBC 2 days ahead of time. Inter-cue variability sucks when we log stuff
+```{r}
+arima.df %>% 
+  ggplot() +
+  geom_bar(aes(x = as.factor(pq), fill = variable), position = position_dodge2(width = 0.9, preserve = "single")) +
+  xlab("(p,q)") +
+  theme_bw()
+
+
+arima.df %>% 
+  ggplot() +
+  geom_bar(aes(x = as.factor(pdq), fill = variable), position = position_dodge2(width = 0.9, preserve = "single")) +
+  xlab("(p,d,q)") +
+  theme_bw()
+``` 
+
+RBC tend to exhibit larger RMSE compared to other variables. In general, of course, the higher the concentration a particular variable, the larger the variable. When we look at SNR, however, RBC tend to given us higher SNR. For iRBC, it depends.  
+
+Interestingly, logging variables decreases variability in SNR and RMSE between individual mice. For asexual, logging drastically increases SNR.
+```{r}
+# plot RMSE vs SNR 
+arima.df %>% 
+  ggplot() +
+  geom_point(aes(x = log10(RMSE), y = log10(SNR), color = variable), size = 2) +
+  theme_bw()
 ```
 
 
