@@ -12,6 +12,8 @@ library(npreg)
 library(splines)
 library(forecast)
 library(hts)
+library(ggpubr)
+library(nlme)
 ```
 
 # read in experimental data
@@ -33,6 +35,11 @@ plos_2013_2 <- readxl::read_xlsx(here("experimental_data/Huijben_2013_PLoS.xlsx"
 # import in https://onlinelibrary.wiley.com/doi/10.1111/j.1420-9101.2011.02369.x
 ## (2011 in Journal of Evolutionary Biology)
 eseb_2011 <- readxl::read_xls(here("experimental_data/Huijben_2011_eseb.xls"), sheet = 1)
+
+# import in https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3939351/
+## (2011 in Journal of American naturalist)
+amna_2011 <- readxl::read_xls(here("experimental_data/Pollitt_2011_naturalist.xls"), sheet = 1)
+
 ```
 
 # clean data for single infection
@@ -50,7 +57,8 @@ emph_2018_ss.df <- emph_2018 %>%
   mutate(strain = "As6p",
          study = "emph2018",
          study_strain = paste0(strain, study),
-         id = paste0(study, strain, Box, Mouse, 1)) %>%
+         id = paste0(study, strain, Box, Mouse, 1),
+         RBC = RBC * (10^6)) %>%
   select(day = Day,
          mouse = Mouse, 
          RBC, 
@@ -70,6 +78,7 @@ eseb_2011_ss.df <- eseb_2011 %>%
          strain = "As8p",
          study = "eseb2011",
          study_strain = paste0(strain, study),
+         RBC = RBC*(10^6),
          id = paste0(study, strain, Box, Mouse, 2)) %>% 
   select(day = Day,
          mouse = Mouse,
@@ -90,6 +99,7 @@ evolution_2010_ss.df <- evo_2010 %>%
   mutate(asex = R.asex + S.asex,
          gam = R.gam + S.gam,
          dose = 10^6,
+         RBC = RBC*(10^6),
          study = "evol2011",
          strain = ifelse(Clone == "R", "As12", "AJ51"),
          study_strain = paste0(strain, "_", study),
@@ -105,21 +115,52 @@ evolution_2010_ss.df <- evo_2010 %>%
          study_strain,
          id)
 
+## for amnat 2011, get single infection data. Filter out any mice that have missing data. Set negative asexuasl data ot 0
+amna_2011_ss.df <-  amna_2011 %>% 
+  filter(treat %in% c("AJ", "AS", "ER", "CR", "CW", "DK")) %>% 
+  mutate(asex = tot.para - tot.gcyte,
+         gam = tot.gcyte,
+         dose = 10^6,
+         study = "amna_2011",
+         RBC = rbc/(10^6),
+         study_strain = paste0(treat, "_", study),
+         id = paste0(study, treat, div, mouse, 4)) %>% 
+  mutate(asex = ifelse(asex < 0, 0, asex)) # sometimes total parasite is less than gametocyte so need to correct for this
+
+### check for NA by groups
+amna_na.id <- amna_2011_ss.df %>% 
+  filter_at(vars(asex, gam, RBC), all_vars(is.na(.))) %>% 
+  distinct(id) %>% 
+  select(id)
+
+amna_2011_ss.df2 <- amna_2011_ss.df %>% 
+  filter(!(id %in% amna_na.id$id)) %>% 
+  select(day,
+         mouse,
+         RBC,
+         asex,
+         gam,
+         dose,
+         strain = treat,
+         study,
+         study_strain,
+         id)
+
 # rbind
-exp_ss.df <- rbind(emph_2018_ss.df, eseb_2011_ss.df, evolution_2010_ss.df)
+exp_ss.df <- rbind(emph_2018_ss.df, eseb_2011_ss.df, evolution_2010_ss.df, amna_2011_ss.df2)
 
 # correct RBC to actual density (in unit of RBC/uL)
-exp_ss.df$RBC <- exp_ss.df$RBC * (10^6)
-exp_ss_dose.df <- exp_ss.df %>% filter(dose == 10^6)
+exp_ss_dose.df <- exp_ss.df %>% filter(dose == 10^6) 
 
 # add logged parameters
 exp_ss_dose.df <- exp_ss_dose.df %>% 
   mutate(log10_asex = log10(asex+1),
-         log10_RBC =  log10(RBC+1),
+         log10_RBC = log10(RBC+1),
          log10_gam = log10(gam+1))
 
 # get dataset with only resistance strain
 exp_ss_R.df <- exp_ss_dose.df %>% filter(strain != "AJ51")
+
 ```
 
 # data visualization
@@ -235,8 +276,64 @@ bulk_arima <- function(df, variable){
 }
 ```
 
+# bulk AR model
+Think like a parasite, while they can integrate lag values in their decision making (correponding to an AR model), they cannot take into past stochasticity into account (correspondint to the MA part). Hence, a more realistic partitioning of time series would be an imperfect forecastor where we are limited to AR model. The residuals will not be stationary (if MA process is involved). However, those are info that parasite cannot extract.
+```{r}
+# write function to perform auto arima for groups
+bulk_ar <- function(df, variable){
+  
+  #------------------------#
+  # df processing
+  #---------------------#
+  # get sample size
+  n <- n_distinct(df$id)
+  
+  # split df by unique id
+  df.ls <- split(df, df$id)
+  
+  # get variable data
+  data <- lapply(df.ls, function(x) x %>% 
+                   arrange(day) %>% 
+                   select(variable))
+
+  #--------------------#
+  # Detrending using ARIMA
+  #--------------------#
+  # auto arima with AR 
+  ar.mod <- lapply(data, auto.arima, d = 0, max.q = 0, stepwise = FALSE, approximation = FALSE, parallel = TRUE)
+  
+  # store parameters
+  coef.ls <- lapply(ar.mod, arimaorder)
+  coef.df <- do.call(rbind, coef.ls)
+  
+  # plot residue plot (should be within)
+  residual.ls <- lapply(ar.mod, "residuals")
+
+  #----------------------#
+  # Predictability calculation
+  #----------------------#
+  #----------RMSE (for noise quantification)------------------#
+  # calculate RMSE, which is the standard deviation for residue
+  rmse.ls <- lapply(residual.ls, sd)
+  
+  # calculate SNR
+  fitted.ls <- lapply(ar.mod, "fitted")
+  snr.ls <- mapply(function(x,y) ((abs(x)+1)^2)/((abs(y)+1)^2), fitted.ls, residual.ls)
+  snr_mean.ls <- lapply(snr.ls, median, na.rm = T)
+  
+  # turn to df
+  res.df <- data.frame(coef = coef.df, 
+                       RMSE = unlist(rmse.ls), 
+                        SNR = unlist(snr_mean.ls),
+                        variable = variable)
+  
+  return(res.df)
+
+}
+```
 
 # Analyze data
+## ARIMA
 ```{r}
 asex <- bulk_arima(exp_ss_dose.df, "asex")
 gam <- bulk_arima(exp_ss_dose.df, "gam")
@@ -251,29 +348,47 @@ arima.df <- rbind(asex, gam, rbc, log10_asex, log10_rbc, log10_gam)
 arima.df <- arima.df %>% 
   mutate(pq = paste0(coef.p, coef.q),
          pdq = paste0(coef.p, coef.d, coef.q))
+
+arima.df
 ```
+
+# AR
+Here restricte to no differencing (malaria parasite cannot detect trends) or moving average processes (cannot detect external non-cues)
+```{r}
+asex.ar <- bulk_ar(exp_ss_dose.df, "asex")
+gam.ar <- bulk_ar(exp_ss_dose.df, "gam")
+rbc.ar <- bulk_ar(exp_ss_dose.df, "RBC")
+
+log10_asex.ar <- bulk_ar(exp_ss_dose.df, "log10_asex") 
+log10_rbc.ar <- bulk_ar(exp_ss_dose.df, "log10_RBC")
+log10_gam.ar <- bulk_ar(exp_ss_dose.df, "log10_gam")
+
+ar.df <- rbind(asex.ar, gam.ar, rbc.ar, log10_asex.ar, log10_rbc.ar, log10_gam.ar)
+asex.ar
+```
+
 
 ## parameter of ARIMA
 Interestingly, RBC tend to be modelled as an AR process with models either having significant correlation of PACF at lag of 1 day or 2 days. Most gametocyte is modelled as an AR process. However, a sizable proportion of gametocyte are not AR process, meaning that gametocyte concentration cannot be predicted from even a day ago. 
 
 Vast majority of gametocytes are best described by its value a day ago with no MA processes. Similar with RBC and asexual iRBC. However, a sizable porportion of RBC can also be predicted by its value 2 days ago (p = 2). Asexual iRBC exhibit some predictability with 2 days lag but not by much.
 
-interestingly, logging stuff actually made tons of processes random walk (0,1,0). It  seems that the message is clear, intercue predictability is highest for RBC, where we can predict future RBC 2 days ahead of time. Inter-cue variability sucks when we log stuff
+interestingly, logging stuff actually made tons of processes random walk (0,1,0). It  seems that the message is clear, intercue predictability is highest for RBC, where we can predict future RBC 2 days ahead of time. Inter-cue variability sucks when we log stuff. As we decrease the magnitude of change by logging, the predictive power of 
 ```{r}
 arima.df %>% 
   ggplot() +
-  geom_bar(aes(x = as.factor(pq), fill = variable), position = position_dodge2(width = 0.9, preserve = "single")) +
-  xlab("(p,q)") +
+  geom_bar(aes(x = as.factor(coef.p), fill = variable), position = position_dodge2(width = 0.9, preserve = "single")) +
+  xlab("p") +
   theme_bw()
 
-
-arima.df %>% 
+ar.df %>% 
   ggplot() +
-  geom_bar(aes(x = as.factor(pdq), fill = variable), position = position_dodge2(width = 0.9, preserve = "single")) +
-  xlab("(p,d,q)") +
+  geom_bar(aes(x = as.factor(coef.p), fill = variable), position = position_dodge2(width = 0.9, preserve = "single")) +
+  xlab("p") +
   theme_bw()
 ``` 
 
+# SNR vs RMSE
 RBC tend to exhibit larger RMSE compared to other variables. In general, of course, the higher the concentration a particular variable, the larger the variable. When we look at SNR, however, RBC tend to given us higher SNR. For iRBC, it depends.  
 
 Interestingly, logging variables decreases variability in SNR and RMSE between individual mice. For asexual, logging drastically increases SNR.
@@ -283,6 +398,180 @@ arima.df %>%
   ggplot() +
   geom_point(aes(x = log10(RMSE), y = log10(SNR), color = variable), size = 2) +
   theme_bw()
+
+fig1b <- ar.df %>% 
+  ggplot() +
+  geom_point(aes(x = log10(RMSE), y = log10(SNR), color = variable), size = 2) +
+  theme_bw()
+
+fig1 <- ggarrange(fig1a, fig1b, common.legend = T, labels = c("A", "B"))
+ggsave(here("figures/report10/fig1.png"))
+
 ```
+
+# CCF
+
+
+# checking goodness of fit for repeated measurements
+## fit more types of models
+
+```{r}
+bulk_gls <- function(variable, df){
+  
+  # get independent variables
+  ind_var <- setdiff(c("asex", "gam", "RBC", "factor(strain)"), variable)
+  
+  # get list of formula based on independent variable
+  form <- unlist(lapply(1:3, function(n) combn(ind_var, n, FUN=function(row) paste0(variable," ~ ", paste0(row, collapse = "+")))))
+  
+  # run gls modelm (need to nonvectorized because vectorizsed just doesn't want to work with ANOVA)
+  mod_1.ls <- list()
+  mod_2.ls <- list()
+  mod_3.ls <- list()
+  for(i in 1:length(form)){
+    mod_1.ls[[i]] <- update(gls(as.formula(form[[i]]), data = exp_ss_dose.df, corr = corARMA(form = ~ 1 | id, p = 1, q = 0)), . ~ ., method = "ML")
+    
+    mod_2.ls[[i]] <- update(gls(as.formula(form[[i]]), data = exp_ss_dose.df, corr = corARMA(form = ~ 1 | id, p = 2, q = 0)), . ~ ., method = "ML")
+    
+    mod_3.ls[[i]] <- update(gls(as.formula(form[[i]]), data = exp_ss_dose.df, corr = corARMA(form = ~ 1 | id, p = 3, q = 0)), . ~ ., method = "ML")
+  }
+  
+  # rename models
+  names(mod_1.ls) <- lapply(form, function(x){paste0(x, "_1")})
+  names(mod_2.ls) <- lapply(form, function(x){paste0(x, "_2")})
+  names(mod_3.ls) <- lapply(form, function(x){paste0(x, "_3")})
+  
+  # combine models
+  mod.ls <- c(mod_1.ls, mod_2.ls, mod_3.ls)
+  
+  # run ANOVA
+  res <- cbind(eval(parse(text=paste("anova(",paste("mod.ls[[",1:length(mod.ls),"]]",sep="",collapse=","),")"))), name = names(mod.ls))
+  
+  return(res)
+
+}
+```
+
+```{r}
+bulk_gls2 <- function(variable, df){
+  
+  # get independent variables
+  ind_var <- setdiff(c("asex", "gam", "RBC"), variable)
+  
+  # get list of formula based on independent variable
+  form <- unlist(lapply(1:2, function(n) combn(ind_var, n, FUN=function(row) paste0(variable," ~ ", paste0(row, collapse = "+")))))
+  
+  # run gls modelm (need to nonvectorized because vectorizsed just doesn't want to work with ANOVA)
+  mod_1.ls <- list()
+  mod_2.ls <- list()
+  mod_3.ls <- list()
+  
+  for(i in 1:length(form)){
+    mod_1.ls[[i]] <- gls(as.formula(form[[i]]), data = exp_ss_dose.df, corr = corARMA(form = ~ 1 | id, p = 1, q = 0))
+    
+    mod_2.ls[[i]] <- gls(as.formula(form[[i]]), data = exp_ss_dose.df, corr = corARMA(form = ~ 1 | id, p = 2, q = 0))
+    
+    mod_3.ls[[i]] <- gls(as.formula(form[[i]]), data = exp_ss_dose.df, corr = corARMA(form = ~ 1 | id, p = 3, q = 0))
+  }
+  
+  # rename models
+  names(mod_1.ls) <- lapply(form, function(x){paste0(x, "_1")})
+  names(mod_2.ls) <- lapply(form, function(x){paste0(x, "_2")})
+  names(mod_3.ls) <- lapply(form, function(x){paste0(x, "_3")})
+  
+  # combine models
+  mod.ls <- c(mod_1.ls, mod_2.ls, mod_3.ls)
+  
+  # run ANOVA
+  res <- cbind(eval(parse(text=paste("anova(",paste("mod.ls[[",1:length(mod.ls),"]]",sep="",collapse=","),")"))), name = names(mod.ls))
+  
+  return(res)
+
+}
+
+```
+
+```{r}
+bulk_gls3 <- function(variable, df, p){
+  # get independent variables
+  ind_var <- setdiff(c("asex", "gam", "RBC"), variable)
+  
+  # get list of p values
+  p_seq <- seq(1, p, 1)
+  
+  # get list of formula based on independent variable
+  form <- unlist(list(paste0(variable , "~", ind_var[[1]], "*", ind_var[[2]]),
+               paste0(variable , "~", ind_var[[1]], "+", ind_var[[2]]),
+               paste0(variable, "~", ind_var[[1]]),
+               paste0(variable, "~", ind_var[[2]])))
+  
+   # run gls modelm (need to nonvectorized because vectorizsed just doesn't want to work with ANOVA)
+  mod_1.ls <- list()
+  mod_2.ls <- list()
+  mod_3.ls <- list()
+  mod_4.ls <- list()
+  
+  # run for loop gls with different p parameters
+  mod_1.ls <- lapply(p_seq, function(x){
+    gls(as.formula(form[[1]]), data = exp_ss_dose.df, corr = corARMA(form = ~ 1 | id, p = x, q = 0))
+  })
+  
+  #--------------------------------#
+  mod_2.ls <- lapply(p_seq, function(x){
+    gls(as.formula(form[[2]]), data = exp_ss_dose.df, corr = corARMA(form = ~ 1 | id, p = x, q = 0))
+  })
+
+
+  #--------------------------------#
+  mod_3.ls <- lapply(p_seq, function(x){
+    gls(as.formula(form[[3]]), data = exp_ss_dose.df, corr = corARMA(form = ~ 1 | id, p = x, q = 0))
+  })
+  
+#--------------------------------#
+  mod_4.ls <- lapply(p_seq, function(x){
+    gls(as.formula(form[[4]]), data = exp_ss_dose.df, corr = corARMA(form = ~ 1 | id, p = x, q = 0))
+  })
+
+
+  # ANOVA
+  anova_1 <- cbind(eval(parse(text=paste("anova(",paste("mod_1.ls[[",1:length(mod_1.ls),"]]",sep="",collapse=","),")"))), name = form[[1]])
+  
+  anova_2 <- cbind(eval(parse(text=paste("anova(",paste("mod_2.ls[[",1:length(mod_2.ls),"]]",sep="",collapse=","),")"))), name = form[[2]])
+  
+  anova_3 <- cbind(eval(parse(text=paste("anova(",paste("mod_3.ls[[",1:length(mod_3.ls),"]]",sep="",collapse=","),")"))), name = form[[3]])
+
+  anova_4 <- cbind(eval(parse(text=paste("anova(",paste("mod_4.ls[[",1:length(mod_4.ls),"]]",sep="",collapse=","),")"))), name = form[[4]])
+
+  return(list(anova_1, anova_2, anova_3, anova_4))
+  }
+
+
+```
+
+```{r}
+# set p-value of 0.01
+bulk_gls3("RBC", exp_ss_dose.df, 3) # consistently p = 3
+
+bulk_gls3("asex", exp_ss_dose.df, 3) # p = 2, 2, 3, 3
+
+bulk_gls3("gam", exp_ss_dose.df, 3)  # p = 1, 3, 1, 3
+```
+
+```{r}
+rbc_gls <- bulk_gls2("RBC", exp_ss_dose.df)
+asex_gls <- bulk_gls2("asex", exp_ss_dose.df)
+gam_gls <- bulk_gls2("gam", exp_ss_dose.df)
+
+
+rbc_gls %>% arrange(AIC) #RBC ~ asex_3
+rbc_gls %>% arrange(BIC) #RBC ~ asex_3
+
+asex_gls %>% arrange(AIC) #asex ~ gam_3
+asex_gls %>% arrange(BIC) #asex ~ RBC_3
+
+gam_gls %>% arrange(AIC) #gam ~ asex_3
+gam_gls %>% arrange(BIC) #gam ~ asex_3
+```
+
 
 
