@@ -14,6 +14,7 @@ library(forecast)
 library(hts)
 library(ggpubr)
 library(nlme)
+library(astsa)
 ```
 
 # read in experimental data
@@ -166,31 +167,30 @@ exp_ss_R.df <- exp_ss_dose.df %>% filter(strain != "AJ51")
 # data visualization
 ## filtering by same dosage leads to pretty heterogenous results
 ```{r}
-ggplot(exp_ss.df %>% filter(dose == 10^6)) +
-  geom_line(aes(x = day, y = log10(asex), color = id)) +
-  facet_wrap(~study) +
-  theme_bw()
-
-ggplot(exp_ss.df %>% filter(dose == 10^6)) +
-  geom_line(aes(x = day, y = log10(gam), color = id)) +
-  facet_wrap(~study) +
-  theme_bw()
-
-ggplot(exp_ss.df %>% filter(dose == 10^6)) +
-  geom_line(aes(x = day, y = log10(RBC), color = id)) +
-  facet_wrap(~study) +
-  theme_bw()
-
-## visualizing diffreent dosage
-ggplot(exp_ss.df %>% filter(dose != 10^6)) +
+fig1a <- ggplot(exp_ss_dose.df) +
   geom_line(aes(x = day, y = asex, color = id)) +
-  theme_bw()
+  facet_wrap(~study, scales = "free") +
+  theme_bw() +
+  guides(color = "none") +
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
 
-ggplot(exp_ss.df %>% filter(dose != 10^6)) +
+fig1b <- ggplot(exp_ss_dose.df) +
+  geom_line(aes(x = day, y = gam, color = id)) +
+  facet_wrap(~study, scales = "free") +
+  theme_bw() +
+  guides(color = "none")+
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+
+fig1c <- ggplot(exp_ss_dose.df) +
   geom_line(aes(x = day, y = RBC, color = id)) +
-  theme_bw()
+  facet_wrap(~study, scales = "free", ncol = 4) +
+  theme_bw()+
+  guides(color = "none")+
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
 
-
+fig1ab <- ggarrange(fig1a, fig1b, labels = c("A", "B"))
+ggarrange(fig1ab, fig1c, labels = c("", "C"), ncol = 1)
+ggsave(here("figures", "report10", "fig1.png"), width = 8)
 ## visualization time series variance
 
 ```
@@ -381,7 +381,7 @@ arima.df %>%
   xlab("p") +
   theme_bw()
 
-ar.df %>% 
+fig2a <- ar.df %>% 
   ggplot() +
   geom_bar(aes(x = as.factor(coef.p), fill = variable), position = position_dodge2(width = 0.9, preserve = "single")) +
   xlab("p") +
@@ -399,13 +399,15 @@ arima.df %>%
   geom_point(aes(x = log10(RMSE), y = log10(SNR), color = variable), size = 2) +
   theme_bw()
 
-fig1b <- ar.df %>% 
+fig2b <- ar.df %>% 
   ggplot() +
   geom_point(aes(x = log10(RMSE), y = log10(SNR), color = variable), size = 2) +
   theme_bw()
 
-fig1 <- ggarrange(fig1a, fig1b, common.legend = T, labels = c("A", "B"))
-ggsave(here("figures/report10/fig1.png"))
+
+
+ggarrange(fig2a, fig2b, common.legend = T, labels = c("A", "B"))
+ggsave(here("figures/report10/fig2.png"), height = 4)
 
 ```
 
@@ -549,12 +551,30 @@ bulk_gls3 <- function(variable, df, p){
 ```
 
 ```{r}
-# set p-value of 0.01
-bulk_gls3("RBC", exp_ss_dose.df, 3) # consistently p = 3
+# p -value = 0.05 threshold
+# With FDR adjustment amongst models (we have )
+rbc_fit <- bulk_gls3(variable = "RBC", df = exp_ss_dose.df, p = 5) # consistently p = 3
+rbc_fit_p <- unlist(as.list(mapply(function(x) x$`p-value`, rbc_fit)))
+rbc_fit_p <- rbc_fit_p[!is.na(rbc_fit_p)]
+p.adjust(rbc_fit_p, method = "holm") # 3,3,3, 3
 
-bulk_gls3("asex", exp_ss_dose.df, 3) # p = 2, 2, 3, 3
+asex_fit <- bulk_gls3("asex", exp_ss_dose.df, 5) # p = 3 at 0.05. 
+asex_fit_p <- unlist(as.list(mapply(function(x) x$`p-value`, asex_fit)))
+asex_fit_p <- asex_fit_p[!is.na(asex_fit_p)]
+p.adjust(asex_fit_p, method = "holm") # 4, 4, 4, 4
 
-bulk_gls3("gam", exp_ss_dose.df, 3)  # p = 1, 3, 1, 3
+gam_fit <- bulk_gls3("gam", exp_ss_dose.df, 5) 
+gam_fit_p <- unlist(as.list(mapply(function(x) x$`p-value`, gam_fit)))
+gam_fit_p <- gam_fit_p[!is.na(gam_fit_p)]
+p.adjust(gam_fit_p, method = "holm")
+
+gam_fit
+
+gam_fit
+log_gam_fit <- bulk_gls3("log10_gam", exp_ss_dose.df, 3) 
+log_gam_fit_p <- unlist(as.list(mapply(function(x) x$`p-value`, log_gam_fit)))
+log_gam_fit_p <- log_gam_fit_p[!is.na(log_gam_fit_p)]
+p.adjust(log_gam_fit_p, method = "holm")
 ```
 
 ```{r}
@@ -572,6 +592,170 @@ asex_gls %>% arrange(BIC) #asex ~ RBC_3
 gam_gls %>% arrange(AIC) #gam ~ asex_3
 gam_gls %>% arrange(BIC) #gam ~ asex_3
 ```
+
+#---------------------------#
+# CCF (cross correlation function analysis)
+#----------------------------#
+What is the environment of selection? It must effect parasite fitness and the effect on fitness can be modulated by conversion rate. 
+
+Altering conversion rate allows the parasite to do several things: 
+1. Increase overall parasite density (decrease conversion rate) with a lag of 2 days
+2. Increase gametocyte density (increase conversion rate) with a lag of 3 days
+3. Decrease overall parasite density (increase conversion rate) with a lag of 2 days
+
+There are several candidate envrionment of selection that is modulated by a change in iRBC density and gametocyte density:
+1. gametocyte density
+2. transmission potential (probably better than 1.)
+3. asexual iRBC decline rate (can I survive here?)
+4. asexual iRBC density
+
+
+# edit data
+```{r}
+exp_ss_dose.df %>% 
+  group_by(id) %>% 
+  mutate(lag_asex = asex-lag(asex),
+         lag_gam = gam-lag(gam),
+         log_lag_asex = log10_asex-lag(log10_asex),
+         log_lag_gam = log10_gam-lag(log10_gam),
+         trans = (exp(-12.69+3.6*(log10(gam))))/(1+exp(-12.69+(3.6*log10(gam))))) %>% 
+  ggplot(aes(x = day, y = trans, color = id)) +
+  facet_wrap(~study, scales = "free") +
+  geom_line() +
+  guides(color = "none") +
+  theme_bw()
+
+exp_ss_dose.df2 <- exp_ss_dose.df %>% 
+  group_by(id) %>% 
+  mutate(lag_asex = asex-lag(asex),
+         lag_gam = gam-lag(gam),
+         log_lag_asex = log10_asex-lag(log10_asex),
+         log_lag_gam = log10_gam-lag(log10_gam),
+         trans = (exp(-12.69+3.6*(log10(gam))))/(1+exp(-12.69+(3.6*log10(gam)))))
+```
+
+# function to extract the signficant lag value 
+```{r}
+bulk_ccf <- function(predictor, selection, df, p){
+  #------------------------#
+  # df processing
+  #---------------------#
+  # split df by unique id
+  df.ls <- split(df, df$id)
+  
+  
+  # get variable data
+  data <- lapply(df.ls, function(x) x %>% 
+                   arrange(day) %>% 
+                   select(predictor, selection) %>% 
+                   na.omit())
+  
+  pred <- lapply(data, function(x) x[2])
+  
+  sele <- lapply(data, function(x) x[3])
+  
+  # perform CCF and get lagged value that is statistically signficantly (p value can be defined later)
+  # associated with the environment of selection
+  lag.ls <- mapply(function(x, y){
+    ## perform ccf
+    cor <- ccf(x, y)
+    ## get threshold for stat signifcance
+    thres <- qnorm((1 + (1-p))/2)/sqrt(sum(!is.na(x)))
+    ## get sig and lagged value. The only benefit here is where there is a sig correlation when there is a 2 day lag (asexual mature) or 3 day lag (sexual mature)
+    lag <- cor$lag[abs(cor$acf)>thres & cor$lag <= -2 & cor$lag >= -3]
+  }, pred, sele)
+  
+  ## return
+  return(unlist(lag.ls))
+}
+```
+
+# run CCF analysis
+```{r}
+# predict asexual change
+asex_asex <- bulk_ccf(predictor = "asex", selection = "lag_asex", df = exp_ss_dose.df2, p = 0.05)
+asex_gam <-  bulk_ccf(predictor = "gam", selection = "lag_asex", df = exp_ss_dose.df2, p = 0.05)
+asex_rbc <-  bulk_ccf(predictor = "RBC", selection = "lag_asex", df = exp_ss_dose.df2, p = 0.05)
+
+# logged version
+log_asex_asex <- bulk_ccf(predictor = "log10_asex", selection = "log_lag_asex", df = exp_ss_dose.df2, p = 0.05)
+log_asex_gam <- bulk_ccf(predictor = "log10_gam", selection = "log_lag_asex", df = exp_ss_dose.df2, p = 0.05)
+log_asex_rbc <- bulk_ccf(predictor = "log10_RBC", selection = "log_lag_asex", df = exp_ss_dose.df2, p = 0.05)
+
+# predict gametocyte change
+gam_asex <- bulk_ccf(predictor = "asex", selection = "lag_gam", df = exp_ss_dose.df2, p = 0.05)
+gam_gam <- bulk_ccf(predictor = "gam", selection = "lag_gam", df = exp_ss_dose.df2, p = 0.05)
+gam_rbc <- bulk_ccf(predictor = "RBC", selection = "lag_gam", df = exp_ss_dose.df2, p = 0.05)
+
+log_gam_asex <- bulk_ccf(predictor = "log10_asex", selection = "log_lag_gam", df = exp_ss_dose.df2, p = 0.05)
+log_gam_gam <- bulk_ccf(predictor = "log10_gam", selection = "log_lag_gam", df = exp_ss_dose.df2, p = 0.05)
+log_gam_rbc <- bulk_ccf(predictor = "log10_RBC", selection = "log_lag_gam", df = exp_ss_dose.df2, p = 0.05)
+
+# predict transmission potential
+trans_asex <- bulk_ccf(predictor = "asex", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+trans_gam <- bulk_ccf(predictor = "gam", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+trans_rbc <- bulk_ccf(predictor = "RBC", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+
+log_trans_asex <- bulk_ccf(predictor = "log10_asex", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+log_trans_gam <- bulk_ccf(predictor = "log10_gam", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+log_trans_rbc <- bulk_ccf(predictor = "log10_RBC", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+
+# plot
+ccf.df <- data.frame(rbind(
+  cbind(lag = asex_asex, predictor = "asex", selection = "asex_diff"),
+  cbind(lag = asex_gam, predictor = "gam", selection = "asex_diff"),
+  cbind(lag = asex_rbc, predictor = "RBC", selection = "asex_diff"),
+  cbind(lag = log_asex_asex, predictor = "log_asex", selection = "log_asex_diff"),
+  cbind(lag = log_asex_gam, predictor = "log_gam", selection = "log_asex_diff"),
+  cbind(lag = log_asex_rbc, predictor = "log_RBC", selection = "log_asex_diff"),
+  cbind(lag = gam_asex, predictor = "asex", selection = "gam_diff"),
+  cbind(lag = gam_gam, predictor = "gam", selection = "gam_diff"),
+  cbind(lag = gam_rbc, predictor = "RBC", selection = "gam_diff"),
+  #cbind(lag = log_gam_asex, predictor = "log_asex", selection = "log_gam_diff"),
+  cbind(lag = log_gam_gam, predictor = "log_gam", selection = "log_gam_diff"),
+  cbind(lag = log_gam_rbc, predictor = "log_RBC", selection = "log_gam_diff"),
+  cbind(lag = trans_asex, predictor = "asex", selection = "trans"),
+  #cbind(lag = trans_gam, predictor = "gam", selection = "trans"),
+  cbind(lag = trans_rbc, predictor = "RBC", selection = "trans"),
+  cbind(lag = log_trans_asex, predictor = "log_asex", selection = "trans"),
+  cbind(lag = log_trans_gam, predictor = "log_gam", selection = "trans"),
+  cbind(lag = log_trans_rbc, predictor = "log_RBC", selection = "trans")
+  ))
+
+fig3a <- ccf.df %>% filter(selection %in% c("asex_diff", "gam_diff", "RBC_diff")) %>% 
+ggplot(aes(x = as.factor(predictor), fill = lag)) +
+  geom_bar(position = position_dodge2(width = 0.9, preserve = "single")) +
+  facet_wrap(~selection) +
+  xlab("Predictors") +
+  ylab("Frequency") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+fig3b <- ccf.df %>% filter(!selection %in% c("asex_diff", "gam_diff", "trans")) %>% 
+ggplot(aes(x = as.factor(predictor), fill = lag)) +
+  geom_bar(position = position_dodge2(width = 0.9, preserve = "single")) +
+  facet_wrap(~selection) +
+  xlab("Predictors") +
+  ylab("Frequency") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1)) +
+  guides(fill = "none")
+
+fig3c <- ccf.df %>% filter(selection %in% c("trans")) %>% 
+ggplot(aes(x = as.factor(predictor), fill = lag)) +
+  geom_bar(position = position_dodge2(width = 0.9, preserve = "single")) +
+  facet_wrap(~selection) +
+  xlab("Predictors") +
+  ylab("Frequency") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))+
+  guides(fill = "none")
+
+fig3bc <- ggarrange(fig3b, fig3c)
+ggarrange(fig3a, fig3bc, ncol = 1, common.legend = T)
+```
+
+
 
 
 
