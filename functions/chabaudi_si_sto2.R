@@ -1,10 +1,12 @@
 #-----------------------#
-# Newest iteration of single infection model of Plasmodium chabaudi
+# Derivative of chabaudi_si_clean with stochastic terms
+# based on priors of Miller et al 2010
 # Avril Wang
-# Last edited 2021-11-28
+# Last edited 2022-01-22
 #-----------------------#
 
-chabaudi_si_lag_clean <- function(
+
+chabaudi_si_lag_sto2 <- function(
   parameters_cr, # input parameters for conversion rate reaction norm
   parameters, # sets of values for parameters in the model
   immunity, # immunity selection. Tsukushi's model, saturating immunity, or no immunity possible
@@ -20,8 +22,10 @@ chabaudi_si_lag_clean <- function(
   cue_b = "none", # if second cue is incorporated
   cue_b_range = "none", # if second cue is used, the range of cue that parasite use to adjust conversion rate to
   log_cue_b = "none",  # whether to log10 transform cue_b
-  dyn = FALSE # whether the function should return simulation dynamics rather than fitness
-  ){
+  dyn = FALSE, # whether the function should return simulation dynamics rather than fitness
+  burst_rand,
+  rho_rand
+){
   
   #----------------------#
   # Force argument
@@ -42,6 +46,9 @@ chabaudi_si_lag_clean <- function(
   force(cue_b_range)
   force(log_cue_b)
   force(dyn)
+  force(var)
+  force(burst_rand)
+  force(rho_rand)
   
   #----------------------#
   # Quality checks
@@ -93,7 +100,7 @@ chabaudi_si_lag_clean <- function(
                Ig = 0, # sexual iRBC density
                G = 0, # gametocyte density
                cr_t = 0) # conversion rate
-    }
+  }
   
   ## when using Tsukushi's model of immunity
   if(immunity == "tsukushi"){
@@ -107,7 +114,7 @@ chabaudi_si_lag_clean <- function(
                N = 0, # general RBC removal
                W = 0, # targeted RBC removal
                cr_t = 0) 
-    }
+  }
   
   #----------------------#
   # Describe initial population structure
@@ -183,9 +190,9 @@ chabaudi_si_lag_clean <- function(
       a <- parameters["a"] # maximum rate of iRBC removal/day with saturating immunity
       b <- parameters["b"] # iRBC density needed to achieve half maximum iRBC removal rate
     }
-
+    
     if(immunity != "tsukushi"){lambda <- parameters["lambda"]} # maximum RBC replenishment rate
-
+    
     if(drug_dose > 0){mud <- parameters["mud"]} # if drug action is included, add drug induced death rate
     if(drug_dose == 0){mud <- 0} # if no drug is administered, no drug-induced mortality
     
@@ -270,10 +277,10 @@ chabaudi_si_lag_clean <- function(
     } else{
       if(stringr::str_detect(cue, "\\+")){ 
         #### for cue 1 day ago
-          if(t>alpha+delay && cue != "t"){
-            cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]] #### add first cue to second cue
-            if(dual_cue == TRUE){cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]}
-          }
+        if(t>alpha+delay && cue != "t"){
+          cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]] #### add first cue to second cue
+          if(dual_cue == TRUE){cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]}
+        }
       }
     }
     
@@ -295,7 +302,7 @@ chabaudi_si_lag_clean <- function(
         cr <- cr_fun(cue_lag1_p) # single cue cr
       }
     }
-
+    
     #----------------#
     # Drug actions
     #----------------#
@@ -327,18 +334,18 @@ chabaudi_si_lag_clean <- function(
     #-----------------#
     ## Define K, maximum RBC density
     if(immunity != "tsukushi"){K <- lambda*R1/(lambda-mu*R1)}
-
+    
     # asexual merozoite
     dM_nolag <- (-mum*M)-(p*R*M)
     # sexual merozoite
     dMg_nolag <- (-mum*Mg)-(p*R*Mg)
     # gametocyte
     dG_nolag <- -mug*G
-
+    
     # If Tsukushi's model of immunity is used, use the following
     if(immunity == "tsukushi"){
       ## RBC density
-      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N))*R-(p*R*M)-(p*R*Mg)
+      dR <- R1*mu+rho_rand[t+1]*(R1-R)-(mu-log(1-N))*R-(p*R*M)-(p*R*Mg)
       ## asexual iRBC 
       dI_nolag <- (p*R*M)-(mu*I)-((-log(1-N)-log(1-W))*I)
       ## sexual iRBC 
@@ -381,7 +388,7 @@ chabaudi_si_lag_clean <- function(
     # before all first cohort of asexual iRBC bursts (before day 1)
     if(t<=alpha+delay){
       dI <- dI_nolag-(pulseBeta*S) # some initial asexual iRBC burst due to maturation
-      dM <- dM_nolag+(beta*pulseBeta*S) # asexual merozoites are produced when asexual iRBC burst
+      dM <- dM_nolag+(burst_rand[t+1]*pulseBeta*S) # asexual merozoites are produced when asexual iRBC burst
       dMg <- 0 # should have no Mg before day 1
       dIg <- 0 #first wave starts on day alpha
       dG <- 0 # first wave starts on day alpha+alphag
@@ -396,8 +403,8 @@ chabaudi_si_lag_clean <- function(
     # after all first cohort of asexual iRBC burst (after day 1)
     if(t>alpha+delay){
       dI <- dI_nolag-(p*lag1[1]*lag1[2]*S) # bursting of iRBC produced alpha days ago
-      dM <- dM_nolag+(beta*(1-cr)*p*lag1[1]*lag1[2]*S) # production of asexual merozoite from asexual iRBC burst
-      dMg <- dMg_nolag+(beta*cr*p*lag1[1]*lag1[2]*S) # production of sexual merozoite from asexual iRBC burst
+      dM <- dM_nolag+(burst_rand[t+1]*(1-cr)*p*lag1[1]*lag1[2]*S) # production of asexual merozoite from asexual iRBC burst
+      dMg <- dMg_nolag+(burst_rand[t+1]*cr*p*lag1[1]*lag1[2]*S) # production of sexual merozoite from asexual iRBC burst
     }
     
     # after the first gametocyte production
@@ -409,7 +416,7 @@ chabaudi_si_lag_clean <- function(
     # track cr
     if(t<=alpha+delay){dcr_t <- 0}
     if(t>alpha+delay){dcr_t <- cr}
-
+    
     
     #----------------------#
     # Return the states
@@ -423,7 +430,7 @@ chabaudi_si_lag_clean <- function(
   #-------------------End of dynamics function--------------#
   #---------------------------------------------------------#
   #---------------------------------------------------------#
-
+  
   #----------------------#
   # Create injection event
   # needed for delayed infection
@@ -493,7 +500,7 @@ chabaudi_si_lag_clean <- function(
     if(cue == "t"){
       cr.ls <- cr_fun(time_range)
       chabaudi_si.df$cr <- cr.ls
-      }
+    }
     
     # state-based cue
     if(cue != "t"){

@@ -662,7 +662,7 @@ bulk_ccf <- function(predictor, selection, df, p){
     ## get threshold for stat signifcance
     thres <- qnorm((1 + (1-p))/2)/sqrt(sum(!is.na(x)))
     ## get sig and lagged value. The only benefit here is where there is a sig correlation when there is a 2 day lag (asexual mature) or 3 day lag (sexual mature)
-    lag <- cor$lag[abs(cor$acf)>thres & cor$lag <= -2 & cor$lag >= -3]
+    lag <- cor$lag[abs(cor$acf)>thres & cor$lag <= -1 & cor$lag >= -4]
   }, pred, sele)
   
   ## return
@@ -715,7 +715,7 @@ ccf.df <- data.frame(rbind(
   cbind(lag = log_gam_gam, predictor = "log_gam", selection = "log_gam_diff"),
   cbind(lag = log_gam_rbc, predictor = "log_RBC", selection = "log_gam_diff"),
   cbind(lag = trans_asex, predictor = "asex", selection = "trans"),
-  #cbind(lag = trans_gam, predictor = "gam", selection = "trans"),
+  cbind(lag = trans_gam, predictor = "gam", selection = "trans"),
   cbind(lag = trans_rbc, predictor = "RBC", selection = "trans"),
   cbind(lag = log_trans_asex, predictor = "log_asex", selection = "trans"),
   cbind(lag = log_trans_gam, predictor = "log_gam", selection = "trans"),
@@ -753,6 +753,7 @@ ggplot(aes(x = as.factor(predictor), fill = lag)) +
 
 fig3bc <- ggarrange(fig3b, fig3c)
 ggarrange(fig3a, fig3bc, ncol = 1, common.legend = T)
+ggsave(here("figures", "report10", "fig3.png"), height = 5)
 ```
 
 

@@ -1,0 +1,582 @@
+---
+title: "report11"
+output: html_document
+---
+
+# import library
+```{r}
+library(dplyr)
+library(ggplot2)
+library(here)
+library(npreg)
+library(splines)
+library(forecast)
+library(hts)
+library(ggpubr)
+library(nlme)
+library(astsa)
+library(magrittr)
+library(deSolve)
+library(ggpubr)
+library(parallel)
+library(optimParallel)
+```
+
+
+#----------------------------------#
+# Final tackle at working with experimental data
+#--------------------------------#
+# read in experimental data
+```{r}
+# import in https://academic.oup.com/emph/article/2018/1/127/5045871?login=true
+## (2018 published in EMPH)
+emph_2018 <- readxl::read_xls(here("experimental_data/Huijben_2018_EMPH.xls"), sheet = 1)
+
+# import in https://onlinelibrary.wiley.com/doi/10.1111/j.1558-5646.2010.01068.x
+## (2010 published in Evolution)
+evo_2010 <- readxl::read_xls(here("experimental_data/Huijben_2010_evolution.xls"), sheet = 1)
+
+# import in https://onlinelibrary.wiley.com/doi/10.1111/j.1420-9101.2011.02369.x
+## (2013 in PLoS pathogen)
+plos_2013_1 <- readxl::read_xlsx(here("experimental_data/Huijben_2013_PLoS.xlsx"), sheet = 2)
+
+plos_2013_2 <- readxl::read_xlsx(here("experimental_data/Huijben_2013_PLoS.xlsx"), sheet = 3)
+
+# import in https://onlinelibrary.wiley.com/doi/10.1111/j.1420-9101.2011.02369.x
+## (2011 in Journal of Evolutionary Biology)
+eseb_2011 <- readxl::read_xls(here("experimental_data/Huijben_2011_eseb.xls"), sheet = 1)
+
+# import in https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3939351/
+## (2011 in Journal of American naturalist)
+amna_2011 <- readxl::read_xls(here("experimental_data/Pollitt_2011_naturalist.xls"), sheet = 1)
+
+```
+
+# clean data for single infection
+```{r}
+## for EMPH 2018 study, include only infection series without drugs were R-inoculum is administered by itself, which includes 6, 7, 8, 9, 10. Box 6 has a starting inoculum number of 10^6, which is most similar to other studies. Filtering between day 3-21 because those are the days where we have single day data.
+emph_2018_ss.df <- emph_2018 %>% 
+  filter(Box %in% seq(6, 10) &
+         dplyr::between(Day, 3, 21)) %>% 
+  mutate(dose = case_when(
+    Box == 6 ~ 10^6,
+    Box == 7 ~ 10^5,
+    Box == 8 ~ 10^3,
+    Box == 9 | Box == 10 ~ 10^1
+  )) %>% 
+  mutate(strain = "As6p",
+         study = "emph2018",
+         study_strain = paste0(strain, study),
+         id = paste0(study, strain, Box, Mouse, 1),
+         RBC = RBC * (10^6)) %>%
+  select(day = Day,
+         mouse = Mouse, 
+         RBC, 
+         asex = Rasex,
+         gam = Rgam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+## for 2011 eseb, only day 3-17 data are analyzed because those are the days where gametocyte data are available
+eseb_2011_ss.df <- eseb_2011 %>% 
+  filter(Clones == "R" & between(Day, 3, 17) &
+           Drugs == "N") %>% 
+  mutate(dose = 10^6,
+         strain = "As8p",
+         study = "eseb2011",
+         study_strain = paste0(strain, study),
+         RBC = RBC*(10^6),
+         id = paste0(study, strain, Box, Mouse, 2)) %>% 
+  select(day = Day,
+         mouse = Mouse,
+         RBC,
+         asex = R.asex,
+         gam = R.gam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+## for evolution_2010, single infection data for both resistant and susceptible clones are available without drug treatment
+evolution_2010_ss.df <- evo_2010 %>% 
+  filter(Clone == "R" | Clone == "S") %>%
+  filter(between(Day, 3, 21) &
+           Drugs == "nodrugs") %>% 
+  mutate(asex = R.asex + S.asex,
+         gam = R.gam + S.gam,
+         dose = 10^6,
+         RBC = RBC*(10^6),
+         study = "evol2011",
+         strain = ifelse(Clone == "R", "As12", "AJ51"),
+         study_strain = paste0(strain, "_", study),
+         id = paste0(study, strain, Box, Mouse, 3)) %>% 
+  select(day = Day,
+         mouse = Mouse,
+         RBC,
+         asex,
+         gam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+## for amnat 2011, get single infection data. Filter out any mice that have missing data. Set negative asexuasl data ot 0
+amna_2011_ss.df <-  amna_2011 %>% 
+  filter(treat %in% c("AJ", "AS", "ER", "CR", "CW", "DK")) %>% 
+  mutate(asex = tot.para - tot.gcyte,
+         gam = tot.gcyte,
+         dose = 10^6,
+         study = "amna_2011",
+         RBC = rbc/(10^6),
+         study_strain = paste0(treat, "_", study),
+         id = paste0(study, treat, div, mouse, 4)) %>% 
+  mutate(asex = ifelse(asex < 0, 0, asex)) # sometimes total parasite is less than gametocyte so need to correct for this
+
+### check for NA by groups
+amna_na.id <- amna_2011_ss.df %>% 
+  filter_at(vars(asex, gam, RBC), all_vars(is.na(.))) %>% 
+  distinct(id) %>% 
+  select(id)
+
+amna_2011_ss.df2 <- amna_2011_ss.df %>% 
+  filter(!(id %in% amna_na.id$id)) %>% 
+  select(day,
+         mouse,
+         RBC,
+         asex,
+         gam,
+         dose,
+         strain = treat,
+         study,
+         study_strain,
+         id)
+
+# rbind
+exp_ss.df <- rbind(emph_2018_ss.df, eseb_2011_ss.df, evolution_2010_ss.df, amna_2011_ss.df2)
+
+# correct RBC to actual density (in unit of RBC/uL)
+exp_ss_dose.df <- exp_ss.df %>% filter(dose == 10^6) 
+
+# add logged parameters
+exp_ss_dose.df <- exp_ss_dose.df %>% 
+  mutate(log10_asex = log10(asex+1),
+         log10_RBC = log10(RBC+1),
+         log10_gam = log10(gam+1))
+
+# get dataset with only resistance strain
+exp_ss_R.df <- exp_ss_dose.df %>% filter(strain != "AJ51")
+exp_ss_dose.df
+```
+
+# function to fit gls function.
+Function is altered based on https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1002590
+Day and strain is used as a fixed variable, whereas animal is a random variable
+
+Here, the variable in question is modelled as a factor of 
+variable ~ factor(strain)+factor(day), where time is actually treated as categorical
+variable rather than a regression type variable.
+```{r}
+bulk_gls <- function(variable, df){
+  
+   # run gls modelm (need to nonvectorized because vectorizsed just doesn't want to work with ANOVA)
+  mod.ls <- list()
+  
+  # get formula
+  formula <- as.formula(paste0(variable , "~", "factor(strain)+factor(day)"))
+  
+  # run for loop gls with different p parameters
+  ## model with no autocorrelation structure
+  mod <- do.call("gls", args = list(formula, data = df, corr = NULL))
+  mod_1 <-  do.call("gls", args = list(formula, data = df, corr = corARMA(form = ~ 1 | study/id, p = 1, q = 0)))
+  mod_2 <-  do.call("gls", args = list(formula, data = df, corr = corARMA(form = ~ 1 | study/id, p = 2, q = 0)))
+  mod_3 <-  do.call("gls", args = list(formula, data = df, corr = corARMA(form = ~ 1 | study/id, p = 3, q = 0)))
+  mod_4 <-  do.call("gls", args = list(formula, data = df, corr = corARMA(form = ~ 1 | study/id, p = 4, q = 0)))
+
+    
+  # ANOVA
+  anova <- anova(mod, mod_1, mod_2, mod_3, mod_4)
+
+  return(anova)
+}
+
+```
+
+# another function with the lme package
+```{r}
+bulk_lme <- function(variable, df){
+  
+   # run gls modelm (need to nonvectorized because vectorizsed just doesn't want to work with ANOVA)
+  mod.ls <- list()
+  
+  # get formula
+  formula <- as.formula(paste0(variable , "~", "strain*day"))
+  
+  # run for loop gls with different p parameters
+  mod <- do.call("lme", args = list(formula, data = df, random = ~1|id))
+  mod_1 <-  do.call("lme", args = list(formula, data = df, random = ~1|id, correlation = corARMA(form = ~ day|id, p = 1, q = 0)))
+  mod_2 <-  do.call("lme", args = list(formula, data = df, random = ~1|id, correlation = corARMA(form = ~ day|id, p = 2, q = 0)))
+  mod_3 <-  do.call("lme", args = list(formula, data = df, random = ~1|id, correlation = corARMA(form = ~ day|id, p = 3, q = 0)))
+  mod_4 <-  do.call("lme", args = list(formula, data = df, random = ~1|id, correlation = corARMA(form = ~ day|id, p = 4, q = 0)))
+
+    
+  # ANOVA
+  anova <- anova(mod, mod_1, mod_2, mod_3, mod_4)
+
+  return(anova)
+}
+
+```
+
+
+# run function
+```{r}
+# the non-logged version
+rbc_gls <- bulk_gls("RBC", exp_ss_dose.df)
+asex_gls <- bulk_gls("asex", exp_ss_dose.df)
+gam_gls <- bulk_gls("gam", exp_ss_dose.df)
+
+# logged version
+log_rbc_gls <- bulk_gls("log10_RBC", exp_ss_dose.df)
+log_asex_gls <- bulk_gls("log10_asex", exp_ss_dose.df)
+log_gam_gls <- bulk_gls("log10_gam", exp_ss_dose.df)
+
+# bind the dfs together
+gls.df <- rbind(cbind(rbc_gls, variable = "RBC"),
+      cbind(asex_gls, variable = "asex"),
+      cbind(gam_gls, variable = "gam"),
+      cbind(log_rbc_gls, variable = "log10(RBC)"),
+      cbind(log_asex_gls, variable = "log10(asex)"),
+      cbind(log_gam_gls, variable = "log10(gam)"))
+
+gls.df2 <- gls.df %>% select(Model, AIC, BIC, logLik, Test, `p-value`, variable)
+
+# doing p-value adjustment using benjamin hochberg method.
+gls.df3 <- gls.df2 %>% 
+  mutate(p_adjust = p.adjust(`p-value`, method = "BH"),
+         sig = ifelse(p_adjust < 0.05, T, F))
+
+rownames(gls.df3) <- NULL
+gls.df3
+# generate latex table
+xtable::xtable(gls.df3)
+
+```
+
+# trying lme
+```{r}
+rbc_lme <- bulk_lme("RBC", exp_ss_dose.df)
+asex_lme <- bulk_lme("asex", exp_ss_dose.df)
+gam_lme <- bulk_lme("gam", exp_ss_dose.df)
+
+rbc_lme
+asex_lme
+gam_lme 
+```
+
+#------------------------#
+# Generate heatmap for CCF
+#------------------------#
+```{r}
+bulk_ccf <- function(predictor, selection, df, p){
+  #------------------------#
+  # df processing
+  #---------------------#
+  # split df by unique id
+  df.ls <- split(df, df$id)
+  
+  
+  # get variable data
+  data <- lapply(df.ls, function(x) x %>% 
+                   arrange(day) %>% 
+                   select(predictor, selection) %>% 
+                   na.omit())
+  
+  pred <- lapply(data, function(x) x[2])
+  
+  sele <- lapply(data, function(x) x[3])
+  
+  # perform CCF and get lagged value that is statistically signficantly (p value can be defined later)
+  # associated with the environment of selection
+  lag.ls <- mapply(function(x, y){
+    ## perform ccf
+    cor <- ccf(x, y)
+    ## get threshold for stat signifcance
+    thres <- qnorm((1 + (1-p))/2)/sqrt(sum(!is.na(x)))
+    ## get sig and lagged value. The only benefit here is where there is a sig correlation when there is a 2 day lag (asexual mature) or 3 day lag (sexual mature)
+    lag <- cor$lag[abs(cor$acf)>thres & cor$lag <= -1 & cor$lag >= -4]
+  }, pred, sele)
+  
+  ## return
+  return(unlist(lag.ls))
+}
+```
+
+# generate dataset
+# function to calculate immunity for every mouse
+# note, for indiscrimnant response, if we assume very low halflife, then the extent of immune
+# clearance should be directly proportional to the asexual iRBC density.
+
+```{r}
+exp_ss_dose.df2 <- exp_ss_dose.df %>% 
+  group_by(id) %>% 
+  mutate(lag_asex = asex-lag(asex),
+         lag_gam = gam-lag(gam),
+         trans = (exp(-12.69+3.6*(log10(gam))))/(1+exp(-12.69+(3.6*log10(gam))))) 
+
+```
+
+# heat map
+```{r}
+# predicting lag_asex
+asex_asex <- bulk_ccf(predictor = "asex", selection = "lag_asex", df = exp_ss_dose.df2, p = 0.05)
+asex_gam <-  bulk_ccf(predictor = "gam", selection = "lag_asex", df = exp_ss_dose.df2, p = 0.05)
+asex_rbc <-  bulk_ccf(predictor = "RBC", selection = "lag_asex", df = exp_ss_dose.df2, p = 0.05)
+asex_logasex <- bulk_ccf(predictor = "log10_asex", selection = "lag_asex", df = exp_ss_dose.df2, p = 0.05)
+asex_loggam <- bulk_ccf(predictor = "log10_gam", selection = "lag_asex", df = exp_ss_dose.df2, p = 0.05)
+asex_logrbc <- bulk_ccf(predictor = "log10_RBC", selection = "lag_asex", df = exp_ss_dose.df2, p = 0.05)
+
+# predict lag_gam
+gam_asex <- bulk_ccf(predictor = "asex", selection = "lag_gam", df = exp_ss_dose.df2, p = 0.05)
+gam_gam <- bulk_ccf(predictor = "gam", selection = "lag_gam", df = exp_ss_dose.df2, p = 0.05)
+gam_rbc <- bulk_ccf(predictor = "RBC", selection = "lag_gam", df = exp_ss_dose.df2, p = 0.05)
+
+gam_logasex <- bulk_ccf(predictor = "log10_asex", selection = "lag_gam", df = exp_ss_dose.df2, p = 0.05)
+gam_loggam <- bulk_ccf(predictor = "log10_gam", selection = "lag_gam", df = exp_ss_dose.df2, p = 0.05)
+gam_logrbc <- bulk_ccf(predictor = "log10_RBC", selection = "lag_gam", df = exp_ss_dose.df2, p = 0.05)
+
+# predict trans
+trans_asex <- bulk_ccf(predictor = "asex", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+trans_gam <- bulk_ccf(predictor = "gam", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+trans_rbc <- bulk_ccf(predictor = "RBC", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+
+trans_logasex <- bulk_ccf(predictor = "log10_asex", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+trans_loggam <- bulk_ccf(predictor = "log10_gam", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+trans_logrbc <- bulk_ccf(predictor = "log10_RBC", selection = "trans", df = exp_ss_dose.df2, p = 0.05)
+
+# get list of selection variables
+ccf.df <- rbind(
+  data.frame(predictor = "asex", selection = "lag_asex", lag = asex_asex),
+  data.frame(predictor = "gam", selection = "lag_asex", lag = asex_gam),
+  data.frame(predictor = "RBC", selection = "lag_asex", lag = asex_rbc),
+  data.frame(predictor = "log(asex)", selection = "lag_asex", lag = asex_logasex),
+  data.frame(predictor = "log(gam)", selection = "lag_asex", lag = asex_loggam),
+  data.frame(predictor = "log(RBC)", selection = "lag_asex", lag = asex_logrbc),
+  data.frame(predictor = "asex", selection = "lag_gam", lag = gam_asex),
+  data.frame(predictor = "gam", selection = "lag_gam", lag = gam_gam),
+  data.frame(predictor = "RBC", selection = "lag_gam", lag = gam_rbc),
+  #data.frame(predictor = "log(asex)", selection = "lag_gam", lag = gam_logasex),
+  data.frame(predictor = "log(gam)", selection = "lag_gam", lag = gam_loggam),
+  data.frame(predictor = "log(RBC)", selection = "lag_gam", lag = gam_logrbc),
+  data.frame(predictor = "asex", selection = "trans", lag = trans_asex),
+  data.frame(predictor = "gam", selection = "trans", lag = trans_gam),
+  data.frame(predictor = "RBC", selection = "trans", lag = trans_rbc),
+  data.frame(predictor = "log(asex)", selection = "trans", lag = trans_logasex),
+  data.frame(predictor = "log(gam)", selection = "trans", lag = trans_loggam),
+  data.frame(predictor = "log(RBC)", selection = "trans", lag = trans_logrbc)
+      )
+
+# summarize everything
+ccf.df2 <- ccf.df %>% 
+  dplyr::group_by(predictor, selection, lag) %>% 
+  dplyr::summarise(proportion = n()/47)
+
+ggplot(data = ccf.df2) +
+  geom_tile(aes(x = predictor, y = selection, fill = proportion)) +
+  facet_wrap(~lag) +
+  theme_bw()
+
+# heatmap for figure2
+ggplot(data = ccf.df2) +
+  geom_tile(aes(x = lag, y = predictor), fill = "white") +
+  geom_tile(aes(x = lag, y = predictor, fill = proportion)) +
+  facet_wrap(~selection) +
+  theme_bw()
+
+ggsave(here("figures/report11/fig2.png"))
+```
+
+#----------------------------#
+going back to mathematical modelling
+#--------------------------#
+
+# import in the parameters
+```{r}
+parameters_tsukushi_sto <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156,
+                mud = -log(1-0.94),
+                var = 1) # drug induced action. 94% death per day
+
+parameters_tsukushi_sto2 <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156,
+                mud = -log(1-0.94))
+
+time_range <- seq(0, 20, by = 1e-3)
+
+I_range <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
+```
+
+# stochastic simulation based on TSukushi et al 2021 priors
+# load libraries
+```{r}
+library(parallel)
+library(truncnorm)
+library(ggplot2)
+```
+
+# MC simulation based on Tsukushi 2021 Elife paper priors.
+```{r}
+source(here("functions/chabaudi_si_sto.R"))
+
+# monte carlo simulation
+set.seed(137) ## homage to the all encompassing number of our universe :D
+
+## priors have a std = 1. Very noisy. checking if 0.5 is better
+monte_carlo <- function(i){
+  res <- chabaudi_si_lag_sto(par = c(5.511734, 2.394041,-17.890312,4.598348),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi_sto,
+                             time_range = seq(0, 20, 1e-3),
+                             cue = "I",
+                             cue_range = I_range, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE,
+                            var = 0.5)
+  return(res)}
+
+# do this 10 times. parallelized
+library(parallel)
+out_mc <- mclapply(1:10, monte_carlo)
+names(out_mc) <- seq(1:10)
+
+# bind rows
+out_mc2 <- bind_rows(out_mc, .id = "id")
+
+# very noisy!
+ggplot() +
+  geom_line(data = out_mc2, aes(x = time, y = value, color = id)) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+
+
+```
+
+# MOnte carlo simulation based on Miller 2010 priors
+Here, only burst size and RBC replenishment is modelled as a random variable. During a course of infection, parasite will be met with several source of "noise" that may impede with the efficiency of their conversion rate decision. If conversion rate adjustment is used to adjust total parasite density iRBC, then random variations in burst size will affect the outcome of a conversion rate decision and, thus, its fitness. The same problem does not exist for gametocyte generation, where each committed iRBC can only generate one gametocyte. Other sources of variation such as RBC replenishment rate serve as environmental stochasticity that might affect parasite density (via bottom-up limitation). 
+
+Another good source of variation to include would be immunity clearance.
+
+# Visualizing distribution of random variables
+```{r}
+# RBC burst rate
+beta_rand <- truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = parameters_tsukushi_sto["beta"], sd = 0.25)
+
+# RBC replenishment rate
+rho_rand <- truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = parameters_tsukushi_sto["rho"], sd = 0.01)
+
+
+test <- truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = 1, sd = 1)
+# 
+hist(beta_rand)
+hist(rho_rand)
+
+hist(test)
+```
+
+```{r}
+source(here("functions/chabaudi_si_sto2.R"))
+source(here("functions/chabaudi_si_clean.R"))
+
+set.seed(137) ## homage to the all encompassing number of our universe :D
+
+## priors have a std = 1. Very noisy. checking if 0.5 is better
+monte_carlo2 <- function(i){
+  chabaudi_si_lag_sto2(par = c(5.511734, 2.394041,-17.890312,4.598348),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi_sto2,
+                             time_range = seq(0, 20, 1e-3),
+                             cue = "I",
+                             cue_range = I_range, 
+                             solver = "vode",
+                             log_cue = "log10", 
+                             dyn = TRUE)}
+
+# do this 10 times. parallelized
+out_mc2 <- mclapply(1:10, monte_carlo2)
+names(out_mc2) <- seq(1:10)
+
+# bind rows
+out_mc3 <- bind_rows(out_mc2, .id = "id")
+
+# very clean1
+ggplot() +
+  geom_line(data = out_mc3, aes(x = time, y = value, color = id)) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# trouble shooting random variable and optimization
+The key lies in avoiding calling the random variables within the optimization function. This ensures that each optimization works with the same set of randomized sequences. A work around is to set the random variable outside and call the optimization function after setting the random variable list. A MC process ought to generate different burst_rand and rho_rand per run.
+
+```{r}
+burst_rand = truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = parameters_tsukushi_sto2["beta"], sd = 0.25)
+
+rho_rand = truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = parameters_tsukushi_sto2["rho"], sd = 0.01)
+
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+optimParallel(par = rep(0.5,4),# new parameter search space
+                 fn = chabaudi_si_lag_sto2, 
+                 control = list(trace = 6, fnscale = -1),
+                 immunity = "tsukushi",
+                 parameters = parameters_tsukushi_sto2,
+                 time_range = seq(0, 20, 1e-3),
+                 cue = "I",
+                 cue_range = I_range,
+                 solver = "vode",
+                 log_cue = "log10",
+              burst_rand = burst_rand,
+              rho_rand = rho_rand)
+stopCluster(cl)
+
+```
