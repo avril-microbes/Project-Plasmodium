@@ -473,6 +473,7 @@ set.seed(137) ## homage to the all encompassing number of our universe :D
 
 ## priors have a std = 1. Very noisy. checking if 0.5 is better
 monte_carlo <- function(i){
+  
   res <- chabaudi_si_lag_sto(par = c(5.511734, 2.394041,-17.890312,4.598348),
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi_sto,
@@ -565,7 +566,7 @@ burst_rand = truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = param
 rho_rand = truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = parameters_tsukushi_sto2["rho"], sd = 0.01)
 
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-optimParallel(par = rep(0.5,4),# new parameter search space
+res <- optimParallel(par = rep(0.5,4),# new parameter search space
                  fn = chabaudi_si_lag_sto2, 
                  control = list(trace = 6, fnscale = -1),
                  immunity = "tsukushi",
@@ -578,5 +579,183 @@ optimParallel(par = rep(0.5,4),# new parameter search space
               burst_rand = burst_rand,
               rho_rand = rho_rand)
 stopCluster(cl)
+```
+
+# trouble shooting Monte Carlo simulation
+```{r}
+# define monte carlo simulation
+monte_carlo <- function(i){
+  
+  ## define burst number at each time  iteration. This gets changed per simulation
+  burst_rand = truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = parameters_tsukushi_sto2["beta"], sd = 0.25)
+
+  ## define rho
+rho_rand = truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = parameters_tsukushi_sto2["rho"], sd = 0.01)
+
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+## start optimization
+res <- optimParallel::optimParallel(par = rep(0.5,4),# new parameter search space
+                 fn = chabaudi_si_lag_sto2, 
+                 control = list(trace = 6, fnscale = -1),
+                 immunity = "tsukushi",
+                 parameters = parameters_tsukushi_sto2,
+                 time_range = seq(0, 20, 1e-3),
+                 cue = "I",
+                 cue_range = I_range,
+                 solver = "vode",
+                 log_cue = "log10",
+              burst_rand = burst_rand,
+              rho_rand = rho_rand)
+return(res)
+}
+```
+
+# second iteration of MC. using roptim to avoid double parallelzing
+```{r}
+monte_carlo2 <- function(i){
+  
+  ## define burst number at each time  iteration. This gets changed per simulation
+  burst_rand = truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = parameters_tsukushi_sto2["beta"], sd = 0.25)
+
+  ## define rho
+rho_rand = truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = parameters_tsukushi_sto2["rho"], sd = 0.01)
+
+## start optimization
+res <- optim(par = rep(0.5,4),# new parameter search space
+                 fn = chabaudi_si_lag_sto2, 
+             method = "BFGS",
+              control = list(trace = 6, fnscale = -1),
+                 immunity = "tsukushi",
+                 parameters = parameters_tsukushi_sto2,
+                 time_range = seq(0, 20, 1e-3),
+                 cue = "I",
+                 cue_range = I_range,
+                 solver = "vode",
+                 log_cue = "log10",
+              burst_rand = burst_rand,
+              rho_rand = rho_rand)
+return(res)
+}
+```
+
+# trying with mclapply parallelization. Very slow!
+```{r}
+# does not work with optim parallel
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+mc_out <- mclapply(1:2, monte_carlo)
+stopCluster(cl)
 
 ```
+```{r}
+library(doSNOW)
+library(doParallel)
+library(doRNG)
+```
+
+# tryinng do Snow approach
+```{r}
+
+monte_carlo <- function(i){
+  #foreach(i = 1:x, 
+  #              .packages = c("doParallel", "doRNG", "optimParallel", "truncnorm", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "doSNOW", "here"),
+ #               .combine=rbind) %dorng% {
+  library(here)
+  source(here("functions/chabaudi_si_sto2.R"))
+
+  parameters_tsukushi_sto2 <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156,
+                mud = -log(1-0.94))
+
+time_range <- seq(0, 20, by = 1e-3)
+
+    I_range <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
+    cl <- makeCluster(4, type = "SOCK")
+    library(doSNOW)
+    registerDoSNOW(makeCluster(4, type = "SOCK"))
+    library(optimParallel)
+    setDefaultCluster(cl=cl)
+  ## define burst number at each time  iteration. This gets changed per simulation
+  burst_rand = truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = parameters_tsukushi_sto2["beta"], sd = 0.25)
+
+  ## define rho
+rho_rand = truncnorm::rtruncnorm(n = length(time_range+1), a = 0, mean = parameters_tsukushi_sto2["rho"], sd = 0.01)
+
+## start optimization
+res <- optimParallel::optimParallel(par = rep(0.5,4),# new parameter search space
+                 fn = chabaudi_si_lag_sto2, 
+                 control = list(trace = 6, fnscale = -1),
+                 immunity = "tsukushi",
+                 parameters = parameters_tsukushi_sto2,
+                 time_range = seq(0, 20, 1e-3),
+                 cue = "I",
+                 cue_range = I_range,
+                 solver = "vode",
+                 log_cue = "log10",
+              burst_rand = burst_rand,
+              rho_rand = rho_rand)
+return(res)
+}
+
+cl <- makeCluster(4, type = "SOCK")
+test <- foreach(i = 1:2, 
+              .packages = c("doParallel", "doRNG", "optimParallel", "truncnorm", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "doSNOW"),
+           .combine=rbind) %dopar% {
+             clusterCall(cl, monte_carlo())}
+stopCluster(cl)
+
+
+# this works??
+clusterCall(cl, monte_carlo())
+
+# mcapply
+cl <- makeCluster(4, type = "SOCK")
+registerDoSNOW(cl)
+cores <- detectCores()
+test <- mclapply(1:2, FUN = clusterCall(cl, monte_carlo()), mc.cores = cores)
+stopCluster(cl)
+
+# trying cluster apply
+cl <- makeCluster(detectCores())
+test <- clusterApply(cl, 1:2, monte_carlo)
+stopCluster(cl)
+
+
+```
+
+
+# Trouble shooting reproducibility
+We want our simulations to be a) reproducible and b) for each monte carlo simulation to be independent from one another. Trying the do RNG package
+```{r}
+library(doParallel)
+library(doRNG)
+
+cl <- makeCluster(4)
+registerDoParallel(cl)
+registerDoRNG(137)
+test <- foreach(i = 1:3, 
+                .packages = c("doParallel", "doRNG", "optimParallel", "truncnorm", "deSolve", "splines2", "stringr", "dplyr", "tidyr"),
+                .combine=rbind) %dorng% {
+                  monte_carlo()
+return(res)}
+stopCluster(cl)
+
+```
+
