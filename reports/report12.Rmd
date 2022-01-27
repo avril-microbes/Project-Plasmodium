@@ -1,0 +1,353 @@
+---
+title: "report12"
+output: html_document
+---
+
+# load in libraries
+```{r}
+library(ggplot2)
+library(dplyr)
+library(here)
+library(doParallel)
+library(doRNG)
+library(GA)
+```
+
+#-----------------------#
+# Incorporating noise according to Kamiya et al 2020 Uncovering Dose...
+#-----------------------#
+# get record of individual level distribution (dose-independent)
+# all are expionential normal distribution!
+```{r}
+rep <- 10000
+
+#proprotion of RBC recovered per day. rho: sd = 0.2579136
+rho_sd <- 0.2579136
+rho_dist <- exp(rnorm(rep, 0, rho_sd))
+hist(rho_dist)
+
+# burst size: sd= 0.1722868
+beta_sd <- 0.1722868
+beta_dist <- exp(rnorm(rep, 0, beta_sd))
+hist(beta_dist)
+
+
+# general RBC clearance activation strength. Sd = 0.5778196
+psiN_sd <- 0.5778196
+psiN_dist <- exp(rnorm(rep, 0, psiN_sd))
+hist(psiN_dist)
+
+# targetted iRBC clearance activations strength, sd = 0.2355804
+psiW_sd <- 0.2355804
+psiW_dist <- exp(rnorm(rep, 0, psiN_sd))
+hist(psiW_dist)
+
+# half life of general RBC clearance. sd = 0.02609495
+phiN_sd <- 0.02609495
+phiN_dist <- exp(rnorm(rep, 0, psiN_sd))
+
+# half life of targeted iRBC clearance. sd = 0.8286213
+phiW_sd <- 0.8286213
+phiW_dist <- exp(rnorm(rep, 0, phiW_sd))
+
+```
+
+# Figure 1. plot individual level variations
+```{r}
+tiff(here("figures/report12/parameter_distribution.tiff"), res = 100)
+par(mfrow = c(3, 2), mar = c(4, 2, 2, 2))
+
+hist(rho_dist*0.2627156, xlab = "rho (Proportion of RBC recovered/day)", ylab = "Frequency", main = NULL, breaks = 75)
+
+hist(beta_dist*5.721, xlab = "beta (Burst size)", ylab = "Frequency", main = NULL, breaks = 75)
+
+hist(psiN_dist*16.69234, xlab = "psiN (General RBC clearance\nactivation strength)", ylab = "Frequency", main = NULL, breaks = 75)
+
+hist(psiW_dist*0.8431785, xlab = "psiW (Targeted iRBC clearance\nactivation strength)", ylab = "Frequency", main = NULL, breaks = 75)
+
+hist(phiN_dist*0.03520591, xlab = "phiN (General RBC clearance half-life)", ylab = "Frequency", main = NULL, breaks = 75)
+
+hist(phiW_dist*550.842, xlab = "phiW (Targeted iRBC clearance half-life)", ylab = "Frequency", main = NULL, breaks = 75)
+
+dev.off()
+```
+
+#----------------------------------#
+# Stochastic modelling testing
+#------------------------------------#
+# Idea #1. Assess effects of incorporating noise into single infection model
+Assess effects of noise on the fitness of optimal model. Basically, how sensitive are each cue strategy to noise incorporation?
+All script encoded in chabaudi_si_sto.R
+
+To run, need to first specify a list of rho, burst, psin, psiw, phin, and phiw from set distribution 
+
+## get function and get parameter sets
+```{r}
+source(here("functions/chabaudi_si_sto.R"))
+source(here("functions/chabaudi_si_clean.R"))
+
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+
+time_range <- seq(0, 20, by = 1e-3)
+
+I_range <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
+```
+
+## Monte carlo simulation code
+```{r}
+monte_carlo <- function(parameters_cr, # parameter sets for strategy (use optimal)
+                        parameters, # parameter set for model
+                        time_range, # time range
+                        cue, # cue to use
+                        cue_range, # cue range
+                        log_cue, # whether to log cue or not
+                        rho_sd, # sd for rho
+                        beta_sd, # sd for beta (burst size)
+                        psin_sd, # sd for psin (activation strength for general RBC removal)
+                        psiw_sd, # sd for psiw (activation strength for targeted iRBC removal)
+                        phin_sd, # sd for general RBC removal half-life
+                        phiw_sd, # sd for targeted RBC removal half-lfie 
+                        factor = 1 # factor to divide sd with
+                        ){
+  
+  # forcing parameters
+  force(parameters_cr)
+  force(parameters)
+  force(log_cue)
+  force(cue)
+  force(cue_range)
+  force(rho_sd)
+  force(beta_sd)
+  force(psin_sd)
+  force(psiw_sd)
+  force(phin_sd)
+  force(phiw_sd)
+  
+  ## define the random list of parameter values
+  rho_rand <- parameters["rho"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = rho_sd/factor)) # proportion of RBC recovered
+  beta_rand <- parameters["beta"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = beta_sd/factor)) # burst size
+  psin_rand <- parameters["psin"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = psin_sd/factor))
+  psiw_rand <- parameters["psiw"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = psiw_sd/factor))
+  phin_rand <- parameters["phin"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = phin_sd/factor))
+  phiw_rand <- parameters["phiw"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = phiw_sd/factor))
+  
+  ## run the numerical simulation
+  sim <- chabaudi_si_lag_sto(parameters_cr = parameters_cr,
+                             immunity = "tsukushi",
+                             parameters = parameters,
+                             time_range = time_range,
+                             cue = cue,
+                             cue_range = cue_range, 
+                             solver = "vode",
+                             log_cue = log_cue, 
+                             rho_rand = rho_rand,
+                             beta_rand = beta_rand,
+                             psin_rand = psin_rand,
+                             psiw_rand = psiw_rand,
+                             phin_rand = phin_rand,
+                             phiw_rand = phiw_rand,
+                             dyn = TRUE)
+
+  ## return simulation results
+  return(sim)
+}
+```
+
+## testing monte carlo simulation
+Overall, seems our original distribution is too big. Might need to divide by a factor. 
+```{r}
+# run deterministic with optimal parameters
+deterministic <- chabaudi_si_lag_clean(
+  parameters_cr = c(5.511734, 2.394041,-17.890312,4.598348), 
+  parameters = parameters_tsukushi, 
+  time_range = time_range, 
+  cue = "I", 
+  cue_range = I_range, 
+  log_cue = "log10",
+  immunity = "tsukushi",
+  solver = "vode",
+  dyn = TRUE
+)
+
+
+source(here("functions/test.R"))
+
+rho_rand <- parameters_tsukushi["rho"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = rho_sd)) # this is fine 
+beta_rand <- parameters_tsukushi["beta"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = beta_sd)) # this is fine
+psin_rand <- parameters_tsukushi["psin"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = psiN_sd)) # this is fine
+psiw_rand <- parameters_tsukushi["psiw"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = psiW_sd)) # this is fine
+phin_rand <- parameters_tsukushi["phin"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = phiN_sd)) # this is fine
+phiw_rand <- parameters_tsukushi["phiw"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = phiW_sd)) # this is fine
+
+# test function
+test_res <- chabaudi_si_lag_sto(
+  parameters_cr = c(5.511734, 2.394041,-17.890312,4.598348), 
+  parameters = parameters_tsukushi, 
+  time_range = time_range, 
+  cue = "I", 
+  cue_range = I_range, 
+  log_cue = "log10",
+  immunity = "tsukushi",
+  solver = "vode",
+  dyn = TRUE,
+  rho_rand = rho_rand, 
+  beta_rand = beta_rand, 
+  psin_rand = psin_rand,
+  psiw_rand = psiw_rand, 
+  phin_rand = phin_rand, 
+  phiw_rand = phiw_rand
+)
+
+ggplot() +
+  geom_line(data = test_res, aes(x = time, y = value, color = "test")) +
+  geom_line(data = deterministic, aes(x = time, y = value, color = "deterministic"), alpha = 0.5) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+
+```{r}
+# control. should be the same
+set.seed(1)
+mc1 <- monte_carlo(
+  parameters_cr = c(5.511734, 2.394041,-17.890312,4.598348), 
+  parameters = parameters_tsukushi, 
+  time_range = time_range, 
+  cue = "I", 
+  cue_range = I_range, 
+  log_cue = "log10",
+  rho_sd = 0, 
+  beta_sd = 0, 
+  psin_sd = 0,
+  psiw_sd = 0, 
+  phin_sd = 0, 
+  phiw_sd = 0)
+
+mc2 <- monte_carlo(
+  par = c(5.511734, 2.394041,-17.890312,4.598348), 
+  parameters = parameters_tsukushi, 
+  time_range = time_range, 
+  cue = "I", 
+  cue_range = I_range, 
+  log_cue = "log10",
+  rho_sd = 0.2579136, 
+  beta_sd = 0.1722868, 
+  psin_sd = 0.5778196,
+  psiw_sd = 0.2355804, 
+  phin_sd = 0.02609495, 
+  phiw_sd = 0.8286213)
+
+# 
+ggplot() +
+  geom_line(data = deterministic, aes(x = time, y = value, color = "deterministic")) +
+  geom_line(data = mc1, aes(x = time, y = value, color = "mc_control")) +
+  geom_line(data = mc2, aes(x = time, y = value, color = "mc2")) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# trouble shoot complete. Need to visualize several simulation
+```{r}
+cl <- makeCluster(4)
+registerDoParallel(cl)
+registerDoRNG(137)
+
+loop_test <- foreach(i= 1:10, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr")) %dorng% {
+  monte_carlo(
+      par = c(5.511734, 2.394041,-17.890312,4.598348), 
+      parameters = parameters_tsukushi, 
+      time_range = time_range, 
+      cue = "I", 
+      cue_range = I_range, 
+      log_cue = "log10",
+      rho_sd = 0.2579136, 
+      beta_sd = 0.1722868, 
+      psin_sd = 0.5778196,
+      psiw_sd = 0.2355804, 
+      phin_sd = 0.02609495, 
+      phiw_sd = 0.8286213)}
+stopCluster(cl)
+
+loop_test.df <- dplyr::bind_rows(loop_test, .id = "id")
+
+ggplot() +
+  geom_line(data = loop_test.df, aes(x = time, y = value, color = id)) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+#----------------------------------_#
+# Finding optimal cue range + GA
+#----------------------------------_#
+```{r}
+cl <- makeCluster(4)
+registerDoParallel(cl)
+#clusterExport(cl, varlist = c("chabaudi_si_lag_clean", "parameters_tsukushi", "time_range", "I_range"))
+si_I_log10.ga <- ga(type = "real-valued", 
+         fitness =  function(x){
+           chabaudi_si_lag_clean(
+           parameters_cr = c(x[1], x[2], x[3], x[4]), 
+           immunity = "tsukushi",
+           parameters = parameters_tsukushi,
+           time_range = time_range,
+           cue = "I",
+           log_cue = "log10",
+           cue_range = I_range,
+           solver = "vode")},
+         lower = c(-10, -500, -1000, -100000), # range determined that would alter shape of spline
+         upper = c(5, 100, 500, 500), 
+         popSize = 100, 
+         maxiter = 1, 
+         run = 30, 
+         pmutation = 0.3,
+         parallel = TRUE,
+         seed = 137,
+         keepBest = TRUE,
+         monitor = TRUE)
+stopCluster(cl)
+
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+test <- ga(type = "real-valued", 
+         fitness =  function(parameters_cr)
+           chabaudi_si_lag_clean(
+           parameters_cr, 
+           immunity = "tsukushi",
+           parameters = parameters_tsukushi,
+           time_range = time_range,
+           cue = "I",
+           cue_range = I_range,
+           solver = "vode"),
+         lower = c(-10, -500, -1000, -100000), 
+         upper = c(5, 100, 500, 500), 
+         popSize = 100, 
+         maxiter = 500, 
+         run = 30, # increase if running for long
+         pmutation = 0.3, # higher given local minimum stuck
+         parallel = TRUE,
+         seed = 137,
+         keepBest = TRUE)
+stopCluster(cl)
+
+
+```
+
+

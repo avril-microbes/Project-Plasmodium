@@ -1,7 +1,7 @@
 #-----------------------#
 # Newest iteration of single infection model of Plasmodium chabaudi
 # Avril Wang
-# Last edited 2021-11-28
+# Last edited 2022-01-22
 #-----------------------#
 
 chabaudi_si_lag_clean <- function(
@@ -71,7 +71,7 @@ chabaudi_si_lag_clean <- function(
     stop("log_cue must be either 'none' or 'log10'")
   }
   
-  if(log_cue_b != "none" && log_cue != "log10"){
+  if(log_cue_b != "none" && log_cue_b != "log10"){
     stop("log_cue_b must be either 'none' or 'log10'")
   }
   

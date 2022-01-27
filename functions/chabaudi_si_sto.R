@@ -1,9 +1,8 @@
 #-----------------------#
 # Derivative of chabaudi_si_clean with stochastic terms
-# based on priors of Tsukushi  et al. 2021
-# following terms exhibit log normal variation: RBC death rate (mu), burst size, RBC replenishment rate
+# based on priors of Tsukushi 2020 individual coefficient of variation
 # Avril Wang
-# Last edited 2022-01-22
+# Last edited 2022-01-25
 #-----------------------#
 
 chabaudi_si_lag_sto <- function(
@@ -23,7 +22,12 @@ chabaudi_si_lag_sto <- function(
   cue_b_range = "none", # if second cue is used, the range of cue that parasite use to adjust conversion rate to
   log_cue_b = "none",  # whether to log10 transform cue_b
   dyn = FALSE, # whether the function should return simulation dynamics rather than fitness
-  var # standard deviation of log normal distribution used in stochastici simulation
+  rho_rand, # a pre-determined list of rho values for each time step, generated from a exp normal distribution -> for stochastic modelling. Predetermined to faciliate with optimization
+  beta_rand, # a pre-determined list of beta values
+  psin_rand, # a pre0determined list of psin values
+  psiw_rand, # a pre-determined list of psiw values
+  phin_rand, # a pre-determined list of phin values
+  phiw_rand # a pre-determined list of phiw values
 ){
   
   #----------------------#
@@ -45,7 +49,12 @@ chabaudi_si_lag_sto <- function(
   force(cue_b_range)
   force(log_cue_b)
   force(dyn)
-  force(var)
+  force(rho_rand)
+  force(beta_rand)
+  force(psin_rand)
+  force(psiw_rand)
+  force(phin_rand)
+  force(phiw_rand)
   
   #----------------------#
   # Quality checks
@@ -75,7 +84,7 @@ chabaudi_si_lag_sto <- function(
     stop("log_cue must be either 'none' or 'log10'")
   }
   
-  if(log_cue_b != "none" && log_cue != "log10"){
+  if(log_cue_b != "none" && log_cue_b != "log10"){
     stop("log_cue_b must be either 'none' or 'log10'")
   }
   
@@ -112,15 +121,6 @@ chabaudi_si_lag_sto <- function(
                W = 0, # targeted RBC removal
                cr_t = 0) 
   }
-  
-  #----------------------#
-  # Define initial list of stochastic terms
-  #----------------------#
-  # All parameter distribution based in prior distribution listed in Tsukushi et al. 2021
-  # https://elifesciences.org/articles/65846/figures#content
-  
-  ## log normal distribution with mean = 0 and std = var
-  rlnorm.ls <- rlnorm(length(time_range) + 1, 0, var)
   
   #----------------------#
   # Describe initial population structure
@@ -318,7 +318,7 @@ chabaudi_si_lag_sto <- function(
     # Survival functions
     #----------------#
     # before first iRBC maturation, survival function of iRBC
-    if(t<=alpha+delay){
+    if(t<=alpha+delay ){
       S <- exp(-ID) ## survival function of asexual iRBC. ID = cumulative hazard rate in 1 day
       Sg <- 0 ## survival function of sexual iRBC. No sexual iRBC before alpha so set to 0
     } 
@@ -350,37 +350,36 @@ chabaudi_si_lag_sto <- function(
     
     # If Tsukushi's model of immunity is used, use the following
     if(immunity == "tsukushi"){
-      ## RBC density.Random variables: Proportion of RBC recovered/day (rho), background RBC
-      ## mortality rate (mu)
-      dR <- R1*(mu*rlnorm.ls[t+1])+(rho*rlnorm.ls[t+1])*(R1-R)-((mu*rlnorm.ls[t+1])-log(1-N))*R-(p*R*M)-(p*R*Mg)
-      ## asexual iRBC. Random variables: background RBC mortality rate (mu)
-      dI_nolag <- (p*R*M)-((mu*rlnorm.ls[t+1])*I)-((-log(1-N)-log(1-W))*I)
-      ## sexual iRBC. Random variables: background RBC mortality rate (mu)
-      dIg_nolag <- (p*R*Mg)-((mu*rlnorm.ls[t+1])*Ig)-((-log(1-N)-log(1-W))*Ig)
+      ## RBC density
+      dR <- R1*mu+rho_rand[t+1]*(R1-R)-(mu-log(1-N))*R-(p*R*M)-(p*R*Mg)
+      ## asexual iRBC 
+      dI_nolag <- (p*R*M)-(mu*I)-((-log(1-N)-log(1-W))*I)
+      ## sexual iRBC 
+      dIg_nolag <- (p*R*Mg)-(mu*Ig)-((-log(1-N)-log(1-W))*Ig)
       ## indiscriminant RBC removal
-      dN <- psin*((I+Ig)/iota)*(1-N)-(N/phin)
+      dN <- psin_rand[t+1]*((I+Ig)/iota)*(1-N)-(N/phin_rand[t+1])
       ## targeted iRBC removal
-      dW <- psiw*((I+Ig)/iota)*(1-W)-(W/phiw)
+      dW <- psiw_rand[t+1]*((I+Ig)/iota)*(1-W)-(W/phiw_rand[t+1])
       ## hazard function of iRBC
-      dID <- (mu*rlnorm.ls[t+1])-log(1-N)-log(1-W)
+      dID <- mu-log(1-N)-log(1-W)
     }
     
     # if no immunity is used
     if(immunity == "ni"){
-      # RBC density. 
-      dR <- lambda*(1-(R/K))-((mu*rlnorm.ls[t+1])*R)-(p*R*M)-(p*R*Mg)
-      dI_nolag <- (p*R*M)-((mu*rlnorm.ls[t+1])*I)
-      dIg_nolag <- (p*R*Mg)-((mu*rlnorm.ls[t+1])*Ig)
-      dID <- mu*rlnorm.ls[t+1]
+      # RBC density
+      dR <- lambda*(1-(R/K))-(mu*R)-(p*R*M)-(p*R*Mg)
+      dI_nolag <- (p*R*M)-(mu*I)
+      dIg_nolag <- (p*R*Mg)-(mu*Ig)
+      dID <- mu
     }
     
     # if saturating immunity is used
     if(immunity == "i") {
       # RBC density
-      dR <- lambda*(1-(R/K))-((mu*rlnorm.ls[t+1])*R)-(p*R*M)-(p*R*Mg)
-      dI_nolag <- (p*R*M)-((mu*rlnorm.ls[t+1])*I)-((a*I)/(b+I))
-      dIg_nolag <- (p*R*Mg)-((mu*rlnorm.ls[t+1])*Ig)
-      dID <- (mu*rlnorm.ls[t+1])+(a/(b+I))
+      dR <- lambda*(1-(R/K))-(mu*R)-(p*R*M)-(p*R*Mg)
+      dI_nolag <- (p*R*M)-(mu*I)-((a*I)/(b+I))
+      dIg_nolag <- (p*R*Mg)-(mu*Ig)
+      dID <- mu+(a/(b+I))
     }
     
     #--------------#
@@ -395,7 +394,7 @@ chabaudi_si_lag_sto <- function(
     # before all first cohort of asexual iRBC bursts (before day 1)
     if(t<=alpha+delay){
       dI <- dI_nolag-(pulseBeta*S) # some initial asexual iRBC burst due to maturation
-      dM <- dM_nolag+(beta*rlnorm.ls[t+1]*pulseBeta*S) # asexual merozoites are produced when asexual iRBC burst
+      dM <- dM_nolag+(beta_rand[t+1]*pulseBeta*S) # asexual merozoites are produced when asexual iRBC burst
       dMg <- 0 # should have no Mg before day 1
       dIg <- 0 #first wave starts on day alpha
       dG <- 0 # first wave starts on day alpha+alphag
@@ -410,9 +409,8 @@ chabaudi_si_lag_sto <- function(
     # after all first cohort of asexual iRBC burst (after day 1)
     if(t>alpha+delay){
       dI <- dI_nolag-(p*lag1[1]*lag1[2]*S) # bursting of iRBC produced alpha days ago
-      ## burst size is random variable
-      dM <- dM_nolag+(beta*rlnorm.ls[t+1]*(1-cr)*p*lag1[1]*lag1[2]*S) # production of asexual merozoite from asexual iRBC burst
-      dMg <- dMg_nolag+(beta*rlnorm.ls[t+1]*cr*p*lag1[1]*lag1[2]*S) # production of sexual merozoite from asexual iRBC burst
+      dM <- dM_nolag+(beta_rand[t+1]*(1-cr)*p*lag1[1]*lag1[2]*S) # production of asexual merozoite from asexual iRBC burst
+      dMg <- dMg_nolag+(beta_rand[t+1]*cr*p*lag1[1]*lag1[2]*S) # production of sexual merozoite from asexual iRBC burst
     }
     
     # after the first gametocyte production
