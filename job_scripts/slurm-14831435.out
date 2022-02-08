@@ -1,5 +1,0 @@
-Loading required package: parallel
-here() starts at /project/6004331/wanglu57/Project_Plasmodium
-Error in co_infection_opt(parameters_cr = rep(0.5, 4), limit = 0.01, model = chabaudi_ci_opt_lag,  : 
-  could not find function "co_infection_opt"
-Execution halted

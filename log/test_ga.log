@@ -1,0 +1,34 @@
+========================================================================= 
+Log Path: /Users/avrilwang/Desktop/Project-Plasmodium/log/test_ga.log 
+Program Path: /Users/avrilwang/Desktop/Project-Plasmodium/reports/report12.Rmd 
+Working Directory: /Users/avrilwang/Desktop/Project-Plasmodium/reports 
+User Name: avrilwang 
+R Version: 4.1.2 (2021-11-01) 
+Machine: Avrils-MacBook-Pro.local arm64 
+[1] "Operating System: Darwin 21.0.1 Darwin Kernel Version 21.0.1: Tue Sep 14 20:56:24 PDT 2021; root:xnu-8019.30.61~4/RELEASE_ARM64_T6000"
+[1] "Base Packages: parallel stats graphics grDevices utils datasets methods\n               base \nOther Packages: GA_3.2.2 doRNG_1.8.2 rngtools_1.5.2 doParallel_1.0.16 iterators_1.0.13\n                foreach_1.5.1 here_1.0.1 dplyr_1.0.7 ggplot2_3.3.5 "
+Log Start Time: 2022-02-04 15:41:05 
+========================================================================= 
+
+[[1]]
+           [,1]     [,2]     [,3]     [,4]
+[1,] -0.6878527 64.43848 334.1706 120.8391
+
+[[2]]
+[1] 2.430713
+
+
+NOTE: Log Print Time:  2022-02-04 15:41:21 
+NOTE: Elapsed Time in seconds: 16.0728709697723 
+
+[[1]]
+           [,1]     [,2]     [,3]     [,4]
+[1,] -0.6878527 64.43848 334.1706 120.8391
+
+[[2]]
+[1] 2.430713
+
+
+NOTE: Log Print Time:  2022-02-04 15:41:33 
+NOTE: Elapsed Time in seconds: 12.0328421592712 
+

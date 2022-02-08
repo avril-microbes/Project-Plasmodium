@@ -1,12 +1,27 @@
+# script for parallelizing parameter optimization for deterministic single infection model
+# 2022-01-27
+
+library(doParallel)
+library(hydroPSO)
+
+# Create an array from the NODESLIST environnement variable
+nodeslist = unlist(strsplit(Sys.getenv("NODESLIST"), split=" "))
+
+# Create the cluster with the nodes name. One process per count of node name.
+# nodeslist = node1 node1 node2 node2, means we are starting 2 processes on node1, likewise on node2.
+cl = makeCluster(nodeslist, type = "PSOCK") 
+registerDoParallel(cl)
+
+# run the simulation
 #-----------------------#
 # Newest iteration of single infection model of Plasmodium chabaudi
 # Avril Wang
 # Last edited 2022-01-22
 #-----------------------#
 
-test <- function(
+chabaudi_si_lag_clean <- function(
   parameters_cr, # input parameters for conversion rate reaction norm
-  parameters, # sets of values for parameters in the mosel
+  parameters, # sets of values for parameters in the model
   immunity, # immunity selection. Tsukushi's model, saturating immunity, or no immunity possible
   time_range, # time that simulation is ran for
   cue, # cue that parasite use to change conversion rate
@@ -20,8 +35,7 @@ test <- function(
   cue_b = "none", # if second cue is incorporated
   cue_b_range = "none", # if second cue is used, the range of cue that parasite use to adjust conversion rate to
   log_cue_b = "none",  # whether to log10 transform cue_b
-  dyn = FALSE, # whether the function should return simulation dynamics rather than fitness
-  neg = FALSE # set to TRUE if using minimization function
+  dyn = FALSE # whether the function should return simulation dynamics rather than fitness
 ){
   
   #----------------------#
@@ -117,7 +131,7 @@ test <- function(
   ## function that takes initial merozoite emergence density (I0), shape parameter
   ## of beta function (sp), and time point (t)
   pulseBeta_fun <- function(I0, sp, t){ 
-    res = vector(length = length(t))
+    res = rep(NA, length(t))
     res = I0*(dbeta(t, sp, sp))
     return(res)
   }
@@ -282,9 +296,7 @@ test <- function(
     # Process cue values
     #------------------#
     if(t>alpha+delay){
-      if(log_cue == "log10"){cue_lag1_p <- log10(abs(cue_lag1)+5e-324)} # log the lagged cue
-      ## IMPORTANT: none of the cue lags should be naturally negative. adding this prevents
-      ## stiff "dipping" of cue from producing NAs. 
+      if(log_cue == "log10"){cue_lag1_p <- log10(cue_lag1)} # log the lagged cue
       if(log_cue == "none"){cue_lag1_p <- cue_lag1} # keep it the same
       
       ## if second cue is used
@@ -436,12 +448,6 @@ test <- function(
                                 value = parameters["I0"],
                                 method = "add")
   
-  #-----------------------#
-  # Event that force logged variables
-  # like cue_lag, 1-N, and 1-W to be above 0
-  #------------------------#
-  rootN_fun <- function(t, N, p){N-1}
-  
   #-------------------------#
   # Run single-infection model
   #------------------------#
@@ -451,7 +457,7 @@ test <- function(
                                                 p = parameters,
                                                 method = solver,
                                                 events = list(data = delay_injection),
-                                                control=list(mxhist = 1e7)))
+                                                control=list(mxhist = 1e6)))
   
   #-------------------# 
   # Calculate fitness for optimization
@@ -459,8 +465,6 @@ test <- function(
   # Get Gametocyte density time series data
   gam <- chabaudi_si.df$G
   gam[gam<0] <- 0 ## Assign negative gametocyte density to 0. can arise due to stiffness of function
-  
-
   
   # Get timeseries interval
   int <- chabaudi_si.df$time[2]
@@ -474,14 +478,11 @@ test <- function(
   tau.ls <- (exp(aval+(bval*dens)))/(1+exp(aval+(bval*dens)))
   
   # Get approximation of cumulative transmission potential
-  tau.sum <- sum(tau.ls*int, na.rm = TRUE)
+  tau.sum <- sum(tau.ls*int)
   
   # return cumulative transmission potential. Used for optimization
-  if(dyn == FALSE && neg == FALSE){return(tau.sum)} ## 
-  if(dyn == FALSE && neg == TRUE){
-    tau.sumneg <- tau.sum*-1
-    return(tau.sumneg)
-  } ## if using minimization algorthm, set neg to TRUE to get maximize
+  if(dyn == FALSE){return(tau.sum)} ## if running algorithm that is not ga, set control = list(fnscale = -1)
+  
   #----------------------------#
   #----------------------------#
   #-Simulate infection dynamics#
@@ -522,3 +523,39 @@ test <- function(
     return(chabaudi_si.df2)
   }
 }
+
+#---------------------_#
+ # Load parameters
+#---------------------------#
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                         lambda = 3.7*10^5,
+                         mu = 0.025, 
+                         p = 8*10^-6, # doubled form original
+                         alpha = 1, 
+                         alphag = 2, 
+                         beta = 5.721, 
+                         mum = 48, 
+                         mug = 4, 
+                         I0 = 43.85965, 
+                         Ig0 = 0, 
+                         a = 150, 
+                         b = 100, 
+                         sp = 1,
+                         psin = 16.69234,
+                         psiw = 0.8431785,
+                         phin = 0.03520591, 
+                         phiw = 550.842,
+                         iota = 2.18*(10^6),
+                         rho = 0.2627156)
+
+time_range <- seq(0, 20, by = 1e-3)
+
+I_range <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
+
+
+
+#-----------------------_#
+# run hydroPSO
+#-----------------------_#
+
+

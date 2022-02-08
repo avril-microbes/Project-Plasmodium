@@ -109,7 +109,7 @@ parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
 
 time_range <- seq(0, 20, by = 1e-3)
 
-I_range <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
+I_log_range <- seq(0, log10(10^8), by = log10(10^8)/5000)
 ```
 
 ## Monte carlo simulation code
@@ -298,23 +298,84 @@ ggplot() +
 #----------------------------------_#
 # Finding optimal cue range + GA
 #----------------------------------_#
+
+# systematically spline curve bounds
 ```{r}
-cl <- makeCluster(4)
+# fit different combination of parameter values
+make_par <- function(bounds){
+  par_1 <- c(bounds, rep(0.5, 3))
+  par_2 <- c(0.5, bounds, 0.5, 0.5)
+  par_3 <- c(rep(0.5,2), bounds, 0.5)
+  par_4 <- c(rep(0.5, 3), bounds)
+  
+  return(list(par_1, par_2, par_3, par_4))
+
+}
+
+# get parameter list with different bounds
+bound.ls <- c(-2000, -1000, -500, -100, -50, -10, 10, 50, 100, 500, 1000, 2000)
+
+par.ls <- unlist(lapply(bound.ls, make_par), recursive = F)
+
+# get list of models
+get_spline_mod <- function(par){
+  dummy_y.vals <- rep(0, 5000) 
+  dummy_cr.data <- as.data.frame(cbind(seq(1,5000), dummy_y.vals))
+    
+  dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(x = seq(1,5000), degree = 3))
+  dummy_cr.mod$data <- dummy_cr.data
+  dummy_cr.mod$coefficients <- par
+  cr_fit <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(seq(1,5000)))))  
+  df <- data.frame(x = seq(1, 5000), value = cr_fit, id = paste(par, collapse = " "))
+  return(df)
+}
+
+# generate range of splines
+## first par
+spline.ls1 <- lapply(par.ls[seq(1, length(par.ls), by = 4)], get_spline_mod)
+spline_df.ls1 <- do.call(rbind, spline.ls1)
+
+spline.ls2 <- lapply(par.ls[seq(2, length(par.ls), by = 4)], get_spline_mod)
+spline_df.ls2 <- do.call(rbind, spline.ls2)
+
+spline.ls3 <- lapply(par.ls[seq(3, length(par.ls), by = 4)], get_spline_mod)
+spline_df.ls3 <- do.call(rbind, spline.ls3)
+
+spline.ls4 <- lapply(par.ls[seq(4, length(par.ls), by = 4)], get_spline_mod)
+spline_df.ls4 <- do.call(rbind, spline.ls4)
+
+# plot
+# parameter 1 can be very small
+ggplot() +
+  geom_line(data = spline_df.ls1, aes(y = value, x= x, color = id))  +
+  theme_bw()
+
+# paramter 2 -100 to 100 works
+ggplot() +
+  geom_line(data = spline_df.ls2, aes(y = value, x= x, color = id))  +
+  theme_bw()
+
+# parameter 3 -500 to 500 works
+ggplot() +
+  geom_line(data = spline_df.ls3, aes(y = value, x= x, color = id))  +
+  theme_bw()
+
+# paraketer 4 -1000 to 1000 is not perfect but keeps it in check
+ggplot() +
+  geom_line(data = spline_df.ls4, aes(y = value, x= x, color = id))  +
+  theme_bw()
+
+```
+
+# testing out GA
+couldn't get this to work properly, which is weird given that I used the same code as beofre.
+```{r}
 registerDoParallel(cl)
 #clusterExport(cl, varlist = c("chabaudi_si_lag_clean", "parameters_tsukushi", "time_range", "I_range"))
 si_I_log10.ga <- ga(type = "real-valued", 
-         fitness =  function(x){
-           chabaudi_si_lag_clean(
-           parameters_cr = c(x[1], x[2], x[3], x[4]), 
-           immunity = "tsukushi",
-           parameters = parameters_tsukushi,
-           time_range = time_range,
-           cue = "I",
-           log_cue = "log10",
-           cue_range = I_range,
-           solver = "vode")},
-         lower = c(-10, -500, -1000, -100000), # range determined that would alter shape of spline
-         upper = c(5, 100, 500, 500), 
+         fitness = fitness,
+         lower = c(-1, -100, -500, -1000), # range determined that would alter shape of spline
+         upper = c(1, 100, 500, 1000), 
          popSize = 100, 
          maxiter = 1, 
          run = 30, 
@@ -324,30 +385,520 @@ si_I_log10.ga <- ga(type = "real-valued",
          keepBest = TRUE,
          monitor = TRUE)
 stopCluster(cl)
+```
 
-cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-test <- ga(type = "real-valued", 
-         fitness =  function(parameters_cr)
-           chabaudi_si_lag_clean(
-           parameters_cr, 
-           immunity = "tsukushi",
-           parameters = parameters_tsukushi,
-           time_range = time_range,
-           cue = "I",
-           cue_range = I_range,
-           solver = "vode"),
-         lower = c(-10, -500, -1000, -100000), 
-         upper = c(5, 100, 500, 500), 
-         popSize = 100, 
-         maxiter = 500, 
-         run = 30, # increase if running for long
-         pmutation = 0.3, # higher given local minimum stuck
+
+# creating custom ga that writes log file
+```{r}
+# note. after many hours of suffering, you need to put x and set the parameter values as x[1]... or else this will just produce NAs!!!!!!!!!!!!!!!!
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+library(here)
+source(here("functions/ga_verbose.R"))
+test <- ga_verbose(type = "real-valued", 
+         function(x)
+            chabaudi_si_lag_clean(
+            parameters_cr = c(x[1], x[2], x[3], x[4]), 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "I", 
+            cue_range = I_range, 
+            log_cue = "log10",
+            immunity = "tsukushi",
+            solver = "vode"),
+         lower = c(-5, -10,-10,-10), # range determined that would alter shape of spline
+         upper = c(5, 5,5,5), 
+         popSize = 4, 
+         maxiter = 5, 
+         run = 10, 
+         pmutation = 0.3,
+         keepBest = TRUE,
          parallel = TRUE,
-         seed = 137,
-         keepBest = TRUE)
+         monitor = TRUE)
+
 stopCluster(cl)
+
+
+# another issue. I range not enough. Compute canada go up to 10^7.02634. Let's change this to 10^8
+seq(0, log10(10^8), by = log10(10^8)/5000)
+```
+
+# testing out hydropSo
+particle swarming algorithm. I give up.
+```{r}
+library(hydroPSO)
+
+# 
+det_model <- function(x){
+  chabaudi_si_lag_clean(
+    parameters_cr = c(x[[1]],x[[2]],x[[3]],x[[4]]), 
+    parameters = parameters_tsukushi, 
+    time_range = time_range, 
+    cue = "I", 
+    cue_range = I_range, 
+    log_cue = "log10",
+    immunity = "tsukushi",
+    solver = "vode")
+}
+# write model function to be optimized. determinisic model here.
+
+cl <- makeCluster(4)
+registerDoParallel(cl)
+hydropso_test <- hydroPSO(
+  fn = det_model,
+  lower = c(-1, -100, -500, -500),
+  upper = c(1, 100, 500, 500),
+  control = list(verbose = TRUE,
+    MinMax = "max",
+              parallel = "parallel",
+              REPORT = 1)
+)
+
+stopCluster(cl)
+
+
+det_model(list(0.5,0.5,0.5,0.5))
+```
+
+
+# testing out ppso
+```{r}
+library(ppso)
+source(here("functions/chabaudi_si_clean.R"))
+source(here("functions/test.R"))
+
+
+parameter_bounds <- cbind(c(-10, -100, -500, -500),
+                          c(10, 100, 500, 500))
+
+optim_pso(
+  objective_function = function(X)
+            chabaudi_si_clean(
+            parameters_cr = X, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "I", 
+            cue_range = I_range, 
+            log_cue = "log10",
+            immunity = "tsukushi",
+            solver = "vode",
+            neg = TRUE),
+  number_of_parameters = 4,
+  parameter_bounds = parameter_bounds,
+  tryCall = TRUE
+)
+# using default setting
+# 0.8026691   7.5016711 -12.4452724   7.9655673
+#8.164052
 
 
 ```
 
+
+#----------------------------#
+# GA with 200 iterations gave followign parameters
+#----------------------------#
+1.436777 -5.726695 15.34231 -39.01399
+with fitness of 7.79281
+
+# further local LFBGS optimization
+```{r}
+library(optimParallel)
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+si_I_log10.ga <- optimParallel(
+  par =c(26.25904, -38.77391, -26.81986, -17.54260),
+  fn = chabaudi_si_clean, 
+  control = list(trace = 6, fnscale = -1),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  cue = "I",
+  log_cue = "log10",
+  cue_range = I_range,
+  solver = "vode")
+stopCluster(cl)
+
+si_I_log10.ga
+# 1 st iteration. cannot go any further
+#26.25904 -38.77391 -26.81986 -17.54260
+#9.541386
+
+# maximize ppso
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+si_I_log10.ppso <- optimParallel(
+  par =c(0.8026691,   7.5016711, -12.4452724 ,  7.9655673),
+  fn = chabaudi_si_clean, 
+  control = list(trace = 6, fnscale = -1),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  cue = "I",
+  log_cue = "log10",
+  cue_range = I_range,
+  solver = "vode")
+stopCluster(cl)
+#7.59787 -1.37371 -26.0138 17.4015 
+#9.50001
+
+# compare to local starting at 0.5
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+si_I_log10.local <- optimParallel(
+  par =rep(0.5,4),
+  fn = chabaudi_si_clean, 
+  control = list(trace = 6, fnscale = -1),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  cue = "I",
+  log_cue = "log10",
+  cue_range = I_range,
+  solver = "vode")
+stopCluster(cl)
+si_I_log10.local
+#11.951024 -10.153976 -26.094426   9.100654
+# 9.510186
+
+#look at shape of rxn norm
+source(here("functions/par_to_df.R"))
+
+si_I_log_ga.rn <- par_to_df(c(26.25904, -38.77391, -26.81986, -17.54260), cue_range = I_range)
+si_I_log_ppso.rn <- par_to_df(c(7.59787, -1.37371, -26.0138, 17.4015), cue_range = I_range)
+si_I_log_loc.rn <- par_to_df(c(11.951024, -10.153976, -26.094426,   9.100654), cue_range = I_range)
+
+# very little difference lol
+ggplot() +
+  geom_line(data= si_I_log_ga.rn, aes(x = cue_range, y = cr, color = "GA Hybrid")) +
+  geom_line(data= si_I_log_ppso.rn, aes(x = cue_range, y = cr, color = "PPSO hybrid")) +
+  geom_line(data= si_I_log_loc.rn, aes(x = cue_range, y = cr, color = "LBFGS")) +
+  theme_bw()
+```
+
+
+#----------------#
+# note about GA
+#---------------_#
+better results obtained with population size of 500, run value = 100, and longer max-teration. Whole node with 48 cores = 104 iterations at 3 hours. different parameter values: 
+0.4233447 -0.01626622 5.753277 -20.34907, which gives us a fitness of around 7.970117
+from original GA run with smaller population size. 
+
+#---------------------# 
+#more comprehensively trying out PPSO
+#---------------------#
+```{r}
+library(ppso)
+parameter_bounds <- cbind(c(-5, -100, -500, -500),
+                          c(5, 100, 500, 500))
+
+optim_pso(
+  objective_function = function(X)
+            chabaudi_si_clean(
+            parameters_cr = X, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "I", 
+            cue_range = I_range, 
+            log_cue = "log10",
+            immunity = "tsukushi",
+            solver = "vode",
+            neg = TRUE),
+  number_of_parameters = 4,
+  number_of_particles = 70, # increase to 500. Which is on the higher end of the optimal range,. according to https://doi.org/10.1016/j.swevo.2020.100718
+  max_number_of_iterations = 100,
+  parameter_bounds = parameter_bounds,
+  tryCall = TRUE
+)
+
+#0.8026691   7.5016711 -12.4452724   7.9655673
+#8.164052
+```
+
+NOTE FOR PPSO, you need to delete the log or else it retrieves the best results based on your previous runs!!!!
+
+#-------------------------------#
+# cue limits testing
+#------------------------------#
+Need to test for the following:
+1. log(I) -> done. 1 to log(10^8)
+2. I -> use 0 to 10^8
+3. log(R) 
+4. R -> use 10^6 -> 10^7.
+5. log(G)
+6. G
+
+
+# R testing
+```{r}
+R_range1 <- seq(10^6, 10^7, by = (9*(10^6))/5000) # this seems fine for stochastic model
+R_range0 <- seq(0, 10^7, by = (10^7)/5000) # considering stochastic model that might dip further
+
+# no log
+optim_pso(
+  objective_function = function(X)
+            chabaudi_si_clean(
+            parameters_cr = X, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "R", 
+            cue_range = R_range, 
+            log_cue = "none",
+            immunity = "tsukushi",
+            solver = "vode",
+            neg = TRUE),
+  number_of_parameters = 4,
+  number_of_particles = 50, # increase to 500. Which is on the higher end of the optimal range,. according to https://doi.org/10.1016/j.swevo.2020.100718
+  max_number_of_iterations = 5,
+  parameter_bounds = parameter_bounds,
+  tryCall = TRUE
+)
+
+chabaudi_si_clean(
+            parameters_cr = c(-0.132004226,	-48.22755103,	12.34318544,	394.7057029), 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "R", 
+            cue_range = R_range1, 
+            log_cue = "none",
+            immunity = "tsukushi",
+            solver = "vode",
+            neg = TRUE)
+```
+
+# G testing
+```{r}
+G_range1 <- seq(0, 10^5, by = (10^5)/5000) # this is fine
+G_range2 <- seq(0, 5*10^4, by = (10^5)/5000)# this is also fine
+
+optim_pso(
+  objective_function = function(X)
+            chabaudi_si_clean(
+            parameters_cr = X, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "G", 
+            cue_range = G_range2, 
+            log_cue = "none",
+            immunity = "tsukushi",
+            solver = "vode",
+            neg = TRUE),
+  number_of_parameters = 4,
+  number_of_particles = 50, # increase to 500. Which is on the higher end of the optimal range,. according to https://doi.org/10.1016/j.swevo.2020.100718
+  max_number_of_iterations = 5,
+  parameter_bounds = parameter_bounds,
+  tryCall = TRUE
+)
+
+
+source(here("functions/par_to_df.R"))
+
+G_rn_1 <- par_to_df(par = c(0.1941519,  -29.2703889,  296.3940933, -206.6236651), cue_range = G_range1)
+
+# complex shape. Need to check dynamics. In reality, it seems that gametocyte goes to 2*10^4
+plot(G_rn_1$cue_range, G_rn_1$cr, type = "lines")
+#-6.902992
+#0.1941519  -29.2703889  296.3940933 -206.6236651
+
+# getting dynamics data
+G_dyn_1 <- chabaudi_si_clean(
+            parameters_cr = c(0.1941519,  -29.2703889,  296.3940933, -206.6236651), 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "G", 
+            cue_range = G_range1, 
+            log_cue = "none",
+            immunity = "tsukushi",
+            solver = "vode",
+            neg = TRUE,
+            dyn = TRUE)
+
+ggplot() +
+  geom_line(data = G_dyn_1, aes(x = time, y = value)) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+#-------------------------#
+# testing out new GA verbose so that we can submit many jobs with dedicated id
+#-------------------------#
+```{r}
+source(here("functions/ga_verbose.R"))
+source(here("functions/cbahadi_si_clean.R"))
+
+G_range <- seq(0, 10^5, by= (10^5)/5000)
+test <- ga_verbose(type = "real-valued", 
+             function(x)
+               chabaudi_si_clean(
+                 parameters_cr = c(x[1], x[2], x[3], x[4]), 
+                 parameters = parameters_tsukushi, 
+                 time_range = time_range, 
+                 cue = "G", 
+                 cue_range = G_range, 
+                 log_cue = "none",
+                 immunity = "tsukushi",
+                 solver = "vode"),
+             lower = c(-5, -100, -500, -500), # range determined that would alter shape of spline
+             upper = c(5, 100, 500, 500),  
+             popSize = 5, 
+             maxiter = 2, # change to 10 for testing purpose 
+             run = 5, 
+             pmutation = 0.3,
+             keepBest = TRUE,
+             seed = 137,
+             monitor = TRUE,
+             id = "test")
+```
+
+
+#---------------------------------#
+#LFGBS of GA runs that finished successfully
+#----------------------------------#
+```{r}
+source(here("functions/chabaudi_si_clean.R"))
+source(here("functions/par_to_df.R"))
+```
+
+
+# R log
+# 10^6-10^8 finished with 500 populations, 50 runs, max 500 iterations
+#-0.9841931 12.20793 -30.23427 63.48455
+#8.025093 
+
+# changing 10^8->10^7.5 still finish. However, lower fitness such that = 7.985181
+```{r}
+library(optimParallel)
+R_log_range <- seq(log10(10^6), log10(10^8), by = log10((10^8)-(10^6))/5000)
+
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+si_R_log.local <- optimParallel(
+  par = c(-0.9841931, 12.20793, -30.23427, 63.48455),
+  fn = chabaudi_si_clean, 
+  control = list(trace = 6, fnscale = -1),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  cue = "R",
+  log_cue = "log10",
+  cue_range = R_log_range,
+  solver = "vode")
+stopCluster(cl)
+
+#-0.9462285  12.3937075 -30.4948618  63.3172971
+#8.025768
+si_R_log.local
+
+si_R_log.rn <- par_to_df(c(-0.9462285,  12.3937075, -30.4948618,  63.3172971), R_log_range)
+
+plot(si_R_log.rn$cue_range, si_R_log.rn$cr, type = "lines")
+
+# plto dynamics
+si_R_log.dyn <- chabaudi_si_clean(
+  parameters_cr = c(-0.9462285,  12.3937075, -30.4948618,  63.3172971),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  cue = "R",
+  log_cue = "log10",
+  cue_range = R_log_range,
+  solver = "vode",
+  dyn = TRUE
+)
+
+ggplot() +
+  geom_line(data = si_R_log.dyn, aes(x = time, y = value)) +
+  facet_wrap(~variable, scales = "free") +
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+  theme_bw()
+```
+# I-log
+1. (2022-01-27) population size of 500 population size (10^8) limit did not finish but ended with highest point. 
+0.4233447 -0.01626622 5.753277 -20.34907 where fitness = 7.970117
+2. 
+
+# G-log
+1. 0 to 10^5 stopped at iteration 4
+2. 0 to 10^6 stopped at iteration 2
+3. 0 to 10^7 did not start at all
+
+
+# if shit doesn't work, use PPSO to optimize G
+```{r}
+library(ppso)
+G_range <- seq(0, 10^5, by = (10^5)/5000)
+parameter_bounds <- cbind(c(-5, -100, -500, -500),
+                          c(5, 100, 500, 500))
+
+ppso_si_G <- optim_pso(
+  objective_function = function(X)
+            chabaudi_si_clean(
+            parameters_cr = X, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "G", 
+            cue_range = G_range, 
+            log_cue = "none",
+            immunity = "tsukushi",
+            solver = "vode",
+            neg = TRUE),
+  number_of_parameters = 4,
+  number_of_particles = 70,
+  max_number_of_iterations = 500,
+  parameter_bounds = parameter_bounds,
+  max_number_function_calls = 10000,
+  tryCall = TRUE,
+  log = "ppso_si_G6.log")
+
+ppso_si_G 
+#7.047563
+#0.1543677 -21.9189036 179.9696198 166.6666667
+# max iteration reached with 1000 iteraitons
+
+# 10 max iterations
+#-0.1189398  -12.3031964  147.4372224 -261.1575244
+#-7.590436
+#max number of function calls reached
+
+# 50 max iteration
+#-0.1189398  -12.3031964  147.4372224 -261.1575244
+#-7.590436
+
+#500 max iteration
+#-0.1189398  -12.3031964  147.4372224 -261.1575244
+#-7.590436
+
+# 500 max iterations, 5000 max function calls
+# -0.1053204   -7.1153938   62.0880905 -234.3408273
+# -8.278978
+
+# 500 max iterations, 10000 max function calls
+# did not complete. stopped at around 5436
+#-0.003896759	-7.478472547	64.01540971	-310.8298563
+#-8.383730568
+```
+
+# optimize G-log
+```{r}
+G_log_range <- seq(5e-324, log10(10^6), by = log10(10^6)/5000)
+
+ppso_si_G_log <- optim_pso(
+  objective_function = function(X)
+            chabaudi_si_clean(
+            parameters_cr = X, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "G", 
+            cue_range = G_log_range, 
+            log_cue = "log10",
+            immunity = "tsukushi",
+            solver = "vode",
+            neg = TRUE),
+  number_of_parameters = 4,
+  number_of_particles = 70,
+  max_number_of_iterations = 500,
+  parameter_bounds = parameter_bounds,
+  max_number_function_calls = 10000,
+  tryCall = TRUE,
+  log = "ppso_si_G_log.log")
+
+ chabaudi_si_clean
+```
 

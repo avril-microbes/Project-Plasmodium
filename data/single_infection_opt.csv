@@ -1,4 +1,0 @@
-﻿model,algorithm,immunity,time_range,df,cue,cue_range,log_cue,gamete_immune,solver,par_1,par_2,par_3,par_4,fitness
-lag,L-BFGS-B,tsukushi,20,3,I,6*10^6,log10,TRUE,vode,5.457834,2.379202,-17.737559,4.565501,9.494985
-lag,L-BFGS-B,tsukushi,20,3,I,6*10^6,none,TRUE,vode,0.1467794,-44.387266,2286.508169,28.0751167,8.540348
-lag,L-BFGS-B,tsukushi,20,3,I,6*10^6,log ,TRUE,vode,5.477084,2.396156,-17.806718,4.590146,9.495

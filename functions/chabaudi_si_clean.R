@@ -4,9 +4,9 @@
 # Last edited 2022-01-22
 #-----------------------#
 
-chabaudi_si_lag_clean <- function(
+chabaudi_si_clean <- function(
   parameters_cr, # input parameters for conversion rate reaction norm
-  parameters, # sets of values for parameters in the model
+  parameters, # sets of values for parameters in the mosel
   immunity, # immunity selection. Tsukushi's model, saturating immunity, or no immunity possible
   time_range, # time that simulation is ran for
   cue, # cue that parasite use to change conversion rate
@@ -20,8 +20,9 @@ chabaudi_si_lag_clean <- function(
   cue_b = "none", # if second cue is incorporated
   cue_b_range = "none", # if second cue is used, the range of cue that parasite use to adjust conversion rate to
   log_cue_b = "none",  # whether to log10 transform cue_b
-  dyn = FALSE # whether the function should return simulation dynamics rather than fitness
-  ){
+  dyn = FALSE, # whether the function should return simulation dynamics rather than fitness
+  neg = FALSE # set to TRUE if using minimization function
+){
   
   #----------------------#
   # Force argument
@@ -93,7 +94,7 @@ chabaudi_si_lag_clean <- function(
                Ig = 0, # sexual iRBC density
                G = 0, # gametocyte density
                cr_t = 0) # conversion rate
-    }
+  }
   
   ## when using Tsukushi's model of immunity
   if(immunity == "tsukushi"){
@@ -107,7 +108,7 @@ chabaudi_si_lag_clean <- function(
                N = 0, # general RBC removal
                W = 0, # targeted RBC removal
                cr_t = 0) 
-    }
+  }
   
   #----------------------#
   # Describe initial population structure
@@ -116,7 +117,7 @@ chabaudi_si_lag_clean <- function(
   ## function that takes initial merozoite emergence density (I0), shape parameter
   ## of beta function (sp), and time point (t)
   pulseBeta_fun <- function(I0, sp, t){ 
-    res = rep(NA, length(t))
+    res = vector(length = length(t))
     res = I0*(dbeta(t, sp, sp))
     return(res)
   }
@@ -183,9 +184,9 @@ chabaudi_si_lag_clean <- function(
       a <- parameters["a"] # maximum rate of iRBC removal/day with saturating immunity
       b <- parameters["b"] # iRBC density needed to achieve half maximum iRBC removal rate
     }
-
+    
     if(immunity != "tsukushi"){lambda <- parameters["lambda"]} # maximum RBC replenishment rate
-
+    
     if(drug_dose > 0){mud <- parameters["mud"]} # if drug action is included, add drug induced death rate
     if(drug_dose == 0){mud <- 0} # if no drug is administered, no drug-induced mortality
     
@@ -270,10 +271,10 @@ chabaudi_si_lag_clean <- function(
     } else{
       if(stringr::str_detect(cue, "\\+")){ 
         #### for cue 1 day ago
-          if(t>alpha+delay && cue != "t"){
-            cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]] #### add first cue to second cue
-            if(dual_cue == TRUE){cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]}
-          }
+        if(t>alpha+delay && cue != "t"){
+          cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]] #### add first cue to second cue
+          if(dual_cue == TRUE){cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]}
+        }
       }
     }
     
@@ -281,7 +282,9 @@ chabaudi_si_lag_clean <- function(
     # Process cue values
     #------------------#
     if(t>alpha+delay){
-      if(log_cue == "log10"){cue_lag1_p <- log10(cue_lag1)} # log the lagged cue
+      if(log_cue == "log10"){cue_lag1_p <- log10(abs(cue_lag1)+5e-324)} # log the lagged cue
+      ## IMPORTANT: none of the cue lags should be naturally negative. adding this prevents
+      ## stiff "dipping" of cue from producing NAs. 
       if(log_cue == "none"){cue_lag1_p <- cue_lag1} # keep it the same
       
       ## if second cue is used
@@ -295,7 +298,7 @@ chabaudi_si_lag_clean <- function(
         cr <- cr_fun(cue_lag1_p) # single cue cr
       }
     }
-
+    
     #----------------#
     # Drug actions
     #----------------#
@@ -327,14 +330,14 @@ chabaudi_si_lag_clean <- function(
     #-----------------#
     ## Define K, maximum RBC density
     if(immunity != "tsukushi"){K <- lambda*R1/(lambda-mu*R1)}
-
+    
     # asexual merozoite
     dM_nolag <- (-mum*M)-(p*R*M)
     # sexual merozoite
     dMg_nolag <- (-mum*Mg)-(p*R*Mg)
     # gametocyte
     dG_nolag <- -mug*G
-
+    
     # If Tsukushi's model of immunity is used, use the following
     if(immunity == "tsukushi"){
       ## RBC density
@@ -344,7 +347,7 @@ chabaudi_si_lag_clean <- function(
       ## sexual iRBC 
       dIg_nolag <- (p*R*Mg)-(mu*Ig)-((-log(1-N)-log(1-W))*Ig)
       ## indiscriminant RBC removal
-      dN <- psin*((I+Ig)/iota)*(1-N)-(N/phin)
+      dN <- psin*((I+Ig)/iota)*(1-N)-(N/phin) 
       ## targeted iRBC removal
       dW <- psiw*((I+Ig)/iota)*(1-W)-(W/phiw)
       ## hazard function of iRBC
@@ -409,7 +412,7 @@ chabaudi_si_lag_clean <- function(
     # track cr
     if(t<=alpha+delay){dcr_t <- 0}
     if(t>alpha+delay){dcr_t <- cr}
-
+    
     
     #----------------------#
     # Return the states
@@ -423,7 +426,7 @@ chabaudi_si_lag_clean <- function(
   #-------------------End of dynamics function--------------#
   #---------------------------------------------------------#
   #---------------------------------------------------------#
-
+  
   #----------------------#
   # Create injection event
   # needed for delayed infection
@@ -432,6 +435,12 @@ chabaudi_si_lag_clean <- function(
                                 time = delay,
                                 value = parameters["I0"],
                                 method = "add")
+  
+  #-----------------------#
+  # Event that force logged variables
+  # like cue_lag, 1-N, and 1-W to be above 0
+  #------------------------#
+  rootN_fun <- function(t, N, p){N-1}
   
   #-------------------------#
   # Run single-infection model
@@ -442,7 +451,7 @@ chabaudi_si_lag_clean <- function(
                                                 p = parameters,
                                                 method = solver,
                                                 events = list(data = delay_injection),
-                                                control=list(mxhist = 1e6)))
+                                                control=list(mxhist = 1e7)))
   
   #-------------------# 
   # Calculate fitness for optimization
@@ -450,6 +459,8 @@ chabaudi_si_lag_clean <- function(
   # Get Gametocyte density time series data
   gam <- chabaudi_si.df$G
   gam[gam<0] <- 0 ## Assign negative gametocyte density to 0. can arise due to stiffness of function
+  
+  
   
   # Get timeseries interval
   int <- chabaudi_si.df$time[2]
@@ -463,11 +474,14 @@ chabaudi_si_lag_clean <- function(
   tau.ls <- (exp(aval+(bval*dens)))/(1+exp(aval+(bval*dens)))
   
   # Get approximation of cumulative transmission potential
-  tau.sum <- sum(tau.ls*int)
+  tau.sum <- sum(tau.ls*int, na.rm = TRUE)
   
   # return cumulative transmission potential. Used for optimization
-  if(dyn == FALSE){return(tau.sum)} ## if running algorithm that is not ga, set control = list(fnscale = -1)
-  
+  if(dyn == FALSE && neg == FALSE){return(tau.sum)} ## 
+  if(dyn == FALSE && neg == TRUE){
+    tau.sumneg <- tau.sum*-1
+    return(tau.sumneg)
+  } ## if using minimization algorthm, set neg to TRUE to get maximize
   #----------------------------#
   #----------------------------#
   #-Simulate infection dynamics#
@@ -493,7 +507,7 @@ chabaudi_si_lag_clean <- function(
     if(cue == "t"){
       cr.ls <- cr_fun(time_range)
       chabaudi_si.df$cr <- cr.ls
-      }
+    }
     
     # state-based cue
     if(cue != "t"){
