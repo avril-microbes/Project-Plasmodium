@@ -35,7 +35,7 @@ parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
 
 time_range <- seq(0, 20, by = 1e-3)
 
-G_range <- seq(0, 10^5, by = (10^5)/5000)
+G_range <- seq(0,log10(10^5), by = log10(10^5)/5000)
 
 #-----------------------------#
 # Begin parallelized code
@@ -59,12 +59,12 @@ ga_res <- ga_verbose(type = "real-valued",
                          time_range = time_range, 
                          cue = "G", 
                          cue_range = G_range, 
-                         log_cue = "none",
+                         log_cue = "log10",
                          immunity = "tsukushi",
                          solver = "vode"),
                      lower = c(-5, -100, -500, -1000), # range determined that would alter shape of spline
                      upper = c(5,100,500, 1000),  
-                     popSize = 20, 
+                     popSize = 500, 
                      maxiter = 500, # change to 10 for testing purpose 
                      pmutation = 0.3,
                      keepBest = TRUE,
@@ -72,7 +72,7 @@ ga_res <- ga_verbose(type = "real-valued",
                      parallel = cl,
                      seed = 137,
                      monitor = TRUE,
-                     id = "2022-02-01_ga-si-G")
+                     id = "2022-02-22_ga-si-G-log")
 stopCluster(cl)
 
 print(list(ga_res@bestSol, ga_res@fitnessValue))

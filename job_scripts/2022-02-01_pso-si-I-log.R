@@ -1,4 +1,24 @@
 # script to submit to compute canada parallelized ppso runs
+# Load the R MPI package if it is not already loaded.
+if (!is.loaded("mpi_initialize")) {
+    library("Rmpi")
+    }
+
+ns <- mpi.universe.size() - 1
+mpi.spawn.Rslaves(nslaves=ns)
+#
+# In case R exits unexpectedly, have it automatically clean up
+# resources taken up by Rmpi (slaves, memory, etc...)
+.Last <- function(){
+       if (is.loaded("mpi_initialize")){
+           if (mpi.comm.size(1) > 0){
+               print("Please use mpi.close.Rslaves() to close slaves.")
+               mpi.close.Rslaves()
+           }
+           print("Please use mpi.quit() to quit R")
+           .Call("mpi_finalize")
+       }
+}
 
 # load libraries
 library(Rmpi)
@@ -45,6 +65,8 @@ I_range <- seq(0, log10(10^8), by = log10(10^8)/5000)
 
 parameter_bounds <- cbind(c(-5, -100, -500, -1000),
                           c(5, 100, 500, 1000))
+
+source(here::here("functions/chabaudi_si_clean.R"), local = T)
 #-------------#
 # run optim_ppso parallelized
 #-------------#

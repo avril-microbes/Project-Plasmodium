@@ -49,7 +49,7 @@ nodeslist = unlist(strsplit(Sys.getenv("NODESLIST"), split=" "))
 # nodeslist = node1 node1 node2 node2, means we are starting 2 processes on node1, likewise on node2.
 cl = makeCluster(nodeslist, type = "PSOCK") 
 registerDoParallel(cl)
-clusterExport(cl,c("ga_verbose", "time_range", "parameters_tsukushi", "I_range", "chabaudi_si_clean")) 
+clusterExport(cl,c("ga_verbose", "time_range", "parameters_tsukushi", "R_range", "chabaudi_si_clean")) 
 clusterCall(cl, library, package = "mclust", character.only = TRUE)
 ga_res <- ga_verbose(type = "real-valued", 
                      function(x)

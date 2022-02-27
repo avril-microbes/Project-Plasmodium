@@ -1,0 +1,106 @@
+
+R version 4.0.2 (2020-06-22) -- "Taking Off Again"
+Copyright (C) 2020 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # R script to submit parallelized genetic algorithm optimzied runs.
+> 
+> # load libraries
+> library(doParallel)
+Loading required package: foreach
+Loading required package: iterators
+Loading required package: parallel
+> library(GA)
+Package 'GA' version 3.2.2
+Type 'citation("GA")' for citing this R package in publications.
+
+Attaching package: ‘GA’
+
+The following object is masked from ‘package:utils’:
+
+    de
+
+> library(here)
+here() starts at /project/6004331/wanglu57/Project_Plasmodium
+> 
+> # load function
+> source(here("functions/chabaudi_si_clean.R"))
+> #-----------------------------#
+> # load in parameters
+> #-----------------------------#
+> parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
++                          lambda = 3.7*10^5,
++                          mu = 0.025, 
++                          p = 8*10^-6, # doubled form original
++                          alpha = 1, 
++                          alphag = 2, 
++                          beta = 5.721, 
++                          mum = 48, 
++                          mug = 4, 
++                          I0 = 43.85965, 
++                          Ig0 = 0, 
++                          a = 150, 
++                          b = 100, 
++                          sp = 1,
++                          psin = 16.69234,
++                          psiw = 0.8431785,
++                          phin = 0.03520591, 
++                          phiw = 550.842,
++                          iota = 2.18*(10^6),
++                          rho = 0.2627156)
+> 
+> time_range <- seq(0, 20, by = 1e-3)
+> 
+> I_range <- seq(0, log10(6*10^6), by = log10(6*10^6)/5000)
+> 
+> #-----------------------------#
+> # Begin parallelized code
+> #----------------------------#
+> 
+> 
+> # Create an array from the NODESLIST environnement variable
+> nodeslist = unlist(strsplit(Sys.getenv("NODESLIST"), split=" "))
+> 
+> # Create the cluster with the nodes name. One process per count of node name.
+> # nodeslist = node1 node1 node2 node2, means we are starting 2 processes on node1, likewise on node2.
+> cl = makeCluster(nodeslist, type = "PSOCK") 
+> registerDoParallel(cl)
+> ga_res <- ga(type = "real-valued", 
++              function(x)
++                chabaudi_si_lag_clean(
++                  parameters_cr = c(x[1], x[2], x[3], x[4]), 
++                  parameters = parameters_tsukushi, 
++                  time_range = time_range, 
++                  cue = "I", 
++                  cue_range = I_range, 
++                  log_cue = "log10",
++                  immunity = "tsukushi",
++                  solver = "vode"),
++              lower = c(-5, -100, -500, -500), # range determined that would alter shape of spline
++              upper = c(5, 100, 500, 500),  
++              popSize = 100, 
++              maxiter = 10, # change to 10 for testing purpose 
++              run = 30, 
++              pmutation = 0.3,
++              keepBest = TRUE,
++              parallel = cl,
++              seed = 137,
++              monitor = TRUE)
+Error in { : 
+  task 1 failed - "could not find function "chabaudi_si_lag_clean""
+Calls: ga -> %DO% -> <Anonymous>
+Execution halted

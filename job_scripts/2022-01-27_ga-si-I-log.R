@@ -65,14 +65,13 @@ ga_res <- ga_verbose(type = "real-valued",
              lower = c(-5, -100, -500, -1000), # range determined that would alter shape of spline
              upper = c(5,100,500, 1000),  
              popSize = 250, 
-             maxiter = 500, # change to 10 for testing purpose 
+             maxiter = 1000, # change to 10 for testing purpose 
              pmutation = 0.3,
              keepBest = TRUE,
-             run = 50,
+             run = 100,
              parallel = cl,
              seed = 137,
-             monitor = TRUE,
-             id = "2022-02-01_ga-si-I-log")
+             monitor = TRUE)
 stopCluster(cl)
 
 print(list(ga_res@bestSol, ga_res@fitnessValue))

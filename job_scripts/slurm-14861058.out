@@ -1,0 +1,17 @@
+Unloading StdEnv/2020
+
+The following have been reloaded with a version change:
+  1) gcccore/.9.3.0 => gcccore/.7.3.0     2) imkl/2020.1.217 => imkl/2018.3.222
+
+Loading required package: parallel
+here() starts at /project/6004331/wanglu57/Project_Plasmodium
+N = 4, M = 5 machine precision = 2.22045e-16
+L = -inf -inf -inf -inf 
+X0 = 0.5 0.5 0.5 0.5 
+U = inf inf inf inf 
+This problem is unconstrained.
+At X0, 0 variables are exactly at the bounds
+Error in checkForRemoteErrors(val) : 
+  9 nodes produced errors; first error: argument "cue" is missing, with no default
+Calls: co_infection_opt ... clusterApply -> staticClusterApply -> checkForRemoteErrors
+Execution halted

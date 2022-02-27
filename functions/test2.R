@@ -4,7 +4,7 @@
 # Last edited 2022-01-22
 #-----------------------#
 
-test <- function(
+test2 <- function(
   parameters_cr, # input parameters for conversion rate reaction norm
   parameters, # sets of values for parameters in the mosel
   immunity, # immunity selection. Tsukushi's model, saturating immunity, or no immunity possible
@@ -340,18 +340,23 @@ test <- function(
     
     # If Tsukushi's model of immunity is used, use the following
     if(immunity == "tsukushi"){
+      ## define 1-N and 1-W, 2 numbers that might go to negative.
+      ## do heaviside transformation that maintains N/W at 0.999 if N/W>=1 and N/W at 0 if N/W <0
+      N_trans <- ((fBasics::Heaviside(N)*N)+fBasics::Heaviside(N-0.999)*(0.999-N))
+      W_trans <- ((fBasics::Heaviside(W)*W)+fBasics::Heaviside(W-0.999)*(0.999-W))
+      
       ## RBC density
-      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N))*R-(p*R*M)-(p*R*Mg)
+      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N_trans))*R-(p*R*M)-(p*R*Mg)
       ## asexual iRBC 
-      dI_nolag <- (p*R*M)-(mu*I)-((-log(1-N)-log(1-W))*I)
+      dI_nolag <- (p*R*M)-(mu*I)-((-log(1-N_trans)-log(1-W_trans))*I)
       ## sexual iRBC 
-      dIg_nolag <- (p*R*Mg)-(mu*Ig)-((-log(1-N)-log(1-W))*Ig)
+      dIg_nolag <- (p*R*Mg)-(mu*Ig)-((-log(1-N_trans)-log(1-W_trans))*Ig)
       ## indiscriminant RBC removal
-      dN <- psin*((I+Ig)/iota)*(1-N)-(N/phin) 
+      dN <- psin*((I+Ig)/iota)*(1-N_trans)-(N_trans/phin) 
       ## targeted iRBC removal
-      dW <- psiw*((I+Ig)/iota)*(1-W)-(W/phiw)
+      dW <- psiw*((I+Ig)/iota)*(1-W_trans)-(W_trans/phiw)
       ## hazard function of iRBC
-      dID <- mu-log(1-N)-log(1-W)
+      dID <- mu-log(1-N_trans)-log(1-W_trans)
     }
     
     # if no immunity is used
@@ -435,23 +440,7 @@ test <- function(
                                 time = delay,
                                 value = parameters["I0"],
                                 method = "add")
-  
-  #-----------------------#
-  # Event that force logged variables
-  # like cue_lag, 1-N, and 1-W to be above 0
-  #------------------------#
-  root_fun <- function(t, state, parameters){
-    root <- c(state[8]-1, state[9]-1)
-    return(root)
-  }
-  event_fun <- function(t, state, parameters){
-    root <- c(state[8]-1, state[9]-1)
-    root1 <- ifelse(abs(root[[1]]< 1e-3), 1, 0)
-    root2 <- ifelse(abs(root[[2]]< 1e-3), 1, 0)
-    state[8] <- ifelse(root1 == 1, 0.999, state[8]) 
-    state[9] <- ifelse(root2 == 1, 0.999, state[9]) 
-    return(state)
-  }
+
   
   #-------------------------#
   # Run single-infection model
@@ -461,10 +450,7 @@ test <- function(
                                                 func = chabaudi_si_dyn,
                                                 p = parameters,
                                                 method = solver,
-                                                rootfun = root_fun,
-                                                events = list(data = delay_injection,
-                                                              func = event_fun,
-                                                              root = TRUE),
+                                                events = list(data = delay_injection),
                                                 control=list(mxhist = 1e7)))
   
   #-------------------# 

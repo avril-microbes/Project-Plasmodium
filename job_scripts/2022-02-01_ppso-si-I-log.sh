@@ -9,4 +9,5 @@ module load gcc/9.3.0
 module load r/4.0.2
 module load openmpi/4.0.3
 export R_LIBS=~/local/R_libs/
-mpirun Rscript 2022-02-01_pso-si-I-log.R 
+
+mpirun -np 1 R CMD BATCH 2022-02-01_pso-si-I-log.R test.txt

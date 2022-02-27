@@ -1,0 +1,406 @@
+Loading required package: parallel
+here() starts at /project/6004331/wanglu57/Project_Plasmodium
+[1] "starting iteration 2"
+N = 4, M = 5 machine precision = 2.22045e-16
+L = -inf -inf -inf -inf 
+X0 = 0.5 0.5 0.5 0.5 
+U = inf inf inf inf 
+This problem is unconstrained.
+At X0, 0 variables are exactly at the bounds
+At iterate     0  f=           -0  |proj g|=       1.3575
+Iteration     0
+
+---------------- CAUCHY entered-------------------
+
+There are 0  breakpoints
+
+GCP found in this segment
+Piece      1 f1, f2 at start point -3.4757e+00  3.4757e+00
+Distance to the stationary point =   1.0000e+00
+Cauchy X =  -0.857535 0.497834 0.419946 -0.775289 
+
+---------------- exit CAUCHY----------------------
+
+4  variables are free at GCP on iteration 1
+LINE SEARCH 1 times; norm of step = 0.125281
+X = 0.408775 0.499854 0.49462 0.414301 
+G = 0.620269 0.00222473 0.0818968 0.536116 
+Iteration     1
+LINE SEARCH 0 times; norm of step = 0.100231
+X = 0.33168 0.499467 0.480363 0.351858 
+G = -0.407993 0.0019028 0.0705331 -0.480467 
+Iteration     2
+LINE SEARCH 0 times; norm of step = 0.0418081
+X = 0.361614 0.499487 0.481099 0.381035 
+G = 0.0580121 0.00207455 0.0765461 -0.0206197 
+Iteration     3
+LINE SEARCH 1 times; norm of step = 0.033127
+X = 0.342161 0.498787 0.455252 0.388134 
+G = -0.0403462 0.00204438 0.0755631 -0.117983 
+Iteration     4
+LINE SEARCH 0 times; norm of step = 0.133469
+X = 0.277551 0.495876 0.347833 0.433874 
+G = -0.205497 0.00201078 0.074203 -0.281758 
+Iteration     5
+LINE SEARCH 0 times; norm of step = 0.585861
+X = 0.0143334 0.48305 -0.125497 0.656908 
+G = -0.625065 0.00194337 0.0706159 -0.697624 
+Iteration     6
+LINE SEARCH 0 times; norm of step = 1.44785
+X = -0.608729 0.451316 -1.29637 1.23667 
+G = -1.26452 0.00174196 0.0623409 -1.32866 
+Iteration     7
+LINE SEARCH 0 times; norm of step = 3.70095
+X = -2.16033 0.370182 -4.28993 2.76034 
+G = -2.16958 0.00111495 0.0412908 -2.21197 
+Iteration     8
+LINE SEARCH 0 times; norm of step = 6.88521
+X = -4.99191 0.21925 -9.85913 5.64991 
+G = -2.44625 0.000435073 0.0182879 -2.46498 
+Iteration     9
+LINE SEARCH 0 times; norm of step = 12.9613
+X = -10.2426 -0.0646587 -20.3421 11.1682 
+G = -0.942019 -1.69551e-05 0.00304772 -0.945062 
+Iteration    10
+LINE SEARCH 0 times; norm of step = 5.46643
+X = -12.448 -0.184367 -24.7632 13.5044 
+G = -0.333293 -8.2138e-05 0.00112437 -0.334401 
+Iteration    11
+LINE SEARCH 0 times; norm of step = 3.02762
+X = -13.6697 -0.250654 -27.2118 14.7982 
+G = -0.0841397 -8.32721e-05 0.000655927 -0.084684 
+Iteration    12
+LINE SEARCH 0 times; norm of step = 1.41201
+X = -14.2412 -0.281556 -28.3538 15.3998 
+G = 0.00045736 -9.7696e-05 0.000487768 6.96536e-05 
+Iteration    13
+LINE SEARCH 0 times; norm of step = 0.722515
+X = -14.5376 -0.297352 -28.9383 15.7037 
+G = 0.0149792 -0.000107426 0.00034889 0.0147537 
+Iteration    14
+LINE SEARCH 0 times; norm of step = 0.920263
+X = -14.9202 -0.317428 -29.6827 16.0858 
+G = 0.00211081 -0.000148602 0.000117275 0.0020892 
+Iteration    15
+LINE SEARCH 1 times; norm of step = 0.135494
+X = -14.9763 -0.320337 -29.7923 16.1422 
+G = 0.00134571 -7.61957e-05 4.57302e-05 0.00133744 
+Iteration    16
+LINE SEARCH 1 times; norm of step = 0.0318224
+X = -14.9897 -0.320912 -29.818 16.1553 
+G = -5.09857e-05 -9.17962e-05 3.66659e-05 -1.03981e-05 
+Iteration    17
+LINE SEARCH 5 times; norm of step = 0.00216725
+X = -14.9906 -0.320952 -29.8198 16.1562 
+G = -5.17438e-05 -9.6199e-05 7.18745e-05 1.51731e-05 
+ys=-3.779e-08  -gs= 2.452e-08, BFGS update SKIPPED
+Iteration    18
+Bad direction in the line search;
+   refresh the lbfgs memory and restart the iteration.
+Iteration    18
+
+---------------- CAUCHY entered-------------------
+
+There are 0  breakpoints
+
+GCP found in this segment
+Piece      1 f1, f2 at start point -1.7328e-08  1.7328e-08
+Distance to the stationary point =   1.0000e+00
+Cauchy X =  -14.9905 -0.320856 -29.8199 16.1562 
+
+---------------- exit CAUCHY----------------------
+
+4  variables are free at GCP on iteration 19
+Line search cannot locate an adequate point after 20 function
+and gradient evaluations
+final  value -1.623146 
+stopped after 18 iterations
+[[1]]
+[1] 2
+
+[[2]]
+[1] -14.9905583  -0.3209522 -29.8197808  16.1561838
+
+[[3]]
+[1] 1.623146
+
+[[4]]
+[1] 52
+
+[1] "starting iteration 3"
+N = 4, M = 5 machine precision = 2.22045e-16
+L = -inf -inf -inf -inf 
+X0 = -14.9906 -0.320952 -29.8198 16.1562 
+U = inf inf inf inf 
+This problem is unconstrained.
+At X0, 0 variables are exactly at the bounds
+At iterate     0  f=           -0  |proj g|=       0.8493
+Iteration     0
+
+---------------- CAUCHY entered-------------------
+
+There are 0  breakpoints
+
+GCP found in this segment
+Piece      1 f1, f2 at start point -1.4360e+00  1.4360e+00
+Distance to the stationary point =   1.0000e+00
+Cauchy X =  -14.1413 -0.320816 -29.816 17.0016 
+
+---------------- exit CAUCHY----------------------
+
+4  variables are free at GCP on iteration 1
+LINE SEARCH 1 times; norm of step = 0.24163
+X = -14.8193 -0.320925 -29.819 16.3266 
+G = 0.204347 -0.000126873 0.00160774 0.202858 
+Iteration     1
+LINE SEARCH 0 times; norm of step = 0.0468116
+X = -14.8525 -0.320909 -29.8193 16.2937 
+G = 0.077037 -0.000130864 0.000639887 0.0765394 
+Iteration     2
+LINE SEARCH 0 times; norm of step = 0.0283452
+X = -14.8726 -0.320865 -29.8194 16.2737 
+G = -0.0160112 -0.000133467 4.18712e-05 -0.0159121 
+Iteration     3
+LINE SEARCH 0 times; norm of step = 0.00487792
+X = -14.8692 -0.320844 -29.8194 16.2771 
+G = 0.000918237 -0.000126672 0.000151284 0.000905334 
+Iteration     4
+LINE SEARCH 0 times; norm of step = 0.00026613
+X = -14.8693 -0.320819 -29.8195 16.2769 
+G = 5.90213e-06 -0.000145938 0.000156894 -1.12141e-05 
+Iteration     5
+LINE SEARCH 1 times; norm of step = 7.61576e-06
+X = -14.8693 -0.320814 -29.8195 16.2769 
+G = -9.69829e-06 -0.000127533 0.000142269 -3.26422e-05 
+
+iterations 6
+function evaluations 9
+segments explored during Cauchy searches 1
+BFGS updates skipped 0
+active bounds at final generalized Cauchy point 0
+norm of the final projected gradient 0.000142269
+final function value -0.091684
+
+X = -14.8693 -0.320814 -29.8195 16.2769 
+F = -0.091684
+final  value -0.091684 
+converged
+[[1]]
+[1] 3
+
+[[2]]
+[1] -14.8693494  -0.3208138 -29.8194611  16.2769272
+
+[[3]]
+[1] 0.09168405
+
+[[4]]
+[1] 0
+
+[1] "starting iteration 4"
+N = 4, M = 5 machine precision = 2.22045e-16
+L = -inf -inf -inf -inf 
+X0 = -14.8693 -0.320814 -29.8195 16.2769 
+U = inf inf inf inf 
+This problem is unconstrained.
+At X0, 0 variables are exactly at the bounds
+At iterate     0  f=  -2.2204e-16  |proj g|=     0.054416
+Iteration     0
+
+---------------- CAUCHY entered-------------------
+
+There are 0  breakpoints
+
+GCP found in this segment
+Piece      1 f1, f2 at start point -5.8407e-03  5.8407e-03
+Distance to the stationary point =   1.0000e+00
+Cauchy X =  -14.8157 -0.320717 -29.8203 16.3313 
+
+---------------- exit CAUCHY----------------------
+
+4  variables are free at GCP on iteration 1
+LINE SEARCH 1 times; norm of step = 0.0357001
+X = -14.8443 -0.320769 -29.8199 16.3023 
+G = 0.0447909 -9.70053e-05 0.00148261 0.0434006 
+Iteration     1
+LINE SEARCH 0 times; norm of step = 0.0160344
+X = -14.8557 -0.320764 -29.82 16.2911 
+G = 0.00258356 -9.55074e-05 0.00120458 0.00147488 
+Iteration     2
+LINE SEARCH 0 times; norm of step = 0.000868341
+X = -14.8564 -0.320738 -29.8203 16.2907 
+G = 0.000456692 -9.42936e-05 0.00119064 -0.000638263 
+Iteration     3
+LINE SEARCH 0 times; norm of step = 0.000560584
+X = -14.8567 -0.320702 -29.8208 16.2908 
+G = 3.60024e-05 -9.46431e-05 0.00118914 -0.0010554 
+Iteration     4
+LINE SEARCH 0 times; norm of step = 0.00791825
+X = -14.8605 -0.320181 -29.8273 16.293 
+G = -0.00305361 -9.64756e-05 0.00116712 -0.00412455 
+Iteration     5
+LINE SEARCH 0 times; norm of step = 0.0169477
+X = -14.8678 -0.319057 -29.8415 16.2987 
+G = -0.00650109 -9.68085e-05 0.00113944 -0.00754484 
+Iteration     6
+LINE SEARCH 0 times; norm of step = 0.0550486
+X = -14.8904 -0.3154 -29.8875 16.3185 
+G = -0.012919 -9.67418e-05 0.00108667 -0.0139088 
+Iteration     7
+LINE SEARCH 0 times; norm of step = 0.143303
+X = -14.9473 -0.305875 -30.0074 16.3717 
+G = -0.0226127 -9.6083e-05 0.000990848 -0.0235069 
+Iteration     8
+LINE SEARCH 0 times; norm of step = 0.364437
+X = -15.0895 -0.281647 -30.3122 16.5098 
+G = -0.0364518 -9.64574e-05 0.000819864 -0.0371749 
+Iteration     9
+LINE SEARCH 0 times; norm of step = 0.876803
+X = -15.4275 -0.22335 -31.0457 16.8463 
+G = -0.0525662 -9.57165e-05 0.000523359 -0.0529921 
+Iteration    10
+LINE SEARCH 0 times; norm of step = 1.69538
+X = -16.0746 -0.110606 -32.4639 17.5032 
+G = -0.0573342 -9.46421e-05 0.000137131 -0.0573762 
+Iteration    11
+LINE SEARCH 0 times; norm of step = 2.4967
+X = -16.9926 0.0563841 -34.5522 18.5041 
+G = 0.0550906 -9.20772e-05 0.000359692 0.0548215 
+Iteration    12
+LINE SEARCH 0 times; norm of step = 0.149643
+X = -16.9518 0.0461472 -34.4283 18.4315 
+G = 0.00523572 -9.15605e-05 6.2489e-05 0.0052664 
+Iteration    13
+LINE SEARCH 0 times; norm of step = 0.0162319
+X = -16.9595 0.0472048 -34.4418 18.4361 
+G = -0.000316025 -9.44241e-05 2.63289e-05 -0.00024497 
+Iteration    14
+LINE SEARCH 0 times; norm of step = 0.0123677
+X = -16.9641 0.0480563 -34.4521 18.441 
+G = -3.36677e-05 -9.25434e-05 2.42087e-05 3.46903e-05 
+Iteration    15
+LINE SEARCH 1 times; norm of step = 0.00504909
+X = -16.9659 0.0486483 -34.4564 18.4429 
+G = 1.94372e-05 -9.311e-05 2.28688e-05 8.73951e-05 
+Iteration    16
+LINE SEARCH 0 times; norm of step = 0.014354
+X = -16.9706 0.0514486 -34.4687 18.4477 
+G = 0.00019191 -9.22889e-05 2.24568e-05 0.000265574 
+Iteration    17
+LINE SEARCH 0 times; norm of step = 0.0305224
+X = -16.9791 0.0603816 -34.4952 18.4567 
+G = 0.000486643 -9.32382e-05 1.97363e-05 0.000561879 
+Iteration    18
+LINE SEARCH 0 times; norm of step = 0.0898107
+X = -17.0012 0.0928114 -34.5727 18.4796 
+G = 0.00103157 -9.29802e-05 7.38431e-06 0.00111511 
+Iteration    19
+LINE SEARCH 0 times; norm of step = 0.0364939
+X = -16.9941 0.123435 -34.5902 18.4736 
+G = 0.00257721 -9.25875e-05 1.43815e-05 0.00265641 
+Iteration    20
+LINE SEARCH 0 times; norm of step = 0.0767015
+X = -16.9781 0.188611 -34.624 18.4583 
+G = 0.00373582 -9.34606e-05 1.94852e-05 0.0038073 
+Iteration    21
+LINE SEARCH 0 times; norm of step = 0.850392
+X = -16.8179 0.904532 -35.0254 18.3037 
+G = 0.0105111 -9.16409e-05 2.53091e-05 0.0105769 
+Iteration    22
+LINE SEARCH 0 times; norm of step = 1.20088
+X = -16.5094 1.9412 -35.449 17.9991 
+G = 0.0159641 -9.20906e-05 4.18814e-05 0.0160155 
+Iteration    23
+LINE SEARCH 0 times; norm of step = 6.93625
+X = -14.6423 7.94076 -37.729 16.1465 
+G = 0.0354216 -9.17356e-05 0.000101958 0.0354129 
+Iteration    24
+LINE SEARCH 0 times; norm of step = 11.8235
+X = -11.3588 18.1761 -41.4117 12.8771 
+G = 0.0536691 -9.1637e-05 0.000156282 0.0536043 
+Iteration    25
+LINE SEARCH 0 times; norm of step = 42.7545
+X = 0.669976 55.196 -54.406 0.879837 
+G = 0.0914083 -9.26905e-05 0.000246716 0.0912508 
+Iteration    26
+LINE SEARCH 0 times; norm of step = 116.424
+X = 33.5828 156.011 -89.4516 -31.9774 
+G = 0.146239 -9.63892e-05 0.00027871 0.146057 
+Iteration    27
+LINE SEARCH 0 times; norm of step = 403.696
+X = 147.911 505.588 -210.517 -146.165 
+G = 0.2352 -0.000106825 6.45315e-05 0.235239 
+Iteration    28
+LINE SEARCH 1 times; norm of step = 152.191
+X = 191.034 637.377 -256.103 -189.246 
+G = 0.253807 -9.58886e-05 0.00027599 0.253626 
+Iteration    29
+LINE SEARCH 0 times; norm of step = 789.598
+X = 412.63 1321.05 -496.683 -410.756 
+G = 0.316689 0.000147962 0.00559269 0.310968 
+Iteration    30
+LINE SEARCH 1 times; norm of step = 161.196
+X = 456.079 1460.51 -549.102 -454.35 
+G = 0.0471469 -2.70244e-05 -0.00225744 0.0494205 
+Iteration    31
+LINE SEARCH 0 times; norm of step = 239.051
+X = 389.549 1253.55 -475.187 -387.834 
+G = 0.0724579 -3.12505e-05 -0.00186763 0.0743495 
+Iteration    32
+LINE SEARCH 0 times; norm of step = 565.102
+X = 233.383 764.388 -298.155 -231.855 
+G = -0.0208122 -7.44493e-05 -0.00136633 -0.0193724 
+Iteration    33
+LINE SEARCH 0 times; norm of step = 375.982
+X = 338.876 1089.93 -412.71 -337.357 
+G = -0.0784799 -1.30914e-06 -0.000715385 -0.0777622 
+Iteration    34
+LINE SEARCH 0 times; norm of step = 32.568
+X = 329.514 1061.73 -403.295 -327.93 
+G = 0.0236117 -5.96565e-08 -0.000172106 0.0237832 
+Iteration    35
+LINE SEARCH 0 times; norm of step = 54.6381
+X = 314.459 1014.44 -386.085 -312.901 
+G = 0.00146226 -1.82584e-06 -0.000143806 0.00160236 
+Iteration    36
+LINE SEARCH 1 times; norm of step = 19.9881
+X = 308.93 997.134 -379.835 -307.377 
+G = -0.000581774 -2.84659e-06 -0.000102374 -0.000476023 
+Iteration    37
+LINE SEARCH 1 times; norm of step = 1.53549
+X = 309.401 998.462 -380.221 -307.849 
+G = 0.000785131 7.20498e-06 1.59816e-06 0.000777533 
+Iteration    38
+LINE SEARCH 5 times; norm of step = 0.00421804
+X = 309.4 998.459 -380.219 -307.848 
+G = 0.000788404 3.74094e-08 2.59993e-06 0.000780975 
+Iteration    39
+LINE SEARCH 0 times; norm of step = 0.00629458
+X = 309.401 998.459 -380.214 -307.849 
+G = 0.000221971 -5.686e-06 4.83769e-06 0.000219187 
+Iteration    40
+LINE SEARCH 1 times; norm of step = 0.00167862
+X = 309.401 998.46 -380.215 -307.849 
+G = 0.000113345 8.35445e-06 -1.35274e-07 0.000108353 
+Iteration    41
+Bad direction in the line search;
+   refresh the lbfgs memory and restart the iteration.
+Iteration    41
+
+---------------- CAUCHY entered-------------------
+
+There are 0  breakpoints
+
+GCP found in this segment
+Piece      1 f1, f2 at start point -2.4657e-08  2.4657e-08
+Distance to the stationary point =   1.0000e+00
+Cauchy X =  309.401 998.46 -380.215 -307.849 
+
+---------------- exit CAUCHY----------------------
+
+4  variables are free at GCP on iteration 42
+LINE SEARCH 8 times; norm of step = 6.75635e-10
+X = 309.401 998.46 -380.215 -307.849 
+G = 0.0001109 6.22874e-06 5.50698e-06 0.00010974 
+Iteration    42
+slurmstepd: error: *** JOB 15074800 ON cdr1506 CANCELLED AT 2021-09-26T11:39:40 DUE TO TIME LIMIT ***

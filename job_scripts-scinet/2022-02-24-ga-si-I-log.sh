@@ -3,10 +3,11 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=48     # add this line to make sure that slurm uses multiple node4              # number of processes
 #SBATCH --mem=0      # memory; default unit is megabytes
-#SBATCH --time=01:00:00         # time (HH:MM:SS)
+#SBATCH --time=06:00:00         # time (HH:MM:SS)
 
-module load gcc/9.3.0
-module load r/4.0.2
-module load openmpi/4.0.3
-export R_LIBS=~/local/R_libs/
-mpirun Rscript 2022-02-01_pso-si-I-log.R 
+cd $SLURM_SUBMIT_DIR
+module load gcc/8.3.0 intel/2019u4 r/4.1.2
+
+# load R script to all nodes
+${SCINET_R_ROOT}/job_scripts --no-restore 2022-02-24-ga-si-I-log.R
+

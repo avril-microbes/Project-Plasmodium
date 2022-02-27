@@ -809,10 +809,19 @@ ggplot() +
   scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
   theme_bw()
 ```
+# R
+1. (2022-02-22) submitted same parameter as optimal R-log with 6 hours to ensure convergence
+2. 
+
 # I-log
 1. (2022-01-27) population size of 500 population size (10^8) limit did not finish but ended with highest point. 
 0.4233447 -0.01626622 5.753277 -20.34907 where fitness = 7.970117
-2. 
+2. (2022-02-04) 1.635983 -3.309937 5.588261 -20.38874 fitness = 8.000105. pop size and max iter = 500. did not converge, at iteration 259. 6 hours run
+3. (2022-02-22) tried out 250 population with 1000 max iteration and 50 run. Run for 6 hours and see convergence and fitness.
+
+# G 
+1. 0 to 10^5 with heaviside transformation. -0.01614217 -9.194905 97.44897 -695.8279 with fitness of 8.459342. converged with 89th iteration. Pop = 20. Need to repeat with higher population size
+2. pop = 250 with max 50 runs. Converged at fitness of 8.461212, -0.01397668 -8.80356 103.2753 -836.5864
 
 # G-log
 1. 0 to 10^5 stopped at iteration 4
@@ -902,3 +911,52 @@ ppso_si_G_log <- optim_pso(
  chabaudi_si_clean
 ```
 
+
+#-----------------------#
+# implementing heavistep transformation
+#----------------------#
+# issues with N and W going above 1. 
+
+## testing out ifelse statements
+```{r}
+library(ppso)
+source(here("functions/test2.R"))
+
+G_log_range <- seq(5e-324, log10(10^6), by = log10(10^6)/5000)
+parameter_bounds <- cbind(c(-5, -100, -500, -500),
+                          c(5, 100, 500, 500))
+
+optim_pso(
+  objective_function = function(X)
+            test2(
+            parameters_cr = X, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "G", 
+            cue_range = G_log_range, 
+            log_cue = "log10",
+            immunity = "tsukushi",
+            solver = "vode",
+            neg = TRUE),
+  number_of_parameters = 4,
+  parameter_bounds = parameter_bounds,
+  tryCall = TRUE,
+  log = "test.log")
+
+library(fBasics)
+x <- seq(-0.1, 1.5, 0.01)
+y <- ((Heaviside(x)*x)+Heaviside(x-0.999)*(0.999-x))
+plot(x, y)
+
+
+library(crone)
+y2 <- ((heaviside(x)*x)+heaviside(x-0.999)*(0.999-x))
+identical(y, y2)
+```
+
+
+
+#--------------------#
+ppso optimization of G-log
+#---------------------#
+For some reason, cannot get computecanada to optimizate G-log, despite increasing the range to    10^6

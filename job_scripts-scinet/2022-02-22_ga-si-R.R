@@ -35,7 +35,7 @@ parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
 
 time_range <- seq(0, 20, by = 1e-3)
 
-G_range <- seq(0, 10^5, by = (10^5)/5000)
+R_range <- seq(10^6, 10^8, by = ((10^8)-(10^6))/5000)
 
 #-----------------------------#
 # Begin parallelized code
@@ -43,13 +43,17 @@ G_range <- seq(0, 10^5, by = (10^5)/5000)
 
 
 # Create an array from the NODESLIST environnement variable
-nodeslist = unlist(strsplit(Sys.getenv("NODESLIST"), split=" "))
+nodelist <- Sys.getenv("SLURM_JOB_NODELIST")
+# Get your SCRATCH directory.
+my.scratch <- Sys.getenv("SCRATCH")
+node_ids <- unlist(strsplit(nodelist,split="[^a-z0-9-]"))[-1]
+nodelist <- rep(nodelist, 40)
 
 # Create the cluster with the nodes name. One process per count of node name.
 # nodeslist = node1 node1 node2 node2, means we are starting 2 processes on node1, likewise on node2.
 cl = makeCluster(nodeslist, type = "PSOCK") 
 registerDoParallel(cl)
-clusterExport(cl,c("ga_verbose", "time_range", "parameters_tsukushi", "G_range", "chabaudi_si_clean")) 
+clusterExport(cl,c("ga_verbose", "time_range", "parameters_tsukushi", "R_range", "chabaudi_si_clean")) 
 clusterCall(cl, library, package = "mclust", character.only = TRUE)
 ga_res <- ga_verbose(type = "real-valued", 
                      function(x)
@@ -57,14 +61,14 @@ ga_res <- ga_verbose(type = "real-valued",
                          parameters_cr = c(x[1], x[2], x[3], x[4]), 
                          parameters = parameters_tsukushi, 
                          time_range = time_range, 
-                         cue = "G", 
-                         cue_range = G_range, 
+                         cue = "R", 
+                         cue_range = R_range, 
                          log_cue = "none",
                          immunity = "tsukushi",
                          solver = "vode"),
                      lower = c(-5, -100, -500, -1000), # range determined that would alter shape of spline
                      upper = c(5,100,500, 1000),  
-                     popSize = 20, 
+                     popSize = 500, 
                      maxiter = 500, # change to 10 for testing purpose 
                      pmutation = 0.3,
                      keepBest = TRUE,
@@ -72,7 +76,7 @@ ga_res <- ga_verbose(type = "real-valued",
                      parallel = cl,
                      seed = 137,
                      monitor = TRUE,
-                     id = "2022-02-01_ga-si-G")
+                     id = "2022-02-22_ga-si-R")
 stopCluster(cl)
 
 print(list(ga_res@bestSol, ga_res@fitnessValue))

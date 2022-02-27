@@ -35,7 +35,7 @@ parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
 
 time_range <- seq(0, 20, by = 1e-3)
 
-R_range <- seq(log10(10^6), log10(10^8), by = log10((10^8)-(10^6))/5000)
+R_range <- seq(log10(10^6), log10(10^7.5), by = log10((10^7.5)-(10^6))/5000)
 
 #-----------------------------#
 # Begin parallelized code
@@ -49,7 +49,7 @@ nodeslist = unlist(strsplit(Sys.getenv("NODESLIST"), split=" "))
 # nodeslist = node1 node1 node2 node2, means we are starting 2 processes on node1, likewise on node2.
 cl = makeCluster(nodeslist, type = "PSOCK") 
 registerDoParallel(cl)
-clusterExport(cl,c("ga_verbose", "time_range", "parameters_tsukushi", "I_range", "chabaudi_si_clean")) 
+clusterExport(cl,c("ga_verbose", "time_range", "parameters_tsukushi", "R_range", "chabaudi_si_clean")) 
 clusterCall(cl, library, package = "mclust", character.only = TRUE)
 ga_res <- ga_verbose(type = "real-valued", 
                      function(x)
@@ -72,7 +72,7 @@ ga_res <- ga_verbose(type = "real-valued",
                      parallel = cl,
                      seed = 137,
                      monitor = TRUE,
-                     id = "2022-02-01_ga-si-R-log")
+                     id = "2022-02-01_ga-si-R-log2")
 stopCluster(cl)
 
 print(list(ga_res@bestSol, ga_res@fitnessValue))

@@ -1,0 +1,91 @@
+
+Lmod is automatically replacing "intel/2020.1.217" with "gcc/9.3.0".
+
+
+Due to MODULEPATH changes, the following have been reloaded:
+  1) openmpi/4.0.3
+
+
+R version 4.0.2 (2020-06-22) -- "Taking Off Again"
+Copyright (C) 2020 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> # R script to submit parallelized genetic algorithm optimzied runs.
+> 
+> # load libraries
+> library(doParallel)
+Loading required package: foreach
+Loading required package: iterators
+Loading required package: parallel
+> library(GA)
+Package 'GA' version 3.2.2
+Type 'citation("GA")' for citing this R package in publications.
+
+Attaching package: ‘GA’
+
+The following object is masked from ‘package:utils’:
+
+    de
+
+> library(here)
+here() starts at /project/6004331/wanglu57/Project_Plasmodium
+> library(doRNG)
+Loading required package: rngtools
+> 
+> source(here::here("functions/ga_verbose.R"), local = T)
+> source(here::here("functions/chabaudi_si_clean.R"), local = T)
+> # load function
+> #-----------------------------#
+> # load in parameters
+> #-----------------------------#
+> parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
++                          lambda = 3.7*10^5,
++                          mu = 0.025, 
++                          p = 8*10^-6, # doubled form original
++                          alpha = 1, 
++                          alphag = 2, 
++                          beta = 5.721, 
++                          mum = 48, 
++                          mug = 4, 
++                          I0 = 43.85965, 
++                          Ig0 = 0, 
++                          a = 150, 
++                          b = 100, 
++                          sp = 1,
++                          psin = 16.69234,
++                          psiw = 0.8431785,
++                          phin = 0.03520591, 
++                          phiw = 550.842,
++                          iota = 2.18*(10^6),
++                          rho = 0.2627156)
+> 
+> time_range <- seq(0, 20, by = 1e-3)
+> 
+> G_range <- seq(0, log10(10^5.5), by = log10(10^5.5)/5000)
+> 
+> #-----------------------------#
+> # Begin parallelized code
+> #----------------------------#
+> 
+> 
+> # Create an array from the NODESLIST environnement variable
+> nodeslist = unlist(strsplit(Sys.getenv("NODESLIST"), split=" "))
+> 
+> # Create the cluster with the nodes name. One process per count of node name.
+> # nodeslist = node1 node1 node2 node2, means we are starting 2 processes on node1, likewise on node2.
+> cl = makeCluster(nodeslist, type = "PSOCK") 
+slurmstepd: error: *** JOB 26053376 ON cdr1534 CANCELLED AT 2022-02-03T15:39:43 DUE TO TIME LIMIT ***

@@ -51,3 +51,4 @@ lag_ci_I_20.opt_tsukushi_log10_R <- co_infection_opt(parameters_cr = rep(0.5, 4)
 stopCluster(cl)
 
 print(lag_ci_I_20.opt_tsukushi_log10_R)
+

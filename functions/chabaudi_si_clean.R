@@ -1,7 +1,7 @@
 #-----------------------#
 # Newest iteration of single infection model of Plasmodium chabaudi
 # Avril Wang
-# Last edited 2022-01-22
+# Last edited 2022-02-21
 #-----------------------#
 
 chabaudi_si_clean <- function(
@@ -340,18 +340,23 @@ chabaudi_si_clean <- function(
     
     # If Tsukushi's model of immunity is used, use the following
     if(immunity == "tsukushi"){
+      ## define N and W transformed, 2 variables that might go to negative and give NAN in optimization process. 
+      ## do heaviside transformation that maintains N/W at 0.999 if N/W>=1 and N/W at 0 if N/W <0. 
+      N_trans <- ((crone::heaviside(N)*N)+crone::heaviside(N-0.999)*(0.999-N))
+      W_trans <- ((crone::heaviside(W)*W)+crone::heaviside(W-0.999)*(0.999-W))
+      
       ## RBC density
-      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N))*R-(p*R*M)-(p*R*Mg)
+      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N_trans))*R-(p*R*M)-(p*R*Mg)
       ## asexual iRBC 
-      dI_nolag <- (p*R*M)-(mu*I)-((-log(1-N)-log(1-W))*I)
+      dI_nolag <- (p*R*M)-(mu*I)-((-log(1-N_trans)-log(1-W_trans))*I)
       ## sexual iRBC 
-      dIg_nolag <- (p*R*Mg)-(mu*Ig)-((-log(1-N)-log(1-W))*Ig)
+      dIg_nolag <- (p*R*Mg)-(mu*Ig)-((-log(1-N_trans)-log(1-W_trans))*Ig)
       ## indiscriminant RBC removal
-      dN <- psin*((I+Ig)/iota)*(1-N)-(N/phin) 
+      dN <- psin*((I+Ig)/iota)*(1-N_trans)-(N_trans/phin) 
       ## targeted iRBC removal
-      dW <- psiw*((I+Ig)/iota)*(1-W)-(W/phiw)
+      dW <- psiw*((I+Ig)/iota)*(1-W_trans)-(W_trans/phiw)
       ## hazard function of iRBC
-      dID <- mu-log(1-N)-log(1-W)
+      dID <- mu-log(1-N_trans)-log(1-W_trans)
     }
     
     # if no immunity is used
@@ -436,11 +441,6 @@ chabaudi_si_clean <- function(
                                 value = parameters["I0"],
                                 method = "add")
   
-  #-----------------------#
-  # Event that force logged variables
-  # like cue_lag, 1-N, and 1-W to be above 0
-  #------------------------#
-  rootN_fun <- function(t, N, p){N-1}
   
   #-------------------------#
   # Run single-infection model
