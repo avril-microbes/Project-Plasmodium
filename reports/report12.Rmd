@@ -502,12 +502,13 @@ optim_pso(
 1.436777 -5.726695 15.34231 -39.01399
 with fitness of 7.79281
 
+# better attempts here with GA: 1.635983 -3.309937 5.588261 -20.38874
 # further local LFBGS optimization
 ```{r}
 library(optimParallel)
 cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
 si_I_log10.ga <- optimParallel(
-  par =c(26.25904, -38.77391, -26.81986, -17.54260),
+  par =c(1.635983, -3.309937, 5.588261, -20.38874),
   fn = chabaudi_si_clean, 
   control = list(trace = 6, fnscale = -1),
   immunity = "tsukushi",
@@ -572,6 +573,8 @@ ggplot() +
   geom_line(data= si_I_log_ppso.rn, aes(x = cue_range, y = cr, color = "PPSO hybrid")) +
   geom_line(data= si_I_log_loc.rn, aes(x = cue_range, y = cr, color = "LBFGS")) +
   theme_bw()
+
+ggsave(here("figures/report12/log_I_rxn_norm.png"))
 ```
 
 
@@ -954,9 +957,179 @@ y2 <- ((heaviside(x)*x)+heaviside(x-0.999)*(0.999-x))
 identical(y, y2)
 ```
 
+#-----------------------#
+# figure 1. preliminary optimal reaction norm
+#------------------------#
+# effect of different algo on reaction norm for LogI
+```{r}
+source(here("functions/par_to_df.R"))
 
+# run reaction norm
+si_I_log_ga.rn <- par_to_df(c(26.25904, -38.77391, -26.81986, -17.54260), cue_range = I_range)
+si_I_log_ppso.rn <- par_to_df(c(7.59787, -1.37371, -26.0138, 17.4015), cue_range = I_range)
+si_I_log_loc.rn <- par_to_df(c(11.951024, -10.153976, -26.094426,   9.100654), cue_range = I_range)
 
-#--------------------#
-ppso optimization of G-log
+# get Rug plot
+I_log_range <- seq(0, log10(10^8), by = log10(10^8)/5000)
+si_I_log.dyn <- chabaudi_si_clean(
+  parameters_cr = c(26.25904, -38.77391, -26.81986, -17.54260),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  cue = "I",
+  log_cue = "log10",
+  cue_range = I_log_range,
+  solver = "vode",
+  dyn = TRUE
+)
+
+si_I_log.rug <- si_I_log.dyn %>% filter(variable == "I") 
+si_I_log.rug <- si_I_log.rug$value +(10^-524)
+si_I_log.rug <- data.frame(value = log10(si_I_log.rug))
+si_I_log.rug
+# plot
+fig1a <- ggplot() +
+  geom_line(data= si_I_log_ga.rn, aes(x = cue_range, y = cr, color = "GA Hybrid")) +
+  geom_line(data= si_I_log_ppso.rn, aes(x = cue_range, y = cr, color = "PPSO hybrid")) +
+  geom_line(data= si_I_log_loc.rn, aes(x = cue_range, y = cr, color = "LBFGS")) +
+  geom_rug(data = si_I_log.rug, aes(x = value)) +
+  xlim(0, 5.5) +
+  theme_bw() +
+  labs(x = "log10(iRBC)", y = "Conversion rate", color = "Algorithm")
+```
+
+# R log
+for GA, 10^6-10^8 finished with 500 populations, 50 runs, max 500 iterations
+-0.9841931 12.20793 -30.23427 63.48455
+8.025093 
+```{r}
+R_log_range <- seq(log10(10^6), log10(10^8), by = log10((10^8)-(10^6))/5000)
+
+si_R_log.rn <- par_to_df(c(-0.9462285,  12.3937075, -30.4948618,  63.3172971), R_log_range)
+
+# rug plot
+si_R_log.dyn <- chabaudi_si_clean(
+  parameters_cr = c(-0.9462285,  12.3937075, -30.4948618,  63.3172971),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  cue = "R",
+  log_cue = "log10",
+  cue_range = R_log_range,
+  solver = "vode",
+  dyn = TRUE
+)
+
+si_R_log.rug <- si_R_log.dyn %>% filter(variable == "R")
+si_R_log.rug <- data.frame(value = log10(si_R_log.rug$value))
+min(si_R_log.rug)
+
+fig1b <- ggplot() +
+  geom_line(data = si_R_log.rn, aes(x = cue_range, y = cr)) +
+  labs(x = "log10(RBC)", y = "Conversion rate") +
+  geom_rug(data = si_R_log.rug, aes(x = value)) +
+  xlim(6.5,7.5)+
+  theme_bw()
+```
+
+# G 
+pop = 250 with max 50 runs. Converged at fitness of 8.461212, -0.01397668 -8.80356 103.2753 -836.5864
+
+```{r}
+G_range <- seq(0, 10^5, by = (10^5)/5000)
+
+si_G.dyn <- chabaudi_si_clean(
+  parameters_cr = c(-0.01397668, -8.80356, 103.2753, -836.5864),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  cue = "G",
+  log_cue = "none",
+  cue_range = G_range,
+  solver = "vode",
+  dyn = TRUE
+)
+
+si_G.rn <- par_to_df(c(-0.01397668, -8.80356, 103.2753, -836.5864), G_range)
+
+si_G.rug <- si_G.dyn %>% filter(variable == "G")
+si_G.rug <- data.frame(value = si_G_log.rug$value)
+
+fig1c <- ggplot() +
+  geom_line(data = si_G.rn, aes(x = cue_range, y = cr)) +
+  labs(x = "Gametocyte", y = "Conversion rate") +
+  geom_rug(data = si_G.rug, aes(x = value)) +
+  xlim(0, 25000) +
+  theme_bw()
+```
+
+# whole ass plot
+```{r}
+library(ggpubr)
+fig1bc <- ggarrange(fig1b, fig1c)
+
+ggarrange(fig1a, fig1bc, ncol = 1)
+
+ggsave(here("figures/report12/fig1_prelim-rxn-norm.png"))
+```
+
+#----------------------#
+# timewise variables conversion rate
 #---------------------#
-For some reason, cannot get computecanada to optimizate G-log, despite increasing the range to    10^6
+```{r}
+# cumulative tau
+tau.df <- data.frame(rbind(
+  cbind(si_I_log.dyn %>% filter(variable == "tau_cum"), Cue = "log10(iRBC)"),
+  cbind(si_R_log.dyn %>% filter(variable == "tau_cum"), Cue = "log10(RBC)"),
+  cbind(si_G.dyn %>% filter(variable == "tau_cum"), Cue = "Gametocyte")
+))
+
+# conversion rate
+cr.df <- data.frame(rbind(
+  cbind(si_I_log.dyn %>% filter(variable == "cr"), Cue = "log10(iRBC)"),
+  cbind(si_R_log.dyn %>% filter(variable == "cr"), Cue = "log10(RBC)"),
+  cbind(si_G.dyn %>% filter(variable == "cr"), Cue = "Gametocyte")
+))
+
+# immunity
+N.df <- data.frame(rbind(
+  cbind(si_I_log.dyn %>% filter(variable == "N"), Cue = "log10(iRBC)"),
+  cbind(si_R_log.dyn %>% filter(variable == "N"), Cue = "log10(RBC)"),
+  cbind(si_G.dyn %>% filter(variable == "N"), Cue = "Gametocyte")
+))
+
+W.df <- data.frame(rbind(
+  cbind(si_I_log.dyn %>% filter(variable == "W"), Cue = "log10(iRBC)"),
+  cbind(si_R_log.dyn %>% filter(variable == "W"), Cue = "log10(RBC)"),
+  cbind(si_G.dyn %>% filter(variable == "W"), Cue = "Gametocyte")
+))
+
+tau.pt <- ggplot() +
+  geom_line(data = tau.df, aes(x = time, y = value, color = Cue)) +
+  labs(x = "Time (day)", y = "Cumulative\ntransmission potential") +
+  theme_bw()
+
+cr.pt <- ggplot() +
+  geom_line(data = cr.df, aes(x = time, y = value, color = Cue)) +
+  labs(x = "Time (day)", y = "Conversion rate") +
+  theme_bw()
+
+N.pt <- ggplot() +
+  geom_line(data = N.df, aes(x = time, y = value, color = Cue)) +
+  labs(x = "Time (day)", y = "Indiscriminant\nRBC clearance") +
+  theme_bw()
+
+W.pt <- ggplot() +
+  geom_line(data = W.df, aes(x = time, y = value, color = Cue)) +
+  labs(x = "Time (day)", y = "iRBC\nclearance") +
+  theme_bw()
+
+ggarrange(tau.pt, cr.pt, N.pt, W.pt, labels = c("A", "B", "C", "D"),
+                  common.legend = T)
+
+ggsave(here("figures/report12/fig2_time_variable.png"), height = 5)
+
+
+```
+
+

@@ -1,7 +1,7 @@
 #-----------------------#
 # Newest iteration of single infection model of Plasmodium chabaudi
 # Avril Wang
-# Last edited 2022-01-22
+# Last edited 2022-02-21
 #-----------------------#
 
 test <- function(
@@ -119,6 +119,16 @@ test <- function(
   pulseBeta_fun <- function(I0, sp, t){ 
     res = vector(length = length(t))
     res = I0*(dbeta(t, sp, sp))
+    return(res)
+  }
+  
+  #----------------------#
+  # define Heaviside transformation
+  #----------------------#
+  # function that transforms anything that above specificed max value to max. 
+  # if value cue_range is below max, does not change the value.
+  heaviside_trans <- function(cue_range, max){
+    res <- crone::heaviside(cue_range)*(cue_range)+(crone::heaviside(cue_range-max)*(max-cue_range))
     return(res)
   }
   
@@ -282,10 +292,17 @@ test <- function(
     # Process cue values
     #------------------#
     if(t>alpha+delay){
-      if(log_cue == "log10"){cue_lag1_p <- log10(abs(cue_lag1)+5e-324)} # log the lagged cue
+      if(log_cue == "log10"){
+        cue_lag1_log <- log10(abs(cue_lag1)+5e-324) # log the lagged cue
+        
+        ## heaviside transformation
+        cue_lag1_p <- heaviside_trans(cue_lag1_log, max(cue_range)) 
+        } 
       ## IMPORTANT: none of the cue lags should be naturally negative. adding this prevents
       ## stiff "dipping" of cue from producing NAs. 
-      if(log_cue == "none"){cue_lag1_p <- cue_lag1} # keep it the same
+      if(log_cue == "none"){
+        cue_lag1_p <- heaviside_trans(cue_lag1, max(cue_range))
+        } # keep it the same
       
       ## if second cue is used
       if(cue_b != "none"){
@@ -340,18 +357,23 @@ test <- function(
     
     # If Tsukushi's model of immunity is used, use the following
     if(immunity == "tsukushi"){
+      ## define N and W transformed, 2 variables that might go to negative and give NAN in optimization process. 
+      ## do heaviside transformation that maintains N/W at 0.999 if N/W>=1 and N/W at 0 if N/W <0. 
+      N_trans <- ((crone::heaviside(N)*N)+crone::heaviside(N-0.999)*(0.999-N))
+      W_trans <- ((crone::heaviside(W)*W)+crone::heaviside(W-0.999)*(0.999-W))
+      
       ## RBC density
-      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N))*R-(p*R*M)-(p*R*Mg)
+      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N_trans))*R-(p*R*M)-(p*R*Mg)
       ## asexual iRBC 
-      dI_nolag <- (p*R*M)-(mu*I)-((-log(1-N)-log(1-W))*I)
+      dI_nolag <- (p*R*M)-(mu*I)-((-log(1-N_trans)-log(1-W_trans))*I)
       ## sexual iRBC 
-      dIg_nolag <- (p*R*Mg)-(mu*Ig)-((-log(1-N)-log(1-W))*Ig)
+      dIg_nolag <- (p*R*Mg)-(mu*Ig)-((-log(1-N_trans)-log(1-W_trans))*Ig)
       ## indiscriminant RBC removal
-      dN <- psin*((I+Ig)/iota)*(1-N)-(N/phin) 
+      dN <- psin*((I+Ig)/iota)*(1-N_trans)-(N_trans/phin) 
       ## targeted iRBC removal
-      dW <- psiw*((I+Ig)/iota)*(1-W)-(W/phiw)
+      dW <- psiw*((I+Ig)/iota)*(1-W_trans)-(W_trans/phiw)
       ## hazard function of iRBC
-      dID <- mu-log(1-N)-log(1-W)
+      dID <- mu-log(1-N_trans)-log(1-W_trans)
     }
     
     # if no immunity is used
@@ -436,22 +458,6 @@ test <- function(
                                 value = parameters["I0"],
                                 method = "add")
   
-  #-----------------------#
-  # Event that force logged variables
-  # like cue_lag, 1-N, and 1-W to be above 0
-  #------------------------#
-  root_fun <- function(t, state, parameters){
-    root <- c(state[8]-1, state[9]-1)
-    return(root)
-  }
-  event_fun <- function(t, state, parameters){
-    root <- c(state[8]-1, state[9]-1)
-    root1 <- ifelse(abs(root[[1]]< 1e-3), 1, 0)
-    root2 <- ifelse(abs(root[[2]]< 1e-3), 1, 0)
-    state[8] <- ifelse(root1 == 1, 0.999, state[8]) 
-    state[9] <- ifelse(root2 == 1, 0.999, state[9]) 
-    return(state)
-  }
   
   #-------------------------#
   # Run single-infection model
@@ -461,10 +467,7 @@ test <- function(
                                                 func = chabaudi_si_dyn,
                                                 p = parameters,
                                                 method = solver,
-                                                rootfun = root_fun,
-                                                events = list(data = delay_injection,
-                                                              func = event_fun,
-                                                              root = TRUE),
+                                                events = list(data = delay_injection),
                                                 control=list(mxhist = 1e7)))
   
   #-------------------# 

@@ -1,7 +1,7 @@
 #-----------------------#
 # Newest iteration of single infection model of Plasmodium chabaudi
 # Avril Wang
-# Last edited 2022-02-21
+# Last edited 2022-03-05
 #-----------------------#
 
 chabaudi_si_clean <- function(
@@ -119,6 +119,16 @@ chabaudi_si_clean <- function(
   pulseBeta_fun <- function(I0, sp, t){ 
     res = vector(length = length(t))
     res = I0*(dbeta(t, sp, sp))
+    return(res)
+  }
+  
+  #----------------------#
+  # define Heaviside transformation
+  #----------------------#
+  # function that transforms anything that above specificed max value to max. 
+  # if value cue_range is below max, does not change the value.
+  heaviside_trans <- function(cue_range, max){
+    res <- crone::heaviside(cue_range)*(cue_range)+(crone::heaviside(cue_range-max)*(max-cue_range))
     return(res)
   }
   
@@ -282,10 +292,17 @@ chabaudi_si_clean <- function(
     # Process cue values
     #------------------#
     if(t>alpha+delay){
-      if(log_cue == "log10"){cue_lag1_p <- log10(abs(cue_lag1)+5e-324)} # log the lagged cue
+      if(log_cue == "log10"){
+        cue_lag1_log <- log10(abs(cue_lag1)+5e-324) # log the lagged cue
+        
+        ## heaviside transformation
+        cue_lag1_p <- heaviside_trans(cue_lag1_log, max(cue_range)) 
+      } 
       ## IMPORTANT: none of the cue lags should be naturally negative. adding this prevents
       ## stiff "dipping" of cue from producing NAs. 
-      if(log_cue == "none"){cue_lag1_p <- cue_lag1} # keep it the same
+      if(log_cue == "none"){
+        cue_lag1_p <- heaviside_trans(cue_lag1, max(cue_range))
+      } # keep it the same
       
       ## if second cue is used
       if(cue_b != "none"){

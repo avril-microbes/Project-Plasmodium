@@ -1,0 +1,270 @@
+---
+title: "report13"
+output: html_document
+---
+
+# Overview
+Hoping to implement the following changes
+1. Using heaviside transformation to restrain cue range such that any simulation that exceeds/dips below specificed cue range is assigned to max, and min cue range. This will hopefully allow us to use a narrower (and more biologically plausible) cue range, which will improve the optimization outcome
+2. Per above, test out the impact of two types of cue range: theoretical limit and limits derived from experimental data
+3. Test out the effects of spline transformation with heaviside. Can we decrease size of solution space?
+4. Phase plot testing -> read Schneider papers
+
+# load libraries
+```{r}
+library(dplyr)
+library(ggplot2)
+library(here)
+library(deSolve)
+library(crone)
+library(optimParallel)
+```
+# load parameter
+```{r}
+source(here("functions/par_to_df.R"))
+
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+
+time_range <- seq(0, 20, by = 1e-3)
+
+```
+
+#--------------------------#
+# Testing function with H(cue range)
+#--------------------------#
+## function for heaviside transformation
+```{r}
+heaviside_trans <- function(cue_range, max){
+  res <- crone::heaviside(cue_range)*(cue_range)+(crone::heaviside(cue_range-max)*(max-cue_range))
+  return(res)
+}
+```
+
+## testing H(with theoretical cue range)
+```{r}
+test_cue_range <- seq(10^6, 10^8, by = ((10^8)-(10^6))/10)
+res <- heaviside_trans(test_cue_range, 10^7.5)
+plot(x = test_cue_range, y = res)
+
+test_cue_range
+res
+```
+
+## testing test function
+So far so good
+```{r}
+source(here("functions/test.R"))
+
+G_log_range <- seq(0, log10(10^3), by = (log10(10^3)/5000))
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+test.opt <- optimParallel(
+  par = rep(0.5,4),
+  fn = test, 
+  control = list(trace = 6, fnscale = -1),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range,
+  cue = "G",
+  log_cue = "log10",
+  cue_range = G_log_range,
+  solver = "vode")
+stopCluster(cl)
+
+#9.561373 (10^5 as max)
+#1.20976 -4.12116 -1.05438 -1.30074 
+
+#1.21438 -3.32024 -1.98555 -1.47068 (10^4 as max)
+#-9.56045
+
+#1.33022 -3.39835 -2.53525 -1.66878  (10^3 as max)
+#9.534979
+
+# running dynamics to see if things match up
+test.dyn <- test(
+            parameters_cr = c(1.33022, -3.39835, -2.53525, -1.6687), 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "G", 
+            cue_range = G_log_range, 
+            log_cue = "log10",
+            immunity = "tsukushi",
+            solver = "vode",
+            dyn = TRUE)
+
+# max fitness
+test.dyn %>% filter(variable == "tau_cum") %>% arrange(desc(value)) #9.534969	
+
+# plot rxn norm and G
+test.rn <- par_to_df(c(1.33022, -3.39835, -2.53525, -1.6687), G_log_range)
+
+G.dyn <- test.dyn %>% filter(variable == "G")
+cr.dyn <- test.dyn %>% filter(variable == "cr")
+
+plot(x = test.rn$cue_range, y = test.rn$cr)
+line(x = G.dyn$time, y = log10(G.dyn$value))
+line(x = cr.dyn$time, y = cr.dyn$value)
+```
+
+#------------------------#
+# Decrease solution space 
+#------------------------#
+# nested function to generate different iterations of each parameter values
+```{r}
+spline_par <- function(
+  par_seq, # range of parameters we want to test
+  cue_range,
+  mode = NULL) # cue_range optimized over
+  { 
+  
+  get_spline <- function(par, cue_range){
+  # create dummy model
+  dummy_y.vals <- rep(0, length(cue_range)) 
+  dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
+    
+  # fit basic cubic spline with no internal knots. 
+  dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3))
+  dummy_cr.mod$data <- dummy_cr.data
+    
+  # assign coefficient to be optimized to the dummy conversion rate function
+  dummy_cr.mod$coefficients <- par
+    
+  # trying heaviside transformation
+  cr_pred <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
+  cr_trans <- crone::heaviside(cr_pred)*(cr_pred)+(crone::heaviside(cr_pred-1)*(1-cr_pred))
+  if(mode == "exp"){cr_trans <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))}
+    
+  # fit spline function to predicted conversion rate. This increases processing speed
+  cr_fun <- splinefun(cbind(cue_range, cr_trans))
+  return(cr_fun)
+  }
+  
+  # get dataframe of all permutation of parameter values and their position
+  par.df <- expand.grid(n = c(1,2,3,4), par = par_seq)
+  ## paste0 to get id
+  par.df$id <- paste0(par.df$n, "_", par.df$par)
+  
+  # substitute each value within the 4 parameters with par_seq (generate all iterations)
+  changed_par <- mapply(function(x, y){
+    ## define original parameter
+    par_trans <- rep(0.5,4)
+    ## change according to df
+    par_trans[[x]] <- y
+    return(par_trans)
+  }, x = par.df$n, y = par.df$par)
+  
+  # convert matrix (each column) into a list of parameters
+  par.ls <- lapply(seq_len(ncol(changed_par)), function(i) changed_par[,i])
+
+  
+  #get a list of splines form the transformed parameter lists
+  spline.ls <- lapply(par.ls, function(x){
+    get_spline(par = x, cue_range = cue_range)
+  })
+  
+  # convert spline to dataframe
+  spline_int.ls <- mapply(function(x, y){
+    data.frame(cue = cue_range, cr = x(cue_range), group = y)},
+    x = spline.ls, y = par.df$id)
+  
+  # convert to df.ls
+  df.ls <- lapply(seq_len(ncol(spline_int.ls)), function(i){
+    df <- spline_int.ls[,i]
+    df_cat <- data.frame(cbind(
+      cue = as.numeric(df$cue), 
+      cr = as.numeric(df$cr), 
+      group = df$group))
+  return(df_cat)
+} )
+  
+  res <- do.call(rbind, df.ls)
+  
+  return(res)
+  
+}
+
+```
+
+# testing the heaviside transformed version
+par1: -1 to 1
+par2: -100 to 100
+par3: -1000, 1000
+par4: -5000 to 5000
+```{r}
+heaviside_spline <- spline_par(par_seq = c(-10000, -5000, -1000, -100, -10, -1, 0, 1, 10, 100, 1000, 5000, 10000), cue_range = seq(0, 100, by = 1))
+
+# process data
+heaviside_spline2 <- heaviside_spline %>% 
+  mutate(n = gsub("_.*", "", group),
+         par = gsub("*._", "", group))
+
+ggplot() +
+  geom_line(data = heaviside_spline2, aes(x = as.numeric(cue), y = as.numeric(cr), color = par)) +
+  facet_wrap(~n) +
+  theme_bw()
+```
+
+# testing double exponential
+solution space the same size. goddamit. Moving on, we could continue with double exponential for consistency sake. Use the spline range we have determined
+```{r}
+exp_spline <- spline_par(par_seq = c(-10000, -5000, -1000, -100, -10, -1, 0, 1, 10, 100, 1000, 5000, 10000), cue_range = seq(0, 100, by = 1),
+                         mode = "exp")
+
+# process data
+exp_spline2 <- exp_spline %>% 
+  mutate(n = gsub("_.*", "", group),
+         par = gsub("*._", "", group))
+
+ggplot() +
+  geom_line(data = exp_spline2, aes(x = as.numeric(cue), y = as.numeric(cr), color = par)) +
+  facet_wrap(~n) +
+  theme_bw()
+```
+
+#-------------------------#
+# cue range determination
+#-------------------------#
+all determined via single infection for resistance strain
+
+For empirical cue range, use:
+iRBC: 0-10^7
+gametocyte: 0-10^5
+RBC: 10^6-10^8
+
+For theoretical cue range, use:
+iRBC: 0-50859690 (maximum RBC*burst size)
+gametocyte: 0-(8.89*10^6) (maximum RBC)
+RBC:0-(10^8)
+```{r}
+# max asexual iRBC: 5352755 (5*10^6)
+max(exp_ss_R.df$asex)
+
+# max gametocyte: 58148.5 (6*10^4)
+max(exp_ss_R.df$gam)
+
+# minimum RBC: 1610000 (1.6*10^6)
+min(exp_ss_R.df$RBC)
+# max RBC: 12820000 (1.3*10^7)
+max(exp_ss_R.df$RBC)
+```
+
+
+
