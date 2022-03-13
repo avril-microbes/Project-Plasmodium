@@ -132,7 +132,7 @@ line(x = cr.dyn$time, y = cr.dyn$value)
 spline_par <- function(
   par_seq, # range of parameters we want to test
   cue_range,
-  mode = NULL) # cue_range optimized over
+  mode = "place") # cue_range optimized over
   { 
   
   get_spline <- function(par, cue_range){
@@ -216,10 +216,14 @@ heaviside_spline2 <- heaviside_spline %>%
   mutate(n = gsub("_.*", "", group),
          par = gsub("*._", "", group))
 
-ggplot() +
+fig2a <- ggplot() +
   geom_line(data = heaviside_spline2, aes(x = as.numeric(cue), y = as.numeric(cr), color = par)) +
   facet_wrap(~n) +
+  xlab("Cue") +
+  ylab("Conversion rate") +
   theme_bw()
+
+
 ```
 
 # testing double exponential
@@ -233,11 +237,20 @@ exp_spline2 <- exp_spline %>%
   mutate(n = gsub("_.*", "", group),
          par = gsub("*._", "", group))
 
-ggplot() +
+fig2b <- ggplot() +
   geom_line(data = exp_spline2, aes(x = as.numeric(cue), y = as.numeric(cr), color = par)) +
   facet_wrap(~n) +
+  xlab("Cue") +
+  ylab("Conversion rate") +
   theme_bw()
 ```
+
+# get figure 2
+```{r}
+ggpubr::ggarrange(fig2a, fig2b, common.legend = T, labels = c("A", "B"))
+ggsave(here("figures/report13/fig2_solution_space.png"), width = 10, height = 6)
+```
+
 
 #-------------------------#
 # cue range determination
@@ -266,5 +279,678 @@ min(exp_ss_R.df$RBC)
 max(exp_ss_R.df$RBC)
 ```
 
+
+#------------------------#
+# phase planes
+#------------------------#
+Run code in report 10 to get exp_ss_R.df
+
+Here, a lopsided curve would be produced for two variables that, in combination, produces a unique point on the graph for each time point. This is line with our requirement for state differentiation, in which the parasite should be able to distinguish early infection, log phase, paratesemia, decline, and terminal phase. 
+
+It would also be interesting to model how antimalarial influence the shape of the curve and how different cue allow parasites to respond. 
+
+# different combination of cues. non logged
+```{r}
+# RBC and asexual
+rbc_asex <- ggplot(exp_ss.df) +
+  geom_point(aes(y = RBC, x = asex)) +
+  geom_path(aes(y = RBC, x = asex, colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+
+# RBC and gametocyte
+rbc_gam <- ggplot(exp_ss.df) +
+  geom_point(aes(y = RBC, x = gam)) +
+  geom_path(aes(y = RBC, x = gam, colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+
+# asex and gametocyte
+asex_gam <- ggplot(exp_ss.df) +
+  geom_point(aes(y = asex, x = gam)) +
+  geom_path(aes(y = asex, x = gam, colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+```
+
+# logged RBC and asexual
+```{r}
+# RBC and asexual
+## log RBC only
+rbc_log_asex <- ggplot(exp_ss.df) +
+  geom_point(aes(y = log10(RBC), x = asex)) +
+  geom_path(aes(y = log10(RBC), x = asex, colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+## log asex only
+rbc_asex_log <- ggplot(exp_ss.df) +
+  geom_point(aes(y = RBC, x = log10(asex))) +
+  geom_path(aes(y = RBC, x = log10(asex), colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+## log both
+rbc_asex_log2 <- ggplot(exp_ss.df) +
+  geom_point(aes(y = log10(RBC), x = log10(asex))) +
+  geom_path(aes(y = log10(RBC), x = log10(asex), colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+```
+
+# logged RBC and gametocyte
+```{r}
+# RBC and gametocyte
+## log RBC only
+rbc_log_gam <- ggplot(exp_ss.df) +
+  geom_point(aes(y = log10(RBC), x = gam)) +
+  geom_path(aes(y = log10(RBC), x = gam, colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+
+## log gametocyte only
+rbc_gam_log <- ggplot(exp_ss.df) +
+  geom_point(aes(y = RBC, x = log10(gam))) +
+  geom_path(aes(y = RBC, x = log10(gam), colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+
+# log bRBC and gametocyte
+rbc_gam_log2 <- ggplot(exp_ss.df) +
+  geom_point(aes(y = log10(RBC), x = log10(gam))) +
+  geom_path(aes(y = log10(RBC), x = log10(gam), colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+```
+
+# logged asex and gametocyte
+```{r}
+# log asex only
+asex_log_gam <- ggplot(exp_ss.df) +
+  geom_point(aes(y = log10(asex), x = gam)) +
+  geom_path(aes(y = log10(asex), x = gam, colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+
+# log gam only
+asex_gam_log <- ggplot(exp_ss.df) +
+  geom_point(aes(y = asex, x = log10(gam))) +
+  geom_path(aes(y = asex, x = log10(gam), colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+
+# log both
+asex_gam_log2 <- ggplot(exp_ss.df) +
+  geom_point(aes(y = log10(asex), x = log10(gam))) +
+  geom_path(aes(y = log10(asex), x = log10(gam), colour = day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+```
+
+# get figure 3
+```{r}
+rbc_asex_cat <- ggarrange(rbc_asex, rbc_log_asex, rbc_asex_log, rbc_asex_log2, ncol = 4, common.legend = T)
+rbc_gam_cat <- ggarrange(rbc_gam, rbc_log_gam, rbc_gam_log, rbc_gam_log2, ncol = 4, common.legend = T)
+asex_gam_cat <- ggarrange(asex_gam, asex_log_gam, asex_gam_log, asex_gam_log2, ncol = 4, common.legend = T)
+
+ggarrange(rbc_asex_cat, rbc_gam_cat, asex_gam_cat, ncol = 1, labels = c("A", "B","C"))
+
+ggsave(here("figures/report13/figure3_phase_plot.png"), width = 20, height = 17)
+```
+
+
+#-------------------#
+# optimization results
+#-------------------#
+# round 1. pop = 250
+1. G non-logged finished optimization
+0.03086619 -13.61544 192.6085 -2017.579
+fitness: 8.576677
+2. G logged not finished -> resubmitted with suggestions
+ -0.4881706 -72.4814 383.2886 -183.4642
+fitness: 5.427223
+3. I non-logged not finished -> resubmitted with suggestions
+-0.07831214 -17.14939 990.9274 4770.606
+fitness: 8.154605
+4. I logged not finished -> resubmitted with suggestions and adjustment of population to 100 (max run = 50)
+ 0.4186045 -14.82593 47.4499 -87.66085
+ fitness: 4.613214
+5. R non-logged not finished -> resubmitted with suggestions
+0.4834533 -10.72914 64.90252 815.7626
+fitness: 8.023515
+6. R logged not finished -> resubmitted with suggestions
+0.2502309 23.90878 -65.34474 125.7192
+fitness: 8.036564
+
+# Round 2
+resubmitted all jobs with suggestions of the last highest fitness. Unfortunately, all of them had 50 iterations with no improvements, ending the runs.
+
+Except for:
+1. R log (converged)
+0.4133338 23.93299 -65.81105 125.6339
+fitness: 8.037498
+2. I log (converged)
+0.404047 -14.82593 47.4499 -87.66085
+fitness: 4.613326
+
+Resubmission
+1. I non-logged 
+resubmission with run adjusted to 100
+2. R non-logged
+resubmission with run adjusted to 100
+3. I logged
+resubmission with no suggestion. Adjust population to 50 and run to 100
+
+# round 3
+1. I logged 
+converged at fitness of 1.799255 lol. Might need to use another algo for optimization (PPSO?) compare with L-BFGS
+2. R non-logged -> local opt
+did not improve after 100 runs
+0.4834533 -10.72914 64.90252 815.7626
+fitness: 8.023515
+3. I non-logged -> local opt
+did not improve after 100 runs
+-0.07831214 -17.14939 990.9274 4770.606
+fitness: 8.154605
+
+#----------------------#
+# LBFGS comparison (local optimization)
+#---------------------#
+# function wrapper for optimization to save space
+```{r}
+source(here("functions/chabaudi_si_clean.R"))
+
+opt_local <- function(
+  par, # initial parameter sets
+  cue, #
+  log,
+  cue_range,
+  dyn = F
+  ){
+  # start cluster
+  cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  
+  # start optimization LFBGS
+  res <- optimParallel(
+    par = par,
+    fn = chabaudi_si_clean, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = time_range,
+    cue = cue,
+    log_cue = log,
+    cue_range = cue_range,
+    solver = "vode")
+  
+  # close cluster
+  stopCluster(cl)
+  
+  return (res)
+}
+```
+
+# G non-logged
+better performance for GA hybrid
+```{r}
+# GA hybrid
+G_ga_hybrid.op <- opt_local(par = c(0.03086619, -13.61544, 192.6085, -2017.579),
+                            cue = "G",
+                            log = "none",
+                            cue_range = seq(0, 10^5, by = (10^5)/5000))
+
+# 4.111631e-02 -1.426712e+01 1.975708e+02 -2.017394e+03
+# fitness 8.582866
+
+# LBFGS only
+G_ga_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "G",
+                            log = "none",
+                            cue_range = seq(0, 10^5, by = (10^5)/5000))
+# -0.04605913 -6.19662012 40.47605626  2.70620334
+#8.316965
+chabaudi_si_clean
+```
+
+
+# G logged
+couldn't get further improvements with run 100 on GA. Nonetheless, I am going to use the GA to further perform local optimization to see whether that leads to improvements.
+```{r}
+G_log_ga_hybrid.op <- opt_local(par = c(-0.4881706, -72.4814, 383.2886, -183.4642),
+                            cue = "G",
+                            log = "log10",
+                            cue_range = seq(0, log10(10^5), by = log10(10^5)/5000))
+
+# -0.4884122  -72.4814417  383.2885244 -183.4644718
+# 5.427269
+## ga hybrid trapped into local optimum
+
+G_log_ga_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "G",
+                            log = "log10",
+                            cue_range = seq(0, log10(10^5), by = log10(10^5)/5000))
+
+#1.211651 -4.120928 -1.054041 -1.300403
+#9.561373
+```
+
+
+# R logged
+GA+hybrid does better
+```{r}
+# GA hybrid
+R_log_ga_hybrid.op <- opt_local(par = c(0.4133338, 23.93299, -65.81105, 125.6339),
+                            cue = "R",
+                            log = "log10",
+                            cue_range = seq(log10(10^6), log10(10^8), by = (log10(10^8)-log10(10^6))/5000))
+#0.4131313  23.9329075 -65.8111298 125.6338918
+#8.037499
+
+# local
+R_log_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "R",
+                            log = "log10",
+                            cue_range = seq(log10(10^6), log10(10^8), by = (log10(10^8)-log10(10^6))/5000))
+# -0.6602626 -1.4889904  2.4936875  2.0109512
+# 8.012911
+```
+
+# R nonlogged
+GA hybrid performed better
+```{r}
+# GA hybrid
+R_ga_hybrid.op <- opt_local(par = c(0.4834533, -10.72914, 64.90252, 815.7626),
+                            cue = "R",
+                            log = "none",
+                            cue_range = seq(10^6, 10^8, by = ((10^8)-(10^6))/5000))
+# 0.5763738 -11.1734054  64.8443512 815.7820446
+# 8.02401
+
+# local optimization
+R_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "R",
+                            log = "none",
+                            cue_range = seq(10^6, 10^8, by = ((10^8)-(10^6))/5000))
+#-1.1982201  5.0854969  1.3014539  0.5183234
+#8.013513
+```
+# I non-logged
+GA hybrid performs better
+```{r}
+# GA hybrid
+I_ga_hybrid.op <- opt_local(par = c(-0.07831214, -17.14939, 990.9274, 4770.606),
+                            cue = "I",
+                            log = "none",
+                            cue_range = seq(0, (10^7), by = (10^7)/5000))
+
+#-0.0762914  -17.2790701  990.9323116 4770.6285946
+#8.154676
+I_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "I",
+                            log = "none",
+                            cue_range = seq(0, (10^7), by = (10^7)/5000))
+#-0.1359293 -6.5813978  0.4492349  0.5003204
+#8.006024
+
+```
+
+# I-logged
+GA just doesn't like this one for some reason. Trying PPSO and testing it 
+```{r}
+library(ppso)
+
+parameter_bounds <- cbind(c(-1, -100, -1000, -5000),
+                          c(1, 100, 1000, 5000))
+
+I_log_ppso.op <- optim_pso(
+  objective_function = function(X)
+            chabaudi_si_clean(
+            parameters_cr = X, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "I", 
+            cue_range = seq(0, log10(10^7), by = log10(10^7)/5000), 
+            log_cue = "log10",
+            immunity = "tsukushi",
+            solver = "vode",
+            neg = TRUE),
+  number_of_parameters = 4,
+  parameter_bounds = parameter_bounds,
+  tryCall = TRUE,
+  max_number_function_calls = 100000,
+  max_number_of_iterations=1000
+)
+
+#-3.592634
+#0.4534095   4.7308844  37.7123491 -66.1690763
+
+
+# trying simulated annealing. crashes computer
+I_log_sa.op <- GenSA::GenSA(
+  fn = function(X){
+    
+    # put parameter values into local environment
+    parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+
+time_range <- seq(0, 20, by = 1e-3)
+# run this shit
+            chabaudi_si_clean(
+            parameters_cr = X, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = "I", 
+            cue_range = seq(0, log10(10^7), by = log10(10^7)/5000), 
+            log_cue = "log10",
+            immunity = "tsukushi",
+            solver = "vode",
+            neg = TRUE)},
+            lower = c(-1, -10, -1000, -5000),
+            upper = c(1, 10, 1000, 5000),
+            control = list(verbose = T))
+
+# LFBGS local optimization
+I_log_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "I",
+                            log = "log10",
+                            cue_range = seq(0, log10(10^7), by = log10(10^7)/5000))
+
+#6.437168   0.774665 -19.588253   5.618792
+#9.497325
+
+parameters_tsukushi
+```
+
+
+#------------------------#
+# visualization of optimal rxn norm
+#------------------------#
+```{r}
+source(here("functions/par_to_df.R"))
+```
+
+# function wrapper for getting dynamics, reaction norm, and rug in one function
+```{r}
+get_dyn <- function(par,
+                    cue,
+                    log,
+                    cue_range){
+  # get dynamics
+  dyn <- chabaudi_si_clean(
+            parameters_cr = par, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = cue, 
+            cue_range = cue_range, 
+            log_cue = log,
+            immunity = "tsukushi",
+            solver = "vode",
+            dyn = TRUE)
+  
+  # get reaction norm
+  rn <- par_to_df(par = par, cue_range = cue_range)
+  
+  # get rug
+  if(log == "none"){rug <- dyn %>% dplyr::filter(variable == cue)}
+  
+  if(log == "log10"){
+    max <- max(cue_range)
+    rug <- dyn %>% 
+      dplyr::filter(variable == cue) %>% 
+      dplyr::mutate(value = heaviside_trans(log10(value+(10^(-524))), max))
+  }
+  
+  
+  return(list(dyn, rn, rug))
+}
+
+```
+
+# G non-logged
+```{r}
+# get dynamics
+G_ga_hybrid.dyn <- get_dyn(par = c(4.111631e-02, -1.426712e+01, 1.975708e+02, -2.017394e+03),
+                           cue = "G",
+                           log = "none",
+                           cue_range = seq(0, 10^5, by = (10^5)/5000))
+
+G_loc.dyn <-  get_dyn(par = c(-0.04605913, -6.19662012, 40.47605626,  2.70620334),
+                           cue = "G",
+                           log = "none",
+                           cue_range = seq(0, 10^5, by = (10^5)/5000))
+
+# compare rxn norm
+ggplot() +
+  geom_line(data = G_ga_hybrid.dyn[[2]], aes(x = cue_range, y = cr, color = "GA hybrid")) +
+  geom_rug(data = G_ga_hybrid.dyn[[3]], aes(x = value, color = "GA hybrid")) +
+  geom_line(data = G_loc.dyn[[2]], aes(x = cue_range, y = cr, color = "L-BFGS")) +
+  geom_rug(data = G_loc.dyn[[3]], aes(x = value, color = "L-BFGS"), sides = "t") +
+  theme_bw()
+```
+
+# G logged
+```{r}
+# get dynamics
+G_log_loc.dyn <-  get_dyn(par = c(1.211651, -4.120928, -1.054041, -1.300403),
+                           cue = "G",
+                           log = "log10",
+                           cue_range = seq(0, log10(10^5), by = log10(10^5)/5000))
+```
+
+
+
+# R logged
+```{r}
+# get dynamics
+R_log_ga_hybrid.dyn <- get_dyn(par = c(0.4131313,  23.9329075, -65.8111298, 125.6338918),
+                           cue = "R",
+                           log = "log10",
+                           cue_range = seq(log10(10^6), log10(10^8), by = (log10(10^8)-log10(10^6))/5000))
+
+R_log_loc.dyn <- get_dyn(par = c(-0.6602626, -1.4889904,  2.4936875,  2.0109512),
+                           cue = "R",
+                           log = "log10",
+                           cue_range = seq(log10(10^6), log10(10^8), by = (log10(10^8)-log10(10^6))/5000))
+
+
+# compare rxn norm
+ggplot() +
+  geom_line(data = R_log_ga_hybrid.dyn[[2]], aes(x = cue_range, y = cr, color = "GA hybrid")) +
+  geom_rug(data = R_log_ga_hybrid.dyn[[3]], aes(x = value, color = "GA hybrid")) +
+  geom_line(data = R_log_loc.dyn[[2]], aes(x = cue_range, y = cr, color = "L-BFGS")) +
+  geom_rug(data = R_log_loc.dyn[[3]], aes(x = value, color = "L-BFGS"), sides = "t") +
+  theme_bw()
+```
+
+# R non-logged
+```{r}
+# get dynamics
+R_ga_hybrid.dyn <- get_dyn(par = c(0.5763738, -11.1734054,  64.8443512, 815.7820446),
+                           cue = "R",
+                           log = "none",
+                           cue_range = seq((10^6), (10^8), by = ((10^8)-(10^6))/5000))
+
+R_loc.dyn <- get_dyn(par = c(-1.1982201,  5.0854969,  1.3014539,  0.5183234),
+                           cue = "R",
+                           log = "none",
+                           cue_range = seq((10^6), (10^8), by = ((10^8)-(10^6))/5000))
+
+
+# compare rxn norm
+ggplot() +
+  geom_line(data = R_ga_hybrid.dyn[[2]], aes(x = cue_range, y = cr, color = "GA hybrid")) +
+  geom_rug(data = R_ga_hybrid.dyn[[3]], aes(x = value, color = "GA hybrid")) +
+  geom_line(data = R_loc.dyn[[2]], aes(x = cue_range, y = cr, color = "L-BFGS")) +
+  geom_rug(data = R_loc.dyn[[3]], aes(x = value, color = "L-BFGS"), sides = "t") +
+  theme_bw()
+```
+
+# I non-logged
+```{r}
+# get dynamics
+I_ga_hybrid.dyn <- get_dyn(par = c(-0.0762914,  -17.2790701 , 990.9323116, 4770.6285946),
+                           cue = "I",
+                           log = "none",
+                           cue_range = seq(0, 10^7, by = (10^7)/5000))
+
+I_loc.dyn <-  get_dyn(par = c(-0.1359293, -6.5813978,  0.4492349,  0.5003204),
+                           cue = "I",
+                           log = "none",
+                           cue_range = seq(0, 10^7, by = (10^7)/5000))
+
+# compare rxn norm
+ggplot() +
+  geom_line(data = I_ga_hybrid.dyn[[2]], aes(x = cue_range, y = cr, color = "GA hybrid")) +
+  geom_rug(data = I_ga_hybrid.dyn[[3]], aes(x = value, color = "GA hybrid")) +
+  geom_line(data = I_loc.dyn[[2]], aes(x = cue_range, y = cr, color = "L-BFGS")) +
+  geom_rug(data = I_loc.dyn[[3]], aes(x = value, color = "L-BFGS"), sides = "t") +
+  theme_bw()
+
+```
+
+# I logged 
+```{r}
+I_log_loc.dyn <-  get_dyn(par = c(6.437168,   0.774665, -19.588253 ,  5.618792),
+                           cue = "I",
+                           log = "log10",
+                           cue_range = seq(0, log10(10^7), by = log10(10^7)/5000))
+
+
+ggplot() +
+  geom_line(data = I_log_loc.dyn[[2]], aes(x = cue_range, y = cr, color = "L-BFGS")) +
+  geom_rug(data = I_log_loc.dyn[[3]], aes(x = value, color = "L-BFGS"), sides = "t") +
+  theme_bw()
+```
+
+
+# figure 1
+## panel A conversion rate reaction norm
+```{r}
+# get bound df
+rxn.df <- rbind(
+  cbind(I_ga_hybrid.dyn[[2]], variable = "I", log = "none"),
+  cbind(I_log_loc.dyn[[2]], variable = "I", "log" = "log10"),
+  cbind(R_ga_hybrid.dyn[[2]], variable = "R", log = "none"),
+  cbind(R_log_ga_hybrid.dyn[[2]], variable = "R", "log" = "log10"),
+  cbind(G_ga_hybrid.dyn[[2]], variable = "G", log = "none"),
+  cbind(G_log_loc.dyn[[2]], variable = "G", "log" = "log10")
+)
+
+# get rug df
+rug.df <- rbind(
+  cbind(I_ga_hybrid.dyn[[3]], log = "none"),
+  cbind(I_log_loc.dyn[[3]], log = "log10"),
+  cbind(R_ga_hybrid.dyn[[3]], log = "none"),
+  cbind(R_log_ga_hybrid.dyn[[3]], log = "log10"),
+  cbind(G_ga_hybrid.dyn[[3]],  log = "none"),
+  cbind(G_log_loc.dyn[[3]], log = "log10")
+)
+
+# plot
+fig1a <- ggplot() +
+  geom_line(data = rxn.df, aes(x = cue_range, y = cr)) +
+  geom_rug(data = rug.df, aes(x = value)) +
+  facet_wrap(~log+variable, scales = "free_x") +
+  theme_bw() +
+  labs(y = "Conversion rate", x = "Cue range") +
+  scale_x_continuous(labels = function(x) format(x, scientific = FALSE),
+                     guide = guide_axis(check.overlap = TRUE)) + theme(axis.text.x = element_text(size = 7)) 
+```
+
+# figure 1 panel B
+plot dynamics
+```{r}
+dyn.df <- rbind(
+  cbind(I_ga_hybrid.dyn[[1]], cue = "I", log = "none"),
+  cbind(I_log_loc.dyn[[1]], cue = "I", log = "log10"),
+  cbind(R_ga_hybrid.dyn[[1]], cue = "R", log = "none"),
+  cbind(R_log_ga_hybrid.dyn[[1]], cue = "R", log = "log10"),
+  cbind(G_ga_hybrid.dyn[[1]], cue = "G", log = "none"),
+  cbind(G_log_loc.dyn[[1]], cue = "G", log = "log10")
+)
+
+# filter just those we want
+dyn.df2 <- dyn.df %>% 
+  dplyr::mutate(id = paste0(cue, " ", log)) %>% 
+  dplyr::filter(variable %in% c("I", "Ig", "G", "R", "N", "W", "tau_cum", "cr")) %>% 
+  dplyr::mutate(variable_2 = recode(variable, 
+                                    "I" = "Asexual iRBC",
+                                    "Ig" = "Sexual iRBC",
+                                    "G" = "Gametocyte",
+                                    "R" = "RBC",
+                                    "W" = "Targeted immunity",
+                                     "N" = "Non-specific immunity",
+                                    "tau_cum" = "Transmission\naccumulation",
+                                    "cr" = "Conversion rate"
+                                    ))  ## recode for figure
+
+## reorder variable factors
+dyn.df3 <- dyn.df2
+dyn.df3$variable_2 <- factor(dyn.df3$variable_2, levels = c("Conversion rate", "Transmission\naccumulation", "RBC", "Targeted immunity", "Non-specific immunity", "Asexual iRBC", "Sexual iRBC", "Gametocyte"))
+
+# further filtering
+dyn.df5 <- dyn.df3 %>% filter(variable %in% c("cr", "tau_cum"))
+
+# plot
+fig1b <- ggplot() +
+  geom_line(data = dyn.df5, aes(x = time, y = value, color = id)) +
+  facet_wrap(~variable_2, scales = "free") +
+  theme_bw() +
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
+  labs(color = "Cue", y =  "Value", x = "Time (days)")
+```
+
+# figure 1 panel 3
+disease curve
+```{r}
+# get disease curve
+## rearrange to get variable to column
+dyn.df4 <- tidyr::pivot_wider(dyn.df2, names_from = variable, values_from = value, id_cols = c(time, id))
+
+dyn.df4[is.na(dyn.df4)] <- 0
+
+dyn.df4$total_parasite <- dyn.df4$I + dyn.df4$Ig
+
+# get tau
+dyn.df4$tau <- (exp(-12.69+(3.6*log10(dyn.df4$G))))/(1+exp(-12.69+(3.6*log10(dyn.df4$G))))
+
+# plot
+## from the host's perspective
+fig1c_1 <- ggplot() +
+  geom_point(data = dyn.df4, aes(y = R, x = total_parasite, color = id)) +
+  geom_path(data = dyn.df4, aes(y = R, x = total_parasite, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  labs(color = "Cue", x = "Total iRBC", y = "RBC") +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) + theme(legend.position = "none")
+
+## from the parasite's perspective
+fig1c_2 <- ggplot() +
+  geom_point(data = dyn.df4, aes(y = tau_cum, x = N, color = id)) +
+  geom_path(data = dyn.df4, aes(y = tau_cum, x = N, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  labs(color = "Cue", x = "Non-specific immunity", y = "Transmission\naccumulation") +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) + theme(legend.position = "none")
+
+fig1c <- ggpubr::ggarrange(fig1c_1, fig1c_2)
+```
+
+# plot together
+```{r}
+library(ggpubr)
+# put b and c together
+fig1bc <- ggarrange(fig1b, fig1c, ncol = 1, common.legend = T, align = "hv", legend = "right", labels = c("B", "C"))
+
+ggarrange(fig1a, fig1bc, labels = c("A", ""))
+
+ggsave(here("figures/report14/cue_dynamics.png"), width = 11.5, height = 5.5)
+```
+
+
+#--------------------#
+# code testing MC simulation
+#-------------------#
+You better submit the job today (2022-03-10)!!!!!!!!!!!!!!!!!!
 
 

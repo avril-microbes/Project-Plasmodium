@@ -1,0 +1,336 @@
+---
+title: "report14"
+output: html_document
+---
+# load libraries
+```{r}
+library(here)
+library(dplyr)
+library(ggplot2)
+library(parallel)
+library(doParallel)
+library(doRNG)
+```
+
+```{r}
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+
+time_range <- seq(0, 20, by = 1e-3)
+```
+
+#-------------------------#
+# MC
+#_-----------------------_#
+Using the optimal parameters obtained for each cue:
+1. G nonlogged: 4.111631e-02, -1.426712e+01, 1.975708e+02, -2.017394e+03
+2. G logged: 1.211651, -4.120928, -1.054041, -1.300403
+3. I nonlogged: -0.0762914,  -17.2790701 , 990.9323116, 4770.6285946
+4. I logged: 6.437168,   0.774665, -19.588253 ,  5.618792
+5. R nonlogged: 0.5763738, -11.1734054,  64.8443512, 815.7820446
+6. R logged: 0.4131313,  23.9329075, -65.8111298, 125.6338918
+
+# loading parameters
+```{r}
+#proprotion of RBC recovered per day. rho: sd = 0.2579136
+rho_sd <- 0.2579136
+# burst size: sd= 0.1722868
+beta_sd <- 0.1722868
+
+# general RBC clearance activation strength. Sd = 0.5778196
+psiN_sd <- 0.5778196
+
+# targetted iRBC clearance activations strength, sd = 0.2355804
+psiW_sd <- 0.2355804
+
+# half life of general RBC clearance. sd = 0.02609495
+phiN_sd <- 0.02609495
+
+# half life of targeted iRBC clearance. sd = 0.8286213
+phiW_sd <- 0.8286213
+```
+
+# load functions
+```{r}
+source(here("functions/monte_carlo.R"))
+source(here("functions/chabaudi_si_clean.R"))
+source(here("functions/chabaudi_si_sto.R"))
+```
+
+# functions to process MC output
+```{r}
+process_mc <- function(ls){
+  # get maximum fitness across each iteration. Loop through the list instead of rbinding the entire thing because of memory limitation (even for 1000 dataset)
+  fitness.ls <- mclapply(ls, function(x){
+    fitness <- x %>% 
+      dplyr::filter(variable == "tau_cum") %>% 
+      dplyr::summarise(max_fitness = max(value))
+    
+    return(fitness)
+  })
+  
+  ## get fitness.df
+  fitness.df <- do.call(rbind, fitness.ls)
+ 
+  # produce output for convergence of fitness
+  ## get cum sum of fitness
+  fitness.sum <- cumsum(fitness.df$max_fitness)
+  ## get average fitness across iteration
+  fitness.avg <- fitness.sum/(1:length(fitness.sum))
+  
+  # get cue vs dynamics
+  ## produce wide df for plotting cue vs cr graph
+  df_wide.ls <- mclapply(ls, function(x){
+    ## convert to wide
+    wide <- tidyr::pivot_wider(x, names_from = variable, values_from = value, id_cols = c(time))
+    ## get every 10th row
+    wide_filtered <- wide %>% dplyr::filter(row_number() %% 10 == 1)
+    return(wide_filtered)
+  })
+  
+  # get wide list
+  df_wide.df <- dplyr::bind_rows(df_wide.ls, .id = "id")
+  
+  # return output
+  return(list(fitness.df, fitness.avg, df_wide.df))
+}
+```
+
+# function to run split mc (running 5000 at a time exhausts memory)
+```{r}
+mc_run <- function(par, cue, cue_range, log, seed){
+  # run 5 iterations each with 1000
+    cl <- makeCluster(8)
+    registerDoParallel(cl)
+    registerDoRNG(seed)
+    mc_res <- foreach(i= 1:1000, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
+      
+      # source shit
+      source(here("functions/monte_carlo.R"))
+      source(here("functions/chabaudi_si_sto.R"))
+      
+      parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+
+      time_range <- seq(0, 20, by = 1e-3)
+      
+      # run monte-carlo
+      monte_carlo(
+        parameters_cr = par, 
+        parameters = parameters_tsukushi, 
+        time_range = time_range, 
+        cue = cue, 
+        cue_range = cue_range, 
+        log_cue = log,
+        rho_sd = 0.2579136, 
+        beta_sd = 0.1722868, 
+        psin_sd = 0.5778196,
+        psiw_sd = 0.2355804, 
+        phin_sd = 0.02609495, 
+        phiw_sd = 0.8286213)}
+   stopCluster(cl)
+   
+   # process data
+  fitness.ls <- mclapply(mc_res, function(x){
+    fitness <- x %>% 
+      dplyr::filter(variable == "tau_cum") %>% 
+      dplyr::summarise(max_fitness = max(value))
+    
+    return(fitness)
+  })
+  
+  ## get fitness.df
+  fitness.df <- do.call(rbind, fitness.ls)
+ 
+
+  
+  # get cue vs dynamics
+  ## produce wide df for plotting cue vs cr graph
+  df_wide.ls <- mclapply(mc_res, function(x){
+    ## convert to wide
+    wide <- tidyr::pivot_wider(x, names_from = variable, values_from = value, id_cols = c(time))
+    ## get every 10th row
+    wide_filtered <- wide %>% dplyr::filter(row_number() %% 10 == 1)
+    return(wide_filtered)
+  })
+  
+  # get wide list
+  df_wide.df <- dplyr::bind_rows(df_wide.ls, .id = "id")
+
+  # return output
+  return(list(fitness.df, df_wide.df))
+}
+```
+
+# mc_five function to run 
+```{r}
+mc_five(par, cue, cue_range, log){
+  mc.1 <- mc_run(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 seed = 137)
+  mc.2 <- mc_run(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 seed = 138)
+  mc.3 <- mc_run(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 seed = 139)
+  mc.4 <- mc_run(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 seed = 140)
+  mc.5 <- mc_run(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 seed = 141)
+  
+  
+    # produce output for convergence of fitness
+  ## get cum sum of fitness
+  fitness.sum <- cumsum(fitness.df$max_fitness)
+  ## get average fitness across iteration
+  fitness.avg <- fitness.sum/(1:length(fitness.sum))
+}
+```
+
+
+#------------Running MC simulations locally-------------#
+# G log
+```{r}
+mc_G_log.1 <- mc_run(par = c(1.211651, -4.120928, -1.054041, -1.300403),
+                     cue = "G",
+                     cue_range = seq(0, log10(10^5), by = log10(10^5)/5000),
+                     log = "log10",
+                     seed = 137)
+mc_G_log.2 <- mc_run(par = c(1.211651, -4.120928, -1.054041, -1.300403),
+                     cue = "G",
+                     cue_range = seq(0, log10(10^5), by = log10(10^5)/5000),
+                     log = "log10",
+                     seed = 138)
+mc_G_log.3 <- mc_run(par = c(1.211651, -4.120928, -1.054041, -1.300403),
+                     cue = "G",
+                     cue_range = seq(0, log10(10^5), by = log10(10^5)/5000),
+                     log = "log10",
+                     seed = 139)
+mc_G_log.4 <- mc_run(par = c(1.211651, -4.120928, -1.054041, -1.300403),
+                     cue = "G",
+                     cue_range = seq(0, log10(10^5), by = log10(10^5)/5000),
+                     log = "log10",
+                     seed = 140)
+mc_G_log.5 <- mc_run(par = c(1.211651, -4.120928, -1.054041, -1.300403),
+                     cue = "G",
+                     cue_range = seq(0, log10(10^5), by = log10(10^5)/5000),
+                     log = "log10",
+                     seed = 141)
+
+# get fitness
+mc_G_log.fitness <- rbind(mc_G_log.1[[1]], mc_G_log.2[[1]], mc_G_log.3[[1]], mc_G_log.4[[1]], mc_G_log.5[[1]])
+
+# get dynamics
+mc_G_log.dyn <- rbind(
+  cbind(mc_G_log.1[[3]], run = 1),
+  cbind(mc_G_log.2[[3]], run = 2),
+  cbind(mc_G_log.3[[3]], run = 3),
+  cbind(mc_G_log.4[[3]], run = 4),
+  cbind(mc_G_log.5[[3]], run = 5)
+)
+```
+
+
+```{r}
+cl <- makeCluster(8)
+registerDoParallel(cl)
+registerDoRNG(137)
+mc_G_log <- foreach(i= 1:1000, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone")) %dorng% {
+  monte_carlo(
+    parameters_cr = c(1.211651, -4.120928, -1.054041, -1.300403), 
+    parameters = parameters_tsukushi, 
+    time_range = time_range, 
+    cue = "G", 
+    cue_range = seq(0, log10(10^5), by = log10(10^5)/5000), 
+    log_cue = "log10",
+    rho_sd = rho_sd, 
+    beta_sd = beta_sd, 
+    psin_sd = psiN_sd,
+    psiw_sd = psiW_sd, 
+    phin_sd = phiN_sd, 
+    phiw_sd = phiW_sd)}
+stopCluster(cl)
+
+test <- process_mc(mc_G_log)
+plot(test[[2]], type = "l")
+# write parquet file (more compact and faster form than csv)
+arrow::write_parquet(loop_test.df, "test.parquet")
+```
+
+# test analyzing effect of stochasticity on cue suitability
+```{r}
+# effect on fitness
+mc_fitness.df <- loop_test.df %>% 
+  dplyr::filter(variable == "tau_cum") %>% 
+  dplyr::group_by(as.numeric(id)) %>% 
+  dplyr::summarise(max_fitness = max(value))
+
+ggplot() +
+  geom_histogram(data = mc_fitness.df, aes(x = max_fitness)) +
+  theme_bw()
+
+# see if sampling is enough
+## get cum sum of fitness
+fitness.sum <- cumsum(mc_fitness.df$max_fitness)
+fitness.R <- fitness.sum/(1:length(fitness.sum))
+
+plot(fitness.R, type = "l")
+
+# effect on conversion rate vs cue
+loop_test.df2 <- tidyr::pivot_wider(loop_test.df, names_from = variable, values_from = value, id_cols = c(time, id))
+
+ggplot() +
+  geom_path(data = loop_test.df2, aes(y = cr, x = log10(G), group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  theme_bw()
+```
+
+

@@ -6,8 +6,8 @@ library(GA)
 library(here)
 library(doRNG)
 
-source(here::here("functions/ga_verbose.R"), local = T)
-source(here::here("functions/chabaudi_si_clean.R"), local = T)
+source(here::here("ga_verbose.R"), local = T)
+source(here::here("chabaudi_si_clean.R"), local = T)
 # load function
 #-----------------------------#
 # load in parameters

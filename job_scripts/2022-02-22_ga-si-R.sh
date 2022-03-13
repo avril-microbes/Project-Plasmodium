@@ -3,7 +3,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=48     # add this line to make sure that slurm uses multiple node4              # number of processes
 #SBATCH --mem=0      # memory; default unit is megabytes
-#SBATCH --time=06:00:00         # time (HH:MM:SS)
+#SBATCH --time=03:00:00         # time (HH:MM:SS)
 
 module load gcc/9.3.0 r/4.0.2
 
