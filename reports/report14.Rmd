@@ -10,6 +10,10 @@ library(ggplot2)
 library(parallel)
 library(doParallel)
 library(doRNG)
+library(arrow)
+library(ggpubr)
+library(ggthemes)
+
 ```
 
 ```{r}
@@ -73,45 +77,6 @@ phiW_sd <- 0.8286213
 source(here("functions/monte_carlo.R"))
 source(here("functions/chabaudi_si_clean.R"))
 source(here("functions/chabaudi_si_sto.R"))
-```
-
-# functions to process MC output
-```{r}
-process_mc <- function(ls){
-  # get maximum fitness across each iteration. Loop through the list instead of rbinding the entire thing because of memory limitation (even for 1000 dataset)
-  fitness.ls <- mclapply(ls, function(x){
-    fitness <- x %>% 
-      dplyr::filter(variable == "tau_cum") %>% 
-      dplyr::summarise(max_fitness = max(value))
-    
-    return(fitness)
-  })
-  
-  ## get fitness.df
-  fitness.df <- do.call(rbind, fitness.ls)
- 
-  # produce output for convergence of fitness
-  ## get cum sum of fitness
-  fitness.sum <- cumsum(fitness.df$max_fitness)
-  ## get average fitness across iteration
-  fitness.avg <- fitness.sum/(1:length(fitness.sum))
-  
-  # get cue vs dynamics
-  ## produce wide df for plotting cue vs cr graph
-  df_wide.ls <- mclapply(ls, function(x){
-    ## convert to wide
-    wide <- tidyr::pivot_wider(x, names_from = variable, values_from = value, id_cols = c(time))
-    ## get every 10th row
-    wide_filtered <- wide %>% dplyr::filter(row_number() %% 10 == 1)
-    return(wide_filtered)
-  })
-  
-  # get wide list
-  df_wide.df <- dplyr::bind_rows(df_wide.ls, .id = "id")
-  
-  # return output
-  return(list(fitness.df, fitness.avg, df_wide.df))
-}
 ```
 
 # function to run split mc (running 5000 at a time exhausts memory)
@@ -198,9 +163,10 @@ mc_run <- function(par, cue, cue_range, log, seed){
 }
 ```
 
-# mc_five function to run 
+# mc_five function
+wrapper around mc_run to ouput results of 5000 MC simulation
 ```{r}
-mc_five(par, cue, cue_range, log){
+mc_five <- function(par, cue, cue_range, log){
   mc.1 <- mc_run(par = par,
                  cue = cue,
                  cue_range = cue_range,
@@ -228,11 +194,24 @@ mc_five(par, cue, cue_range, log){
                  seed = 141)
   
   
-    # produce output for convergence of fitness
+  # get fitness
+  fitness <- rbind(mc.1[[1]],mc.2[[1]],mc.3[[1]],mc.4[[1]],mc.5[[1]])
+
+  # produce output for convergence of fitness
   ## get cum sum of fitness
-  fitness.sum <- cumsum(fitness.df$max_fitness)
+  fitness.sum <- cumsum(fitness)
   ## get average fitness across iteration
   fitness.avg <- fitness.sum/(1:length(fitness.sum))
+  
+  # get wide data
+  dyn <- rbind(
+    cbind(mc.1[[2]], run = 1),
+    cbind(mc.2[[2]], run = 2),
+    cbind(mc.3[[2]], run = 3),
+    cbind(mc.4[[2]], run = 4),
+    cbind(mc.5[[2]], run = 5))
+  
+  return(list(fitness, fitness.avg, dyn))
 }
 ```
 
@@ -279,58 +258,142 @@ mc_G_log.dyn <- rbind(
 )
 ```
 
-
+# G nonlog
 ```{r}
-cl <- makeCluster(8)
-registerDoParallel(cl)
-registerDoRNG(137)
-mc_G_log <- foreach(i= 1:1000, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone")) %dorng% {
-  monte_carlo(
-    parameters_cr = c(1.211651, -4.120928, -1.054041, -1.300403), 
-    parameters = parameters_tsukushi, 
-    time_range = time_range, 
-    cue = "G", 
-    cue_range = seq(0, log10(10^5), by = log10(10^5)/5000), 
-    log_cue = "log10",
-    rho_sd = rho_sd, 
-    beta_sd = beta_sd, 
-    psin_sd = psiN_sd,
-    psiw_sd = psiW_sd, 
-    phin_sd = phiN_sd, 
-    phiw_sd = phiW_sd)}
-stopCluster(cl)
+mc_G.res <- mc_five(par = c(4.111631e-02, -1.426712e+01, 1.975708e+02, -2.017394e+03),
+                    cue = "G",
+                    cue_range = seq(0, 10^5, by = (10^5)/5000),
+                    log= "none")
 
-test <- process_mc(mc_G_log)
-plot(test[[2]], type = "l")
-# write parquet file (more compact and faster form than csv)
-arrow::write_parquet(loop_test.df, "test.parquet")
+write.csv(mc_G.res[[1]], here("data/MC/mc_G_fitness.csv"))
+write_parquet(mc_G.res[[3]], here("data/MC/mc_G_dyn.parquet"))
 ```
 
-# test analyzing effect of stochasticity on cue suitability
+# R log
 ```{r}
-# effect on fitness
-mc_fitness.df <- loop_test.df %>% 
-  dplyr::filter(variable == "tau_cum") %>% 
-  dplyr::group_by(as.numeric(id)) %>% 
-  dplyr::summarise(max_fitness = max(value))
+mc_R_log.res <- mc_five(par = c(0.4131313,  23.9329075, -65.8111298, 125.6338918),
+                    cue = "R",
+                    cue_range = seq(log10(10^6), log10(10^8), by = (log10(10^8)-log10(10^6))/5000),
+                    log= "log10")
 
-ggplot() +
-  geom_histogram(data = mc_fitness.df, aes(x = max_fitness)) +
-  theme_bw()
-
-# see if sampling is enough
-## get cum sum of fitness
-fitness.sum <- cumsum(mc_fitness.df$max_fitness)
-fitness.R <- fitness.sum/(1:length(fitness.sum))
-
-plot(fitness.R, type = "l")
-
-# effect on conversion rate vs cue
-loop_test.df2 <- tidyr::pivot_wider(loop_test.df, names_from = variable, values_from = value, id_cols = c(time, id))
-
-ggplot() +
-  geom_path(data = loop_test.df2, aes(y = cr, x = log10(G), group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  theme_bw()
+write.csv(mc_R_log.res[[1]], here("data/MC/mc_R_log_fitness.csv"))
+write_parquet(mc_R_log.res[[3]], here("data/MC/mc_R_log_dyn.parquet"))
 ```
+
+# R non-log
+```{r}
+mc_R.res <- mc_five(par = c(0.5763738, -11.1734054,  64.8443512, 815.7820446),
+                    cue = "R",
+                    cue_range = seq((10^6), (10^8), by = ((10^8)-(10^6))/5000),
+                    log= "none")
+
+write.csv(mc_R.res[[1]], here("data/MC/mc_R_fitness.csv"))
+write_parquet(mc_R.res[[3]], here("data/MC/mc_R_dyn.parquet"))
+```
+
+#I log
+```{r}
+mc_I_log.res <- mc_five(par = c(6.437168,   0.774665, -19.588253 ,  5.618792),
+                    cue = "I",
+                    cue_range = seq(0, log10(10^7), by = (log10(10^7))/5000),
+                    log= "log10")
+
+write.csv(mc_I_log.res[[1]], here("data/MC/mc_I_log_fitness.csv"))
+write_parquet(mc_I_log.res[[3]], here("data/MC/mc_I_log_dyn.parquet"))
+```
+
+# I nonlog
+```{r}
+mc_I.res <- mc_five(par = c(-0.0762914,  -17.2790701 , 990.9323116, 4770.6285946),
+                    cue = "I",
+                    cue_range = seq(0, (10^7), by = (10^7)/5000),
+                    log= "none")
+
+write.csv(mc_I.res[[1]], here("data/MC/mc_I_fitness.csv"))
+write_parquet(mc_I.res[[3]], here("data/MC/mc_I_dyn.parquet"))
+```
+
+#-----------------------#
+# analyze the MC data
+#-----------------------#
+```{r}
+# read in dymamics
+mc_G_log.dyn <- read_parquet(here("data/MC/mc_G_log_dyn.parquet"))
+mc_G.dyn <- read_parquet(here("data/MC/mc_G_dyn.parquet"))
+mc_R_log.dyn <- read_parquet(here("data/MC/mc_R_log_dyn.parquet"))
+mc_R.dyn <- read_parquet(here("data/MC/mc_R_dyn.parquet"))
+mc_I_log.dyn <- read_parquet(here("data/MC/mc_I_log_dyn.parquet"))
+mc_I.dyn <- read_parquet(here("data/MC/mc_I_dyn.parquet"))
+
+# read in fitness
+mc_G_log.fitness <- read.csv(here("data/MC/mc_G_log_fitness.csv"))
+mc_G.fitness <- read.csv(here("data/MC/mc_G_fitness.csv"))
+mc_R_log.fitness <- read.csv(here("data/MC/mc_R_log_fitness.csv"))
+mc_R.fitness <- read.csv(here("data/MC/mc_R_fitness.csv"))
+mc_I_log.fitness <- read.csv(here("data/MC/mc_I_log_fitness.csv"))
+mc_I.fitness <- read.csv(here("data/MC/mc_I_fitness.csv"))
+```
+
+# plot fitness vs iteration
+```{r}
+fitness.df <- rbind(
+  cbind(mc_G_log.fitness, id = "Gametocyte log10"),
+  cbind(mc_G.fitness, id = "Gametocyte"),
+  cbind(mc_R_log.fitness, id = "RBC log10"),
+  cbind(mc_R.fitness, id = "RBC"),
+  cbind(mc_I_log.fitness, id = "iRBC log10"),
+  cbind(mc_I.fitness, id = "iRBC")
+)
+
+# fitness vs time
+fig2a <- ggplot() +
+  geom_line(data = fitness.df, aes(x = X, y = max_fitness, color = id)) +
+  facet_wrap(~id, ncol = 2) +
+  labs(x = "Iteration", y = "Maximum fitness", color = "Cue") +
+  theme_bw() +
+  guides(color = FALSE, fill = F)
+
+# quantify variance
+fitness_var.df <- fitness.df %>% 
+  dplyr::group_by(id) %>% 
+  dplyr::summarise(var = var(max_fitness)) %>% 
+  dplyr::mutate(id = forcats::fct_reorder(factor(id), var, .desc = F))
+
+fig2b <- ggplot() +
+  geom_col(data = fitness_var.df, aes(y = id, x = var, fill = id)) +
+  scale_fill_manual(values = c("#619CFF", "#B79F00", "#F564E3", "#00BA38", "#F8766D", "#00BFC4")) +
+  theme_bw() +
+  labs(y = "Cue", x = "Variance") +
+  guides(fill = F, color = F)
+
+fig2ab <- ggarrange(fig2a, fig2b, widths = c(1.5, 1))
+```
+
+# get deviation from reference ("ideal") conversion rate series
+## get reference (deterministic time series)
+```{r}
+# G log
+G_log.dyn <- chabaudi_si_clean()
+```
+
+```{r}
+mc_I.dyn <- chabaudi_si_clean(
+            parameters_cr = par, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = cue, 
+            cue_range = cue_range, 
+            log_cue = log,
+            immunity = "tsukushi",
+            solver = "vode",
+            dyn = TRUE)
+
+
+ggplot() +
+  geom_line(data = mc_I.dyn, aes(y = cr, x = time, color = id)) +
+  labs(color = "Cue", x = "Total iRBC", y = "RBC") +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) + theme(legend.position = "none")
+```
+
 
 
