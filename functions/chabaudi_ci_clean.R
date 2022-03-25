@@ -3,7 +3,9 @@
 #-------------------#
 # Used for infection simulation of co-infection model and for optimization of best conversion rate strategy
 # Avril Wang
-# last edited 2021-11-29
+# last edited 2022-03-25
+## added heaviside transfromation to constrain cue range
+## Note, added "sum" as possibility for cue. This would give us I1+I2+Ig1+Ig2
 
 # code reviewed version of chabaudi_ci_opt_lag
 # strain 1 is set as the invading strain whereas strain 2 is set as the residence strain
@@ -102,13 +104,13 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     # Ensure cue is correct
     ## cue of strain 1
     if (!(unlist(stringr::str_split(cue_1, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
-        !(cue_1 %in% names(state)) && cue_1 != "t") {
+        !((cue_1 %in% names(state)) | cue_1 != "sum") && cue_1 != "t") {
       stop("Cue 1 must be one of the states or time")
     }
     
     ## cue of strain 2
     if (!(unlist(stringr::str_split(cue_2, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
-        !(cue_2 %in% names(state)) && cue_2 != "t") {
+        !((cue_2 %in% names(state)) | cue_2 != "sum") && cue_2 != "t") {
       stop("Cue 2 must be one of the states or time")
     }
     
@@ -160,6 +162,16 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
   pulseBeta_fun <- function(I0, sp, t){ 
     res = rep(NA, length(t))
     res = I0*(dbeta(t, sp, sp))
+  }
+  
+  #----------------------#
+  # define Heaviside transformation
+  #----------------------#
+  # function that transforms anything that above specificed max value to max. 
+  # if value cue_range is below max, does not change the value.
+  heaviside_trans <- function(cue_range, max){
+    res <- crone::heaviside(cue_range)*(cue_range)+(crone::heaviside(cue_range-max)*(max-cue_range))
+    return(res)
   }
   
   #-------------------------#
@@ -304,7 +316,8 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       }
     } else{ #-----------------------complex cues for addition-based cues-----------------------#
       if(stringr::str_detect(cue_1, "\\+")){ # addition only (currently only supports two cues addition)
-        if(t>alpha+delay && cue_1 != "t"){cue_lag_a1 <- lag_a_1[lag.i_1[1]]+lag_a_1[lag.i_1[2]]}
+        if(t>alpha+delay && cue_1 != "t" && cue_1 != "sum"){cue_lag_a1 <- lag_a_1[lag.i_1[1]]+lag_a_1[lag.i_1[2]]}
+        if(t>alpha+delay && cue_1 != "sum"){cue_lag_a1 <- lag_a_1[2]+lag_a_1[3]+lag_a_1[4]+lag_a_1[5]} ## if sum is chosen as cue, add up all iRBC values (I1+I2+Ig1+Ig2)
       }
     }
     
@@ -322,7 +335,8 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       
     } else{ #------------complex cues involving addition of 2 cues-----------------------#
       if(stringr::str_detect(cue_2, "\\+")){ # if it contains plus. strain 1
-        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]+lag_a_2[lag.i_2[2]]}
+        if(t>alpha && cue_2 != "t" && cue_2 != "sum"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]+lag_a_2[lag.i_2[2]]}
+        if(t>alpha+delay && cue_2 != "sum"){cue_lag_a2 <- lag_a_1[2]+lag_a_1[3]+lag_a_1[4]+lag_a_1[5]}
       }
     }
     
@@ -331,15 +345,15 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     #------------------#
     # Strain 1
     if(t>alpha+delay){
-      if(log_cue_1 == "log10"){cue_lag1_p <- log10(cue_lag_a1)} # log the lagged cue
-      if(log_cue_1 == "none"){cue_lag1_p <- cue_lag_a1} # keep it the same
+      if(log_cue_1 == "log10"){cue_lag1_p <- heaviside_trans(log10(abs(cue_lag_a1)+5e-324), max(cue_range_1))} # log the lagged cue
+      if(log_cue_1 == "none"){cue_lag1_p <- heaviside_trans(cue_lag_a1, max(cue_range_1))} # keep it the same
       cr_1 <- cr_1_fun(cue_lag1_p)
     }
     
     # Strain 2
     if(t>alpha){
-      if(log_cue_2 == "log10"){cue_lag2_p <- log10(cue_lag_a2)} # log the lagged cue
-      if(log_cue_2 == "none"){cue_lag2_p <- cue_lag_a2} # keep it the same
+      if(log_cue_2 == "log10"){cue_lag2_p <- heaviside_trans(log10(abs(cue_lag_a2)+5e-324), max(cue_range_2))} # log the lagged cue
+      if(log_cue_2 == "none"){cue_lag2_p <- heaviside_trans(cue_lag_a2, max(cue_range_2))} # keep it the same
       cr_2 <- cr_2_fun(cue_lag2_p)
     }
     
@@ -447,14 +461,19 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     
     # ODEs exclusive to tsukushi's model
     if(immunity == "tsukushi"){ #Tsukushi exclusive ODEs
-      dR <- (R1*mu)+(rho*(R1-R))-((mu-log(1-N))*R)-(p*R*M1)-(p*R*M2)-(p*R*Mg1)-(p*R*Mg2)
-      dI1_nolag <- (p*R*M1)-(mu*I1)-((-log(1-N)-log(1-W))*I1)
-      dI2_nolag <- (p*R*M2)-(mu*I2)-((-log(1-N)-log(1-W))*I2)
-      dIg1_nolag <- (p*R*Mg1)-(mu*Ig1)-((-log(1-N)-log(1-W))*Ig1)
-      dIg2_nolag <- (p*R*Mg2)-(mu*Ig2)-((-log(1-N)-log(1-W))*Ig2)
-      dN <- psin*((I1+I2+Ig1+Ig2)/iota)*(1-N)-(N/phin)
-      dW <- psiw*((I1+I2+Ig1+Ig2)/iota)*(1-W)-(W/phiw)
-      dID <- mu-log(1-N)-log(1-W)
+      ## define N and W transformed, 2 variables that might go to negative and give NAN in optimization process. 
+      ## do heaviside transformation that maintains N/W at 0.999 if N/W>=1 and N/W at 0 if N/W <0. 
+      N_trans <- ((crone::heaviside(N)*N)+crone::heaviside(N-0.999)*(0.999-N))
+      W_trans <- ((crone::heaviside(W)*W)+crone::heaviside(W-0.999)*(0.999-W))
+      
+      dR <- (R1*mu)+(rho*(R1-R))-((mu-log(1-N_trans))*R)-(p*R*M1)-(p*R*M2)-(p*R*Mg1)-(p*R*Mg2)
+      dI1_nolag <- (p*R*M1)-(mu*I1)-((-log(1-N_trans)-log(1-W_trans))*I1)
+      dI2_nolag <- (p*R*M2)-(mu*I2)-((-log(1-N_trans)-log(1-W_trans))*I2)
+      dIg1_nolag <- (p*R*Mg1)-(mu*Ig1)-((-log(1-N_trans)-log(1-W_trans))*Ig1)
+      dIg2_nolag <- (p*R*Mg2)-(mu*Ig2)-((-log(1-N_trans)-log(1-W_trans))*Ig2)
+      dN <- psin*((I1+I2+Ig1+Ig2)/iota)*(1-N_trans)-(N_trans/phin)
+      dW <- psiw*((I1+I2+Ig1+Ig2)/iota)*(1-W_trans)-(W_trans/phiw)
+      dID <- mu-log(1-N_trans)-log(1-W_trans)
     }
     
     # ODEs exclusive to no immunity model
@@ -510,8 +529,8 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       dG1 <- 0 # no production of gametocyte yet
       dIg1 <- dIg2_nolag # no death due to mature sexual iRBC bursting
       # burst extent
-      dBIg <- mu*(Ig1+Ig2)+(-log(1-N)-log(1-W))*(Ig1+Ig2)
-      dBIt <- mu*(Ig1+Ig2)+(-log(1-N)-log(1-W))*(Ig1+Ig2)+mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(p*lag_a_1[1]*lag_a_1[2]*S_1)+(p*lag_a_2[1]*lag_a_2[3]*S_2)
+      dBIg <- mu*(Ig1+Ig2)+(-log(1-N_trans)-log(1-W_trans))*(Ig1+Ig2)
+      dBIt <- mu*(Ig1+Ig2)+(-log(1-N_trans)-log(1-W_trans))*(Ig1+Ig2)+mu*(I1+I2)+(-log(1-N_trans)-log(1-W_trans))*(I1+I2)+(p*lag_a_1[1]*lag_a_1[2]*S_1)+(p*lag_a_2[1]*lag_a_2[3]*S_2)
     }
     
     ## Strain 2
@@ -526,7 +545,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       dI1 <- dI1_nolag-(p*lag_a_1[1]*lag_a_1[2]*S_1)
       dM1 <- dM1_nolag+(beta*(1-cr_1)*p*lag_a_1[1]*lag_a_1[2]*S_1)
       dMg1 <- dMg1_nolag+(beta*cr_1*p*lag_a_1[1]*lag_a_1[2]*S_1)
-      dBI <- mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(p*lag_a_1[1]*lag_a_1[2]*S_1)+(p*lag_a_2[1]*lag_a_2[3]*S_2)
+      dBI <- mu*(I1+I2)+(-log(1-N_trans)-log(1-W_trans))*(I1+I2)+(p*lag_a_1[1]*lag_a_1[2]*S_1)+(p*lag_a_2[1]*lag_a_2[3]*S_2)
       
       }
     
@@ -543,8 +562,8 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       dG1 <- dG1_nolag+(p*lag_b_1[1]*lag_b_1[4]*Sg_1)
       dIg1 <- dIg1_nolag-(p*lag_b_1[1]*lag_b_1[4]*Sg_1)
       ## tracking burst intensity of sexual iRBC
-      dBIg <- mu*(Ig1+Ig2)+(-log(1-N)-log(1-W))*(Ig1+Ig2)+(p*lag_b_1[1]*lag_b_1[4]*Sg_1)+(p*lag_b_2[1]*lag_b_2[5]*Sg_2)
-      dBIt <- mu*(Ig1+Ig2)+(-log(1-N)-log(1-W))*(Ig1+Ig2)+(p*lag_b_1[1]*lag_b_1[4]*Sg_1)+(p*lag_b_2[1]*lag_b_2[5]*Sg_2)+mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(p*lag_a_1[1]*lag_a_1[2]*S_1)+(p*lag_a_2[1]*lag_a_2[3]*S_2)
+      dBIg <- mu*(Ig1+Ig2)+(-log(1-N_trans)-log(1-W_trans))*(Ig1+Ig2)+(p*lag_b_1[1]*lag_b_1[4]*Sg_1)+(p*lag_b_2[1]*lag_b_2[5]*Sg_2)
+      dBIt <- mu*(Ig1+Ig2)+(-log(1-N_trans)-log(1-W_trans))*(Ig1+Ig2)+(p*lag_b_1[1]*lag_b_1[4]*Sg_1)+(p*lag_b_2[1]*lag_b_2[5]*Sg_2)+mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(p*lag_a_1[1]*lag_a_1[2]*S_1)+(p*lag_a_2[1]*lag_a_2[3]*S_2)
     }
     
     ## Strain 2

@@ -21,7 +21,8 @@ chabaudi_si_clean <- function(
   cue_b_range = "none", # if second cue is used, the range of cue that parasite use to adjust conversion rate to
   log_cue_b = "none",  # whether to log10 transform cue_b
   dyn = FALSE, # whether the function should return simulation dynamics rather than fitness
-  neg = FALSE # set to TRUE if using minimization function
+  neg = FALSE, # set to TRUE if using minimization function
+  dual_cue = FALSE
 ){
   
   #----------------------#

@@ -13,7 +13,7 @@ library(doRNG)
 library(arrow)
 library(ggpubr)
 library(ggthemes)
-
+library(tidyr)
 ```
 
 ```{r}
@@ -337,7 +337,7 @@ mc_I.fitness <- read.csv(here("data/MC/mc_I_fitness.csv"))
 # plot fitness vs iteration
 ```{r}
 fitness.df <- rbind(
-  cbind(mc_G_log.fitness, id = "Gametocyte log10"),
+  cbind(mc_G_log.fitness, id = "Gametocyte\nlog10"),
   cbind(mc_G.fitness, id = "Gametocyte"),
   cbind(mc_R_log.fitness, id = "RBC log10"),
   cbind(mc_R.fitness, id = "RBC"),
@@ -366,33 +366,136 @@ fig2b <- ggplot() +
   labs(y = "Cue", x = "Variance") +
   guides(fill = F, color = F)
 
-fig2ab <- ggarrange(fig2a, fig2b, widths = c(1.5, 1))
+fig2ab <- ggarrange(fig2a, fig2b, widths = c(2, 1), labels = c("A", ""))
+fig2ab 
 ```
 
 # get deviation from reference ("ideal") conversion rate series
 ## get reference (deterministic time series)
+
+# function to calculate reference series and get std of conversion rate and tau
 ```{r}
-# G log
-G_log.dyn <- chabaudi_si_clean()
+dev_cr <- function(dyn, par, cue, cue_range, log){
+  # get reference dynamics
+  ref_dyn <- chabaudi_si_clean(
+              parameters_cr = par,
+              parameters = parameters_tsukushi, 
+              time_range = time_range, 
+              cue = cue, 
+              cue_range = cue_range, 
+              log_cue = log,
+              immunity = "tsukushi",
+              solver = "vode",
+              dyn = TRUE)
+  
+  # convert to wide
+  ref_dyn.wide <- tidyr::pivot_wider(ref_dyn, names_from = variable, values_from = value)
+  
+  # get std from MC dynamics
+  mc_sum <- dyn %>%
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(cr_top = mean(cr)+sd(cr),
+                   cr_bot = mean(cr)-var(cr),
+                   tau_top = mean(tau)+sd(tau),
+                   tau_bot = mean(tau)-sd(tau))
+  
+  # return list
+  return(list(ref_dyn.wide, mc_sum))
+}
 ```
 
+## get refernece dynamics difference
 ```{r}
-mc_I.dyn <- chabaudi_si_clean(
-            parameters_cr = par, 
-            parameters = parameters_tsukushi, 
-            time_range = time_range, 
-            cue = cue, 
-            cue_range = cue_range, 
-            log_cue = log,
-            immunity = "tsukushi",
-            solver = "vode",
-            dyn = TRUE)
+# G log
+G_log.diff <- dev_cr(mc_G_log.dyn, 
+                     par = c(1.211651, -4.120928, -1.054041, -1.300403),
+                     cue = "G",
+                     cue_range = seq(0, log10(10^5), by = log10(10^5)/5000),
+                     log = "log10")
+
+# G
+G.diff <- dev_cr(mc_G.dyn, 
+                     par = c(4.111631e-02, -1.426712e+01, 1.975708e+02, -2.017394e+03),
+                     cue = "G",
+                     cue_range = seq(0, (10^5), by = (10^5)/5000),
+                     log = "none")
+
+# R log
+R_log.diff <- dev_cr(mc_R_log.dyn, 
+                     par = c(0.4131313,  23.9329075, -65.8111298, 125.6338918),
+                     cue = "R",
+                     cue_range = seq(log10(10^6), log10(10^8), by = (log10(10^8)-log10(10^6))/5000),
+                     log = "log10")
+
+# R
+R.diff <- dev_cr(mc_R.dyn, 
+                     par = c(0.5763738, -11.1734054,  64.8443512, 815.7820446),
+                     cue = "R",
+                     cue_range = seq((10^6), (10^8), by = ((10^8)-(10^6))/5000),
+                     log = "none")
+
+# I log
+I_log.diff <- dev_cr(mc_I_log.dyn, 
+                     par = c(6.437168,   0.774665, -19.588253 ,  5.618792),
+                     cue = "I",
+                     cue_range = seq(0, log10(10^7), log10(10^7)/5000),
+                     log = "log10")
+
+# I
+I.diff <- dev_cr(mc_I.dyn, 
+                     par = c(-0.0762914,  -17.2790701 , 990.9323116, 4770.6285946),
+                     cue = "I",
+                     cue_range = seq(0, 10^7, (10^7)/5000),
+                     log = "none")
 
 
-ggplot() +
-  geom_line(data = mc_I.dyn, aes(y = cr, x = time, color = id)) +
-  labs(color = "Cue", x = "Total iRBC", y = "RBC") +
-  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) + theme(legend.position = "none")
+```
+
+# plot
+```{r}
+# cr time series
+## concatenate data
+reference.df <- rbind(
+  cbind(G_log.diff[[1]], cue = "Gametocyte log10"),
+  cbind(G.diff[[1]], cue = "Gametocyte"),
+  cbind(R_log.diff[[1]], cue = "RBC log10"),
+  cbind(R.diff[[1]], cue = "RBC"),
+  cbind(I_log.diff[[1]], cue = "iRBC log10"),
+  cbind(I.diff[[1]], cue = "iRBC")
+)
+
+## different data contenate
+diff.df <- rbind(
+  cbind(G_log.diff[[2]], cue = "Gametocyte log10"),
+  cbind(G.diff[[2]], cue = "Gametocyte"),
+  cbind(R_log.diff[[2]], cue = "RBC log10"),
+  cbind(R.diff[[2]], cue = "RBC"),
+  cbind(I_log.diff[[2]], cue = "iRBC log10"),
+  cbind(I.diff[[2]], cue = "iRBC")
+)
+
+
+# plot conversion time series
+fig2c <- ggplot() +
+  geom_line(data = reference.df, aes(x = time, y = cr)) +
+  geom_ribbon(data = diff.df, aes(x = time, ymin = cr_bot, ymax = cr_top), alpha = 0.3, fill = "red") +
+  facet_wrap(~cue, ncol = 2) +
+  labs(x = "Time (days)", y = "Conversion rate") +
+  theme_bw()
+  
+# plot fitness timeseries. When if tiness lost? At the latter part
+fig2d <- ggplot() +
+  geom_line(data = reference.df, aes(x = time, y = tau)) +
+  geom_ribbon(data = diff.df, aes(x = time, ymin = tau_bot, ymax = tau_top), alpha = 0.3, fill = "red") +
+  facet_wrap(~cue, ncol = 2) +
+  labs(x = "Time (days)", y = "Transmission potential") +
+  theme_bw()
+
+# arrange
+fig2cd <- ggarrange(fig2c, fig2d, labels = c("B", "C"))
+
+fig2 <- ggarrange(fig2ab, fig2cd, ncol = 1)
+ggsave(here("figures/report14/MC_simulation.png"))
 ```
 
 
