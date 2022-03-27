@@ -63,7 +63,7 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
                                                                  control = list(trace = 6, fnscale = -1),
                                                                  parameters_cr_2 = residence_par), # reassign resident parameter to optimal one
                                                             additional_arg))
-    stopCluster(cl)
+   
     
     ## save output
     conv <- model_output$convergence
@@ -77,17 +77,20 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
     ## previous run converged, strain 1 is fitter than strain 2, and that the fitness difference is minute
     if(conv == 0 && fitness > 0 && fitness < limit){
       print("Strain 1 is fitter than strain 2 but difference is minute.")
+      stopCluster(cl)
       break
       }
     ## If repeat run after lower strain 1 fitness, if strain 1 is now fitter, break if difference is minute
     if(conv == 0 && fitness < 0 && lower_repeat == TRUE && fitness > 0 && fitness < limit){
       print("Strain 1 was previously less fit than strain 2. Now it is fitter and the difference is minute.")
+      stopCluster(cl)
       break
       }
     # If repeat run and there is no improvements or even decrease in fitness, break
     if(conv == 0 && fitness < 0 && lower_repeat == TRUE && fitness < 0 && output_ls[[index]][[5]] <= output_ls[[index - 1]][[5]]){
       worse_then_previous <- TRUE
       print("Strain 1 is less fit than strain 2. Repeating optimization did not improve performance.")
+      stopCluster(cl)
       break
       }
   }

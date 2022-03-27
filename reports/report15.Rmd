@@ -274,6 +274,27 @@ do_ci_combo <- function(cue_1, cue_2, par, limit){
 # run all possible combo of compeition with different cues
 ```{r}
 source(here("functions/chabaudi_ci_clean.R"))
+source(here("functions/co_infection_opt.R"))
+
+co_infection_opt(parameters_cr = rep(0.5,4),
+                 limit = 0.01, 
+                 model = chabaudi_ci_clean,
+                 immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 cue_1 = "sum",
+                 cue_2 = "Ig1",
+                 cue_range_1 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                 cue_range_2 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                 solver = "vode",
+                 log_cue_1 = "none",
+                 log_cue_2 = "none")
+
+
+test <- do_ci_combo(cue_1 = c("I1+I2"),
+                          cue_2 = c("sum"),
+                          par = rep(0.5, 4),
+                          limit = 0.01)
 
 ci_opt.raw <- do_ci_combo(cue_1 = c("I1", "I1+I2", "Ig1", "Ig1+Ig2", "sum", "G1", "G1+G2", "R"),
                           cue_2 = c("I2", "I1+I2", "Ig2", "Ig1+Ig2", "sum", "G2", "G1+G2", "R"),
@@ -291,29 +312,29 @@ ci_opt.raw <- do_ci_combo(cue_1 = c("I1", "I1+I2", "Ig1", "Ig1+Ig2", "sum", "G1"
 ```{r}
 mc_run <- function(par, cue, cue_range, log, seed){
   # run 5 iterations each with 1000
-    cl <- makeCluster(8)
+    cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
     registerDoParallel(cl)
     registerDoRNG(seed)
-    mc_res <- foreach(i= 1:1000, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
+    mc_res <- foreach(i= 1:5, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
       
       # source function
       source(here("functions/chabaudi_si_clean.R"))
       
       # get parameter values that are stochastic
-      rho_rand <- parameters["rho"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = rho_sd/factor)) # proportion of RBC recovered
-      beta_rand <- parameters["beta"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = beta_sd/factor)) # burst size
-      psin_rand <- parameters["psin"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = psin_sd/factor))
-      psiw_rand <- parameters["psiw"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = psiw_sd/factor))
-      phin_rand <- parameters["phin"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = phin_sd/factor))
-      phiw_rand <- parameters["phiw"]*exp(rnorm(n = length(time_range) + 1, mean = 0, sd = phiw_sd/factor))
-      
+      rho_rand <- 0.2627156*exp(rnorm(n = 1, mean = 0, sd = 0.2579136)) # proportion of RBC recovered
+      beta_rand <- 5.721*exp(rnorm(n = 1, mean = 0, sd = 0.1722868)) # burst size
+      psin_rand <- 16.69234*exp(rnorm(n = 1, mean = 0, sd = 0.5778196))
+      psiw_rand <- 0.8431785*exp(rnorm(n = 1, mean = 0, sd = 0.2355804))
+      phin_rand <- 0.03520591*exp(rnorm(n = 1, mean = 0, sd = 0.02609495))
+      phiw_rand <- 550.842*exp(rnorm(n = 1, mean = 0, sd = 0.8286213))
+
       parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
                 lambda = 3.7*10^5,
-                mu = 0.025, 
+                mu = 0.025,
                 p = 8*10^-6, # doubled form original
                 alpha = 1, 
                 alphag = 2, 
-                beta = 5.721, 
+                beta = beta_rand, 
                 mum = 48, 
                 mug = 4, 
                 I0 = 43.85965, 
@@ -321,31 +342,29 @@ mc_run <- function(par, cue, cue_range, log, seed){
                 a = 150, 
                 b = 100, 
                 sp = 1,
-                psin = 16.69234,
-                psiw = 0.8431785,
-                phin = 0.03520591, 
-                phiw = 550.842,
+                psin = psin_rand,
+                psiw = psiw_rand,
+                phin = phin_rand, 
+                phiw = phiw_rand,
                 iota = 2.18*(10^6),
-                rho = 0.2627156)
+                rho = rho_rand)
 
       time_range <- seq(0, 20, by = 1e-3)
       
-      # run monte-carlo
-      
-      
-      monte_carlo(
+      # run dynamics
+      chabaudi_si_clean(
         parameters_cr = par, 
         parameters = parameters_tsukushi, 
+        immunity = "tsukushi",
         time_range = time_range, 
         cue = cue, 
         cue_range = cue_range, 
         log_cue = log,
-        rho_sd = 0.2579136, 
-        beta_sd = 0.1722868, 
-        psin_sd = 0.5778196,
-        psiw_sd = 0.2355804, 
-        phin_sd = 0.02609495, 
-        phiw_sd = 0.8286213)}
+        solver = "vode",
+        dyn = TRUE)
+      
+    }
+
    stopCluster(cl)
    
    # process data
@@ -360,8 +379,6 @@ mc_run <- function(par, cue, cue_range, log, seed){
   ## get fitness.df
   fitness.df <- do.call(rbind, fitness.ls)
  
-
-  
   # get cue vs dynamics
   ## produce wide df for plotting cue vs cr graph
   df_wide.ls <- mclapply(mc_res, function(x){
@@ -379,6 +396,19 @@ mc_run <- function(par, cue, cue_range, log, seed){
   return(list(fitness.df, df_wide.df))
 }
 ```
+
+# test
+```{r}
+test <- mc_run(par = c(1.211521, -3.936778, -1.312944, -1.285713), 
+                   cue = "G", 
+                   cue_range = seq(0, log10(6*(10^4)), by = log10(6*(10^4))/5000), 
+                   log = "log10", 
+                   seed = 137)
+
+test
+  
+```
+
 
 
 

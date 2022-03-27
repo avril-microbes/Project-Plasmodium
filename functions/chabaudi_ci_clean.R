@@ -104,13 +104,13 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     # Ensure cue is correct
     ## cue of strain 1
     if (!(unlist(stringr::str_split(cue_1, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
-        !((cue_1 %in% names(state)) | cue_1 != "sum") && cue_1 != "t") {
+        !((cue_1 %in% names(state)) | cue_1 == "sum") && cue_1 != "t") {
       stop("Cue 1 must be one of the states or time")
     }
     
     ## cue of strain 2
     if (!(unlist(stringr::str_split(cue_2, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
-        !((cue_2 %in% names(state)) | cue_2 != "sum") && cue_2 != "t") {
+        !((cue_2 %in% names(state)) | cue_2 == "sum") && cue_2 != "t") {
       stop("Cue 2 must be one of the states or time")
     }
     
@@ -290,12 +290,12 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     
     #-----Define lag index based on cue-------#
     ## strain 1
-    if(cue_1 != "t") {
+    if(cue_1 != "t" && cue_1 != "sum") {
       lag.i_1 <- match(unlist(stringr::str_split(cue_1, "\\+|\\-|\\*|\\/")), names(state)) 
     }
     
     ## strain 2
-    if(cue_2 != "t") {
+    if(cue_2 != "t" && cue_2 != "sum") {
       lag.i_2 <- match(unlist(stringr::str_split(cue_2, "\\+|\\-|\\*|\\/")), names(state)) 
     }
     
@@ -311,13 +311,13 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
         cue_lag_a1 <- t-alpha
       } 
       ## State-based cue for strain 1
-      if(t>alpha+delay && cue_1 != "t"){ ### cue lagged alpha days ago
+      if(t>alpha+delay && cue_1 != "t" && cue_1 != "sum"){ ### cue lagged alpha days ago
         cue_lag_a1 <- lag_a_1[lag.i_1]
       }
+      if(t>alpha+delay && cue_1 == "sum"){cue_lag_a1 <- lag_a_1[7]+lag_a_1[8]+lag_a_1[9]+lag_a_1[10]} ## if sum is chosen as cue, add up all iRBC values (I1+I2+Ig1+Ig2)
     } else{ #-----------------------complex cues for addition-based cues-----------------------#
       if(stringr::str_detect(cue_1, "\\+")){ # addition only (currently only supports two cues addition)
-        if(t>alpha+delay && cue_1 != "t" && cue_1 != "sum"){cue_lag_a1 <- lag_a_1[lag.i_1[1]]+lag_a_1[lag.i_1[2]]}
-        if(t>alpha+delay && cue_1 != "sum"){cue_lag_a1 <- lag_a_1[2]+lag_a_1[3]+lag_a_1[4]+lag_a_1[5]} ## if sum is chosen as cue, add up all iRBC values (I1+I2+Ig1+Ig2)
+        if(t>alpha+delay && cue_1 != "t"){cue_lag_a1 <- lag_a_1[lag.i_1[1]]+lag_a_1[lag.i_1[2]]}
       }
     }
     
@@ -332,11 +332,11 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       if(t>alpha && cue_2 != "t"){
         cue_lag_a2 <- lag_a_2[lag.i_2]
       }
+      if(t>alpha+delay && cue_2 == "sum"){cue_lag_a2 <- lag_a_2[7]+lag_a_2[8]+lag_a_2[9]+lag_a_2[10]}
       
     } else{ #------------complex cues involving addition of 2 cues-----------------------#
       if(stringr::str_detect(cue_2, "\\+")){ # if it contains plus. strain 1
-        if(t>alpha && cue_2 != "t" && cue_2 != "sum"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]+lag_a_2[lag.i_2[2]]}
-        if(t>alpha+delay && cue_2 != "sum"){cue_lag_a2 <- lag_a_1[2]+lag_a_1[3]+lag_a_1[4]+lag_a_1[5]}
+        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]+lag_a_2[lag.i_2[2]]}
       }
     }
     
