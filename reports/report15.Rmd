@@ -141,12 +141,13 @@ I_Ig_loc.op <- opt_local(par = rep(0.5, 4),
 
 # I+Ig logged
 ```{r}
-Ig_log_loc.op <- opt_local(par = rep(0.5, 4),
+I_Ig_log_loc.op <- opt_local(par = rep(0.5, 4),
                             cue = "Ig+I",
                             log = "log10",
                             cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000))
-#1.746334 -1.785818 -5.528335  1.573436
-#9.618812
+
+#3.594042   4.157744 -13.530672   2.599905
+#9.573291
 ```
 
 # I logged
@@ -271,6 +272,173 @@ do_ci_combo <- function(cue_1, cue_2, par, limit){
 
 ```
 
+# new co-infection optimization function for switcheroo
+```{r}
+switcheroo <- function(parameters_cr,  # preliminary parameter set
+                       limit, # minimum fitness difference between competing strains to break
+                       model, # infection model
+                       cue_1,
+                       cue_2,
+                       cue_range_1,
+                       cue_range_2,
+                       log_cue_1,
+                       log_cue_2,
+                       ...){ # additional parameters to be inserted into the infection model
+  force(parameters_cr)
+  force(limit)
+  force(model)
+  additional_arg <- list(...) # unpack for do.call
+  
+  # assign default parameters
+  # assign iteration index
+  index <- 1
+  output_ls <- list()
+  
+  # do-while loop to continue to optimize strain 1 fitness
+  repeat{
+    ## for first iteration, both strain adopts initial parameter condition assigned
+    if(index == 1){
+      mutant_par <- parameters_cr
+      resident_par <- parameters_cr
+      
+      ### assigning cue
+      mutant_cue <- cue_1
+      resident_cue <- cue_2
+      
+      ### assigning cue range
+      mutant_cue_range <- cue_range_1
+      resident_cue_range <- cue_range_2
+      
+      ### assigning log
+      mutant_log <- log_cue_1
+      resident_log <- log_cue_2
+      
+      print(paste("First round of optimization! Mutant is using", mutant_cue, min(mutant_cue_range), max(mutant_cue_range), mutant_log, ". resident is using", resident_cue, min(resident_cue_range), max(resident_cue_range), resident_log, sep = " "))
+    }
+      
+    ## for second iteration, if strain 1 is fitter, than assign strain 1 to resident
+    ## and assign strain to be mutant adopting initial condition. 
+    if(index == 2){
+        mutant_par <- parameters_cr
+        resident_par <- par
+        
+        ### switch cue
+        mutant_cue <- cue_2
+        resident_cue <- cue_1
+    
+        ### switch cue range
+        mutant_cue_range <- cue_range_2
+        resident_cue_range <- cue_range_1
+        
+        ### switch log
+        mutant_log <- log_cue_2
+        resident_log <- log_cue_1
+          
+        print(paste("Second round! Strain 1 is fitter than strain 2. First switch! Mutant is using", mutant_cue, min(mutant_cue_range), max(mutant_cue_range), mutant_log, ". resident is using", resident_cue, min(resident_cue_range), max(resident_cue_range), resident_log, sep = " "))
+    } 
+    if(index > 2) {
+      ###--------assign cues, cue ranges, and logs based on iteration index
+      if((index %% 2) == 0) {
+        ### if index is even, strain 2 is mutant, strain 1 is resident
+        mutant_cue <- cue_2
+        resident_cue <- cue_1
+        
+        mutant_cue_range <- cue_range_2
+        resident_cue_range <- cue_range_1
+        
+        mutant_log <- log_cue_2
+        resident_log <- log_cue_1
+      } else { ### if index is odd, strain 1 is mutant, strain 2 is resident
+        mutant_cue <- cue_1
+        resident_cue <- cue_2
+        
+        mutant_cue_range <- cue_range_1
+        resident_cue_range <- cue_range_2
+        
+        mutant_log <- log_cue_1
+        resident_log <- log_cue_2
+        }
+      
+      ###---------------assign parameters 
+      ### if strain 1 (mutant) is fitter than strain 2 (resident), switcheroo! 
+      ### strain 2 becomes mutant and strain 1 becomes resident. Here, we assign
+      ### resident par as optimized par. 
+      if(fitness > 0 && fitness < limit){
+        mutant_par <- output_ls[[index - 2]][[2]] ## assign mutant par to the optimized par 2 gen ago (corresponding to the same cue and cue range)
+        resident_par <- output_ls[[index - 1]][[2]] ## assign resident to the optimized par just obtained
+        print(paste("Strain 1 is fitter than strain 2. First switch! Mutant is using", mutant_cue, min(mutant_cue_range), max(mutant_cue_range), mutant_log, ". resident is using", resident_cue, min(resident_cue_range), max(resident_cue_range), resident_log, sep = " "))
+      }
+    }
+    
+    ## code to execute parallel LGBF-GS optimization
+    output <- list() # reset per run
+    cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+    model_output <- do.call(optimParallel::optimParallel, c(list(par = mutant_par, # competing parameter
+                                                                 fn = model,
+                                                                 control = list(trace = 6, fnscale = -1),
+                                                                 parameters_cr_2 = resident_par, 
+                                                                 cue_1 = mutant_cue,
+                                                                 cue_2 = resident_cue,
+                                                                 cue_range_1 = mutant_cue_range,
+                                                                 cue_range_2 = resident_cue_range,
+                                                                 log_cue_1 = mutant_log,
+                                                                 log_cue_2 = resident_log),
+                                                            additional_arg))
+   
+    ## save output
+    par <- model_output$par ### final parameters after optimization
+    fitness <- model_output$value ### fitness difference between mutant and resident
+    output <- list(index, 
+                   par,
+                   fitness,
+                   mutant_cue, mutant_par, min(mutant_cue_range), max(mutant_cue_range), mutant_log, 
+                   resident_cue, resident_par, min(resident_cue_range), max(resident_cue_range), resident_log)
+    output_ls[[index]] <- output
+    print(output)
+    
+    ## move index forward
+    index <- index + 1
+    print(paste("starting iteration", index))
+    
+    # exit loop IF
+    ## previous run converged, strain 1 is fitter than strain 2, and that the fitness difference is minute
+    if(fitness > 0 && fitness < limit){
+      print("Strain 1 is fitter than strain 2 but difference is minute.")
+      stopCluster(cl)
+      break
+      }
+    # If fitness after optimization is smaller than 0, break (strain 1 cannot outcompete strain 2)
+    if(fitness < 0){
+      print("Strain 1 is less fit than strain 2.")
+      stopCluster(cl)
+      break
+      }
+  }
+
+  # final output
+    return(output_ls)
+}
+```
+
+# test function
+```{r}
+source(here("chabaudi_ci_clean.R"))
+switcheroo(parameters_cr = rep(0.5,4),
+                 limit = 0.01, 
+                 model = chabaudi_ci_clean,
+                 immunity = "tsukushi",
+                 parameters = parameters_tsukushi,
+                 time_range = time_range,
+                 cue_2 = "sum",
+                 cue_1 = "R",
+                 cue_range_2 = seq(0, log10(6*(10^6)), by = log10(6*(10^6))/5000),
+                 cue_range_1 = seq(10^6, (10^7), by = ((10^7)-(10^6))/5000),
+                 solver = "vode",
+                 log_cue_2 = "log10",
+                 log_cue_1 = "none")
+```
+
+
 # run all possible combo of compeition with different cues
 ```{r}
 source(here("functions/chabaudi_ci_clean.R"))
@@ -315,7 +483,7 @@ mc_run <- function(par, cue, cue_range, log, seed){
     cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
     registerDoParallel(cl)
     registerDoRNG(seed)
-    mc_res <- foreach(i= 1:5, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
+    mc_res <- foreach(i= 1:1000, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
       
       # source function
       source(here("functions/chabaudi_si_clean.R"))
@@ -395,19 +563,164 @@ mc_run <- function(par, cue, cue_range, log, seed){
   # return output
   return(list(fitness.df, df_wide.df))
 }
-```
 
-# test
-```{r}
-test <- mc_run(par = c(1.211521, -3.936778, -1.312944, -1.285713), 
-                   cue = "G", 
-                   cue_range = seq(0, log10(6*(10^4)), by = log10(6*(10^4))/5000), 
-                   log = "log10", 
-                   seed = 137)
-
-test
+# functions to run five of these serially 
+mc_five <- function(par, cue, cue_range, log){
+  mc.1 <- mc_run(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 seed = 137)
+  mc.2 <- mc_run(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 seed = 138)
+  mc.3 <- mc_run(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 seed = 139)
+  mc.4 <- mc_run(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 seed = 140)
+  mc.5 <- mc_run(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 seed = 141)
   
+  
+  # get fitness
+  fitness <- rbind(mc.1[[1]],mc.2[[1]],mc.3[[1]],mc.4[[1]],mc.5[[1]])
+
+  # produce output for convergence of fitness
+  ## get cum sum of fitness
+  fitness.sum <- cumsum(fitness)
+  ## get average fitness across iteration
+  fitness.avg <- fitness.sum/(1:length(fitness.sum))
+  
+  # get wide data
+  dyn <- rbind(
+    cbind(mc.1[[2]], run = 1),
+    cbind(mc.2[[2]], run = 2),
+    cbind(mc.3[[2]], run = 3),
+    cbind(mc.4[[2]], run = 4),
+    cbind(mc.5[[2]], run = 5))
+  
+  # get unique id
+  dyn <- dyn %>% 
+    dplyr::mutate(run_id = paste0(run,"_", id))
+  
+  return(list(fitness, fitness.avg, dyn))
+}
 ```
+
+# I
+```{r}
+# non-logged
+mc_I.res <- mc_five(par = c(0.1135384,  -39.0585154, 1941.9082813,  119.8228980),
+                    cue = "I",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+write.csv(mc_I.res[[1]], here("data/MC2/mc_I_fitness.csv"))
+write_parquet(mc_I.res[[3]], here("data/MC2/mc_I_dyn.parquet"))
+
+# logged
+mc_I_log.res <- mc_five(par = c(5.463558,   2.383948, -17.757281,   4.571835),
+                    cue = "I",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+
+write.csv(mc_I_log.res[[1]], here("data/MC2/mc_I_log_fitness.csv"))
+write_parquet(mc_I_log.res[[3]], here("data/MC2/mc_I_log_dyn.parquet"))
+```
+
+# Ig
+```{r}
+# non-logged
+mc_Ig.res <- mc_five(par = c(0.05234791,  -46.03368629, 1897.61313455,   70.57689145),
+                    cue = "Ig",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+write.csv(mc_Ig.res[[1]], here("data/MC2/mc_Ig_fitness.csv"))
+write_parquet(mc_Ig.res[[3]], here("data/MC2/mc_Ig_dyn.parquet"))
+
+# logged
+mc_Ig_log.res <- mc_five(par = c(1.74633, -1.78582, -5.52834, 1.57344 ),
+                    cue = "Ig",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+
+write.csv(mc_Ig_log.res[[1]], here("data/MC2/mc_Ig_log_fitness.csv"))
+write_parquet(mc_Ig_log.res[[3]], here("data/MC2/mc_Ig_log_dyn.parquet"))
+```
+
+
+# I+Ig
+```{r}
+mc_I_Ig.res <- mc_five(par = c(0.3159297,  -46.1104558, 1250.7529081,   -6.1982093),
+                    cue = "I+Ig",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+write.csv(mc_I_Ig.res[[1]], here("data/MC2/mc_I_Ig_fitness.csv"))
+write_parquet(mc_I_Ig.res[[3]], here("data/MC2/mc_I_Ig_dyn.parquet"))
+
+mc_I_Ig_log.res <- mc_five(par = c(3.594042,   4.157744, -13.530672,   2.599905),
+                    cue = "I+Ig",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+
+write.csv(mc_I_Ig_log.res[[1]], here("data/MC2/mc_I_Ig_log_fitness.csv"))
+write_parquet(mc_I_Ig_log.res[[3]], here("data/MC2/mc_I_Ig_log_dyn.parquet"))
+```
+
+# G
+```{r}
+# non-logged
+MC_G.res <- MC_five(par = c(0.04061288,   -9.31445958,   74.13015506, -431.59843638),
+                    cue = "G",
+                    cue_range = seq(0, 6*(10^4), (6*(10^4))/5000),
+                    log= "none")
+
+write.csv(mc_G.res[[1]], here("data/MC2/mc_G_fitness.csv"))
+write_parquet(mc_G.res[[3]], here("data/MC2/mc_G_dyn.parquet"))
+
+
+mc_G_log.res <- mc_five(par = c(1.211521, -3.936778,-1.312944, -1.285713),
+                    cue = "G",
+                    cue_range = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000),
+                    log= "log10")
+
+write.csv(mc_G_log.res[[1]], here("data/MC2/mc_G_log_fitness.csv"))
+write_parquet(mc_G_log.res[[3]], here("data/MC2/mc_G_log_dyn.parquet"))
+```
+
+# R
+```{r}
+mc_R.res <- mc_five(par = c(7.0976026,  30.1295151, -28.0565613,  -0.2788713),
+                    cue = "R",
+                    cue_range = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
+                    log= "none")
+
+write.csv(mc_R.res[[1]], here("data/MC2/mc_R_fitness.csv"))
+write_parquet(mc_R.res[[3]], here("data/MC2/mc_R_dyn.parquet"))
+
+mc_R_log.res <- mc_five(par = c(48.70772, 105.18882, -81.80625, -44.60051),
+                    cue = "R",
+                    cue_range = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+                    log= "log10")
+
+write.csv(mc_R_log.res[[1]], here("data/MC2/mc_R_log_fitness.csv"))
+write_parquet(mc_R_log.res[[3]], here("data/MC2/mc_R_log_dyn.parquet"))
+```
+
+
 
 
 

@@ -324,19 +324,19 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     #----------------Simple cue without addition for strain 2-------#
     if(stringr::str_detect(cue_2, "\\+|\\-|\\*|\\/", negate = TRUE)){
       ## time-based cues
-      if(t>alpha && cue_2 == "t"){
+      if(t>alpha+delay && cue_2 == "t"){
         cue_lag_a2 <- t-alpha
       } 
       
       ## state-based cues
-      if(t>alpha && cue_2 != "t"){
+      if(t>alpha+delay && cue_2 != "t" && cue_2 != "sum"){
         cue_lag_a2 <- lag_a_2[lag.i_2]
       }
       if(t>alpha+delay && cue_2 == "sum"){cue_lag_a2 <- lag_a_2[7]+lag_a_2[8]+lag_a_2[9]+lag_a_2[10]}
       
     } else{ #------------complex cues involving addition of 2 cues-----------------------#
       if(stringr::str_detect(cue_2, "\\+")){ # if it contains plus. strain 1
-        if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]+lag_a_2[lag.i_2[2]]}
+        if(t>alpha+delay && cue_2 != "t"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]+lag_a_2[lag.i_2[2]]}
       }
     }
     
