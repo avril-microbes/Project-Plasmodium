@@ -11,6 +11,7 @@ library(crone)
 library(optimParallel)
 library(doParallel)
 library(doRNG)
+library(arrow)
 ```
 
 
@@ -720,6 +721,699 @@ write.csv(mc_R_log.res[[1]], here("data/MC2/mc_R_log_fitness.csv"))
 write_parquet(mc_R_log.res[[3]], here("data/MC2/mc_R_log_dyn.parquet"))
 ```
 
+
+# read MC data
+```{r}
+# read in dymamics
+mc_G_log.dyn <- read_parquet(here("data/MC2/mc_G_log_dyn.parquet"))
+mc_G.dyn <- read_parquet(here("data/MC2/mc_G_dyn.parquet"))
+mc_R_log.dyn <- read_parquet(here("data/MC2/mc_R_log_dyn.parquet"))
+mc_R.dyn <- read_parquet(here("data/MC2/mc_R_dyn.parquet"))
+mc_I_log.dyn <- read_parquet(here("data/MC2/mc_I_log_dyn.parquet"))
+mc_I.dyn <- read_parquet(here("data/MC2/mc_I_dyn.parquet"))
+mc_Ig_log.dyn <- read_parquet(here("data/MC2/mc_Ig_log_dyn.parquet"))
+mc_Ig.dyn <- read_parquet(here("data/MC2/mc_Ig_dyn.parquet"))
+mc_I_Ig_log.dyn <- read_parquet(here("data/MC2/mc_I_Ig_log_dyn.parquet"))
+mc_I_Ig.dyn <- read_parquet(here("data/MC2/mc_I_Ig_dyn.parquet"))
+
+# read in fitness
+mc_G_log.fitness <- read.csv(here("data/MC2/mc_G_log_fitness.csv"))
+mc_G.fitness <- read.csv(here("data/MC2/mc_G_fitness.csv"))
+mc_R_log.fitness <- read.csv(here("data/MC2/mc_R_log_fitness.csv"))
+mc_R.fitness <- read.csv(here("data/MC2/mc_R_fitness.csv"))
+mc_I_log.fitness <- read.csv(here("data/MC2/mc_I_log_fitness.csv"))
+mc_I.fitness <- read.csv(here("data/MC2/mc_I_fitness.csv"))
+mc_Ig_log.fitness <- read.csv(here("data/MC2/mc_Ig_log_fitness.csv"))
+mc_Ig.fitness <- read.csv(here("data/MC2/mc_Ig_fitness.csv"))
+mc_I_Ig_log.fitness <- read.csv(here("data/MC2/mc_I_Ig_log_fitness.csv"))
+mc_I_Ig.fitness <- read.csv(here("data/MC2/mc_I_Ig_fitness.csv"))
+```
+
+# examine variation
+```{r}
+# plot fitness vs iteration
+fitness.df <- rbind(
+  cbind(mc_G_log.fitness, id = "Gametocyte\nlog10"),
+  cbind(mc_G.fitness, id = "Gametocyte"),
+  cbind(mc_R_log.fitness, id = "RBC log10"),
+  cbind(mc_R.fitness, id = "RBC"),
+  cbind(mc_I_log.fitness, id = "Asexual iRBC\nlog10"),
+  cbind(mc_I.fitness, id = "Asexual iRBC"),
+  cbind(mc_Ig_log.fitness, id = "Sexual iRBC\nlog10"),
+  cbind(mc_Ig.fitness, id = "Sexual iRBC"),
+  cbind(mc_I_Ig_log.fitness, id = "Total iRBC\nlog10"),
+  cbind(mc_I_Ig.fitness, id = "Total iRBC")
+)
+
+# fitness vs time
+#fig2a <- ggplot() +
+#  geom_line(data = fitness.df, aes(x = X, y = max_fitness), size =0.5) +
+#  facet_wrap(~id, ncol = 2) +
+#  labs(x = "Iteration", y = "Maximum fitness", color = "Cue") +
+#  theme_bw() +
+#  guides(color = FALSE, fill = F)
+
+# quantify variance and mean
+fitness_var.df <- fitness.df %>% 
+  dplyr::group_by(id) %>% 
+  dplyr::summarise(std = sd(max_fitness),
+                   mean = mean(max_fitness)) %>% 
+  dplyr::mutate(id = forcats::fct_reorder(factor(id), std, .desc = F))
+
+# original rank by standard deviation
+##fig2b <- ggplot() +
+##  geom_col(data = fitness_var.df, aes(y = id, x = std)) +
+  #scale_fill_manual(values = c("#619CFF", "#B79F00", "#F564E3", "#00BA38", "#F8766D", "#00BFC4")) +
+##  theme_bw() +
+#  labs(y = "Cue", x = "Standard deviation") +
+#  guides(fill = F, color = F)
+
+fig2a <- ggplot() +
+  geom_point(data = fitness_var.df, aes(x = mean, y = std)) +
+  ggrepel::geom_label_repel(data = fitness_var.df, aes(x = mean, y = std, label = id)) +
+  theme_bw() +
+  labs(x = "Mean fitness", y = "Fitness standard deviation")
+
+fitness_var.df
+```
+
+# plot violin with difference in deterministic model fitness and mean model fitness
+```{r}
+# get deterministic df
+det.df <- data.frame(id = fitness_var.df$id, fitness =  c(8.49777, 9.494991, 8.58856, 9.561373, 8.23991, 8.181604, 8.569285, 9.618812, 8.854682, 9.573291))
+
+fig2b <- ggplot() +
+  geom_violin(data = fitness.df, aes(y = id, x = max_fitness), alpha = 0.5) +
+  geom_point(data = fitness_var.df, aes(y = id, x = mean)) +
+  geom_point(data = det.df, aes(y = id, x = fitness), color = "red") +
+  labs(x = "Fitness", y = "Cue") +
+  theme_bw()
+
+
+```
+
+
+# get deviation from ideal cr
+```{r}
+dev_cr <- function(dyn, par, cue, cue_range, log){
+  # get reference dynamics
+  ref_dyn <- chabaudi_si_clean(
+              parameters_cr = par,
+              parameters = parameters_tsukushi, 
+              time_range = time_range, 
+              cue = cue, 
+              cue_range = cue_range, 
+              log_cue = log,
+              immunity = "tsukushi",
+              solver = "vode",
+              dyn = TRUE)
+  
+  # convert to wide
+  ref_dyn.wide <- tidyr::pivot_wider(ref_dyn, names_from = variable, values_from = value)
+  
+  # get 95% CI. Use t score of 1.960439 given our sample size of 5000. Margin of error = t*(sd/sqrt(n))
+  mc_sum <- dyn %>%
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(cr_top = mean(cr)+sd(cr),
+                   cr_bot = mean(cr)-sd(cr),
+                   tau_top = mean(tau)+sd(tau),
+                   tau_bot = mean(tau)-sd(tau))
+  
+  # return list
+  return(list(ref_dyn.wide, mc_sum))
+}
+```
+
+# run tests
+```{r}
+# G log
+G_log.diff <- dev_cr(mc_G_log.dyn, 
+                    par = c(1.211521, -3.936778,-1.312944, -1.285713),
+                    cue = "G",
+                    cue_range = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000),
+                    log= "log10")
+
+# G
+G.diff <- dev_cr(mc_G.dyn, 
+                 par = c(0.04061288,   -9.31445958,   74.13015506, -431.59843638),
+                    cue = "G",
+                    cue_range = seq(0, 6*(10^4), (6*(10^4))/5000),
+                    log= "none")
+
+# R log
+R_log.diff <- dev_cr(mc_R_log.dyn, 
+                     par = c(48.70772, 105.18882, -81.80625, -44.60051),
+                    cue = "R",
+                    cue_range = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+                    log= "log10")
+
+# R
+R.diff <- dev_cr(mc_R.dyn, 
+                 par = c(7.0976026,  30.1295151, -28.0565613,  -0.2788713),
+                    cue = "R",
+                    cue_range = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
+                    log= "none")
+
+# I log
+I_log.diff <- dev_cr(mc_I_log.dyn, 
+                     par = c(5.463558,   2.383948, -17.757281,   4.571835),
+                    cue = "I",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+
+# I
+I.diff <- dev_cr(mc_I.dyn, 
+                     par = c(0.1135384,  -39.0585154, 1941.9082813,  119.8228980),
+                    cue = "I",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+# Ig log
+Ig_log.diff <- dev_cr(mc_Ig_log.dyn, 
+                  par = c(1.74633, -1.78582, -5.52834, 1.57344 ),
+                    cue = "Ig",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+
+# Ig
+Ig.diff <- dev_cr(mc_Ig.dyn, 
+                  par = c(0.05234791,  -46.03368629, 1897.61313455,   70.57689145),
+                    cue = "Ig",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+
+# I+Ig log
+I_Ig_log.diff <- dev_cr(mc_I_Ig_log.dyn, 
+                    par = c(3.594042,   4.157744, -13.530672,   2.599905),
+                    cue = "I+Ig",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+
+
+# I+Ig
+I_Ig.diff <- dev_cr(mc_I_Ig.dyn, 
+                    par = c(0.3159297,  -46.1104558, 1250.7529081,   -6.1982093),
+                    cue = "I+Ig",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+```
+
+# plot
+```{r}
+# cr time series
+## concatenate data
+reference.df <- rbind(
+  cbind(G_log.diff[[1]], cue = "Gametocyte log10"),
+  cbind(G.diff[[1]], cue = "Gametocyte"),
+  cbind(R_log.diff[[1]], cue = "RBC log10"),
+  cbind(R.diff[[1]], cue = "RBC"),
+  cbind(I_log.diff[[1]], cue = "Asexual iRBC log10"),
+  cbind(I.diff[[1]], cue = "Asexual iRBC"),
+  cbind(Ig_log.diff[[1]], cue = "Sexual iRBC log10"),
+  cbind(Ig.diff[[1]], cue = "Sexual iRBC"),
+  cbind(I_Ig_log.diff[[1]], cue = "Total iRBC log10"),
+  cbind(I_Ig.diff[[1]], cue = "Total iRBC")
+)
+
+## different data contenate
+diff.df <- rbind(
+  cbind(G_log.diff[[2]], cue = "Gametocyte log10"),
+  cbind(G.diff[[2]], cue = "Gametocyte"),
+  cbind(R_log.diff[[2]], cue = "RBC log10"),
+  cbind(R.diff[[2]], cue = "RBC"),
+  cbind(I_log.diff[[2]], cue = "Asexual iRBC log10"),
+  cbind(I.diff[[2]], cue = "Asexual iRBC"),
+  cbind(Ig_log.diff[[2]], cue = "Sexual iRBC log10"),
+  cbind(Ig.diff[[2]], cue = "Sexual iRBC"),
+  cbind(I_Ig_log.diff[[2]], cue = "Total iRBC log10"),
+  cbind(I_Ig.diff[[2]], cue = "Total iRBC")
+)
+
+
+# plot conversion time series
+fig2c <- ggplot() +
+  geom_line(data = reference.df, aes(x = time, y = cr)) +
+  geom_ribbon(data = diff.df, aes(x = time, ymin = cr_bot, ymax = cr_top), alpha = 0.3, fill = "red") +
+  facet_wrap(~cue, ncol = 2) +
+  labs(x = "Time (days)", y = "Conversion rate") +
+  theme_bw()
+  
+# plot fitness timeseries. When if tiness lost? At the latter part
+fig2d <- ggplot() +
+  geom_line(data = reference.df, aes(x = time, y = tau)) +
+  geom_ribbon(data = diff.df, aes(x = time, ymin = tau_bot, ymax = tau_top), alpha = 0.3, fill = "red") +
+  facet_wrap(~cue, ncol = 2) +
+  labs(x = "Time (days)", y = "Transmission potential") +
+  theme_bw()
+
+```
+
+
+
+# plot togehter
+```{r}
+# arrange
+fig2ab <- ggpubr::ggarrange(fig2a, fig2b, ncol = 2, widths = c(1.5,1), labels = c("A", "B"))
+fig2cd <- ggpubr::ggarrange(fig2c, fig2d, labels = c("C", "D"))
+fig2 <- ggpubr::ggarrange(fig2ab, fig2cd, ncol = 1)
+ggsave(here("figures/report15/MC_simulation.png"), height = 8, width = 8)
+```
+
+#-------------------- partitioning MC-------------------------#
+
+# general function that takes rand_var, rand_mean, and rand_sd to perform 1000 MC simulations
+```{r}
+partition_var <- function(par, cue, cue_range, log, rand_var, rand_mean, rand_sd, seed){
+  # run 5 iterations each with 1000
+    cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+    registerDoParallel(cl)
+    registerDoRNG(seed)
+    mc_res <- foreach(i= 1:1000, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
+      
+      # source function
+      source(here("functions/chabaudi_si_clean.R"))
+      
+      # get parameter values that are stochastic
+      rand <- rand_mean*exp(rnorm(n = 1, mean = 0, sd = rand_sd)) # proportion of RBC recovered
+
+      # get different parameter set, each incorporating only 1 random variable
+      if(rand_var == "rho"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = rand)
+      }
+      
+      if(rand_var == "beta"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = rand, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+      }
+      
+      if(rand_var == "psin"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = rand,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+      }
+      
+      if(rand_var == "psiw"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = rand,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+      }
+      
+      if(rand_var == "phin"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = rand, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+      }
+      
+      if(rand_var == "phiw"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = rand,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+      }
+
+      time_range <- seq(0, 20, by = 1e-3)
+      
+      # run dynamics
+      chabaudi_si_clean(
+        parameters_cr = par, 
+        parameters = parameters_tsukushi_rand, 
+        immunity = "tsukushi",
+        time_range = time_range, 
+        cue = cue, 
+        cue_range = cue_range, 
+        log_cue = log,
+        solver = "vode",
+        dyn = TRUE)
+      
+    }
+
+   stopCluster(cl)
+   
+   # process data
+  fitness.ls <- mclapply(mc_res, function(x){
+    fitness <- x %>% 
+      dplyr::filter(variable == "tau_cum") %>% 
+      dplyr::summarise(max_fitness = max(value))
+    
+    return(fitness)
+  })
+  
+  ## get fitness.df
+  fitness.df <- do.call(rbind, fitness.ls)
+  ## bind fitness.df with cue, log, and variable being randomized
+ 
+  # get cue vs dynamics
+  ## produce wide df for plotting cue vs cr graph
+  df_wide.ls <- mclapply(mc_res, function(x){
+    ## convert to wide
+    wide <- tidyr::pivot_wider(x, names_from = variable, values_from = value, id_cols = c(time))
+    ## get every 10th row
+    wide_filtered <- wide %>% dplyr::filter(row_number() %% 10 == 1)
+    return(wide_filtered)
+  })
+  
+  # get wide list
+  df_wide.df <- dplyr::bind_rows(df_wide.ls, .id = "id")
+  ## bind with cue, log and variable being randomized
+  df_wide.df <- cbind(df_wide.df, cue = cue, log = log, rand_var = rand_var)
+
+  # return output
+  return(list(fitness.df, df_wide.df))
+}
+
+```
+
+# run 5 iterations of par_var
+```{r}
+mc_five2 <- function(par, cue, cue_range, log, rand_var, rand_mean, rand_sd){
+  mc.1 <- partition_var(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 rand_var = rand_var,
+                 rand_mean = rand_mean,
+                 rand_sd = rand_sd, 
+                 seed = 137)
+  mc.2 <- partition_var(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 rand_var = rand_var,
+                 rand_mean = rand_mean,
+                 rand_sd = rand_sd, 
+                 seed = 138)
+  mc.3 <- partition_var(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 rand_var = rand_var,
+                 rand_mean = rand_mean,
+                 rand_sd = rand_sd, 
+                 seed = 139)
+  mc.4 <- partition_var(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 rand_var = rand_var,
+                 rand_mean = rand_mean,
+                 rand_sd = rand_sd, 
+                 seed = 140)
+  mc.5 <- partition_var(par = par,
+                 cue = cue,
+                 cue_range = cue_range,
+                 log = log,
+                 rand_var = rand_var,
+                 rand_mean = rand_mean,
+                 rand_sd = rand_sd, 
+                 seed = 141)
+  
+  
+  # get fitness
+  fitness <- rbind(mc.1[[1]],mc.2[[1]],mc.3[[1]],mc.4[[1]],mc.5[[1]])
+
+  # produce output for convergence of fitness
+  ## get cum sum of fitness
+  fitness.sum <- cumsum(fitness)
+  ## get average fitness across iteration
+  fitness.avg <- fitness.sum/(1:length(fitness.sum))
+  
+  # get wide data
+  dyn <- rbind(
+    cbind(mc.1[[2]], run = 1),
+    cbind(mc.2[[2]], run = 2),
+    cbind(mc.3[[2]], run = 3),
+    cbind(mc.4[[2]], run = 4),
+    cbind(mc.5[[2]], run = 5))
+  
+  # get unique id
+  dyn <- dyn %>% 
+    dplyr::mutate(run_id = paste0(run,"_", id, "_", rand_var))
+  
+  return(list(fitness, fitness.avg, dyn))
+}
+```
+
+# function to run all 6 rand. 3rd nested function!
+```{r}
+get_par_MC <- function(par, cue, cue_range, log){
+  # run MC with only rho
+  res <- mc_five2(par = par,
+                    cue = cue,
+                    cue_range = cue_range,
+                    log = log,
+                    rand_var = "rho",
+                    rand_mean = 0.2627156,
+                    rand_sd = 0.2579136)
+  
+  fitness_name <- paste0("mc_par_", cue, "_", log, "_rho_fitness.csv")
+  write.csv(res[[1]], here("data/MC_partitioned", fitness_name))
+  
+  dyn_name <- paste0("mc_par_", cue, "_", log, "_rho_dyn.parquet")
+  write_parquet(res[[3]], here("data/MC_partitioned", dyn_name))
+  
+  # beta
+  res <- mc_five2(par = par,
+                    cue = cue,
+                    cue_range = cue_range,
+                    log = log,
+                    rand_var = "beta",
+                    rand_mean = 5.721,
+                    rand_sd = 0.1722868)
+  
+  fitness_name <- paste0("mc_par_", cue, "_", log, "_beta_fitness.csv")
+  write.csv(res[[1]], here("data/MC_partitioned", fitness_name))
+  
+  dyn_name <- paste0("mc_par_", cue, "_", log, "_beta_dyn.parquet")
+  write_parquet(res[[3]], here("data/MC_partitioned", dyn_name))
+  
+  # psin
+  res <- mc_five2(par = par,
+                    cue = cue,
+                    cue_range = cue_range,
+                    log = log,
+                    rand_var = "psin",
+                    rand_mean = 16.69234,
+                    rand_sd = 0.5778196)
+  
+  fitness_name <- paste0("mc_par_", cue, "_", log, "_psin_fitness.csv")
+  write.csv(res[[1]], here("data/MC_partitioned", fitness_name))
+  
+  dyn_name <- paste0("mc_par_", cue, "_", log, "_psin_dyn.parquet")
+  write_parquet(res[[3]], here("data/MC_partitioned", dyn_name))
+  
+  # psiw
+  res <- mc_five2(par = par,
+                    cue = cue,
+                    cue_range = cue_range,
+                    log = log,
+                    rand_var = "psiw",
+                    rand_mean = 0.8431785,
+                    rand_sd = 0.2355804)
+  
+  fitness_name <- paste0("mc_par_", cue, "_", log, "_psiw_fitness.csv")
+  write.csv(res[[1]], here("data/MC_partitioned", fitness_name))
+  
+  dyn_name <- paste0("mc_par_", cue, "_", log, "_psiw_dyn.parquet")
+  write_parquet(res[[3]], here("data/MC_partitioned", dyn_name))
+  
+  # phin
+  res <- mc_five2(par = par,
+                    cue = cue,
+                    cue_range = cue_range,
+                    log = log,
+                    rand_var = "phin",
+                    rand_mean = 0.03520591,
+                    rand_sd = 0.02609495)
+  
+  fitness_name <- paste0("mc_par_", cue, "_", log, "_phin_fitness.csv")
+  write.csv(res[[1]], here("data/MC_partitioned", fitness_name))
+  
+  dyn_name <- paste0("mc_par_", cue, "_", log, "_phin_dyn.parquet")
+  write_parquet(res[[3]], here("data/MC_partitioned", dyn_name))
+  
+  # phiw
+  res <- mc_five2(par = par,
+                    cue = cue,
+                    cue_range = cue_range,
+                    log = log,
+                    rand_var = "phiw",
+                    rand_mean = 550.842,
+                    rand_sd = 0.8286213)
+  
+  fitness_name <- paste0("mc_par_", cue, "_", log, "_phiw_fitness.csv")
+  write.csv(res[[1]], here("data/MC_partitioned", fitness_name))
+  
+  dyn_name <- paste0("mc_par_", cue, "_", log, "_phiw_dyn.parquet")
+  write_parquet(res[[3]], here("data/MC_partitioned", dyn_name))
+}
+```
+
+
+#------------- run the code!
+```{r}
+# I
+# non-logged
+get_par_MC(par = c(0.1135384,  -39.0585154, 1941.9082813,  119.8228980),
+                    cue = "I",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+# logged
+get_par_MC(par = c(5.463558,   2.383948, -17.757281,   4.571835),
+                    cue = "I",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+
+# Ig
+# non-logged
+get_par_MC(par = c(0.05234791,  -46.03368629, 1897.61313455,   70.57689145),
+                    cue = "Ig",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+# logged
+get_par_MC(par = c(1.74633, -1.78582, -5.52834, 1.57344 ),
+                    cue = "Ig",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+
+# I+Ig
+get_par_MC(par = c(0.3159297,  -46.1104558, 1250.7529081,   -6.1982093),
+                    cue = "I+Ig",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+get_par_MC(par = c(3.594042,   4.157744, -13.530672,   2.599905),
+                    cue = "I+Ig",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+# G
+# non-logged
+get_par_MC(par = c(0.04061288,   -9.31445958,   74.13015506, -431.59843638),
+                    cue = "G",
+                    cue_range = seq(0, 6*(10^4), (6*(10^4))/5000),
+                    log= "none")
+
+get_par_MC(par = c(1.211521, -3.936778,-1.312944, -1.285713),
+                    cue = "G",
+                    cue_range = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000),
+                    log= "log10")
+# R
+get_par_MC(par = c(7.0976026,  30.1295151, -28.0565613,  -0.2788713),
+                    cue = "R",
+                    cue_range = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
+                    log= "none")
+get_par_MC(par = c(48.70772, 105.18882, -81.80625, -44.60051),
+                    cue = "R",
+                    cue_range = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+                    log= "log10")
+```
 
 
 
