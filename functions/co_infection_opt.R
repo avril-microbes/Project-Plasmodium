@@ -55,7 +55,6 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
     }
     ## code to execute parallel LGBF-GS optimization
     output <- list() # reset per run
-    index <- index + 1
     print(paste("starting iteration", index))
     cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
     model_output <- do.call(optimParallel::optimParallel, c(list(par = mutant_par, # competing parameter
@@ -72,6 +71,9 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
     output <- list(index, conv, mutant_par, residence_par, fitness)
     output_ls[[index]] <- output
     print(output)
+    
+    # add index
+    index <- index + 1
     
     # exit loop IF
     ## previous run converged, strain 1 is fitter than strain 2, and that the fitness difference is minute
