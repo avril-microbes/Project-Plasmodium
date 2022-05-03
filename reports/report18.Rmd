@@ -2,12 +2,187 @@
 title: "R Notebook"
 output: html_notebook
 ---
-
-Resolving single infection optimization
-Previous attempts at optimization resulted in an infection curve that went unresolved
+```{r}
+library(dplyr)
+library(ggplot2)
+library(here)
+library(deSolve)
+library(crone)
+library(optimParallel)
+library(doParallel)
+library(doRNG)
+library(arrow)
+library(stringr)
+library(parallel)
+library(ggpubr)
+```
 
 ```{r}
+source(here("functions/chabaudi_si_clean.R"))
+```
+
+Resolving single infection optimization
+Previous attempts at optimization resulted in an infection curve that went unresolved. Here, I cannot get the infection period to resolve. Increasing the infection period causes the infection dynamic of the parasite to become flattened. 
+```{r}
+time_range <- seq(0, 30, by = 1e-3)
+```
+
+```{r}
+source(here("functions/par_to_df.R"))
+source(here("functions/chabaudi_si_clean.R"))
+
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
 
 ```
+
+```{r}
+opt_local <- function(
+  par, # initial parameter sets
+  cue, #
+  log,
+  cue_range,
+  dyn = F
+  ){
+  # start cluster
+  cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  
+  # start optimization LFBGS
+  res <- optimParallel(
+    par = par,
+    fn = chabaudi_si_clean, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = time_range,
+    cue = cue,
+    log_cue = log,
+    cue_range = cue_range,
+    solver = "vode")
+  
+  # close cluster
+  stopCluster(cl)
+  
+  return (res)
+}
+```
+
+# I non-logged
+```{r}
+I_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "I",
+                            log = "none",
+                            cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000))
+
+I_loc_20.dyn <- chabaudi_si_clean(parameters_cr = c(0.1135384,  -39.0585154, 1941.9082813,  119.8228980),
+                               parameters= parameters_tsukushi,
+                               immunity = "tsukushi",
+                               time_range = seq(0,25,0.001),
+                               cue = "I",
+                               log_cue = "none",
+                               cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                               dyn = T)
+
+I_loc_25.dyn <- chabaudi_si_clean(parameters_cr = c(-0.4002295,  3.2517089,  0.6089734,  0.4916482),
+                               parameters= parameters_tsukushi,
+                               immunity = "tsukushi",
+                               time_range = seq(0,25,0.001),
+                               cue = "I",
+                               log_cue = "none",
+                               cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                               dyn = T)
+
+I_loc_30.dyn <- chabaudi_si_clean(parameters_cr = c(-0.4632307,  -12.7384555, 1898.9561735, -292.2138265),
+                               parameters= parameters_tsukushi,
+                               immunity = "tsukushi",
+                               time_range = seq(0,30,0.001),
+                               cue = "I",
+                               log_cue = "none",
+                               cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                               dyn = T)
+
+# 20 days optimziation
+#0.1135384  -39.0585154 1941.9082813  119.8228980
+#8.49777
+
+# 25 days 
+#-0.4002295  3.2517089  0.6089734  0.4916482
+#9.860488
+
+# 30 days
+#-0.4632307  -12.7384555 1898.9561735 -292.2138265
+#11.81462
+
+# plotting together, we cannot get the infeciton cycle to resolve. By elongating the infection period, we see a flattening of parasite dynamics that prolongs the infection
+ggplot()+ 
+  geom_line(data = I_loc_30.dyn, aes(x = time, y = value, color = "30")) +
+  geom_line(data = I_loc_25.dyn, aes(x = time, y = value, color = "25")) +
+  geom_line(data = I_loc_20.dyn, aes(x = time, y = value, color = "20")) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+# I logged
+Still no full resolution even with 30 days, although it is closer to resolution than 20 days optimization. Extending the simulation to 25 days allows the optimum 20 days to fully resolve. Hence, for future purposes, it might be better to optimize based on 20 days for optimal acute infection. However, for simulation go to 30 days to ensure fulll resolution 
+```{r}
+I_log_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "I",
+                            log = "log10",
+                            cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000))
+
+# 20 days
+#5.463558   2.383948 -17.757281   4.571835
+#9.494991
+
+# 30 days
+# 3.53672545  -0.03564319 -12.38102999   5.20523629
+# 13.27947
+I_log_loc_20.dyn <- chabaudi_si_clean(parameters_cr = c(5.463558,   2.383948 ,-17.757281 ,  4.571835),
+                               parameters= parameters_tsukushi,
+                               immunity = "tsukushi",
+                               time_range = seq(0,30,0.001),
+                               cue = "I",
+                               log_cue = "log10",
+                               cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                               dyn = T)
+
+I_log_loc_30.dyn <- chabaudi_si_clean(parameters_cr = c(3.53672545,  -0.03564319, -12.38102999,   5.20523629),
+                               parameters= parameters_tsukushi,
+                               immunity = "tsukushi",
+                               time_range = seq(0,30,0.001),
+                               cue = "I",
+                               log_cue = "log10",
+                               cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                               dyn = T)
+
+ggplot()+ 
+  geom_line(data = I_log_loc_30.dyn, aes(x = time, y = value, color = "30")) +
+  geom_line(data = I_log_loc_20.dyn, aes(x = time, y = value, color = "20")) +
+  facet_wrap(~variable, scales = "free") +
+  theme_bw()
+```
+
+
+#---------------------------------------------------------#
+# Co-infection optimization
+#---------------------------------------------------------#
 
 
