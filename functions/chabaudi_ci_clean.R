@@ -154,16 +154,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     res = I0*(dbeta(t, sp, sp))
   }
   
-  
-  #-------------------------#
-  # Function to describe population 
-  # structure of initial inoculum
-  #------------------------#
-  pulseBeta_fun <- function(I0, sp, t){ 
-    res = rep(NA, length(t))
-    res = I0*(dbeta(t, sp, sp))
-  }
-  
+
   #----------------------#
   # define Heaviside transformation
   #----------------------#

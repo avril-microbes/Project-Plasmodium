@@ -184,5 +184,120 @@ ggplot()+
 #---------------------------------------------------------#
 # Co-infection optimization
 #---------------------------------------------------------#
+```{r}
+source(here("functions/par_to_df.R"))
+source(here("functions/chabaudi_si_clean.R"))
+source(here("functions/chabaudi_ci_clean.R"))
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+
+time_range <- seq(0, 20, by = 1e-3)
+```
+
+#---------------------------------#
+optimizing co-infection
+#---------------------------------#
+
+fully static run with the optimal parameter for each cue competing against each other. parasites are not allowed to alter their strategy. In biology terms, think of when intrastrain competition>>interstrain competition, thereby maintaining the original optimizal parameters.
+
+```{r}
+source(here("functions/chabaudi_ci_clean.R"))
+```
+
+```{r}
+
+
+ci_comp_static <- function(df){
+  
+  
+  
+}
+```
+
+# create cue_range df
+if _i at end of cue, suggesting of I1/I2 (self-differentation possible).
+```{r}
+# code. 
+cue_range.df <- cbind.data.frame(
+  cue = c("I_i", "I_i",
+          "I1+I2", "I1+I2",
+          "Ig_i", "Ig_i",
+          "Ig1+Ig2", "Ig1+Ig2",
+          "sum", "sum",
+          "G_i", "G_i"),
+  log = c("none", "log",
+          "none", "log",
+          "none", "log",
+          "none", "log",
+          "none", "log",
+          "none", "log"),
+  low = c(0, 0,
+          0, 0,
+          0, 0,
+          0, 0,
+          0, 9),
+  high = c(6*(10^6), log10(6*(10^6)),
+           6*(10^6), log10(6*(10^6)),
+           6*(10^6), log10(6*(10^6)),
+           6*(10^6), log10(6*(10^6)),
+           6*(10^6), log10(6*(10^6))),
+  by = c((6*(10^6))/5000, (log10(6*(10^6)))/5000,
+         (6*(10^6))/5000, (log10(6*(10^6)))/5000,
+         (6*(10^6))/5000, (log10(6*(10^6)))/5000,
+         (6*(10^6))/5000, (log10(6*(10^6)))/5000,
+         (6*(10^6))/5000, (log10(6*(10^6)))/5000)
+)
+```
+
+
+```{r}
+df <- cbind.data.frame(
+  cue = c("I", "Ig", "sum"),
+  log = c("none", "log", "log"),
+  var1 = c(1.931059, 35.6294, 435.1835),
+  var2 = c(-63.786820, -65.6898, -565.3985),
+  var3 = c(1295.819775, -11.5609, -395.7242),
+  var4 = c(-31.580440, -52.0779, -446.5950)
+) %>% mutate(id = paste0(cue, "_", log))
+
+df2 <- df %>% 
+  setNames(paste0(names(df), '_2')) %>% 
+  tidyr::crossing(df, .name_repair = "check_unique") %>% 
+  janitor::clean_names()
+
+df3 <- df2[!duplicated(apply(df2, 1, function(x) paste(sort(x),collapse=''))),]
+
+
+df3[1,]$cue
+chabaudi_ci_clean(parameters_cr_1 = c(df3[1,]$var1, df3[1,]$var2, df3[1,]$var3, df3[1,]$var4),
+                  parameters_cr_2 = c(df3[1,]$var1_2, df3[1,]$var2_2, df3[1,]$var3_2, df3[1,]$var4_2),
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = df3[1,]$cue,
+                  cue_2 = df3[1,]$cue_2,
+                  cue_range_1 = ,
+                  cue_range_2 = ,
+                  log_cue_1 = ,
+                  log_cue_2 = ,
+                  solver = "vode")
+```
 
 
