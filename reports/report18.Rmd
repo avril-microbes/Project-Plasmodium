@@ -1,0 +1,13 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Resolving single infection optimization
+Previous attempts at optimization resulted in an infection curve that went unresolved
+
+```{r}
+
+```
+
+
