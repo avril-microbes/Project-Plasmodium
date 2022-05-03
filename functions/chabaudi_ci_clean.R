@@ -66,9 +66,6 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
                Ig2 = 0, # sexual iRBC density of strain 2
                G1 = 0, # gametocyte density of strain 1
                G2 = 0, # gametocyte density of strain 3
-               BI = 0, # extent of asexual iRBC burst of all strains
-               BIg = 0, # extent of sexual iRBC burst of all strains
-               BIt = 0, # total asexual and sexual burst intensity
                cr_t1 = 0,
                cr_t2 = 0)  
   } else{ # initial states if tsukushi's mode of immunity is used 
@@ -86,9 +83,6 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
                G2 = 0,
                N = 0, # indiscriminant RBC removal
                W = 0, # targetted iRBC removal
-               BI = 0, # extent of asexual iRBC burst of all strains
-               BIg = 0, # extent of sexual iRBC burst of all strains
-               BIt = 0, # total asexual and sexual burst intensity
                cr_t1 = 0,
                cr_t2 = 0)
   }
@@ -499,10 +493,6 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       dMg1 <- 0 # should have no Mg before day alpha
       dIg1 <- 0 #first wave starts on day alpha+delay
       dG1 <- 0 # first wave starts on day alpha+alphag+delay
-      ## tracking burst extent. does not feed back into system
-      dBI <- mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(pulseBeta_1*S_1)+(pulseBeta_2*S_2)
-      dBIt <- mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(pulseBeta_1*S_1)+(pulseBeta_2*S_2)
-      dBIg <- 0 # just tracking burst intensity
     }
     
     ## Strain 2
@@ -519,9 +509,6 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     if(t>alpha+delay && t<=alpha+alphag+delay){
       dG1 <- 0 # no production of gametocyte yet
       dIg1 <- dIg2_nolag # no death due to mature sexual iRBC bursting
-      # burst extent
-      dBIg <- mu*(Ig1+Ig2)+(-log(1-N_trans)-log(1-W_trans))*(Ig1+Ig2)
-      dBIt <- mu*(Ig1+Ig2)+(-log(1-N_trans)-log(1-W_trans))*(Ig1+Ig2)+mu*(I1+I2)+(-log(1-N_trans)-log(1-W_trans))*(I1+I2)+(p*lag_a_1[1]*lag_a_1[2]*S_1)+(p*lag_a_2[1]*lag_a_2[3]*S_2)
     }
     
     ## Strain 2
@@ -536,8 +523,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       dI1 <- dI1_nolag-(p*lag_a_1[1]*lag_a_1[2]*S_1)
       dM1 <- dM1_nolag+(beta*(1-cr_1)*p*lag_a_1[1]*lag_a_1[2]*S_1)
       dMg1 <- dMg1_nolag+(beta*cr_1*p*lag_a_1[1]*lag_a_1[2]*S_1)
-      dBI <- mu*(I1+I2)+(-log(1-N_trans)-log(1-W_trans))*(I1+I2)+(p*lag_a_1[1]*lag_a_1[2]*S_1)+(p*lag_a_2[1]*lag_a_2[3]*S_2)
-      
+
       }
     
     ## Strain 2
@@ -552,9 +538,6 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     if(t>alpha+alphag+delay){
       dG1 <- dG1_nolag+(p*lag_b_1[1]*lag_b_1[4]*Sg_1)
       dIg1 <- dIg1_nolag-(p*lag_b_1[1]*lag_b_1[4]*Sg_1)
-      ## tracking burst intensity of sexual iRBC
-      dBIg <- mu*(Ig1+Ig2)+(-log(1-N_trans)-log(1-W_trans))*(Ig1+Ig2)+(p*lag_b_1[1]*lag_b_1[4]*Sg_1)+(p*lag_b_2[1]*lag_b_2[5]*Sg_2)
-      dBIt <- mu*(Ig1+Ig2)+(-log(1-N_trans)-log(1-W_trans))*(Ig1+Ig2)+(p*lag_b_1[1]*lag_b_1[4]*Sg_1)+(p*lag_b_2[1]*lag_b_2[5]*Sg_2)+mu*(I1+I2)+(-log(1-N)-log(1-W))*(I1+I2)+(p*lag_a_1[1]*lag_a_1[2]*S_1)+(p*lag_a_2[1]*lag_a_2[3]*S_2)
     }
     
     ## Strain 2
@@ -566,8 +549,8 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     #----------------------#
     # Return the states
     #----------------------#
-    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dBI, dBIg, dBIt, dcr_t1, dcr_t2)))}
-    if (immunity == "tsukushi") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dN, dW, dBI, dBIg, dBIt, dcr_t1, dcr_t2)))}
+    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dcr_t1, dcr_t2)))}
+    if (immunity == "tsukushi") {return(list(c(dR, dM1, dM2, dMg1, dMg2, dID, dI1, dI2, dIg1, dIg2, dG1, dG2, dN, dW, dcr_t1, dcr_t2)))}
   }
   
   #----------------------------#
