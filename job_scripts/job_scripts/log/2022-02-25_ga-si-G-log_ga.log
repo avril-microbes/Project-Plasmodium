@@ -1,0 +1,121 @@
+========================================================================= 
+Log Path: /scratch/wanglu57/job_scripts/log/2022-02-25_ga-si-G-log_ga.log 
+Program Path: /scratch/wanglu57/job_scripts/2022-02-25_ga-si-G-log.R 
+Working Directory: /scratch/wanglu57/job_scripts 
+User Name: wanglu57 
+R Version: 4.0.2 (2020-06-22) 
+Machine: cdr2451.int.cedar.computecanada.ca x86_64 
+Operating System: Linux 3.10.0-1160.36.2.el7.x86_64 #1 SMP Wed Jul 21 11:57:15 UTC 2021 
+[1] "Base Packages: parallel stats graphics grDevices utils datasets methods\n               base \nOther Packages: doRNG_1.8.2 rngtools_1.5.2 here_1.0.1 GA_3.2.2 doParallel_1.0.16\n                iterators_1.0.13 foreach_1.5.1 "
+Log Start Time: 2022-02-26 13:17:15 
+========================================================================= 
+
+[[1]]
+         [,1]     [,2]     [,3]     [,4]
+[1,] 2.955049 6.659449 382.3999 858.7956
+
+[[2]]
+[1] 5.425016
+
+
+NOTE: Log Print Time:  2022-02-26 13:18:56 
+NOTE: Elapsed Time in seconds: 1.67746948798498 
+
+[[1]]
+         [,1]     [,2]     [,3]     [,4]
+[1,] 3.253224 30.10103 199.3657 427.8333
+
+[[2]]
+[1] 5.880619
+
+
+NOTE: Log Print Time:  2022-02-26 13:20:49 
+NOTE: Elapsed Time in seconds: 1.88009176254272 
+
+[[1]]
+         [,1]     [,2]     [,3]     [,4]
+[1,] 3.119042 12.63552 443.2613 239.7576
+
+[[2]]
+[1] 5.969662
+
+
+NOTE: Log Print Time:  2022-02-26 13:27:02 
+NOTE: Elapsed Time in seconds: 6.22797971566518 
+
+[[1]]
+         [,1]     [,2]     [,3]     [,4]
+[1,] 3.119042 12.63552 443.2613 239.7576
+
+[[2]]
+[1] 5.969662
+
+
+NOTE: Log Print Time:  2022-02-26 13:34:40 
+NOTE: Elapsed Time in seconds: 7.62941252390544 
+
+[[1]]
+         [,1]      [,2]     [,3]     [,4]
+[1,] 2.917976 -5.677259 298.0003 205.8515
+
+[[2]]
+[1] 6.310977
+
+
+NOTE: Log Print Time:  2022-02-26 13:41:45 
+NOTE: Elapsed Time in seconds: 7.08908403714498 
+
+[[1]]
+         [,1]      [,2]     [,3]     [,4]
+[1,] 2.917976 -5.677259 298.0003 205.8515
+
+[[2]]
+[1] 6.310977
+
+
+NOTE: Log Print Time:  2022-02-26 13:46:52 
+NOTE: Elapsed Time in seconds: 5.11242616573969 
+
+[[1]]
+         [,1]      [,2]     [,3]     [,4]
+[1,] 2.917976 -5.677259 298.0003 205.8515
+
+[[2]]
+[1] 6.310977
+
+
+NOTE: Log Print Time:  2022-02-26 13:54:20 
+NOTE: Elapsed Time in seconds: 7.46648364861806 
+
+[[1]]
+         [,1]    [,2]     [,3]     [,4]
+[1,] 3.214653 30.4975 188.1856 648.4624
+
+[[2]]
+[1] 6.629979
+
+
+NOTE: Log Print Time:  2022-02-26 14:01:01 
+NOTE: Elapsed Time in seconds: 6.68770339091619 
+
+[[1]]
+         [,1]     [,2]      [,3]     [,4]
+[1,] 2.961455 5.136032 -27.56459 414.8731
+
+[[2]]
+[1] 6.694998
+
+
+NOTE: Log Print Time:  2022-02-26 14:10:31 
+NOTE: Elapsed Time in seconds: 9.48828986485799 
+
+[1] "Error in { : \n  task 316 failed - \"illegal input in lagvalue - lag, 6.05324, too large, at time = 8.05324\n\"\nCalls: ga_verbose -> %DO% -> do.call -> %dopar% -> <Anonymous>\n"
+
+NOTE: Log Print Time:  2022-02-26 15:31:54 
+NOTE: Elapsed Time in seconds: 1.35652878257963 
+
+[1] "Error in h(simpleError(msg, call)) : \n  error in evaluating the argument 'x' in selecting a method for function 'print': object 'ga_res' not found\nCalls: print -> .handleSimpleError -> h\n"
+
+NOTE: Log Print Time:  2022-02-26 15:31:54 
+NOTE: Elapsed Time in seconds: 0.016582727432251 
+

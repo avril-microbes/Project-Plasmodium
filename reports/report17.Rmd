@@ -1,0 +1,448 @@
+---
+title: "report17"
+output: html_document
+---
+Doc for creating figures for EEB397 final report
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(here)
+library(deSolve)
+library(crone)
+library(optimParallel)
+library(doParallel)
+library(doRNG)
+library(arrow)
+library(stringr)
+library(parallel)
+library(ggpubr)
+```
+
+```{r}
+source(here("functions/chabaudi_si_clean.R"))
+```
+
+```{r}
+source(here("functions/par_to_df.R"))
+source(here("functions/chabaudi_si_clean.R"))
+
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+
+time_range <- seq(0, 20, by = 1e-3)
+```
+
+#-------------------#
+# Figure 1
+#--------------------#
+Single infection optimizaiton results
+```{r}
+heaviside_trans <- function(cue_range, max){
+  res <- crone::heaviside(cue_range)*(cue_range)+(crone::heaviside(cue_range-max)*(max-cue_range))
+  return(res)
+}
+
+get_dyn <- function(par,
+                    cue,
+                    log,
+                    cue_range){
+  # get dynamics
+  dyn <- chabaudi_si_clean(
+            parameters_cr = par, 
+            parameters = parameters_tsukushi, 
+            time_range = time_range, 
+            cue = cue, 
+            cue_range = cue_range, 
+            log_cue = log,
+            immunity = "tsukushi",
+            solver = "vode",
+            dyn = TRUE)
+  
+  # get reaction norm
+  rn <- par_to_df(par = par, cue_range = cue_range)
+  
+  # get rug
+  if(log == "none"){rug <- dyn %>% dplyr::filter(variable == cue)}
+  
+  if(log == "log10"){
+    max <- max(cue_range)
+    rug <- dyn %>% 
+      dplyr::filter(variable == cue) %>% 
+      dplyr::mutate(value = heaviside_trans(log10(value+(10^(-524))), max))
+  }
+
+  
+  
+  return(list(dyn, rn, rug))
+}
+
+```
+
+```{r}
+I_none.dyn <-  get_dyn(par = c(0.1135384,  -39.0585154, 1941.9082813,  119.8228980),
+                       cue = "I",
+                       log = "none",
+                       cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000))
+
+I_log10.dyn <-  get_dyn(par = c(5.463558,   2.383948, -17.757281,   4.571835),
+                       cue = "I",
+                       log = "log10",
+                       cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000))
+
+Ig_none.dyn <- get_dyn(par = c(0.05234791,  -46.03368629, 1897.61313455,   70.57689145),
+                            cue = "Ig",
+                            log = "none",
+                            cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000))
+
+Ig_log10.dyn <- get_dyn(par = c(1.746334, -1.785818, -5.528335,  1.573436),
+                            cue = "Ig",
+                            log = "log10",
+                            cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000))
+
+I_Ig_none.dyn <- get_dyn(par = c(0.3159297,  -46.1104558, 1250.7529081,   -6.1982093),
+                            cue = "I+Ig",
+                            log = "none",
+                            cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000))
+I_Ig_none.dyn[[3]] <- I_Ig_none.dyn[[1]] %>% 
+  filter(variable == "I" | variable == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(sum = sum(value)) %>% 
+  mutate(value = heaviside_trans(sum+(10^(-524)), 6*(10^6)),
+         variable = "I+Ig") %>% 
+  select(time, variable, value)
+
+I_Ig_log10.dyn <- get_dyn(par = c(3.594042,   4.157744, -13.530672,   2.599905),
+                            cue = "Ig+I",
+                            log = "log10",
+                            cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000))
+
+I_Ig_log10.dyn[[3]] <- I_Ig_log10.dyn[[1]] %>% 
+  filter(variable == "I" | variable == "Ig") %>% 
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(sum = sum(value)) %>% 
+  mutate(value = heaviside_trans(log10(sum+(10^(-524))), log10(6*(10^6))),
+         variable = "I+Ig") %>% 
+  select(time, variable, value)
+
+R_none.dyn <- get_dyn(par = c(7.0976026,  30.1295151, -28.0565613,  -0.2788713),
+                            cue = "R",
+                            log = "none",
+                            cue_range = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000))
+
+R_log10.dyn <- get_dyn(par = c(48.70772, 105.18882, -81.80625, -44.60051),
+                            cue = "R",
+                            log = "log10",
+                            cue_range = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000))
+
+G_none.dyn <- get_dyn(par = c(0.04061288,   -9.31445958,   74.13015506, -431.59843638),
+                            cue = "G",
+                            log = "none",
+                            cue_range = seq(0, 6*(10^4), (6*(10^4))/5000))
+
+G_log10.dyn <- get_dyn(par = c(1.211521, -3.936778, -1.312944, -1.285713),
+                            cue = "G",
+                            log = "log10",
+                            cue_range = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000))
+I_Ig_none.dyn
+```
+
+## panel A conversion rate reaction norm
+```{r}
+# get bound df
+rxn.df <- rbind(
+  cbind(I_none.dyn[[2]], name = "Asexual iRBC"),
+  cbind(I_log10.dyn[[2]], name = "Asexual iRBC log10"),
+  cbind(Ig_none.dyn[[2]], name = "Sexual iRBC"),
+  cbind(Ig_log10.dyn[[2]], name = "Sexual iRBC log10"),
+  cbind(I_Ig_none.dyn[[2]], name = "Total iRBC"),
+  cbind(I_Ig_log10.dyn[[2]], name = "Total iRBC log10"),
+  cbind(R_none.dyn[[2]], name = "RBC"),
+  cbind(R_log10.dyn[[2]], name = "RBC log10"),
+  cbind(G_none.dyn[[2]], name = "Gametocyte"),
+  cbind(G_log10.dyn[[2]], name = "Gametocyte log10")
+)
+
+# get rug df
+rug.df <- rbind(
+  cbind(I_none.dyn[[3]], name = "Asexual iRBC"),
+  cbind(I_log10.dyn[[3]], name = "Asexual iRBC log10"),
+  cbind(Ig_none.dyn[[3]], name = "Sexual iRBC"),
+  cbind(Ig_log10.dyn[[3]], name = "Sexual iRBC log10"),
+  cbind(I_Ig_none.dyn[[3]], name = "Total iRBC"),
+  cbind(I_Ig_log10.dyn[[3]], name = "Total iRBC log10"),
+  cbind(R_none.dyn[[3]], name = "RBC"),
+  cbind(R_log10.dyn[[3]], name = "RBC log10"),
+  cbind(G_none.dyn[[3]], name = "Gametocyte"),
+  cbind(G_log10.dyn[[3]], name = "Gametocyte log10")
+)
+
+# transform all logged dynamics to non-logged
+rxn.df <- rxn.df %>% 
+  mutate(cue_range2 = ifelse(stringr::str_detect(name, "log10"), 10^cue_range, cue_range))
+
+rug.df <- rug.df %>% 
+  mutate(value2 = ifelse(stringr::str_detect(name, "log10"), 10^value, value))
+
+# filter to restriction conversion rate reaction norm range to cue ranges that appear in rug
+rug_lim.df <- rug.df %>% 
+  group_by(name) %>% 
+  summarize(min = min(value2, na.rm = T)*0.9,
+         max = max(value2, na.rm = T)*1.1)
+
+rug_rxn.df <- rxn.df %>% left_join(rug_lim.df)
+
+rug_rxn.df1 <- rug_rxn.df %>% 
+  dplyr::group_by(name) %>% 
+  dplyr::filter(cue_range2 >= min) %>% 
+  dplyr::filter(cue_range2 <= max)
+
+# plot
+fig1a <- ggplot() +
+  geom_line(data = rug_rxn.df1, aes(x = cue_range2, y = cr)) +
+  geom_rug(data = rug.df, aes(x = value2), color = "red") +
+  facet_wrap(~name, scales = "free_x", ncol = 2) +
+  theme_bw() +
+  labs(y = "Conversion rate", x = "Cue range") +
+  scale_x_continuous(labels = function(x) format(x, scientific = FALSE),
+                     guide = guide_axis(check.overlap = TRUE)) + 
+                    theme(axis.text.x = element_text(size = 7)) 
+
+
+```
+
+# plot time series conversion rate and transmission potential
+```{r}
+dyn.df <- rbind(
+  cbind(I_none.dyn[[1]], name = "Asexual iRBC"),
+  cbind(I_log10.dyn[[1]], name = "Asexual iRBC\nlog10"),
+  cbind(Ig_none.dyn[[1]], name = "Sexual iRBC"),
+  cbind(Ig_log10.dyn[[1]], name = "Sexual iRBC\nlog10"),
+  cbind(I_Ig_none.dyn[[1]], name = "Total iRBC"),
+  cbind(I_Ig_log10.dyn[[1]], name = "Total iRBC\nlog10"),
+  cbind(R_none.dyn[[1]], name = "RBC"),
+  cbind(R_log10.dyn[[1]], name = "RBC log10"),
+  cbind(G_none.dyn[[1]], name = "Gametocyte"),
+  cbind(G_log10.dyn[[1]], name = "Gametocyte\nlog10")
+)
+
+cr_tau.df <- dyn.df %>% filter(variable == "cr" | variable == "tau_cum")
+cr_tau.df2 <- tidyr::pivot_wider(cr_tau.df, names_from = variable, values_from = value, id_cols = c(time, name))
+
+fig1b <- ggplot(cr_tau.df2) +
+  geom_line(aes(x = time, y = cr)) +
+  geom_line(aes(x = time, y = tau_cum/10), color = "red") +
+  facet_wrap(~name, ncol = 2) + 
+  scale_y_continuous(
+    name = "Conversion rate",
+    sec.axis = sec_axis(~.*10, name = "Cumulative\ntransmission potential")) +
+  theme_bw() +
+  theme(axis.title.y.right = element_text(color = "red"))
+
+
+```
+
+panel 1b
+ranking shit by fitness
+```{r}
+tau_cum.df <- dyn.df %>% 
+  filter(variable == "tau_cum") %>% 
+  group_by(name) %>% 
+  summarise(max = max(value))
+
+fig1b <- ggplot(data = tau_cum.df, aes(y = reorder(name, max), x = max)) + 
+  geom_bar(stat = "identity") +
+  labs(x = "Cumulative\ntransmission potential", y = "Cues") +
+  theme_bw()
+```
+
+# panel 1c
+time series conversion rate
+```{r}
+cr.df <- dyn.df %>% 
+  filter(variable == "cr")
+
+# get the top performing log strategies
+cr_top.df <- cr.df %>% 
+  filter(name %in% c("Asexual iRBC\nlog10", "Sexual iRBC\nlog10", "Total iRBC\nlog10", "Gametocyte\nlog10"))
+
+cr_bot.df <- cr.df %>% 
+  filter(!name %in% c("Asexual iRBC\nlog10", "Sexual iRBC\nlog10", "Total iRBC\nlog10", "Gametocyte\nlog10"))
+
+fig1c <- ggplot() +
+  geom_line(data = cr_top.df, aes(x = time, y = value, color = name)) +
+  labs(x = "Time (days)", y = "Conversion rate", color = "High-performing\ncues") + 
+  geom_line(data = cr_bot.df, aes(x = time, y = value, group = name), color = "dark grey") +
+  theme_bw() 
+```
+
+# panel 1d
+disease curves with total iRBC vs RBC
+```{r}
+iRBC_RBC.df <- dyn.df %>% filter(variable == "I" | variable == "Ig" | variable == "R")
+iRBC_RBC.df2 <- tidyr::pivot_wider(iRBC_RBC.df, names_from = variable, values_from = value, id_cols = c(time, name)) %>% 
+  mutate(total = I+Ig)
+
+
+# split dynamics into top and low performing cues
+iRBC_RBC_t.df2 <- iRBC_RBC.df2 %>% 
+  filter(name %in% c("Asexual iRBC\nlog10", "Sexual iRBC\nlog10", "Total iRBC\nlog10", "Gametocyte\nlog10"))
+
+iRBC_RBC_b.df2 <- iRBC_RBC.df2 %>% 
+  filter(!name %in% c("Asexual iRBC\nlog10", "Sexual iRBC\nlog10", "Total iRBC\nlog10", "Gametocyte\nlog10"))
+  
+# plot
+fig1d_pre <- ggplot() +
+  geom_path(data = iRBC_RBC_b.df2, aes(x= total, y = R, group = name), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  labs(color = "High-performing\ncues", x = "Total iRBC", y = "RBC") +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
+  guides(shape = FALSE)
+
+fig1d <- fig1d_pre +
+  geom_point(data = iRBC_RBC_t.df2 %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = name, shape = name)) +
+  geom_path(data = iRBC_RBC_t.df2, aes(x= total, y = R, group = name, color = name), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) 
+```
+
+# panel 1e
+parasite disease curve
+```{r}
+N_tau.df <- dyn.df %>% filter(variable == "N" | variable == "tau_cum")
+N_tau.df2 <- tidyr::pivot_wider(N_tau.df, names_from = variable, values_from = value, id_cols = c(time, name))
+
+# split by cue performance
+N_tau_t.df2 <- N_tau.df2 %>% 
+  filter(name %in% c("Asexual iRBC\nlog10", "Sexual iRBC\nlog10", "Total iRBC\nlog10", "Gametocyte\nlog10"))
+
+N_tau_b.df2 <- N_tau.df2 %>% 
+  filter(!name %in% c("Asexual iRBC\nlog10", "Sexual iRBC\nlog10", "Total iRBC\nlog10", "Gametocyte\nlog10"))
+
+ggplot() +
+  geom_path(data = N_tau_b.df2, aes(x = N, y = tau_cum, color = name, group = name), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  geom_point(data = N_tau_t.df2 %>% filter(row_number() %% 1000 ==0), aes(x = N, y = tau_cum, color = name, shape = name)) +
+  geom_path(data = N_tau_t.df2, aes(x= N, y = tau_cum, group = name, color = name), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  labs(color = "High-performing\ncues", x = "Indiscriminant immunity", y = "Cumulative\ntransmission potential") +
+  theme_bw() + scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1))
+```
+
+# targetd immunity is not at fault
+```{r}
+W_tau.df <- dyn.df %>% filter(variable == "W" | variable == "tau_cum")
+W_tau.df2 <- tidyr::pivot_wider(W_tau.df, names_from = variable, values_from = value, id_cols = c(time, name))
+
+# split by cue performance
+W_tau_t.df2 <- W_tau.df2 %>% 
+  filter(name %in% c("Asexual iRBC\nlog10", "Sexual iRBC\nlog10", "Total iRBC\nlog10", "Gametocyte\nlog10"))
+
+W_tau_b.df2 <- W_tau.df2 %>% 
+  filter(!name %in% c("Asexual iRBC\nlog10", "Sexual iRBC\nlog10", "Total iRBC\nlog10", "Gametocyte\nlog10"))
+
+ggplot() +
+  geom_point(data = W_tau_t.df2, aes(x = W, y = tau_cum, color = name)) +
+  geom_path(data = W_tau_t.df2, aes(x= W, y = tau_cum, group = name), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  geom_path(data = W_tau_b.df2, aes(x = W, y = tau_cum, color = name, group = name), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  labs(color = "High-performing\ncues", x = "Targeted immunity", y = "Cumulative\ntransmission potential") +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1))
+```
+
+# exploration
+plotting the ratio of tau/iRBC against targeted immunity. G is very messy 
+```{r}
+iRBC_G.df <- dyn.df %>% filter(variable == "I" | variable == "Ig" | variable == "G"| variable == "tau" | variable == "W")
+iRBC_G.df2 <- tidyr::pivot_wider(iRBC_G.df, names_from = variable, values_from = value, id_cols = c(time, name)) %>% 
+  mutate(total = I+Ig,
+         ratio = tau/total)
+
+iRBC_G_t.df2 <- iRBC_G.df2 %>% 
+  filter(name %in% c("Asexual iRBC\nlog10", "Sexual iRBC\nlog10", "Total iRBC\nlog10", "Gametocyte\nlog10"))
+
+iRBC_G_b.df2 <- iRBC_G.df2 %>% 
+  filter(!name %in% c("Asexual iRBC\nlog10", "Sexual iRBC\nlog10", "Total iRBC\nlog10", "Gametocyte\nlog10"))
+
+# plot the background 
+fig1e_pre <- ggplot() +
+    geom_path(data = iRBC_G_b.df2, aes(y = ratio, x = W, color = name, group = name), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) 
+
+# plot the good cues so it overlays 
+fig1e <- fig1e_pre +
+  geom_point(data = iRBC_G_t.df2 %>% filter(row_number() %% 1000 == 0), aes(y = ratio, x = W, color = name)) +
+  geom_path(data = iRBC_G_t.df2, aes(y= ratio, x = W, group = name, color = name), arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  labs(color = "High-performing\ncues", x = "Targeted immunity", y = "Transmission potential\nper total iRBC") +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1))
+
+ggplot() +
+  geom_line(data = iRBC_G_t.df2, aes(x = time, y = tau, group = name)) +
+  geom_line(data = iRBC_G_b.df2, aes(x = time, y = tau, group = name), color = "red")
+
+
+```
+
+# plot together
+```{r}
+fig1bc <- ggarrange(fig1b, fig1c, align = "hv", widths = c(1.5,2), ncol = 2, labels = c("B", "C"))
+
+fig1de <- ggarrange(fig1d, fig1e, align = "hv", ncol = 2, legend = "none", labels = c("D", "E"))
+
+fig1be <- ggarrange(fig1bc, fig1de, ncol = 1, align ="hv")
+
+ggarrange(fig1a, fig1be, ncol = 2, widths = c(1, 2), labels = c("A", ""))
+
+ggsave(here("figures/final_report/fig1.png"), width = 11, height = 7)
+```
+
+# get source of cue range determination
+```{r}
+exp_ss_dose.df %>% arrange(desc(gam))
+```
+
+
+```{r}
+source(here("functions/chabaudi_si_clean.R"))
+test <- chabaudi_si_clean(
+          parameters_cr = c(0.04061288,   -9.31445958,   74.13015506, -431.59843638),
+                            cue = "G",
+                            log_cue = "none",
+                            cue_range = seq(0, 6*(10^4), (6*(10^4))/5000),
+          parameters = parameters_tsukushi, 
+          time_range = seq(0, 30, by = 0.001), 
+          immunity = "tsukushi",
+          solver = "vode",
+          dyn = TRUE)
+
+test2 <- chabaudi_si_clean(
+          parameters_cr = c(1.746334, -1.785818, -5.528335,  1.573436),
+                            cue = "Ig",
+                            log_cue = "log10",
+                            cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+          parameters = parameters_tsukushi, 
+          time_range = seq(0, 30, by = 0.001), 
+          immunity = "tsukushi",
+          solver = "vode",
+          dyn = TRUE)
+
+ggplot() +
+  geom_line(data = test, aes(x = time, y = value)) +
+  facet_wrap(~variable, scale = "free") +
+  theme_bw()
+
+```
+
+
+

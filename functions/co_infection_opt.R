@@ -37,7 +37,7 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
       }
       ### if strain 1 is less fit than strain 2 but optimization did not converge, repeat with 
       ### mutant strain 1 final parameter values. Keep residence parameter as it is
-      if(fitness < 0 && conv != 0){
+      if(fitness <= 0 && conv != 0){
         if(index > 2){residence_par <- output_ls[[index - 1]][[4]]} ### assign residence parameter to previous iteration
         if(index == 2){residence_par <- parameters_cr} # special case. If first round of optimization fails, go back to initial parameter set
         mutant_par <- par
@@ -45,7 +45,7 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
       }
       
       ### if run converged but strain 1 is less fit then strain 2, try again with new initial mutant start point
-      if(fitness < 0 && conv == 0){
+      if(fitness <= 0 && conv == 0){
         if(index > 2){residence_par <- output_ls[[index - 1]][[4]]}
         if(index == 2){residence_par <- parameters_cr}
         mutant_par <- par
@@ -56,6 +56,8 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
     ## code to execute parallel LGBF-GS optimization
     output <- list() # reset per run
     print(paste("starting iteration", index))
+    # add index
+    index <- index + 1
     cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
     model_output <- do.call(optimParallel::optimParallel, c(list(par = mutant_par, # competing parameter
                                                                  fn = model,
@@ -71,9 +73,7 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
     output <- list(index, conv, mutant_par, residence_par, fitness)
     output_ls[[index]] <- output
     print(output)
-    
-    # add index
-    index <- index + 1
+
     
     # exit loop IF
     ## previous run converged, strain 1 is fitter than strain 2, and that the fitness difference is minute
@@ -82,19 +82,18 @@ co_infection_opt <- function(parameters_cr,  # preliminary parameter set
       stopCluster(cl)
       break
       }
-    ## If repeat run after lower strain 1 fitness, if strain 1 is now fitter, break if difference is minute
-    if(conv == 0 && fitness < 0 && lower_repeat == TRUE && fitness > 0 && fitness < limit){
-      print("Strain 1 was previously less fit than strain 2. Now it is fitter and the difference is minute.")
+    ## If repeat run after lower strain 1 fitness, break if continue to be 
+    if(conv == 0 && lower_repeat == TRUE && fitness < limit){
+      print("After repetition, fitness difference is still minute.")
       stopCluster(cl)
       break
       }
-    # If repeat run and there is no improvements or even decrease in fitness, break
-    if(conv == 0 && fitness < 0 && lower_repeat == TRUE && fitness < 0 && output_ls[[index]][[5]] <= output_ls[[index - 1]][[5]]){
-      worse_then_previous <- TRUE
-      print("Strain 1 is less fit than strain 2. Repeating optimization did not improve performance.")
+    # if at optimum
+    if(conv == 0 && fitness == 0 ){
+      print("Reached optimum. Break!")
       stopCluster(cl)
       break
-      }
+    }
   }
 
   # final output

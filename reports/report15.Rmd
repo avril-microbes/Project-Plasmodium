@@ -468,7 +468,7 @@ test <- do_ci_combo(cue_1 = c("I1+I2"),
 ci_opt.raw <- do_ci_combo(cue_1 = c("I1", "I1+I2", "Ig1", "Ig1+Ig2", "sum", "G1", "G1+G2", "R"),
                           cue_2 = c("I2", "I1+I2", "Ig2", "Ig1+Ig2", "sum", "G2", "G1+G2", "R"),
                           par = rep(0.5, 4),
-                          limit = 0.001)
+                          limit = 0.01)
 ```
 
 #----------------------#
@@ -1430,13 +1430,10 @@ Need to examine the following combinations:
 8. G1+G2
 9. R
 ```{r}
-source(here("functions/co_infection_opt.R"))
-source(here("functions/chabaudi_ci_clean.R"))
-
 #----------I--------#
 # nonlog
 ci_I_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1449,9 +1446,30 @@ ci_I_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              log_cue_1 = "none",
                              log_cue_2 = "none")
 
+erer::write.list(ci_I_opt, here("data/ci_opt/ci_I_opt.txt"))
+#1.931059  -63.786820 1295.819775  -31.580440
+#0.0009844663
+
+
+test <-chabaudi_ci_clean(parameters_cr_1 = c(1.931059,  -63.786820, 1295.819775,  -31.580440),
+                  parameters_cr_2 = c(1.572635,  -45.561616, 779.429608,  11.468115),
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "I1",
+                             cue_2 = "I2",
+                             cue_range_1 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                             cue_range_2 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+```
+
+
+```{r}
 # log
 ci_I_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1463,10 +1481,15 @@ ci_I_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
+erer::write.list(ci_I_log_opt, here("data/ci_opt/ci_I_log_opt.txt"))
+#381.7701,-528.2317,-324.5508,-403.8235
+```
 
+
+```{r}
 #----------- I1+I2
-ci_I1_I2_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+ci_I1_I2_opt <- co_infection_opt(parameters_cr = c(1.972578, -47.763100, 640.414152, -12.177047),
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1478,9 +1501,22 @@ ci_I1_I2_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "none",
                              log_cue_2 = "none")
+erer::write.list(ci_I1_I2_opt, here("data/ci_opt/ci_I1_I2_opt.txt"))
+# 1: 1.972578 -47.763100 640.414152 -12.177047
+# 2: 1.98219 -24.8733 193.375 -33.4819  (0.6436819 diff)
+# 3: 2.02704 -27.182 193.185 -33.4892 (0.124252 diff)
+# 4: 1.93507 -37.3871 376.59 -27.7111 (0.077143 diff)
+# 5: 1.94476 -46.0747 603.14 -20.1892 (0.1044941)
+# 6: 2.0125 -24.6041 187.759 -41.7831 (0.5960287)
+#1.99546 -25.2332 167.509 -40.9867 (0.1463846)
+# 1.92808 -36.2342 351.969 -32.7568 (0.0902934)
+#1.96598 -47.1496 621.223 -27.3944 (0.112605)
+```
 
+
+```{r}
 ci_I1_I2_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1492,10 +1528,16 @@ ci_I1_I2_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
+erer::write.list(ci_I1_I2_log_opt, here("data/ci_opt/ci_I1_I2_log_opt.txt"))
+#404.6170 -529.2684 -365.0516 -417.0552
+#0.001341288
+```
 
+
+```{r}
 #--------------Ig1 alone
 ci_Ig_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1507,9 +1549,15 @@ ci_Ig_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "none",
                              log_cue_2 = "none")
+#1.096857  -80.496897 1412.461014    3.463079
+#0.007282484
+```
 
-ci_Ig_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+
+```{r}
+#
+ci_Ig_log_opt <- co_infection_opt(parameters_cr = c(35.6294, -65.6898, -11.5609, -52.0779),
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1521,11 +1569,14 @@ ci_Ig_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
+#35.6294 -65.6898 -11.5609 -52.0779 
+```
 
 
+```{r}
 #--------------Ig1+Ig2
 ci_Ig1_Ig2_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1537,9 +1588,17 @@ ci_Ig1_Ig2_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "none",
                              log_cue_2 = "none")
+# 1.506671 -88.902499 337.507606  11.190877 (0.2543592)
+# 1.53278 -1042.41 342.572 10.1707 (0.167393)
+# 0.247449 -8.45154 0.659347 -5.05097 (4.954811)
+# 1.06745 -29.5788 435.027 2.71807 (2.782235)
+# 0.809145 -29.578476 435.027531   2.718066 (0.6013032)
+```
 
+
+```{r}
 ci_Ig1_Ig2_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1551,11 +1610,11 @@ ci_Ig1_Ig2_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
-
+#75.73915 -128.01549  -41.16782  -96.21549
 
 #----------------sum
 ci_sum_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1568,8 +1627,9 @@ ci_sum_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              log_cue_1 = "none",
                              log_cue_2 = "none")
 
+#1.86014   -25.61573   257.60126 -2823.09564
 ci_sum_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1582,9 +1642,10 @@ ci_sum_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
 
+#435.1835 -565.3985 -395.7242 -446.5950
 #--------------G1 only
 ci_G_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1596,9 +1657,10 @@ ci_G_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "none",
                              log_cue_2 = "none")
+# 1.352967 -165.891572   61.230266   -7.374788
 
 ci_G_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1610,10 +1672,12 @@ ci_G_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
+
+# 1.762225 -4.329505  2.548675 -6.726894
 
 #---------------G1+G2
 ci_G1_G2_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1625,9 +1689,10 @@ ci_G1_G2_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "none",
                              log_cue_2 = "none")
+# 3.05668 -5077.22092   585.42826 -8703.57817
 
 ci_G1_G2_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1639,11 +1704,11 @@ ci_G1_G2_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
-
+#12.106219 -21.043524  -5.010265 -16.928459
 
 #---------------R
 ci_R_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1655,9 +1720,10 @@ ci_R_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "none",
                              log_cue_2 = "none")
+#-88.36793 136.04925  65.44548  98.14261
 
 ci_R_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
-                             limit = 0.001,
+                             limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
                              parameters = parameters_tsukushi,
@@ -1669,6 +1735,7 @@ ci_R_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
+#-971.1975 1175.9801  931.5406  978.0870
 
 ```
 

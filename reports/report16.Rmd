@@ -1,0 +1,396 @@
+---
+title: "report16"
+output: html_document
+---
+```{r}
+library(dplyr)
+library(ggplot2)
+library(here)
+library(deSolve)
+library(crone)
+library(optimParallel)
+library(doParallel)
+library(doRNG)
+library(arrow)
+library(stringr)
+library(parallel)
+library(ggpubr)
+```
+
+# analyzing MC partitioning results
+
+# import in all fitness files
+```{r}
+file_ls <- list.files(path = here("data/MC_partitioned/"), pattern = "*.csv", full.names = T)
+name_ls <- list.files(path = here("data/MC_partitioned/"), pattern = "*.csv")
+name_ls <- gsub("*.csv", "", name_ls)
+
+# 60, which is about right
+length(file_ls)
+
+# read in files
+fitness.ls <- lapply(file_ls, read.csv)
+
+# assign unique ID
+fitness.ls <- mapply(cbind, fitness.ls, "ID" = name_ls, SIMPLIFY = F)
+```
+
+# process data
+```{r}
+# get metainfo from ID
+fitness.ls2 <- mclapply(fitness.ls, function(x){
+  id_col <- x$ID
+  # string split to extract all info
+  cue <- unlist(str_split(unique(id_col), pattern = "_"))[[3]]
+  log <- unlist(str_split(unique(id_col), pattern = "_"))[[4]]
+  rand_var <- unlist(str_split(unique(id_col), pattern = "_"))[[5]]
+  
+  # get mean
+  mean_fitness <- mean(x$max_fitness)
+  # get sd
+  sd_fitness <- sd(x$max_fitness)
+  
+  # bind results
+  res <- cbind(x, cue= cue, log = log, rand_var = rand_var, mean_fitness = mean_fitness, sd_fitness = sd_fitness)
+  return(res)
+})
+```
+
+# Get reference data
+```{r}
+reference_ls <- list.files(path = here("data/MC2"), pattern = "*.csv", full.names = T)
+reference_name.ls <- gsub("*.csv", "", list.files(path = here("data/MC2/"), pattern = "*.csv"))
+
+# read in the files
+reference.ls <- lapply(reference_ls, read.csv)
+
+# assign unique ID
+reference.ls <- mapply(cbind, reference.ls, "ID" = reference_name.ls, SIMPLIFY = F)
+
+# get meta data
+reference.ls2 <- mclapply(reference.ls, function(x){
+  id_col <- x$ID
+  # string split to extract all info
+  cue <- unlist(str_split(unique(id_col), pattern = "_"))[[2]]
+  # get log
+  third_col <- unlist(str_split(unique(id_col), pattern = "_"))[[3]]
+  log <- ifelse(third_col == "log", "log10", "none")
+  
+  # get mean
+  mean_fitness <- mean(x$max_fitness)
+  
+  # get sd
+  sd_fitness <- sd(x$max_fitness)
+  
+  # bind results
+  res <- cbind(x, cue= cue, log = log, rand_var = "all", ref_mean_fitness = mean_fitness, ref_sd_fitness = sd_fitness)
+  return(res)
+})
+```
+
+# combine MC partitioned and reference df
+```{r}
+# get unique column values for each cue, log, and rand_var combo
+fitness.ls3 <- do.call(rbind, fitness.ls2)
+fitness.ls3 <- fitness.ls3 %>% dplyr::distinct(ID, .keep_all = T)
+
+# repeat with reference
+reference.ls3 <- do.call(rbind, reference.ls2)
+reference.ls3 <- reference.ls3 %>% dplyr::distinct(ID, .keep_all = T)
+
+# combine!
+ref_fit.df <- left_join(fitness.ls3, reference.ls3, by = c("cue" = "cue", "log"= "log"))
+```
+
+# compute proportion fitness and variation
+```{r}
+ref_fit.df2 <- ref_fit.df %>% 
+  mutate(p_sd = sd_fitness/ref_sd_fitness,
+         p_mean = ref_mean_fitness/mean_fitness,
+         cue_log = paste0(cue, "_", log))
+```
+
+# plot!
+```{r}
+# variation
+fig1a <- ggplot() +
+  geom_tile(data = ref_fit.df2 , aes(x = cue, y = `rand_var.x`, fill = p_sd)) +
+  facet_wrap(~log) +
+  theme_bw() +
+  viridis::scale_fill_viridis() +
+  labs(x = "Cue", y = "Variable randomized", fill = expression(frac(sd("1 var randomized"), sd("all var randomized")))) +
+  theme(legend.position="top")
+
+# mean fitness
+fig1b <- ggplot() +
+  geom_tile(data = ref_fit.df2 , aes(x = cue, y = `rand_var.x`, fill = p_mean)) +
+  facet_wrap(~log) +
+  theme_bw() +
+  viridis::scale_fill_viridis() +
+  labs(x = "Cue", y = "Variable randomized", fill = expression(frac(Mean("all var randomized"), Mean("1 var randomized")))) +
+  theme(legend.position="top")
+
+mc_partition <- ggarrange(fig1a, fig1b, ncol = 1)
+
+ggsave(here("figures/report16/mc_partition.png"), height = 10)
+```
+
+# create new MC fitnes
+# read MC data
+```{r}
+# read in dymamics
+mc_G_log.dyn <- read_parquet(here("data/MC2/mc_G_log_dyn.parquet"))
+mc_G.dyn <- read_parquet(here("data/MC2/mc_G_dyn.parquet"))
+mc_R_log.dyn <- read_parquet(here("data/MC2/mc_R_log_dyn.parquet"))
+mc_R.dyn <- read_parquet(here("data/MC2/mc_R_dyn.parquet"))
+mc_I_log.dyn <- read_parquet(here("data/MC2/mc_I_log_dyn.parquet"))
+mc_I.dyn <- read_parquet(here("data/MC2/mc_I_dyn.parquet"))
+mc_Ig_log.dyn <- read_parquet(here("data/MC2/mc_Ig_log_dyn.parquet"))
+mc_Ig.dyn <- read_parquet(here("data/MC2/mc_Ig_dyn.parquet"))
+mc_I_Ig_log.dyn <- read_parquet(here("data/MC2/mc_I+Ig_log_dyn.parquet"))
+mc_I_Ig.dyn <- read_parquet(here("data/MC2/mc_I+Ig_dyn.parquet"))
+
+# read in fitness
+mc_G_log.fitness <- read.csv(here("data/MC2/mc_G_log_fitness.csv"))
+mc_G.fitness <- read.csv(here("data/MC2/mc_G_fitness.csv"))
+mc_R_log.fitness <- read.csv(here("data/MC2/mc_R_log_fitness.csv"))
+mc_R.fitness <- read.csv(here("data/MC2/mc_R_fitness.csv"))
+mc_I_log.fitness <- read.csv(here("data/MC2/mc_I_log_fitness.csv"))
+mc_I.fitness <- read.csv(here("data/MC2/mc_I_fitness.csv"))
+mc_Ig_log.fitness <- read.csv(here("data/MC2/mc_Ig_log_fitness.csv"))
+mc_Ig.fitness <- read.csv(here("data/MC2/mc_Ig_fitness.csv"))
+mc_I_Ig_log.fitness <- read.csv(here("data/MC2/mc_I+Ig_log_fitness.csv"))
+mc_I_Ig.fitness <- read.csv(here("data/MC2/mc_I+Ig_fitness.csv"))
+```
+
+# examine variation
+```{r}
+# plot fitness vs iteration
+fitness.df <- rbind(
+  cbind(mc_G_log.fitness, id = "Gametocyte\nlog10"),
+  cbind(mc_G.fitness, id = "Gametocyte"),
+  cbind(mc_R_log.fitness, id = "RBC log10"),
+  cbind(mc_R.fitness, id = "RBC"),
+  cbind(mc_I_log.fitness, id = "Asexual iRBC\nlog10"),
+  cbind(mc_I.fitness, id = "Asexual iRBC"),
+  cbind(mc_Ig_log.fitness, id = "Sexual iRBC\nlog10"),
+  cbind(mc_Ig.fitness, id = "Sexual iRBC"),
+  cbind(mc_I_Ig_log.fitness, id = "Total iRBC\nlog10"),
+  cbind(mc_I_Ig.fitness, id = "Total iRBC")
+)
+
+# fitness vs time
+#fig2a <- ggplot() +
+#  geom_line(data = fitness.df, aes(x = X, y = max_fitness), size =0.5) +
+#  facet_wrap(~id, ncol = 2) +
+#  labs(x = "Iteration", y = "Maximum fitness", color = "Cue") +
+#  theme_bw() +
+#  guides(color = FALSE, fill = F)
+
+# quantify variance and mean
+fitness_var.df <- fitness.df %>% 
+  dplyr::group_by(id) %>% 
+  dplyr::summarise(std = sd(max_fitness),
+                   mean = mean(max_fitness)) %>% 
+  dplyr::mutate(id = forcats::fct_reorder(factor(id), std, .desc = F))
+
+# original rank by standard deviation
+##fig2b <- ggplot() +
+##  geom_col(data = fitness_var.df, aes(y = id, x = std)) +
+  #scale_fill_manual(values = c("#619CFF", "#B79F00", "#F564E3", "#00BA38", "#F8766D", "#00BFC4")) +
+##  theme_bw() +
+#  labs(y = "Cue", x = "Standard deviation") +
+#  guides(fill = F, color = F)
+
+fig2a <- ggplot() +
+  geom_point(data = fitness_var.df, aes(x = mean, y = std)) +
+  ggrepel::geom_label_repel(data = fitness_var.df, aes(x = mean, y = std, label = id)) +
+  theme_bw() +
+  labs(x = "Mean fitness", y = "Fitness standard deviation")
+
+fitness_var.df
+```
+
+# plot violin with difference in deterministic model fitness and mean model fitness
+```{r}
+# get deterministic df
+det.df <- data.frame(id = fitness_var.df$id, fitness =  c(8.49777, 9.494991, 8.58856, 9.561373, 8.23991, 8.181604, 8.569285, 9.618812, 8.854682, 9.573291))
+
+fig2b <- ggplot() +
+  geom_violin(data = fitness.df, aes(y = id, x = max_fitness), alpha = 0.5) +
+  geom_point(data = fitness_var.df, aes(y = id, x = mean), color = "red") +
+  geom_point(data = det.df, aes(y = id, x = fitness), shape = 17) +
+  labs(x = "Fitness", y = "Cue") +
+  theme_bw()
+
+fig2b
+```
+
+# get deviation from ideal cr
+```{r}
+source(here("functions/chabaudi_si_clean.R"))
+dev_cr <- function(dyn, par, cue, cue_range, log){
+  # get reference dynamics
+  ref_dyn <- chabaudi_si_clean(
+              parameters_cr = par,
+              parameters = parameters_tsukushi, 
+              time_range = time_range, 
+              cue = cue, 
+              cue_range = cue_range, 
+              log_cue = log,
+              immunity = "tsukushi",
+              solver = "vode",
+              dyn = TRUE)
+  
+  # convert to wide
+  ref_dyn.wide <- tidyr::pivot_wider(ref_dyn, names_from = variable, values_from = value)
+  
+  # get 95% CI. Use t score of 1.960439 given our sample size of 5000. Margin of error = t*(sd/sqrt(n))
+  mc_sum <- dyn %>%
+  dplyr::group_by(time) %>% 
+  dplyr::summarise(cr_top = mean(cr)+sd(cr),
+                   cr_bot = mean(cr)-sd(cr),
+                   tau_top = mean(tau)+sd(tau),
+                   tau_bot = mean(tau)-sd(tau))
+  
+  # return list
+  return(list(ref_dyn.wide, mc_sum))
+}
+```
+
+# run tests
+```{r}
+# G log
+G_log.diff <- dev_cr(mc_G_log.dyn, 
+                    par = c(1.211521, -3.936778,-1.312944, -1.285713),
+                    cue = "G",
+                    cue_range = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000),
+                    log= "log10")
+
+# G
+G.diff <- dev_cr(mc_G.dyn, 
+                 par = c(0.04061288,   -9.31445958,   74.13015506, -431.59843638),
+                    cue = "G",
+                    cue_range = seq(0, 6*(10^4), (6*(10^4))/5000),
+                    log= "none")
+
+# R log
+R_log.diff <- dev_cr(mc_R_log.dyn, 
+                     par = c(48.70772, 105.18882, -81.80625, -44.60051),
+                    cue = "R",
+                    cue_range = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+                    log= "log10")
+
+# R
+R.diff <- dev_cr(mc_R.dyn, 
+                 par = c(7.0976026,  30.1295151, -28.0565613,  -0.2788713),
+                    cue = "R",
+                    cue_range = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
+                    log= "none")
+
+# I log
+I_log.diff <- dev_cr(mc_I_log.dyn, 
+                     par = c(5.463558,   2.383948, -17.757281,   4.571835),
+                    cue = "I",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+
+# I
+I.diff <- dev_cr(mc_I.dyn, 
+                     par = c(0.1135384,  -39.0585154, 1941.9082813,  119.8228980),
+                    cue = "I",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+# Ig log
+Ig_log.diff <- dev_cr(mc_Ig_log.dyn, 
+                  par = c(1.74633, -1.78582, -5.52834, 1.57344 ),
+                    cue = "Ig",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+
+# Ig
+Ig.diff <- dev_cr(mc_Ig.dyn, 
+                  par = c(0.05234791,  -46.03368629, 1897.61313455,   70.57689145),
+                    cue = "Ig",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+
+# I+Ig log
+I_Ig_log.diff <- dev_cr(mc_I_Ig_log.dyn, 
+                    par = c(3.594042,   4.157744, -13.530672,   2.599905),
+                    cue = "I+Ig",
+                    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                    log= "log10")
+
+
+# I+Ig
+I_Ig.diff <- dev_cr(mc_I_Ig.dyn, 
+                    par = c(0.3159297,  -46.1104558, 1250.7529081,   -6.1982093),
+                    cue = "I+Ig",
+                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                    log= "none")
+
+```
+
+# plot
+```{r}
+# cr time series
+## concatenate data
+reference.df <- rbind(
+  cbind(G_log.diff[[1]], cue = "Gametocyte log10"),
+  cbind(G.diff[[1]], cue = "Gametocyte"),
+  cbind(R_log.diff[[1]], cue = "RBC log10"),
+  cbind(R.diff[[1]], cue = "RBC"),
+  cbind(I_log.diff[[1]], cue = "Asexual iRBC log10"),
+  cbind(I.diff[[1]], cue = "Asexual iRBC"),
+  cbind(Ig_log.diff[[1]], cue = "Sexual iRBC log10"),
+  cbind(Ig.diff[[1]], cue = "Sexual iRBC"),
+  cbind(I_Ig_log.diff[[1]], cue = "Total iRBC log10"),
+  cbind(I_Ig.diff[[1]], cue = "Total iRBC")
+)
+
+## different data contenate
+diff.df <- rbind(
+  cbind(G_log.diff[[2]], cue = "Gametocyte log10"),
+  cbind(G.diff[[2]], cue = "Gametocyte"),
+  cbind(R_log.diff[[2]], cue = "RBC log10"),
+  cbind(R.diff[[2]], cue = "RBC"),
+  cbind(I_log.diff[[2]], cue = "Asexual iRBC log10"),
+  cbind(I.diff[[2]], cue = "Asexual iRBC"),
+  cbind(Ig_log.diff[[2]], cue = "Sexual iRBC log10"),
+  cbind(Ig.diff[[2]], cue = "Sexual iRBC"),
+  cbind(I_Ig_log.diff[[2]], cue = "Total iRBC log10"),
+  cbind(I_Ig.diff[[2]], cue = "Total iRBC")
+)
+
+
+# plot conversion time series
+fig2c <- ggplot() +
+  geom_line(data = reference.df, aes(x = time, y = cr)) +
+  geom_ribbon(data = diff.df, aes(x = time, ymin = cr_bot, ymax = cr_top), alpha = 0.3, fill = "red") +
+  facet_wrap(~cue, ncol = 2) +
+  labs(x = "Time (days)", y = "Conversion rate") +
+  theme_bw()
+  
+# plot fitness timeseries. When if tiness lost? At the latter part
+fig2d <- ggplot() +
+  geom_line(data = reference.df, aes(x = time, y = tau)) +
+  geom_ribbon(data = diff.df, aes(x = time, ymin = tau_bot, ymax = tau_top), alpha = 0.3, fill = "red") +
+  facet_wrap(~cue, ncol = 2) +
+  labs(x = "Time (days)", y = "Transmission potential") +
+  theme_bw()
+
+```
+
+# plot together
+```{r}
+fig1ab <- ggarrange(fig2b,mc_partition, labels = c("A", "B"))
+
+fig1cd <- ggarrange(fig2c, fig2d, labels = c("C", "D"))
+
+fig1 <- ggarrange(fig1ab, fig1cd, ncol = 1, heights = c(1.5,1))
+ggsave(here("figures/report16/MC_final.png"), height = 10, width = 10)
+```
+
