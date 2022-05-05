@@ -68,7 +68,8 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
                G2 = 0, # gametocyte density of strain 3
                cr_t1 = 0,
                cr_t2 = 0)  
-  } else{ # initial states if tsukushi's mode of immunity is used 
+  } 
+  if(immunity == "tsukushi"){ # initial states if tsukushi's mode of immunity is used 
     state <- c(R = parameters[["R1"]],
                M1 = 0,
                M2 = 0,
@@ -300,11 +301,11 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
         cue_lag_a1 <- lag_a_1[lag.i_1]
       }
       if(t>alpha+delay && cue_1 == "sum"){cue_lag_a1 <- lag_a_1[7]+lag_a_1[8]+lag_a_1[9]+lag_a_1[10]} ## if sum is chosen as cue, add up all iRBC values (I1+I2+Ig1+Ig2)
-    } else{ #-----------------------complex cues for addition-based cues-----------------------#
-      if(stringr::str_detect(cue_1, "\\+")){ # addition only (currently only supports two cues addition)
+    } #-----------------------complex cues for addition-based cues-----------------------#
+    if(stringr::str_detect(cue_1, "\\+")){ # addition only (currently only supports two cues addition)
         if(t>alpha+delay && cue_1 != "t"){cue_lag_a1 <- lag_a_1[lag.i_1[1]]+lag_a_1[lag.i_1[2]]}
       }
-    }
+
     
     #----------------Simple cue without addition for strain 2-------#
     if(stringr::str_detect(cue_2, "\\+|\\-|\\*|\\/", negate = TRUE)){
@@ -319,11 +320,11 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       }
       if(t>alpha+delay && cue_2 == "sum"){cue_lag_a2 <- lag_a_2[7]+lag_a_2[8]+lag_a_2[9]+lag_a_2[10]}
       
-    } else{ #------------complex cues involving addition of 2 cues-----------------------#
-      if(stringr::str_detect(cue_2, "\\+")){ # if it contains plus. strain 1
+    } #------------complex cues involving addition of 2 cues-----------------------#
+    if(stringr::str_detect(cue_2, "\\+")){ # if it contains plus. strain 1
         if(t>alpha+delay && cue_2 != "t"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]+lag_a_2[lag.i_2[2]]}
       }
-    }
+    
     
     #------------------#
     # Process cue values
@@ -605,11 +606,10 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
   
   # return cumulative transmission potential difference between strain 1 and strain 2
   if(dyn == FALSE){return(tau1.sum-tau2.sum)}
-
   #-------------------------#
   # Simulating infection dynamics if Dyn == TRUE
   #------------------------# 
-  if(dyn == TRUE) {
+  if(dyn == TRUE){
     # calculate cumulative transmission potential gain. NAs or became 0
     tau_cum1.ls <- cumsum(ifelse(is.na(tau1.ls*int), 0, tau1.ls*int)) + tau1.ls*0
     tau_cum2.ls <- cumsum(ifelse(is.na(tau2.ls*int), 0, tau2.ls*int)) + tau2.ls*0
@@ -623,24 +623,20 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     
     #------Calculate cr------#
     ## time-based conversion rate
-    if(cue_1 == "t"){
-      cr.ls1 <- cr_1_fun(time_range)
-      chabaudi_ci.df$cr_1 <- cr.ls1
-
-    }
+   if(cue_1 == "t"){
+    cr.ls1 <- cr_1_fun(time_range)
+    chabaudi_ci.df$cr_1 <- cr.ls1}
     
     if(cue_2 == "t"){
       cr.ls2 <- cr_2_fun(time_range)
-      chabaudi_ci.df$cr_2 <- cr.ls2
-    }
+      chabaudi_ci.df$cr_2 <- cr.ls2}
 
     ## state-based conversion rate
     if(cue_1 != "t"){
       chabaudi_ci.df <- chabaudi_ci.df %>% 
-        dplyr::mutate(cr_1 = (cr_t1 - dplyr::lag(cr_t1))*1000)
-    }
+      dplyr::mutate(cr_1 = (cr_t1 - dplyr::lag(cr_t1))*1000)}
     
-    if(cue_2 != "t"){
+   if(cue_2 != "t"){
       chabaudi_ci.df <- chabaudi_ci.df %>% 
         dplyr::mutate(cr_2 = (cr_t2 - dplyr::lag(cr_t2))*1000)
     }

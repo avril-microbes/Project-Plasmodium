@@ -213,6 +213,11 @@ time_range <- seq(0, 20, by = 1e-3)
 ```
 
 #---------------------------------#
+# confirming coinfection optimal strategy
+#---------------------------------#
+hard to do global optimization on coinfection optimization. One way to see whether our guesses are good is to compete our optimal conversion rate strategy with a bunch 
+
+#---------------------------------#
 # visualization co-infection strategy
 #---------------------------------#
 for all co-infection, optimized for 20 days. certain cues, I1+I2 and Ig1+Ig2 none-logged exhibit cyclical pattern and is omitted from subsequent analysis
@@ -221,8 +226,197 @@ All dynamics is simulated for 30 days to ensure that transmission acrrument is o
 
 #
 ```{r}
+# import in ci optimum for same cue
+ci_opt.df <- read.csv(here("data/ci_opt.csv"))
+
+# reclass for better labels
+ci_opt.df <- ci_opt.df %>% 
+  mutate(label_1 = case_when(
+  cue == "I-i" ~ "Asexual iRBC",
+  cue == "I1+I2" ~ "Total asexual\niRBC",
+  cue == "Ig-i" ~ "Sexual iRBC",
+  cue == "Ig1+Ig2" ~ "Total sexual\niRBC",
+  cue == "sum" ~ "Total iRBC",
+  cue == "G-i" ~ "Gametocyte",
+  cue == "G1+G2" ~ "Total\ngametocyte",
+  cue == "R" ~ "RBC"
+)) %>% 
+  mutate(label_2 = case_when(
+    log == "log" ~ "log10",
+    log == "none" ~ ""
+  )) %>% 
+  mutate(label_3 = paste(label_1, label_2),
+         id = paste0(cue, "_", log))
+
+# left join with cue range df
+cue_range.df <- read.csv(here("data/cue_range.csv"))
+
+ci_opt.df <- ci_opt.df %>% left_join(select(cue_range.df, low, high, by, id), by = c("id" = "id"))
+```
+
+# get conversion rate reaction norm
+# altering code from report 17 for double strains. 30 days simulated
+```{r}
+heaviside_trans <- function(cue_range, max){
+  res <- crone::heaviside(cue_range)*(cue_range)+(crone::heaviside(cue_range-max)*(max-cue_range))
+  return(res)
+}
+
+get_dyn <- function(df){
+  
+  # read in df info
+  if(stringr::str_detect(df$cue, "-i")){cue_1 = paste0(gsub("*-i", "", df$cue), "1")}
+  if(stringr::str_detect(df$cue, "-i", negate = T)){cue_1 = df$cue}
+  if(stringr::str_detect(df$cue, "-i")){cue_2 = paste0(gsub("*-i", "", df$cue), "2")}
+  if(stringr::str_detect(df$cue, "-i", negate = T)){cue_2 = df$cue}
+  if(stringr::str_detect(df$log, "log")){log_1 = "log10"}
+  if(stringr::str_detect(df$log, "none")){log_1 = "none"}
+  if(stringr::str_detect(df$log, "log")){log_2 = "log10"}
+  if(stringr::str_detect(df$log, "none")){log_2 = "none"}
+  par <- c(df$var1, df$var2, df$var3, df$var4)
+  cue_range <- seq(df$low, df$high, by = df$by)
+  label <- df$label_3
+  
+  # get dynamics
+  dyn <- chabaudi_ci_clean(parameters_cr_1 = par,
+                  parameters_cr_2 = par,
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = cue_1,
+                  cue_2 = cue_2,
+                  cue_range_1 = cue_range,
+                  cue_range_2 = cue_range,
+                  log_cue_1 = log_1,
+                  log_cue_2 = log_2,
+                  solver = "vode",
+                  time_range = seq(0, 30, 0.001),
+                  dyn = T)
+  
+    dyn2 <- data.frame(dyn, label = rep(label, nrow(dyn)))
+
+  # get reaction norm
+  rn <- par_to_df(par = par, cue_range = cue_range)
+
+  
+  # get rug
+  ## if + in cue, need to filter out those variables and add together
+  if(stringr::str_detect(cue_1, "\\+")){
+    cue_split <- stringr::str_split(string = cue_1, pattern = "\\+", simplify = T)
+    ## get the two cues 
+    cue_temp_1 <- cue_split[[1]]
+    cue_temp_2 <- cue_split[[2]]
+    
+    ## filter dyn
+    rug <- dyn2 %>% 
+      filter(variable == cue_temp_1 | variable == cue_temp_2) %>% 
+      dplyr::group_by(time) %>% 
+      dplyr::mutate(sum = sum(value)) %>% 
+      select(time, value = sum, label)
+  }
+  
+  ## if sum
+  if(cue_1 == "sum"){
+    ## filter dyn
+    rug <- dyn2 %>% 
+      filter(variable == "I1" | variable == "I2" | variable == "Ig1" | variable == "Ig2") %>% 
+      dplyr::group_by(time) %>% 
+      dplyr::mutate(sum = sum(value)) %>% 
+      select(time, value = sum, label)
+  }
+  
+  # for simplified cue
+  if(stringr::str_detect(cue_1, "\\+", negate = T) && cue_1 != "sum"){
+    rug <- dyn2 %>% 
+      dplyr::filter(variable == cue_1) %>% 
+      dplyr::select(time, value, label)}
+  
+  # for logged, backtransform cue range of reaction norm 
+  rn2 <- rn
+  rn2$cue_range <- 10^(rn2$cue_range)
+  
+  # append label to reaction norm, dyn, and rug
+  rn2 <- data.frame(rn2, label = rep(label, nrow(rn)))
+
+  return(list(dyn2, rn2, rug))
+}
 
 ```
+
+```{r}
+test <- dyn2 %>% 
+      filter(variable == cue_temp_1 | variable == cue_temp_2) %>% 
+      dplyr::group_by(time) %>% 
+      dplyr::summarise(sum = sum(value)) %>% 
+      select(time, value = sum) 
+
+  
+source(here("functions/chabaudi_ci_clean.R"))
+test <- chabaudi_ci_clean(
+  parameters_cr_1 = c(18.879767, -39.688967,   1.969041, -36.436620),
+                  parameters_cr_2 = c(35.6294,	-65.6898,	-11.5609,	-52.0779),
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = "Ig1",
+                  cue_2 = "Ig2",
+                  cue_range_1 = seq(0, log10(6*10^6), by = log10(6*10^6)/5000),
+                  cue_range_2 = seq(0, log10(6*10^6), by = log10(6*10^6)/5000),
+                  log_cue_1 = "log10",
+                  log_cue_2 = "log10",
+                  solver = "vode",
+                  time_range = seq(0, 30, 0.001),
+                  dyn = T)
+
+test
+ggplot() +
+  geom_line(data = test, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable, scales = "free")
+```
+
+# loop through df to get reaction norm + dyn
+```{r}
+# split df 
+ci_opt.ls <- split(ci_opt.df, seq(nrow(ci_opt.df)))
+
+# parallelzed lapply
+ci_opt.dyn <- mclapply(ci_opt.ls, get_dyn)
+
+# bind together dynamics
+dyn.ls <- lapply(ci_opt.dyn, function(x)x[[1]])
+ci_dyn.df <- do.call(rbind, dyn.ls)
+
+rn.ls <- lapply(ci_opt.dyn, function(x)x[[2]])
+ci_rn.df <- do.call(rbind, rn.ls)
+
+rug.ls <- lapply(ci_opt.dyn, function(x)x[[3]])
+ci_rug.df <- do.call(rbind, rug.ls)
+```
+
+
+```{r}
+# filter to restriction conversion rate reaction norm range to cue ranges that appear in rug
+## change to Inf/-inf to NA
+ci_rug_lim.df <- ci_rug.df %>% 
+  group_by(label) %>% 
+  summarise(min = min(value, na.rm = T)*0.9,
+         max = max(value, na.rm = T)*1.1)
+
+ci_rug_lim.df
+ci_rug.df %>% filter(label == "Sexual iRBC log10") %>% summarize(max= max(value))
+```
+
+# visualization
+```{r}
+ggplot() +
+  geom_line(data = ci_rn.df, aes(x = cue_range, y = cr)) +
+  geom_rug(data = ci_rug.df, aes(x = value), color = "red") +
+  facet_wrap(~label, scales = "free_x") +
+  theme_bw() +
+  labs(y = "Conversion rate", x = "Cue range") +
+  scale_x_continuous(labels = function(x) format(x, scientific = FALSE),
+                     guide = guide_axis(check.overlap = TRUE)) + 
+                    theme(axis.text.x = element_text(size = 7)) 
+```
+
 
 
 #---------------------------------#
@@ -443,5 +637,4 @@ ci_comp_static.mean <- ggplot() +
 ggarrange(ci_comp_static.map, ci_comp_static.mean, align = "h", widths = c(1, 0.2))
 ggsave(here("figures/report18/ci_comp_static.png"), width = 10.5)
 ```
-
 
