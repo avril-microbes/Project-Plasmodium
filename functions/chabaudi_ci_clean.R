@@ -27,7 +27,8 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
                               solver = "lsoda", # solver for numerical integration. Vode often gives faster runs
                               dyn = FALSE, # whether to simulate infection dynamics (false for optimization)
                               delay = 0, # when strain 1 injection occurs days-post infection
-                              ratio = 1){ # ratio of # of strain 1 injected compared to strain 2
+                              ratio = 1,# ratio of # of strain 1 injected compared to strain 2
+                              neg = F){  # turn to TRUE if using minimization optimization. Turns final output negative
   
   #-------------------------#
   # Ensure values we inputted 
@@ -605,7 +606,10 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
   tau2.sum <- sum(tau2.ls*int, na.rm = TRUE)
   
   # return cumulative transmission potential difference between strain 1 and strain 2
-  if(dyn == FALSE){return(tau1.sum-tau2.sum)}
+  if(dyn == FALSE){
+    if(neg == F){return(tau1.sum-tau2.sum)}
+    if(neg == T){return((tau1.sum-tau2.sum)*-1)}
+    }
   #-------------------------#
   # Simulating infection dynamics if Dyn == TRUE
   #------------------------# 
