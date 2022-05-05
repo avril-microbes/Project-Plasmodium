@@ -518,7 +518,7 @@ mc_run <- function(par, cue, cue_range, log, seed){
                 iota = 2.18*(10^6),
                 rho = rho_rand)
 
-      time_range <- seq(0, 20, by = 1e-3)
+      time_range <- seq(0, 30, by = 1e-3)
       
       # run dynamics
       chabaudi_si_clean(
