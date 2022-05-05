@@ -259,7 +259,7 @@ check_ci_opt <- function(df){
   registerDoParallel(cl)
   registerDoRNG(137)
   
-  res <- foreach(i= 1:10, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
+  res <- foreach(i= 1:1000, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
   # source function
   source(here("functions/chabaudi_ci_clean.R"))
     
@@ -332,12 +332,22 @@ check_ci_opt <- function(df){
 }
 ```
 
+# run confirmatory checks
 ```{r}
-test <- ci_opt.df[1,]
+# split into 3 chunks
+ci_opt.df1 <- ci_opt.df[1:5,]
+ci_opt.df2 <- ci_opt.df[6:10,]
+ci_opt.df3 <- ci_opt.df[11:14,]
 
-test_res <- check_ci_opt(test)
+ci_opt.ls1 <- split(ci_opt.df1, seq(nrow(ci_opt.df1)))
+ci_opt.ls2 <- split(ci_opt.df2, seq(nrow(ci_opt.df2)))
+ci_opt.ls3 <- split(ci_opt.df3, seq(nrow(ci_opt.df3)))
 
-test_res
+
+# lapply serial iteration
+ci_opt.cf1 <- lapply(ci_opt.ls1, check_ci_opt)
+ci_opt.cf2 <- lapply(ci_opt.ls2, check_ci_opt)
+ci_opt.cf3 <- lapply(ci_opt.ls3, check_ci_opt)
 ```
 
 
