@@ -216,8 +216,11 @@ time_range <- seq(0, 20, by = 1e-3)
 # confirming coinfection optimal strategy
 #---------------------------------#
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 hard to do global optimization on coinfection optimization. One way to see whether our guesses are good is to compete our optimal conversion rate strategy with a bunch 
 =======
+=======
+>>>>>>> Stashed changes
 hard to do global optimization on coinfection optimization. One way to see whether our guesses are good is to compete our optimal conversion rate strategy with a bunch random parameter sets
 
 # processing ci_optidf
@@ -325,6 +328,9 @@ check_ci_opt <- function(df){
 }
 ```
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
 #---------------------------------#
@@ -425,6 +431,7 @@ get_dyn <- function(df){
 
 ```
 
+<<<<<<< Updated upstream
 ```{r}
 <<<<<<< Updated upstream
 # import in ci optimum for same cue
@@ -679,7 +686,83 @@ ggplot() +
   scale_x_continuous(labels = function(x) format(x, scientific = FALSE),
                      guide = guide_axis(check.overlap = TRUE)) + 
                     theme(axis.text.x = element_text(size = 7)) 
+=======
+```{r}
+test <- dyn2 %>% 
+      filter(variable == cue_temp_1 | variable == cue_temp_2) %>% 
+      dplyr::group_by(time) %>% 
+      dplyr::summarise(sum = sum(value)) %>% 
+      select(time, value = sum) 
+
+  
+source(here("functions/chabaudi_ci_clean.R"))
+test <- chabaudi_ci_clean(
+  parameters_cr_1 = c(18.879767, -39.688967,   1.969041, -36.436620),
+                  parameters_cr_2 = c(35.6294,	-65.6898,	-11.5609,	-52.0779),
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = "Ig1",
+                  cue_2 = "Ig2",
+                  cue_range_1 = seq(0, log10(6*10^6), by = log10(6*10^6)/5000),
+                  cue_range_2 = seq(0, log10(6*10^6), by = log10(6*10^6)/5000),
+                  log_cue_1 = "log10",
+                  log_cue_2 = "log10",
+                  solver = "vode",
+                  time_range = seq(0, 30, 0.001),
+                  dyn = T)
+
+test
+ggplot() +
+  geom_line(data = test, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable, scales = "free")
 ```
+
+# loop through df to get reaction norm + dyn
+```{r}
+# split df 
+ci_opt.ls <- split(ci_opt.df, seq(nrow(ci_opt.df)))
+
+# parallelzed lapply
+ci_opt.dyn <- mclapply(ci_opt.ls, get_dyn)
+
+# bind together dynamics
+dyn.ls <- lapply(ci_opt.dyn, function(x)x[[1]])
+ci_dyn.df <- do.call(rbind, dyn.ls)
+
+rn.ls <- lapply(ci_opt.dyn, function(x)x[[2]])
+ci_rn.df <- do.call(rbind, rn.ls)
+
+rug.ls <- lapply(ci_opt.dyn, function(x)x[[3]])
+ci_rug.df <- do.call(rbind, rug.ls)
+```
+
+
+```{r}
+# filter to restriction conversion rate reaction norm range to cue ranges that appear in rug
+## change to Inf/-inf to NA
+ci_rug_lim.df <- ci_rug.df %>% 
+  group_by(label) %>% 
+  summarise(min = min(value, na.rm = T)*0.9,
+         max = max(value, na.rm = T)*1.1)
+
+ci_rug_lim.df
+ci_rug.df %>% filter(label == "Sexual iRBC log10") %>% summarize(max= max(value))
+>>>>>>> Stashed changes
+```
+
+# visualization
+```{r}
+ggplot() +
+  geom_line(data = ci_rn.df, aes(x = cue_range, y = cr)) +
+  geom_rug(data = ci_rug.df, aes(x = value), color = "red") +
+  facet_wrap(~label, scales = "free_x") +
+  theme_bw() +
+  labs(y = "Conversion rate", x = "Cue range") +
+  scale_x_continuous(labels = function(x) format(x, scientific = FALSE),
+                     guide = guide_axis(check.overlap = TRUE)) + 
+                    theme(axis.text.x = element_text(size = 7)) 
+```
+
 
 
 
