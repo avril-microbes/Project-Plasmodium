@@ -78,7 +78,7 @@ co_infection_opt_alt <- function(parameters_cr,  # preliminary parameter set
     
     ## save output
     par <- model_output$par
-    fitness <- model_output$value
+    fitness <- round(model_output$value, 10) # rounding to 10 digits so that almost 0 values becomes 0
     output <- list(index, mutant_par, residence_par, fitness)
     output_ls[[index]] <- output
     print(output)
