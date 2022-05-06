@@ -342,12 +342,41 @@ ci_opt.df3 <- ci_opt.df[11:14,]
 ci_opt.ls1 <- split(ci_opt.df1, seq(nrow(ci_opt.df1)))
 ci_opt.ls2 <- split(ci_opt.df2, seq(nrow(ci_opt.df2)))
 ci_opt.ls3 <- split(ci_opt.df3, seq(nrow(ci_opt.df3)))
+```
 
 
+```{r}
 # lapply serial iteration
 ci_opt.cf1 <- lapply(ci_opt.ls1, check_ci_opt)
+ci_opt.res1 <- do.call(rbind, ci_opt.cf1)
+write.csv(ci_opt.res1, here("data/ci_opt_cf/ci_opt_res1.csv"), row.names = F)
+
+# look at  min
+ci_opt.res1 %>% group_by(label) %>% summarise(min = min(as.numeric(V1)))
+
+ggplot() +
+  geom_histogram(data = ci_opt.res1, aes(x = as.numeric(V1)), bins = 80) +
+  facet_wrap(~label, scales = "free_y") +
+  geom_vline(xintercept = 0) +
+  theme_bw()
+```
+
+
+```{r}
 ci_opt.cf2 <- lapply(ci_opt.ls2, check_ci_opt)
+ci_opt.res2 <- do.call(rbind, ci_opt.cf2)
+write.csv(ci_opt.res2, here("data/ci_opt_cf/ci_opt_res2.csv"), row.names = F)
+
+ci_opt.res2 %>% group_by(label) %>% summarise(min = min(as.numeric(V1)))
+```
+
+
+```{r}
 ci_opt.cf3 <- lapply(ci_opt.ls3, check_ci_opt)
+ci_opt.res3 <- do.call(rbind, ci_opt.cf3)
+write.csv(ci_opt.res3, here("data/ci_opt_cf/ci_opt_res3.csv"), row.names = F)
+ci_opt.res3 %>% group_by(label) %>% summarise(min = min(as.numeric(V1)))
+
 ```
 
 

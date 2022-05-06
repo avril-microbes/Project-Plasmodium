@@ -35,23 +35,6 @@ co_infection_opt_do <- function(parameters_cr,  # preliminary parameter set
         mutant_par <- par
         print("Strain 1 is fitter than strain 2.")
       }
-      ### if strain 1 is less fit than strain 2 but optimization did not converge, repeat with 
-      ### mutant strain 1 final parameter values. Keep residence parameter as it is
-      if(fitness <= 0 && conv != 0){
-        if(index > 2){residence_par <- output_ls[[index - 1]][[4]]} ### assign residence parameter to previous iteration
-        if(index == 2){residence_par <- parameters_cr} # special case. If first round of optimization fails, go back to initial parameter set
-        mutant_par <- par
-        print("Did not converge. Strain 1 is less fit than strain 2. Repeat optimization.")
-      }
-      
-      ### if run converged but strain 1 is less fit then strain 2, try again with new initial mutant start point
-      if(fitness <= 0 && conv == 0){
-        if(index > 2){residence_par <- output_ls[[index - 1]][[4]]}
-        if(index == 2){residence_par <- parameters_cr}
-        mutant_par <- par
-        lower_repeat <- TRUE
-        print("Converged. Strain 1 is less fit than strain 2. Repeat optimization.")
-      }
     }
     ## code to execute parallel LGBF-GS optimization
     output <- list() # reset per run
@@ -68,29 +51,28 @@ co_infection_opt_do <- function(parameters_cr,  # preliminary parameter set
     
     
     ## save output
-    conv <- model_output$convergence
-    par <- model_output$par
-    fitness <- model_output$value
-    output <- list(index, conv, mutant_par, residence_par, fitness)
+    par <- model_output$optim$bestmem
+    fitness <- model_output$optim$bestval
+    output <- list(index, mutant_par, residence_par, fitness)
     output_ls[[index]] <- output
     print(output)
     
     
-    # exit loop IF
+    # exit loop IF. note that given this is minimization, fitness <0 is when strain 1 is fitter!
     ## previous run converged, strain 1 is fitter than strain 2, and that the fitness difference is minute
-    if(conv == 0 && fitness > 0 && fitness < limit){
+    if(fitness < 0 && fitness < limit){
       print("Strain 1 is fitter than strain 2 but difference is minute.")
       stopCluster(cl)
       break
     }
     ## If repeat run after lower strain 1 fitness, break if continue to be 
-    if(conv == 0 && lower_repeat == TRUE && fitness < limit){
-      print("After repetition, fitness difference is still minute.")
+    if(fitness> 0){
+      print("strain 1 is less fit than strain 2. break")
       stopCluster(cl)
       break
     }
     # if at optimum
-    if(conv == 0 && fitness == 0 ){
+    if(fitness == 0 ){
       print("Reached optimum. Break!")
       stopCluster(cl)
       break
