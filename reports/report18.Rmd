@@ -350,6 +350,8 @@ ci_opt.ls3 <- split(ci_opt.df3, seq(nrow(ci_opt.df3)))
 ci_opt.cf1 <- lapply(ci_opt.ls1, check_ci_opt)
 ci_opt.res1 <- do.call(rbind, ci_opt.cf1)
 write.csv(ci_opt.res1, here("data/ci_opt_cf/ci_opt_res1.csv"), row.names = F)
+ci_opt.res1 <- read.csv(here("data/ci_opt_cf/ci_opt_res1.csv"))
+
 
 # look at  min
 ci_opt.res1 %>% group_by(label) %>% summarise(min = min(as.numeric(V1)))
@@ -366,6 +368,7 @@ ggplot() +
 ci_opt.cf2 <- lapply(ci_opt.ls2, check_ci_opt)
 ci_opt.res2 <- do.call(rbind, ci_opt.cf2)
 write.csv(ci_opt.res2, here("data/ci_opt_cf/ci_opt_res2.csv"), row.names = F)
+ci_opt.res2 <- read.csv(here("data/ci_opt_cf/ci_opt_res2.csv"))
 
 ci_opt.res2 %>% group_by(label) %>% summarise(min = min(as.numeric(V1)))
 ```
@@ -375,10 +378,83 @@ ci_opt.res2 %>% group_by(label) %>% summarise(min = min(as.numeric(V1)))
 ci_opt.cf3 <- lapply(ci_opt.ls3, check_ci_opt)
 ci_opt.res3 <- do.call(rbind, ci_opt.cf3)
 write.csv(ci_opt.res3, here("data/ci_opt_cf/ci_opt_res3.csv"), row.names = F)
+ci_opt.res3 <- read.csv(here("data/ci_opt_cf/ci_opt_res3.csv"))
 ci_opt.res3 %>% group_by(label) %>% summarise(min = min(as.numeric(V1)))
 
 ```
 
+# conc
+Sexual iRBC log10	
+Total gametocyte	
+Total sexualiRBC log10
+are all cue runs in which we have non optimized strategy
+```{r}
+ci_opt.res <- rbind(ci_opt.res1, ci_opt.res2, ci_opt.res3)
+ci_opt.res %>% group_by(label) %>% summarise(min = min(as.numeric(V1)))
+```
+
+#----------------------------------#
+# reperform ci optimization for 3 cues
+# with unoptimized strategy
+#---------------------------------#
+Here, I used the the alterative co infection optimizations script that adresses the issue of L-BFGS stuck at local maximum by beginning any optimization run with fitness difference of 0 at 0.5x4. everything run is started with initial strategy found in previous optimization to save time.
+```{r}
+source(here("functions/co_infection_opt_alt.R"))
+time_range <- seq(0, 20, by = 1e-3)
+```
+
+# sexual iRBC log10
+```{r}
+ci_Ig_log_opt <- co_infection_opt_alt(parameters_cr = c(35.6294,	-65.6898,	-11.5609,	-52.0779),
+                             limit = 0.01,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1",
+                             cue_2 = "Ig2",
+                             cue_range_1 = seq(0, log10(6*(10^6)), by = log10(6*(10^6))/5000),
+                             cue_range_2 = seq(0, log10(6*(10^6)), by = log10(6*(10^6))/5000),
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+
+# 2.189146 -5.450051  4.543525 -9.356682
+```
+
+# total gametocyte
+```{r}
+ci_G1_G2_opt <- co_infection_opt_alt(parameters_cr = c(3.05668, -5077.22092,   585.42826, -8703.57817),
+                             limit = 0.01,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1+G2",
+                             cue_2 = "G1+G2",
+                             cue_range_1 = seq(0, 6*(10^4), (6*(10^4))/5000),
+                             cue_range_2 = seq(0, 6*(10^4), (6*(10^4))/5000),
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+```
+
+# total sexual iRBC log10
+```{r}
+ci_Ig1_Ig2_log_opt <- co_infection_opt_alt(parameters_cr = c(75.73915, -128.01549,  -41.16782,  -96.21549),
+                             limit = 0.01,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1+Ig2",
+                             cue_2 = "Ig1+Ig2",
+                             cue_range_1 = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                             cue_range_2 = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+```
 
 
 #---------------------------------#
@@ -387,9 +463,6 @@ ci_opt.res3 %>% group_by(label) %>% summarise(min = min(as.numeric(V1)))
 for all co-infection, optimized for 20 days. certain cues, I1+I2 and Ig1+Ig2 none-logged exhibit cyclical pattern and is omitted from subsequent analysis
 
 All dynamics is simulated for 30 days to ensure that transmission acrrument is over
-
-#
-
 
 # get conversion rate reaction norm
 # altering code from report 17 for double strains. 30 days simulated
