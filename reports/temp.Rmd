@@ -92,7 +92,11 @@ ci_Ig_log_opt <- co_infection_opt_do(parameters_cr = c(0.359066,  -65.485796,  3
                              neg = T)
 ```
 
+<<<<<<< Updated upstream
 # trying alt where last round of optimization is started with 0.5 x 4
+=======
+# trying alt where last round of 
+>>>>>>> Stashed changes
 ```{r}
 ci_Ig_log_opt <- co_infection_opt_alt(parameters_cr = c(35.6294,	-65.6898,	-11.5609,	-52.0779),
                              limit = 0.01,
@@ -110,6 +114,7 @@ ci_Ig_log_opt <- co_infection_opt_alt(parameters_cr = c(35.6294,	-65.6898,	-11.5
 
 # 2.189146 -5.450051  4.543525 -9.356682
 
+<<<<<<< Updated upstream
 # testing dynamics
 test <- chabaudi_ci_clean(
   parameters_cr_1 = c( 2.189146, -5.450051,  4.543525, -9.356682),
@@ -132,6 +137,8 @@ test.df$var1 <- 2.189146
 test.df$var2 <- -5.45005
 test.df$var3 <- 4.543525
 test.df$var4 <- -9.356682
+=======
+>>>>>>> Stashed changes
 ```
 
 ```{r}
