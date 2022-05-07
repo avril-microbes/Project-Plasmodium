@@ -284,8 +284,6 @@ ci_invasion_analysis <- function(df){
 }
 ```
 
-<<<<<<< Updated upstream
-=======
 ```{r}
 source(here("functions/co_infection_opt_alt2.R"))
 ci_Ig1_Ig2_log_opt <- co_infection_opt_alt(parameters_cr = c(22.08106, -47.95592, -12.97148,  19.60815),
@@ -346,7 +344,6 @@ ggplot() +
 
 ```
 
->>>>>>> Stashed changes
 
 
 
