@@ -4,12 +4,12 @@
 # as to maximize the difference between mutant and resident. DEoptim (GA) is used as optimization algorithm.
 
 # By Avril Wang
-# last updated 2022-05-05
+# last updated 2022-05-07
 
 co_infection_opt_do <- function(parameters_cr,  # preliminary parameter set
-                             limit, # minimum fitness difference between competing strains to break
-                             model, # infection model
-                             ...){ # additional parameters to be inserted into the infection model
+                                  limit, # minimum fitness difference between competing strains to break
+                                  model, # infection model
+                                  ...){ # additional parameters to be inserted into the infection model
   force(parameters_cr)
   force(limit)
   force(model)
@@ -20,7 +20,6 @@ co_infection_opt_do <- function(parameters_cr,  # preliminary parameter set
   index <- 1
   output_ls <- list()
   lower_repeat <- FALSE # is this a repeat run after lower strain 1 fitness?
-  worse_then_previous <- FALSE # is the current run worse then previous?
   
   # do-while loop to continue to optimize strain 1 fitness
   repeat{
@@ -35,12 +34,39 @@ co_infection_opt_do <- function(parameters_cr,  # preliminary parameter set
         mutant_par <- par
         print("Strain 1 is fitter than strain 2.")
       }
+      ### if strain 1 is less fit than strain 2, repeat optimization with par
+      if(fitness < 0){
+        if(index > 2){
+          residence_par <- output_ls[[index - 1]][[4]] ### assign residence parameter to previous iteratio
+          mutant_par <- par #### assign mutant to optimal par
+        }
+        if(index == 2){
+          residence_par <- parameters_cr # special case. If first round of optimization fails, go back to initial parameter set
+          mutant_par <- par
+        } 
+        lower_repeat <- TRUE
+        print("Strain 1 is less fit than strain 2. Repeat optimization with 0.5x4")
+      }
+      ### special case: if fitness difference = 0, need skip out 
+      if(fitness == 0){
+        if(index > 2){
+          residence_par <- output_ls[[index - 1]][[4]] ### assign residence parameter to previous iteratio
+          mutant_par <- rep(2, 4) #### assign mutant to 2 x4 
+        }
+        if(index == 2){
+          residence_par <- parameters_cr # special case. If first round of optimization fails, go back to initial parameter set
+          mutant_par <- rep(2, 4)
+        } 
+        lower_repeat <- TRUE
+        print("Strain 1 has same fitness than strain 2. Repeat optimization with 2x4")
+      }
     }
     ## code to execute parallel LGBF-GS optimization
     output <- list() # reset per run
     print(paste("starting iteration", index))
     # add index
     index <- index + 1
+    cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
     model_output <- do.call(DEoptim::DEoptim,
                             c(list(fn = model,
                                    control = list(trace = 1, parallelType = 1),
@@ -58,7 +84,7 @@ co_infection_opt_do <- function(parameters_cr,  # preliminary parameter set
     print(output)
     
     
-    # exit loop IF. note that given this is minimization, fitness <0 is when strain 1 is fitter!
+    # exit loop IF
     ## previous run converged, strain 1 is fitter than strain 2, and that the fitness difference is minute
     if(fitness < 0 && fitness > limit){
       print("Strain 1 is fitter than strain 2 but difference is minute.")
@@ -66,14 +92,8 @@ co_infection_opt_do <- function(parameters_cr,  # preliminary parameter set
       break
     }
     ## If repeat run after lower strain 1 fitness, break if continue to be 
-    if(fitness> 0){
-      print("strain 1 is less fit than strain 2. break")
-      stopCluster(cl)
-      break
-    }
-    # if at optimum
-    if(fitness == 0 ){
-      print("Reached optimum. Break!")
+    if(lower_repeat == TRUE && fitness > limit){
+      print("After repetition, either strain 1 is still less fit or that fitness difference is minute.")
       stopCluster(cl)
       break
     }
