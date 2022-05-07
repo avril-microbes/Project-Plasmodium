@@ -284,6 +284,69 @@ ci_invasion_analysis <- function(df){
 }
 ```
 
+<<<<<<< Updated upstream
+=======
+```{r}
+source(here("functions/co_infection_opt_alt2.R"))
+ci_Ig1_Ig2_log_opt <- co_infection_opt_alt(parameters_cr = c(22.08106, -47.95592, -12.97148,  19.60815),
+                             limit = 0.01,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1+Ig2",
+                             cue_2 = "Ig1+Ig2",
+                             cue_range_1 = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                             cue_range_2 = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+
+# going to another local optimam
+# 22.08106 -47.95592 -12.97148  19.60815
+
+
+# trying DE
+source(here("functions/co_infection_opt_do.R"))
+ci_Ig1_Ig2_log_opt <- co_infection_opt_do(parameters_cr = c(22.08106, -47.95592, -12.97148,  19.60815),
+                             limit = 0.01,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1+Ig2",
+                             cue_2 = "Ig1+Ig2",
+                             cue_range_1 = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                             cue_range_2 = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10",
+                             neg = T)
+
+
+test <- chabaudi_ci_clean(
+  parameters_cr_1 = c(75.73915, -128.01549,  -41.16782,  -96.21549),
+                  parameters_cr_2 = rep(2,4),
+                  immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1+Ig2",
+                             cue_2 = "Ig1+Ig2",
+                             cue_range_1 = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                             cue_range_2 = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10",
+  dyn = T)
+
+ggplot() +
+  geom_line(data = test, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free") +
+  theme_bw()
+
+```
+
+>>>>>>> Stashed changes
 
 
 
