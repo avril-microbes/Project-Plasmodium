@@ -424,7 +424,7 @@ ci_Ig_log_opt <- co_infection_opt_alt(parameters_cr = c(35.6294,	-65.6898,	-11.5
 
 # total gametocyte
 ```{r}
-ci_G1_G2_opt <- co_infection_opt_alt(parameters_cr = c(3.05668, -5077.22092,   585.42826, -8703.57817),
+ci_G1_G2_opt <- co_infection_opt_alt(parameters_cr = c(4.15261,  -6956.90696,    946.10138, -16629.64406 ),
                              limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
@@ -437,11 +437,20 @@ ci_G1_G2_opt <- co_infection_opt_alt(parameters_cr = c(3.05668, -5077.22092,   5
                              solver = "vode",
                              log_cue_1 = "none",
                              log_cue_2 = "none")
+
+# 4.15261  -6956.90696    946.10138 -16629.64406 
+# note has 0 fitness difference. repefrom with 0.5x4 skip out par
+
+# repeated again. did not go to 0 so looks good
+# 1.714645  -3188.074319    807.823556 -12906.583435
 ```
 
 # total sexual iRBC log10
+using GA because previous attempts of using Lbfgs still results in local optimum
 ```{r}
-ci_Ig1_Ig2_log_opt <- co_infection_opt_alt(parameters_cr = c(75.73915, -128.01549,  -41.16782,  -96.21549),
+source(here("functions/co_infection_opt_do.R"))
+source(here("functions/chabaudi_ci_clean.R"))
+ci_Ig1_Ig2_log_opt <- co_infection_opt_do(parameters_cr = c( 0.997924,  -88.047050, -397.592783, 4699.788955),
                              limit = 0.01,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",
@@ -453,7 +462,12 @@ ci_Ig1_Ig2_log_opt <- co_infection_opt_alt(parameters_cr = c(75.73915, -128.0154
                              cue_range_2 = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
                              solver = "vode",
                              log_cue_1 = "log10",
-                             log_cue_2 = "log10")
+                             log_cue_2 = "log10",
+                             neg = T)
+
+# 0.990252  -88.272781 -362.975537 3833.337160
+
+#  0.713855  -59.665883  164.129039 -163.384715
 ```
 
 

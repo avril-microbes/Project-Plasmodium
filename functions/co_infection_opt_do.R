@@ -60,7 +60,7 @@ co_infection_opt_do <- function(parameters_cr,  # preliminary parameter set
     
     # exit loop IF. note that given this is minimization, fitness <0 is when strain 1 is fitter!
     ## previous run converged, strain 1 is fitter than strain 2, and that the fitness difference is minute
-    if(fitness < 0 && fitness < limit){
+    if(fitness < 0 && fitness > limit){
       print("Strain 1 is fitter than strain 2 but difference is minute.")
       stopCluster(cl)
       break
