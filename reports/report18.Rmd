@@ -383,7 +383,6 @@ ci_opt.res3 %>% group_by(label) %>% summarise(min = min(as.numeric(V1)))
 
 ```
 
-# conc
 Sexual iRBC log10	
 Total gametocyte	
 Total sexualiRBC log10
@@ -472,6 +471,49 @@ ci_Ig1_Ig2_log_opt <- co_infection_opt_do(parameters_cr = c( 0.997924,  -88.0470
 # 0.997924,  -88.047050, -397.592783, 4699.788955
 
 # 0.963606  -73.245102  211.446322 -182.771856
+
+# repeated -> do not use. probably no global optimum 
+```
+
+#-------------------------------#
+# repeat validation for stranglers
+#------------------------------#
+```{r}
+# import in updated ci_opt df
+ci_opt.df <- read.csv(here("data/ci_opt.csv"))
+
+#reclass for better labels
+ci_opt.df <- ci_opt.df %>% 
+  mutate(label_1 = case_when(
+  cue == "I-i" ~ "Asexual iRBC",
+  cue == "I1+I2" ~ "Total asexual\niRBC",
+  cue == "Ig-i" ~ "Sexual iRBC",
+  cue == "Ig1+Ig2" ~ "Total sexual\niRBC",
+  cue == "sum" ~ "Total iRBC",
+  cue == "G-i" ~ "Gametocyte",
+  cue == "G1+G2" ~ "Total\ngametocyte",
+  cue == "R" ~ "RBC"
+)) %>% 
+  mutate(label_2 = case_when(
+    log == "log" ~ "log10",
+    log == "none" ~ ""
+  )) %>% 
+  mutate(label_3 = paste(label_1, label_2),
+         id = paste0(cue, "_", log))
+
+# left join with cue range df
+cue_range.df <- read.csv(here("data/cue_range.csv"))
+
+ci_opt.df <- ci_opt.df %>% left_join(select(cue_range.df, low, high, by, id), by = c("id" = "id"))
+
+# filter  for sexual iRBC log10 and total gamteocyte
+ci_opt_f.df <- ci_opt.df %>% filter(id == "Ig-i_log" | id == "G1+G2_none")
+
+# split for confirmatory checks
+ci_opt_f.ls <- split(ci_opt_f.df, seq(nrow(ci_opt_f.df)))
+
+# run confirmatory checks
+ci_opt_f.cf <- lapply(ci_opt_f.ls, check_ci_opt)
 ```
 
 

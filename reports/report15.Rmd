@@ -1516,7 +1516,6 @@ ci_I1_I2_log_opt <- co_infection_opt(parameters_cr = rep(0.5, 4),
                              log_cue_2 = "log10")
 erer::write.list(ci_I1_I2_log_opt, here("data/ci_opt/ci_I1_I2_log_opt.txt"))
 
-# NOTE NOT ACCURATE!!
 #404.6170 -529.2684 -365.0516 -417.0552
 #0.001341288
 ```
