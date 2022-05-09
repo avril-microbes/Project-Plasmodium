@@ -4,7 +4,7 @@
 # as to maximize the difference between mutant and resident. DEoptim (GA) is used as optimization algorithm.
 
 # By Avril Wang
-# last updated 2022-05-07
+# last updated 2022-05-08
 
 co_infection_opt_do <- function(parameters_cr,  # preliminary parameter set
                                   limit, # minimum fitness difference between competing strains to break
@@ -29,13 +29,13 @@ co_infection_opt_do <- function(parameters_cr,  # preliminary parameter set
       mutant_par <- parameters_cr
     } else{
       ### if strain 1 is fitter than strain 2, assign both strains to adopt the optimized par
-      if(fitness > 0){
+      if(fitness < 0){
         residence_par <- par
         mutant_par <- par
         print("Strain 1 is fitter than strain 2.")
       }
       ### if strain 1 is less fit than strain 2, repeat optimization with par
-      if(fitness < 0){
+      if(fitness > 0){
         if(index > 2){
           residence_par <- output_ls[[index - 1]][[4]] ### assign residence parameter to previous iteratio
           mutant_par <- par #### assign mutant to optimal par
@@ -86,13 +86,13 @@ co_infection_opt_do <- function(parameters_cr,  # preliminary parameter set
     
     # exit loop IF
     ## previous run converged, strain 1 is fitter than strain 2, and that the fitness difference is minute
-    if(fitness < 0 && fitness > limit){
+    if(fitness < 0 && fitness > (limit*-1)){
       print("Strain 1 is fitter than strain 2 but difference is minute.")
       stopCluster(cl)
       break
     }
     ## If repeat run after lower strain 1 fitness, break if continue to be 
-    if(lower_repeat == TRUE && fitness > limit){
+    if(lower_repeat == TRUE && fitness > (limit*-1)){
       print("After repetition, either strain 1 is still less fit or that fitness difference is minute.")
       stopCluster(cl)
       break

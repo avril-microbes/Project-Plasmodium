@@ -418,7 +418,43 @@ ci_Ig_log_opt <- co_infection_opt_alt(parameters_cr = c(35.6294,	-65.6898,	-11.5
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
 
+ci_Ig_log_opt <- co_infection_opt_do(parameters_cr = rep(0.5,4),
+                             limit = 0.01,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1",
+                             cue_2 = "Ig2",
+                             cue_range_1 = seq(0, log10(6*(10^6)), by = log10(6*(10^6))/5000),
+                             cue_range_2 = seq(0, log10(6*(10^6)), by = log10(6*(10^6))/5000),
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10",
+                             neg = T)
+
 # 2.189146 -5.450051  4.543525 -9.356682
+
+# do
+# -0.419426   96.411807  823.920086 -949.733302 -> cannot compete with local
+# 0.874028  -86.583311  340.454528 -369.837694
+# 0.631738  -19.086138   68.802929  -97.782339
+# 0.950632  -84.510114  352.418519 -545.198396
+
+# testing do vs lbfgs strategy. LBFGS wins everytime
+test <- chabaudi_ci_clean(parameters_cr_1 = c(2.189146, -5.450051,  4.543525, -9.356682),
+                  parameters_cr_2 = c(0.631738,  -19.086138,   68.802929,  -97.782339),
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = "Ig1",
+                  cue_2 = "Ig2",
+                  cue_range_1 = seq(0, log10(6*(10^6)), by = log10(6*(10^6))/5000),
+                  cue_range_2 = seq(0, log10(6*(10^6)), by = log10(6*(10^6))/5000),
+                  log_cue_1 = "log10",
+                  log_cue_2 = "log10",
+                  solver = "vode",
+                  time_range = seq(0, 30, by = 1e-3),
+                  dyn = F)
 ```
 
 # total gametocyte
@@ -437,11 +473,32 @@ ci_G1_G2_opt <- co_infection_opt_alt(parameters_cr = c(4.15261,  -6956.90696,   
                              log_cue_1 = "none",
                              log_cue_2 = "none")
 
+source(here("functions/co_infection_opt_do.R"))
+ci_G1_G2_opt <- co_infection_opt_do(parameters_cr = c(1.000000,   -21.024895,  328.757233,-4367.765931),
+                             limit = 0.01,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1+G2",
+                             cue_2 = "G1+G2",
+                             cue_range_1 = seq(0, 6*(10^4), (6*(10^4))/5000),
+                             cue_range_2 = seq(0, 6*(10^4), (6*(10^4))/5000),
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none",
+                             neg = T)
+
 # 4.15261  -6956.90696    946.10138 -16629.64406 
 # note has 0 fitness difference. repefrom with 0.5x4 skip out par
 
 # repeated again. did not go to 0 so looks good
 # 1.714645  -3188.074319    807.823556 -12906.583435
+
+# did not pass confirmatory check. repeat with do
+# first round: 1.000000,   -21.024895,  328.757233,-4367.765931
+# second round: 1.000000  -20.662996  324.585014-4999.967412
+# 1.000000  -21.911779  338.362460-4999.999660
 ```
 
 # total sexual iRBC log10
@@ -514,7 +571,23 @@ ci_opt_f.ls <- split(ci_opt_f.df, seq(nrow(ci_opt_f.df)))
 
 # run confirmatory checks
 ci_opt_f.cf <- lapply(ci_opt_f.ls, check_ci_opt)
+
+ci_opt_f.res <- do.call(rbind, ci_opt_f.cf)
+write.csv(ci_opt_f.res, here("data/ci_opt_cf/ci_opt_res_f.csv"), row.names = F)
+ci_opt_f.res <- read.csv(here("data/ci_opt_cf/ci_opt_res_f.csv"))
+
+# total gametocyte is still bad. Sexual iRBC log10 is ok 
+ci_opt_f.res %>% group_by(label) %>% summarise(min = min(V1))
 ```
+
+# second confirmation of gametocyte
+```{r}
+ci_opt_g.df <- ci_opt.df %>% filter(id == "G1+G2_none")
+
+ci_opt_g.res <- check_ci_opt(ci_opt_g.df)
+
+```
+
 
 
 #---------------------------------#
