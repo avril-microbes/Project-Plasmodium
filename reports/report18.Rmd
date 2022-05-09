@@ -585,6 +585,7 @@ ci_opt_f.res %>% group_by(label) %>% summarise(min = min(V1))
 ci_opt_g.df <- ci_opt.df %>% filter(id == "G1+G2_none")
 
 ci_opt_g.res <- check_ci_opt(ci_opt_g.df)
+write.csv(ci_opt_g.res, here("data/ci_opt_cf/ci_opt_res_g.csv"), row.names = F)
 
 ```
 
