@@ -535,6 +535,7 @@ ci_Ig1_Ig2_log_opt <- co_infection_opt_do(parameters_cr = c( 0.997924,  -88.0470
 #-------------------------------#
 # repeat validation for stranglers
 #------------------------------#
+# confirmatory checks for Ig-1 log
 ```{r}
 # import in updated ci_opt df
 ci_opt.df <- read.csv(here("data/ci_opt.csv"))
@@ -564,20 +565,16 @@ cue_range.df <- read.csv(here("data/cue_range.csv"))
 ci_opt.df <- ci_opt.df %>% left_join(select(cue_range.df, low, high, by, id), by = c("id" = "id"))
 
 # filter  for sexual iRBC log10 and total gamteocyte
-ci_opt_f.df <- ci_opt.df %>% filter(id == "Ig-i_log" | id == "G1+G2_none")
+ci_opt_Ig.df <- ci_opt.df %>% filter(id == "Ig-i_log")
 
 # split for confirmatory checks
-ci_opt_f.ls <- split(ci_opt_f.df, seq(nrow(ci_opt_f.df)))
+ci_opt_Ig.ls <- split(ci_opt_Ig.df, seq(nrow(ci_opt_Ig.df)))
 
 # run confirmatory checks
-ci_opt_f.cf <- lapply(ci_opt_f.ls, check_ci_opt)
+ci_opt_Ig.cf <- check_ci_opt(ci_opt_Ig.df)
 
-ci_opt_f.res <- do.call(rbind, ci_opt_f.cf)
-write.csv(ci_opt_f.res, here("data/ci_opt_cf/ci_opt_res_f.csv"), row.names = F)
-ci_opt_f.res <- read.csv(here("data/ci_opt_cf/ci_opt_res_f.csv"))
-
-# total gametocyte is still bad. Sexual iRBC log10 is ok 
-ci_opt_f.res %>% group_by(label) %>% summarise(min = min(V1))
+write.csv(ci_opt_Ig.cf, here("data/ci_opt_cf/ci_opt_res_Ig.csv"), row.names = F)
+ci_opt_Ig.res <- read.csv(here("data/ci_opt_cf/ci_opt_res_Ig.csv"))
 ```
 
 # second confirmation of gametocyte
@@ -586,10 +583,45 @@ ci_opt_g.df <- ci_opt.df %>% filter(id == "G1+G2_none")
 
 ci_opt_g.res <- check_ci_opt(ci_opt_g.df)
 write.csv(ci_opt_g.res, here("data/ci_opt_cf/ci_opt_res_g.csv"), row.names = F)
-
 ```
 
 
+#---------------------------------#
+# processing validation data
+#---------------------------------#
+```{r}
+# import in the old validation results (not valid for gametocyte total and Igi log)
+ci_opt.res1 <- read.csv(here("data/ci_opt_cf/ci_opt_res1.csv"))
+ci_opt.res2 <- read.csv(here("data/ci_opt_cf/ci_opt_res2.csv"))
+ci_opt.res3 <- read.csv(here("data/ci_opt_cf/ci_opt_res3.csv"))
+
+# import in the newer vaidation results -> for Igi
+ci_opt_Ig.res <- read.csv(here("data/ci_opt_cf/ci_opt_res_Ig.csv"))
+
+# import in the newer validation results -> for gametocyte total
+ci_opt_g.res <- read.csv(here("data/ci_opt_cf/ci_opt_res_g.csv"))
+
+# combine old validation data and filter out the wrong ones (those using old parameters)
+ci_opt.res123 <- rbind(ci_opt.res1, ci_opt.res2, ci_opt.res3)
+ci_opt.res123 <- ci_opt.res123 %>% filter(label != "Sexual iRBC log10" & label != "Total\ngametocyte " & label != "Total sexual\niRBC log10")
+
+# combine!
+ci_opt.res <- rbind(ci_opt.res123, ci_opt_Ig.res, ci_opt_g.res)
+
+ci_opt.res %>% filter(V1 <=0) # no records below 0
+```
+
+# plot!
+```{r}
+ggplot() +
+  geom_histogram(data = ci_opt.res, aes(x = V1), bins = 80) +
+  facet_wrap(~label, scales = "free_y", ncol = 4) +
+  geom_vline(xintercept = 0, color = "red") +
+  labs(y = "Frequency", x = "Fitness difference") +
+  theme_bw()
+
+ggsave(here("figures/report18/ci_opt_cf.png"))
+```
 
 #---------------------------------#
 # visualization co-infection strategy
@@ -676,44 +708,14 @@ get_dyn <- function(df){
   
   # for logged, backtransform cue range of reaction norm 
   rn2 <- rn
-  rn2$cue_range <- 10^(rn2$cue_range)
-  
+  if(stringr::str_detect(log_1, "log")){rn2$cue_range <- 10^(rn2$cue_range)}
+
   # append label to reaction norm, dyn, and rug
   rn2 <- data.frame(rn2, label = rep(label, nrow(rn)))
 
   return(list(dyn2, rn2, rug))
 }
 
-```
-
-```{r}
-test <- dyn2 %>% 
-      filter(variable == cue_temp_1 | variable == cue_temp_2) %>% 
-      dplyr::group_by(time) %>% 
-      dplyr::summarise(sum = sum(value)) %>% 
-      select(time, value = sum) 
-
-  
-source(here("functions/chabaudi_ci_clean.R"))
-test <- chabaudi_ci_clean(
-  parameters_cr_1 = c(18.879767, -39.688967,   1.969041, -36.436620),
-                  parameters_cr_2 = c(35.6294,	-65.6898,	-11.5609,	-52.0779),
-                  immunity = "tsukushi",
-                  parameters = parameters_tsukushi,
-                  cue_1 = "Ig1",
-                  cue_2 = "Ig2",
-                  cue_range_1 = seq(0, log10(6*10^6), by = log10(6*10^6)/5000),
-                  cue_range_2 = seq(0, log10(6*10^6), by = log10(6*10^6)/5000),
-                  log_cue_1 = "log10",
-                  log_cue_2 = "log10",
-                  solver = "vode",
-                  time_range = seq(0, 30, 0.001),
-                  dyn = T)
-
-test
-ggplot() +
-  geom_line(data = test, aes(x = time, y = value, color = strain)) +
-  facet_wrap(~variable, scales = "free")
 ```
 
 # loop through df to get reaction norm + dyn
@@ -744,21 +746,51 @@ ci_rug_lim.df <- ci_rug.df %>%
   summarise(min = min(value, na.rm = T)*0.9,
          max = max(value, na.rm = T)*1.1)
 
-ci_rug_lim.df
-ci_rug.df %>% filter(label == "Sexual iRBC log10") %>% summarize(max= max(value))
+#double check Total\ngametocyte log10. have 0
+test <- chabaudi_ci_clean(parameters_cr_1 = c(12.106219, -21.043524 , -5.010265, -16.928459),
+                  parameters_cr_2 = rep(0.5, 4),
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = "G1+G2",
+                  cue_2 = "G1+G2",
+                  cue_range_1 = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000),
+                  cue_range_2 = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000),
+                  log_cue_1 = "log10",
+                  log_cue_2 = "log10",
+                  solver = "vode",
+                  time_range = seq(0, 30, 0.001),
+                  dyn = T)
+
+ggplot() +
+  geom_line(data = test, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free") +
+  theme_bw()
+
+# manually change the range for gametocyte total range (0 to 20000)
+ci_rug_lim.df[10,3] <- 20000
+
+# filter ci_rn by limit
+ci_rn_lim.df <- ci_rn.df %>% 
+  left_join(ci_rug_lim.df) %>% 
+  group_by(label) %>% 
+  filter(cue_range <= max & cue_range >= min)
+  
+
 ```
 
 # visualization
 ```{r}
 ggplot() +
-  geom_line(data = ci_rn.df, aes(x = cue_range, y = cr)) +
+  geom_line(data = ci_rn_lim.df, aes(x = cue_range, y = cr)) +
   geom_rug(data = ci_rug.df, aes(x = value), color = "red") +
-  facet_wrap(~label, scales = "free_x") +
+  facet_wrap(~label, scales = "free_x", ncol = 2) +
   theme_bw() +
   labs(y = "Conversion rate", x = "Cue range") +
   scale_x_continuous(labels = function(x) format(x, scientific = FALSE),
                      guide = guide_axis(check.overlap = TRUE)) + 
                     theme(axis.text.x = element_text(size = 7)) 
+
+ggsave(here("figures/report18/ci_opt_cr.png"), height = 10)
 ```
 
 
@@ -930,6 +962,8 @@ write.csv(ci_comp_static.df, here("data/ci_comp_static.csv"), row.names = F)
 ci_comp_static.df <- read.csv(here("data/ci_comp_static.csv"))
 
 ci_comp_static.df <- select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff)
+
+ci_cue.df
 ```
 
 # visualize using heatmap
@@ -980,5 +1014,77 @@ ci_comp_static.mean <- ggplot() +
   
 ggarrange(ci_comp_static.map, ci_comp_static.mean, align = "h", widths = c(1, 0.2))
 ggsave(here("figures/report18/ci_comp_static.png"), width = 10.5)
+```
+
+#-----------------------#
+# code for invasion analysis of ci
+#-----------------------#
+Note that we have 2 options: start optimization with mutant parameter (from optimized with same strain same strategy), or start optimization with rep(0.5, 4). For safe proof, we could use DE (which is very slow), or we can perform this twice with both rep(0.5,4) and optimized mutant parameters -> compare results. 
+```{r}
+ci_invasion_analysis <- function(df, default = T){
+  
+  # get mutant info (invader)
+  if(default == F){mut_par <- c(df$var1, df$var2, df$var3, df$var4)} ## mutant parameter. if default is false, start optimization with optimized parameter set for mutant
+  if(default == T){mut_par <- rep(0.5, 4)} ## if default is true, start optimization with 0.5x4
+  if(stringr::str_detect(df$cue, "-i")){mut_cue = paste0(gsub("*-i", "", df$cue), "1")} ## mutant cue
+  if(stringr::str_detect(df$cue, "-i", negate = T)){mut_cue = df$cue} ## mutant cue
+  if(stringr::str_detect(df$log, "log")){mut_log = "log10"} ## mutant log
+  if(stringr::str_detect(df$log, "none")){mut_log = "none"} ## mutant log
+  mut_cue_range <- seq(df$low, df$high, by = df$by) ## mutant cue range
+  
+  # get resident info (being invaded)
+  res_par <- c(df$var1_2, df$var2_2, df$var3_2, df$var4_2) ## resident parameter
+  if(stringr::str_detect(df$cue_2, "-i")){res_cue = paste0(gsub("*-i", "", df$cue_2), "1")} ## resident cue
+  if(stringr::str_detect(df$cue_2, "-i", negate = T)){res_cue = df$cue_2} ## resident cue
+  if(stringr::str_detect(df$log_2, "log")){res_log = "log10"} ## resident log
+  if(stringr::str_detect(df$log_2, "none")){res_log = "none"} ## resident log
+  res_cue_range <- seq(df$low_2, df$high_2, by = df$by_2) ## resident cue range
+
+  # get ids
+  mut_id <- df$id
+  res_i <- id$id_2
+  
+  # one way optimization
+  ## start cluster
+  cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  
+  # start optimization LFBGS
+  res <- optimParallel(
+    par = mut_par,
+    fn = chabaudi_ci_clean, 
+    control = list(trace = 6, fnscale = -1),
+    parameters_cr_2 = res_par,
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range_1 <- mut_cue_range,
+    cue_range_2 <- res_cue_range,
+    cue_1 = mut_cue,
+    cue_2 = res_cue,
+    log_cue_1 = mut_log,
+    log_cue_2 = res_log,
+    solver = "vode")
+  
+  # close cluster
+  stopCluster(cl)
+  
+  # get model output
+  fitness <- res$value ## fitness difference between mutant and residence
+  mut_opt_par <- res$par ## optimized parameters of mutant
+  
+  # produce output
+  output <- cbind.data.frame(mut_id = mut_id, res_id = res_id, 
+                             fitness = fitness, 
+                             mut_var1 = df$var1, mut_var2 = df$var2, mut_var3 = df$var3, mut_var4 = df$var4,
+                             res_var1 = df$var1_2, res_var2 = df$var2_2, res_var3 = df$var3_2, res_var4 = df$var4_2,
+                             mut_var1_opt = mut_opt_par[1], mut_var2_opt = mut_opt_par[2], mut_var3_opt = mut_opt_par[3], mut_var4_opt = mut_opt_par[4])
+  
+  return(output)
+  
+}
+```
+
+```{r}
+test <- ci_cue_pair.ls[[1]]
 ```
 
