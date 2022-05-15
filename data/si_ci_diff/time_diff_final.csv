@@ -1,0 +1,81 @@
+"","label","name","value","infection","avg"
+"1","Asexual iRBC ","resolution_time_ci",18.093,"Optimal co-infection",19.752
+"2","Asexual iRBC ","resolution_time_si",18.044,"Non-optimal single infection",19.752
+"3","Asexual iRBC ","resolution_time_ci_n",19.824,"Non-optimal co-infection",19.752
+"4","Asexual iRBC ","resolution_time_si_opt",23.047,"Optimal single infection",19.752
+"5","Asexual iRBC log10","resolution_time_ci",15.919,"Optimal co-infection",23.91075
+"6","Asexual iRBC log10","resolution_time_si",38.085,"Non-optimal single infection",23.91075
+"7","Asexual iRBC log10","resolution_time_ci_n",17.795,"Non-optimal co-infection",23.91075
+"8","Asexual iRBC log10","resolution_time_si_opt",23.844,"Optimal single infection",23.91075
+"9","Gametocyte ","resolution_time_ci",11.649,"Optimal co-infection",16.0135
+"10","Gametocyte ","resolution_time_si",11.892,"Non-optimal single infection",16.0135
+"11","Gametocyte ","resolution_time_ci_n",17.952,"Non-optimal co-infection",16.0135
+"12","Gametocyte ","resolution_time_si_opt",22.561,"Optimal single infection",16.0135
+"13","Gametocyte log10","resolution_time_ci",12.966,"Optimal co-infection",17.43
+"14","Gametocyte log10","resolution_time_si",13.21,"Non-optimal single infection",17.43
+"15","Gametocyte log10","resolution_time_ci_n",19.744,"Non-optimal co-infection",17.43
+"16","Gametocyte log10","resolution_time_si_opt",23.8,"Optimal single infection",17.43
+"17","RBC ","resolution_time_ci",12.552,"Optimal co-infection",18.4795
+"18","RBC ","resolution_time_si",13.449,"Non-optimal single infection",18.4795
+"19","RBC ","resolution_time_ci_n",22.916,"Non-optimal co-infection",18.4795
+"20","RBC ","resolution_time_si_opt",25.001,"Optimal single infection",18.4795
+"21","RBC log10","resolution_time_ci",12.376,"Optimal co-infection",17.8655
+"22","RBC log10","resolution_time_si",13.249,"Non-optimal single infection",17.8655
+"23","RBC log10","resolution_time_ci_n",21.845,"Non-optimal co-infection",17.8655
+"24","RBC log10","resolution_time_si_opt",23.992,"Optimal single infection",17.8655
+"25","Sexual iRBC ","resolution_time_ci",12.283,"Optimal co-infection",16.576
+"26","Sexual iRBC ","resolution_time_si",14.685,"Non-optimal single infection",16.576
+"27","Sexual iRBC ","resolution_time_ci_n",17.315,"Non-optimal co-infection",16.576
+"28","Sexual iRBC ","resolution_time_si_opt",22.021,"Optimal single infection",16.576
+"29","Sexual iRBC log10","resolution_time_ci",12.749,"Optimal co-infection",16.9215
+"30","Sexual iRBC log10","resolution_time_si",12.853,"Non-optimal single infection",16.9215
+"31","Sexual iRBC log10","resolution_time_ci_n",18.501,"Non-optimal co-infection",16.9215
+"32","Sexual iRBC log10","resolution_time_si_opt",23.583,"Optimal single infection",16.9215
+"33","Total
+gametocyte ","resolution_time_ci",13.085,"Optimal co-infection",17.443
+"34","Total
+gametocyte ","resolution_time_si",13.833,"Non-optimal single infection",17.443
+"35","Total
+gametocyte ","resolution_time_ci_n",20.293,"Non-optimal co-infection",17.443
+"36","Total
+gametocyte ","resolution_time_si_opt",22.561,"Optimal single infection",17.443
+"37","Total
+gametocyte log10","resolution_time_ci",15.928,"Optimal co-infection",19.73
+"38","Total
+gametocyte log10","resolution_time_si",18.069,"Non-optimal single infection",19.73
+"39","Total
+gametocyte log10","resolution_time_ci_n",21.123,"Non-optimal co-infection",19.73
+"40","Total
+gametocyte log10","resolution_time_si_opt",23.8,"Optimal single infection",19.73
+"41","Total asexual
+iRBC ","resolution_time_ci",17.074,"Optimal co-infection",20.768
+"42","Total asexual
+iRBC ","resolution_time_si",23.043,"Non-optimal single infection",20.768
+"43","Total asexual
+iRBC ","resolution_time_ci_n",19.908,"Non-optimal co-infection",20.768
+"44","Total asexual
+iRBC ","resolution_time_si_opt",23.047,"Optimal single infection",20.768
+"45","Total asexual
+iRBC log10","resolution_time_ci",15.968,"Optimal co-infection",22.69575
+"46","Total asexual
+iRBC log10","resolution_time_si",29.163,"Non-optimal single infection",22.69575
+"47","Total asexual
+iRBC log10","resolution_time_ci_n",21.808,"Non-optimal co-infection",22.69575
+"48","Total asexual
+iRBC log10","resolution_time_si_opt",23.844,"Optimal single infection",22.69575
+"49","Total iRBC ","resolution_time_ci",13.944,"Optimal co-infection",22.49825
+"50","Total iRBC ","resolution_time_si",35.158,"Non-optimal single infection",22.49825
+"51","Total iRBC ","resolution_time_ci_n",19.544,"Non-optimal co-infection",22.49825
+"52","Total iRBC ","resolution_time_si_opt",21.347,"Optimal single infection",22.49825
+"53","Total iRBC log10","resolution_time_ci",14.833,"Optimal co-infection",24.11875
+"54","Total iRBC log10","resolution_time_si",36.169,"Non-optimal single infection",24.11875
+"55","Total iRBC log10","resolution_time_ci_n",21.812,"Non-optimal co-infection",24.11875
+"56","Total iRBC log10","resolution_time_si_opt",23.661,"Optimal single infection",24.11875
+"57","Total sexual
+iRBC ","resolution_time_ci",12.548,"Optimal co-infection",16.99325
+"58","Total sexual
+iRBC ","resolution_time_si",13.572,"Non-optimal single infection",16.99325
+"59","Total sexual
+iRBC ","resolution_time_ci_n",19.832,"Non-optimal co-infection",16.99325
+"60","Total sexual
+iRBC ","resolution_time_si_opt",22.021,"Optimal single infection",16.99325

@@ -962,8 +962,6 @@ write.csv(ci_comp_static.df, here("data/ci_comp_static.csv"), row.names = F)
 ci_comp_static.df <- read.csv(here("data/ci_comp_static.csv"))
 
 ci_comp_static.df <- select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff)
-
-ci_cue.df
 ```
 
 # visualize using heatmap
@@ -1086,7 +1084,7 @@ ci_invasion_analysis <- function(df, default = T){
 }
 ```
 
-
+# note for all runs, used 0.5 as starting point unless competing against residence G1+G2 log where I set starting to point to optimal if optimization failed (completed within <1 cycle)
 ```{r}
 # get all unique pairwise competition. zThis is already calculated above. For 13 cues, 13^2 = 169
 # get rid of all same
@@ -1621,16 +1619,6 @@ avg_cr.all2 <- tidyr::pivot_longer(avg_cr.all, -label) %>%
 
 ```
 
-# plot. Co-infection leads to lower average conversion rate over course of infection. Even when co-infetion strategy is in single infection, we still see lower conversion rate.
-```{r}
-cr_diff.pl <- ggplot(avg_cr.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
-  geom_line(aes(group = label)) +
-  geom_point(aes(color = infection, shape = infection), size = 2.5, alpha= 0.7) +
-  labs(x = "Average conversion rate", y = "Cue", color = "Infection", shape = "Infection") +
-  scale_shape_manual(values = 15:18) +
-  theme_bw()
-```
-
 # how about resolution time?
 ```{r}
 # need to process optimal ci so it has labels
@@ -1669,12 +1657,7 @@ resolution_time.all2 <- tidyr::pivot_longer(select(resolution_time.all, -id, -la
   group_by(label) %>% 
   mutate(avg = mean(value))
 
-time_diff.pl <- ggplot(resolution_time.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
-  geom_line(aes(group = label)) +
-  geom_point(aes(color = infection, shape = infection), size = 2.5, alpha = 0.7) +
-  labs(x = "Resolution time (days)", y = "Cue", color = "Infection", shape = "Infection") +
-  scale_shape_manual(values = 15:18) +
-  theme_bw()
+
 
 ```
 
@@ -1751,24 +1734,46 @@ fitness.all2 <- tidyr::pivot_longer(fitness.all, -label) %>%
   )) %>% 
   group_by(label) %>% 
   mutate(avg = mean(value))
-
-
 ```
 
-# plot fitness difference
+#------------- plot and write data---------------------#
 ```{r}
+# write all data frames for subsequent pltting
+#write.csv(resolution_time.all2, here("data/si_ci_diff/time_diff_final.csv"))
+#write.csv(avg_cr.all2, here("data/si_ci_diff/cr_diff_final.csv"))
+#write.csv(fitness.all2, here("data/si_ci_diff/fitness_diff_final.csv"))
+
+# read in data
+resolution_time.all2 <- read.csv(here("data/si_ci_diff/time_diff_final.csv"))
+avg_cr.all2 <- read.csv(here("data/si_ci_diff/cr_diff_final.csv"))
+fitness.all2 <- read.csv(here("data/si_ci_diff/fitness_diff_final.csv"))
+
+# plot
+time_diff.pl <- ggplot(resolution_time.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
+  geom_line(aes(group = label)) +
+  geom_point(aes(color = infection, shape = infection), size = 2.5, alpha = 0.7) +
+  labs(x = "Resolution time (days)", y = "Cue", color = "Infection", shape = "Infection") +
+  scale_shape_manual(values = 15:18) +
+  theme_bw()
+
 fitness_diff.pl <- ggplot(fitness.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
   geom_line(aes(group = label)) +
   geom_point(aes(color = infection, shape = infection), size = 2.5, alpha = 0.7) +
   labs(x = "Fitness", y = "Cue", color = "Infection", shape = "Infection") +
   scale_shape_manual(values = 15:18) +
   theme_bw()
-```
 
-```{r}
+cr_diff.pl <- ggplot(avg_cr.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
+  geom_line(aes(group = label)) +
+  geom_point(aes(color = infection, shape = infection), size = 2.5, alpha= 0.7) +
+  labs(x = "Average conversion rate", y = "Cue", color = "Infection", shape = "Infection") +
+  scale_shape_manual(values = 15:18) +
+  theme_bw()
+
+# look at plot
 time_diff.pl
-cr_diff.pl
 fitness_diff.pl
+cr_diff.pl
 ```
 
 

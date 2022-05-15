@@ -12,3 +12,6 @@ functions/.DS_Store
 functions/.DS_Store
 *.parquet
 data/.DS_Store
+.DS_Store
+data/.DS_Store
+data/si_ci_diff/.DS_Store
