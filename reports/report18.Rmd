@@ -1344,42 +1344,10 @@ ci_fitness2 <- ci_fitness %>%
   select(label_si, label_ci, cue, fitness_ci = fitness)
 
 si_ci_fitness2 <- left_join(ci_fitness2, si_fitness2, by = "label_si")
+#write.csv(si_ci_fitness2, here("data/si_ci_diff/si_ci_max_fitness.csv"))
 
 # plot fitness!
 library(scales)
-# first part
-fitness_ci_si.pl1 <- ggplot() +
-  geom_point(data = si_ci_fitness2, aes(x = fitness_ci, y = fitness_si, color = label_si, shape = label_si), size = 2.5) +
-  ggrepel::geom_label_repel(data = si_ci_fitness2, aes(label = label_ci, x = fitness_ci, y = fitness_si),
-                            fill = "white",xlim = c(-Inf, Inf), ylim = c(NA, NA)) +
-  scale_x_continuous(n.breaks = 2,
-                     limits = c(0, 0.1)) +
-  labs(x = "", y = "Optimal single infection fitness",
-       color = "Single infection cue", shape = "Single infection cue") +
-  scale_shape_manual(values = 15:24) +
-  theme_bw() +
-  coord_cartesian(clip = "off") 
-
-# second part
-fitness_ci_si.pl2 <-ggplot() +
-  geom_point(data = si_ci_fitness2, aes(x = fitness_ci, y = fitness_si, color = label_si, shape = label_si), size = 2.5) +
-  coord_cartesian(clip = "off") +
-  ggrepel::geom_label_repel(data = si_ci_fitness2, aes(label = label_ci, x = fitness_ci, y = fitness_si),
-                            fill = "white") +
-  scale_x_continuous(
-    breaks = scales::pretty_breaks(n = 5),
-    labels = scales::number_format(accuracy = 0.01,
-                                 decimal.mark = '.'),
-    expand = expansion(mult = 0.5)) +
-  xlim(3,5) +
-  labs(x = "Optimal co-infection fitness", y = "",
-       color = "Single infection cue", shape = "Single infection cue") +
-  scale_shape_manual(values = 15:24) +
-  theme_bw()
-
-fitness_ci_si.pl <- ggarrange(fitness_ci_si.pl1, fitness_ci_si.pl2, widths = c(0.2, 1), align = "hv", common.legend = T)
-
-fitness_ci_si.pl
 ```
 
 #-------------------------How does dynamics of optimal co-infection, optimal single-infection, non-optimal single infection, and non-optimal co-infection compare---------------------------------------------------#
@@ -1736,7 +1704,51 @@ fitness.all2 <- tidyr::pivot_longer(fitness.all, -label) %>%
   mutate(avg = mean(value))
 ```
 
-#------------- plot and write data---------------------#
+
+#-------------------------------------------------------#
+# Final plotting
+#-------------------------------------------------------#
+
+# what is the best cue when optimized separately for si and ci?
+```{r}
+si_ci_fitness2 <- read.csv(here("data/si_ci_diff/si_ci_max_fitness.csv"))
+
+# first part
+fitness_ci_si.pl1 <- ggplot() +
+  geom_point(data = si_ci_fitness2, aes(x = fitness_ci, y = fitness_si, color = label_si, shape = label_si), size = 2.5) +
+  ggrepel::geom_label_repel(data = si_ci_fitness2, aes(label = label_ci, x = fitness_ci, y = fitness_si),
+                            fill = "white",xlim = c(-Inf, Inf), ylim = c(NA, NA)) +
+  scale_x_continuous(n.breaks = 2,
+                     limits = c(0, 0.1)) +
+  labs(x = "", y = "Optimal single infection fitness",
+       color = "Single infection cue", shape = "Single infection cue") +
+  scale_shape_manual(values = 15:24) +
+  theme_bw() +
+  coord_cartesian(clip = "off") 
+
+# second part
+fitness_ci_si.pl2 <-ggplot() +
+  geom_point(data = si_ci_fitness2, aes(x = fitness_ci, y = fitness_si, color = label_si, shape = label_si), size = 2.5) +
+  coord_cartesian(clip = "off") +
+  ggrepel::geom_label_repel(data = si_ci_fitness2, aes(label = label_ci, x = fitness_ci, y = fitness_si),
+                            fill = "white") +
+  scale_x_continuous(
+    breaks = scales::pretty_breaks(n = 5),
+    labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.'),
+    expand = expansion(mult = 0.5)) +
+  xlim(3,5) +
+  labs(x = "Optimal co-infection fitness", y = "",
+       color = "Single infection cue", shape = "Single infection cue") +
+  scale_shape_manual(values = 15:24) +
+  theme_bw()
+
+fitness_ci_si.pl <- ggarrange(fitness_ci_si.pl1, fitness_ci_si.pl2, widths = c(0.2, 1), align = "hv", common.legend = T)
+
+fitness_ci_si.pl
+```
+
+# comparison of optimized vs unoptimized si and ci dynamic
 ```{r}
 # write all data frames for subsequent pltting
 #write.csv(resolution_time.all2, here("data/si_ci_diff/time_diff_final.csv"))
