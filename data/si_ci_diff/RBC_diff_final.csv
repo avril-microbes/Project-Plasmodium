@@ -1,0 +1,81 @@
+"","label","name","value","infection","avg"
+"1","Asexual iRBC ","RBC_ci",5138358.14028381,"Optimal co-infection",5861616.27573511
+"2","Asexual iRBC ","RBC_si",6907538.2774909,"Optimal single infection",5861616.27573511
+"3","Asexual iRBC ","RBC_non_si",4608841.06300856,"Non-optimal single infection",5861616.27573511
+"4","Asexual iRBC ","RBC_non_ci",6791727.62215718,"Non-optimal co-infection",5861616.27573511
+"5","Asexual iRBC log10","RBC_ci",5050911.39029779,"Optimal co-infection",6345163.37379812
+"6","Asexual iRBC log10","RBC_si",7327451.47599254,"Optimal single infection",6345163.37379812
+"7","Asexual iRBC log10","RBC_non_si",5556947.45878921,"Non-optimal single infection",6345163.37379812
+"8","Asexual iRBC log10","RBC_non_ci",7445343.17011293,"Non-optimal co-infection",6345163.37379812
+"9","Gametocyte ","RBC_ci",4813925.30354962,"Optimal co-infection",6096861.01289599
+"10","Gametocyte ","RBC_si",6940061.58583542,"Optimal single infection",6096861.01289599
+"11","Gametocyte ","RBC_non_si",5495617.74934419,"Non-optimal single infection",6096861.01289599
+"12","Gametocyte ","RBC_non_ci",7137839.41285473,"Non-optimal co-infection",6096861.01289599
+"13","Gametocyte log10","RBC_ci",4855993.92216925,"Optimal co-infection",6149019.90575974
+"14","Gametocyte log10","RBC_si",7135255.44899329,"Optimal single infection",6149019.90575974
+"15","Gametocyte log10","RBC_non_si",5201806.15601871,"Non-optimal single infection",6149019.90575974
+"16","Gametocyte log10","RBC_non_ci",7403024.09585771,"Non-optimal co-infection",6149019.90575974
+"17","RBC ","RBC_ci",4938696.24557006,"Optimal co-infection",6205299.78582534
+"18","RBC ","RBC_si",7480518.24264936,"Optimal single infection",6205299.78582534
+"19","RBC ","RBC_non_si",4922882.34155735,"Non-optimal single infection",6205299.78582534
+"20","RBC ","RBC_non_ci",7479102.31352461,"Non-optimal co-infection",6205299.78582534
+"21","RBC log10","RBC_ci",4862922.87993905,"Optimal co-infection",6111434.7719445
+"22","RBC log10","RBC_si",7375958.98860151,"Optimal single infection",6111434.7719445
+"23","RBC log10","RBC_non_si",4833921.11981867,"Non-optimal single infection",6111434.7719445
+"24","RBC log10","RBC_non_ci",7372936.09941878,"Non-optimal co-infection",6111434.7719445
+"25","Sexual iRBC ","RBC_ci",4634929.57182837,"Optimal co-infection",6052481.08326927
+"26","Sexual iRBC ","RBC_si",7146959.10087853,"Optimal single infection",6052481.08326927
+"27","Sexual iRBC ","RBC_non_si",5238322.25776232,"Non-optimal single infection",6052481.08326927
+"28","Sexual iRBC ","RBC_non_ci",7189713.40260786,"Non-optimal co-infection",6052481.08326927
+"29","Sexual iRBC log10","RBC_ci",4900880.74428727,"Optimal co-infection",6229948.25127396
+"30","Sexual iRBC log10","RBC_si",7097124.57509327,"Optimal single infection",6229948.25127396
+"31","Sexual iRBC log10","RBC_non_si",5406052.53423594,"Non-optimal single infection",6229948.25127396
+"32","Sexual iRBC log10","RBC_non_ci",7515735.15147934,"Non-optimal co-infection",6229948.25127396
+"33","Total
+gametocyte ","RBC_ci",4824326.93640464,"Optimal co-infection",5890550.36046553
+"34","Total
+gametocyte ","RBC_si",6940061.58583542,"Optimal single infection",5890550.36046553
+"35","Total
+gametocyte ","RBC_non_si",4854808.87205611,"Non-optimal single infection",5890550.36046553
+"36","Total
+gametocyte ","RBC_non_ci",6943004.04756595,"Non-optimal co-infection",5890550.36046553
+"37","Total
+gametocyte log10","RBC_ci",3776174.19853494,"Optimal co-infection",5469332.33256523
+"38","Total
+gametocyte log10","RBC_si",7135255.44899329,"Optimal single infection",5469332.33256523
+"39","Total
+gametocyte log10","RBC_non_si",3819547.84858593,"Non-optimal single infection",5469332.33256523
+"40","Total
+gametocyte log10","RBC_non_ci",7146351.83414676,"Non-optimal co-infection",5469332.33256523
+"41","Total asexual
+iRBC ","RBC_ci",5152499.05214735,"Optimal co-infection",6035169.29241663
+"42","Total asexual
+iRBC ","RBC_si",6907538.2774909,"Optimal single infection",6035169.29241663
+"43","Total asexual
+iRBC ","RBC_non_si",5175658.74136062,"Non-optimal single infection",6035169.29241663
+"44","Total asexual
+iRBC ","RBC_non_ci",6904981.09866762,"Non-optimal co-infection",6035169.29241663
+"45","Total asexual
+iRBC log10","RBC_ci",5160610.0190133,"Optimal co-infection",6244220.45548853
+"46","Total asexual
+iRBC log10","RBC_si",7327451.47599254,"Optimal single infection",6244220.45548853
+"47","Total asexual
+iRBC log10","RBC_non_si",5157613.74421775,"Non-optimal single infection",6244220.45548853
+"48","Total asexual
+iRBC log10","RBC_non_ci",7331206.58273054,"Non-optimal co-infection",6244220.45548853
+"49","Total iRBC ","RBC_ci",5050614.68299559,"Optimal co-infection",6129587.51626779
+"50","Total iRBC ","RBC_si",7225823.20526363,"Optimal single infection",6129587.51626779
+"51","Total iRBC ","RBC_non_si",5025705.5346378,"Non-optimal single infection",6129587.51626779
+"52","Total iRBC ","RBC_non_ci",7216206.64217413,"Non-optimal co-infection",6129587.51626779
+"53","Total iRBC log10","RBC_ci",5061585.06803991,"Optimal co-infection",6125018.58942132
+"54","Total iRBC log10","RBC_si",7201386.84371867,"Optimal single infection",6125018.58942132
+"55","Total iRBC log10","RBC_non_si",5040562.78837145,"Non-optimal single infection",6125018.58942132
+"56","Total iRBC log10","RBC_non_ci",7196539.65755523,"Non-optimal co-infection",6125018.58942132
+"57","Total sexual
+iRBC ","RBC_ci",4740798.4105739,"Optimal co-infection",5946801.16979884
+"58","Total sexual
+iRBC ","RBC_si",7146959.10087853,"Optimal single infection",5946801.16979884
+"59","Total sexual
+iRBC ","RBC_non_si",4754631.84018367,"Non-optimal single infection",5946801.16979884
+"60","Total sexual
+iRBC ","RBC_non_ci",7144815.32755926,"Non-optimal co-infection",5946801.16979884

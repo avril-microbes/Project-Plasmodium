@@ -724,7 +724,7 @@ get_dyn <- function(df){
 ci_opt.ls <- split(ci_opt.df, seq(nrow(ci_opt.df)))
 
 # parallelzed lapply
-ci_opt.dyn <- mclapply(ci_opt.ls, get_dyn)
+ci_opt.dyn <- mclapply(ci_opt.ls, get_dyn, mc.cores = 6)
 
 # bind together dynamics
 dyn.ls <- lapply(ci_opt.dyn, function(x)x[[1]])
@@ -746,26 +746,6 @@ ci_rug_lim.df <- ci_rug.df %>%
   summarise(min = min(value, na.rm = T)*0.9,
          max = max(value, na.rm = T)*1.1)
 
-#double check Total\ngametocyte log10. have 0
-test <- chabaudi_ci_clean(parameters_cr_1 = c(12.106219, -21.043524 , -5.010265, -16.928459),
-                  parameters_cr_2 = rep(0.5, 4),
-                  immunity = "tsukushi",
-                  parameters = parameters_tsukushi,
-                  cue_1 = "G1+G2",
-                  cue_2 = "G1+G2",
-                  cue_range_1 = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000),
-                  cue_range_2 = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000),
-                  log_cue_1 = "log10",
-                  log_cue_2 = "log10",
-                  solver = "vode",
-                  time_range = seq(0, 30, 0.001),
-                  dyn = T)
-
-ggplot() +
-  geom_line(data = test, aes(x = time, y = value, color = strain)) +
-  facet_wrap(~variable_alt, scales = "free") +
-  theme_bw()
-
 # manually change the range for gametocyte total range (0 to 20000)
 ci_rug_lim.df[10,3] <- 20000
 
@@ -775,7 +755,8 @@ ci_rn_lim.df <- ci_rn.df %>%
   group_by(label) %>% 
   filter(cue_range <= max & cue_range >= min)
   
-
+write.csv(ci_rn_lim.df, here("data/ci_dyn/ci_rug_lim.csv"))
+write.csv(ci_rug.df, here("data/ci_dyn/ci_rug.csv"))
 ```
 
 # visualization
@@ -959,60 +940,9 @@ ci_comp_static.df <- ci_comp_static.df %>%
 
 # write and import back
 write.csv(ci_comp_static.df, here("data/ci_comp_static.csv"), row.names = F)
-ci_comp_static.df <- read.csv(here("data/ci_comp_static.csv"))
 
-ci_comp_static.df <- select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff)
 ```
 
-# visualize using heatmap
-```{r}
-# get reverse. Here, we will simply multiple fitness difference by -1
-ci_comp_static.df2 <- select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff)
-names(ci_comp_static.df2) <- c("id_2_alt", "id_1_alt","fitness_diff")
-ci_comp_static.df2$fitness_diff <- ci_comp_static.df2$fitness_diff*-1
-
-# cat
-ci_comp_static.df3 <- rbind(select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff), ci_comp_static.df2) %>% 
-  group_by(id_1_alt) %>% 
-  mutate(mean = mean(fitness_diff))
-
-# Heatmap
-ci_comp_static.map <- ggplot(data = ci_comp_static.df3, aes(x = id_2_alt, y = id_1_alt, fill = fitness_diff))+
-  geom_tile(color = "black") +
-  scale_fill_gradient2(low = "red", high = "blue", mid = "white", 
-   midpoint = 0, space = "Lab", limits = c(-2.8, 2.8), name="Fitness\ndifference") +
-  theme_minimal() +  
-  theme(legend.position="none",
-    axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-  panel.grid.major = element_blank(),
-  panel.border = element_blank(),
-  panel.background = element_blank(),
-  axis.ticks = element_blank(),
-  plot.margin=unit(c(1,-2.5,1,1), "cm"),
-  legend.direction = "horizontal") +
-  guides(fill = guide_colorbar(barwidth = 7, barheight = 1,
-                title.position = "top", title.hjust = 0.5)) +
-  labs(x = "Strain 2 cue", y = "Strain 1 cue") +
- coord_fixed()
-
-# get mean
-ci_comp_static.mean <- ggplot() +
-  geom_tile(data = ci_comp_static.df3, aes(y = id_1_alt, x = 1, fill = mean),
-           stat = "identity", color = "black") +
-  labs(x = "", y = "") +
-  scale_fill_gradient2(low = "red", high = "blue", mid = "white", 
-   midpoint = 0, space = "Lab", limits = c(-2.8, 2.8), name="Fitness\ndifference") +
-  theme_bw() +
-  theme(
-    axis.text.x=element_blank(),
-    axis.ticks.x=element_blank(),
-    axis.text.y=element_blank(),
-        axis.ticks.y=element_blank(),
-        plot.margin=unit(c(1,1,1,-1.5), "cm"))
-  
-ggarrange(ci_comp_static.map, ci_comp_static.mean, align = "h", widths = c(1, 0.2))
-ggsave(here("figures/report18/ci_comp_static.png"), width = 10.5)
-```
 
 #-----------------------#
 # code for invasion analysis of ci
@@ -1094,6 +1024,29 @@ write.csv(ci_cue_pair.df3, here("job_scripts/ci_cue_par.csv"), row.names = F)
 ci_cue_pair.ls3 <- split(ci_cue_pair.df3, seq(nrow(ci_cue_pair.df3)))
 
 ```
+
+# process data
+```{r}
+# import list of all dataframes (210 of them!)
+invasion.ls <- list.files(path = here("data/ci_invasion/"), pattern = "*.csv", full.names = T)
+
+# read and bind
+invasion_df.ls <- lapply(invasion.ls, read.csv)
+invasion.df <- do.call(rbind, invasion_df.ls)
+
+# get label
+invasion.df2 <- invasion.df %>% 
+  mutate(
+    mut_cue = gsub("-i.*", "", gsub("_.*", "", mut_id)),
+    res_cue = gsub("-i.*", "", gsub("_.*", "", res_id)),
+    mut_log = ifelse(str_detect(mut_id, "log"), "log10", ""),
+    res_log = ifelse(str_detect(res_id, "log"), "log10", ""),
+    mut_alt = paste(mut_cue, mut_log),
+    res_alt = paste(res_cue, res_log))
+
+write.csv(invasion.df2, here("data/ci_invasion_final.csv"))
+```
+
 
 #=============================#
 # how does co-infection fare in single infection situation
@@ -1704,10 +1657,93 @@ fitness.all2 <- tidyr::pivot_longer(fitness.all, -label) %>%
   mutate(avg = mean(value))
 ```
 
+# get host RBC decline (lowest point) and max iRBC (total count)
+```{r}
+# get maximum fitness for optimal single infection
+RBC.si <- si_dyn.df %>% 
+  filter(variable == "R") %>% 
+  group_by(id) %>%
+  summarise(RBC_si = min(value))
+
+# get maximum fitness for optimal co-ineciton, note that we are multiplykng by 2 to get total infection of both strains (since they are adopting the same strategy)
+RBC.ci <- ci_si_comp.ci %>% 
+  filter(variable == "R") %>% 
+  group_by(label) %>% 
+  summarise(RBC_ci = min(value))
+
+# get average conversion rate for non-optimal single infection (co-infeciton)
+RBC_non.si <- ci_si_comp.si %>% 
+  filter(variable == "R") %>% 
+  group_by(label) %>%
+  summarise(RBC_non_si = min(value))
+
+# get average conversion rate for non-optimal co-infection
+RBC_non.ci <- ci_non_opt.res %>% 
+  filter(variable == "R") %>% 
+  group_by(label) %>% 
+  summarise(RBC_non_ci = min(value))
+
+# join all
+## need to first get si_id
+RBC.ci2 <- RBC.ci %>% 
+  left_join(ci_opt.df, by = c("label"="label_3")) %>% 
+  mutate(label_ci = ifelse(log == "log", paste(cue, log), cue)) %>% 
+  mutate(cue_si = case_when(
+    stringr::str_detect(cue, "-i") ~ gsub("*-i", "", cue),
+    stringr::str_detect(cue, "1+") ~ gsub("*1+.*", "", cue),
+    stringr::str_detect(cue, "sum") ~ "I+Ig",
+    TRUE ~ cue
+  ),
+  label_si = ifelse(log == "log", paste(cue_si, log), cue_si)) %>% 
+  select(label_si, RBC_ci, label)
+
+RBC.si2 <- RBC.si %>% 
+  mutate(cue = gsub("_.*", "", id),
+         log = gsub(".*_", "",  id)) %>% 
+  mutate(label_si = ifelse(log == "log", paste(cue, log), cue)) %>% 
+  select(label_si, RBC_si)
+
+RBC.all <- left_join(RBC.ci2, RBC.si2, by = "label_si") %>% 
+  left_join(RBC_non.si,  by = "label") %>% 
+  left_join(RBC_non.ci, by = "label") %>% 
+  select(label, RBC_ci, RBC_si, RBC_non_si, RBC_non_ci)
+
+RBC.all2 <- tidyr::pivot_longer(RBC.all, -label) %>% 
+  mutate(infection = case_when(
+    name == "RBC_ci" ~ "Optimal co-infection",
+    name == "RBC_non_si" ~"Non-optimal single infection",
+    name == "RBC_si" ~"Optimal single infection",
+    name == "RBC_non_ci" ~"Non-optimal co-infection"
+  )) %>% 
+  group_by(label) %>% 
+  mutate(avg = mean(value))
+
+write.csv(RBC.all2, here("data/si_ci_diff/RBC_diff_final.csv"))
+```
+
+
+
 
 #-------------------------------------------------------#
-# Final plotting
+# Final plotting. Figure on si vs ci difference
 #-------------------------------------------------------#
+# reaction norm of ci
+```{r}
+ci_rn_lim.df <- read.csv(here("data/ci_dyn/ci_rn_lim.csv"))
+ci_rug.df <- read.csv(here("data/ci_dyn/ci_rug.csv"))
+
+ci_rn.pl <- ggplot() +
+  geom_line(data = ci_rn_lim.df, aes(x = cue_range, y = cr)) +
+  geom_rug(data = ci_rug.df, aes(x = value), color = "red") +
+  facet_wrap(~label, scales = "free_x", ncol = 2) +
+  theme_bw() +
+  labs(y = "Conversion rate", x = "Cue range") +
+  scale_x_continuous(labels = function(x) format(x, scientific = FALSE),
+                     guide = guide_axis(check.overlap = TRUE)) + 
+                    theme(axis.text.x = element_text(size = 7))  +
+  theme(plot.margin=margin(r=30))
+```
+
 
 # what is the best cue when optimized separately for si and ci?
 ```{r}
@@ -1724,7 +1760,8 @@ fitness_ci_si.pl1 <- ggplot() +
        color = "Single infection cue", shape = "Single infection cue") +
   scale_shape_manual(values = 15:24) +
   theme_bw() +
-  coord_cartesian(clip = "off") 
+  coord_cartesian(clip = "off") +
+  theme(plot.margin=margin(r=0))
 
 # second part
 fitness_ci_si.pl2 <-ggplot() +
@@ -1741,11 +1778,10 @@ fitness_ci_si.pl2 <-ggplot() +
   labs(x = "Optimal co-infection fitness", y = "",
        color = "Single infection cue", shape = "Single infection cue") +
   scale_shape_manual(values = 15:24) +
-  theme_bw()
+  theme_bw() +
+  theme(plot.margin=margin(l=0))
 
 fitness_ci_si.pl <- ggarrange(fitness_ci_si.pl1, fitness_ci_si.pl2, widths = c(0.2, 1), align = "hv", common.legend = T)
-
-fitness_ci_si.pl
 ```
 
 # comparison of optimized vs unoptimized si and ci dynamic
@@ -1759,6 +1795,8 @@ fitness_ci_si.pl
 resolution_time.all2 <- read.csv(here("data/si_ci_diff/time_diff_final.csv"))
 avg_cr.all2 <- read.csv(here("data/si_ci_diff/cr_diff_final.csv"))
 fitness.all2 <- read.csv(here("data/si_ci_diff/fitness_diff_final.csv"))
+RBC.all2 <- read.csv(here("data/si_ci_diff/RBC_diff_final.csv"))
+
 
 # plot
 time_diff.pl <- ggplot(resolution_time.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
@@ -1766,32 +1804,153 @@ time_diff.pl <- ggplot(resolution_time.all2, aes(x = value, y = reorder(label, a
   geom_point(aes(color = infection, shape = infection), size = 2.5, alpha = 0.7) +
   labs(x = "Resolution time (days)", y = "Cue", color = "Infection", shape = "Infection") +
   scale_shape_manual(values = 15:18) +
-  theme_bw()
+  theme_bw()+
+  theme(axis.text = element_text(size = 6))
 
 fitness_diff.pl <- ggplot(fitness.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
   geom_line(aes(group = label)) +
   geom_point(aes(color = infection, shape = infection), size = 2.5, alpha = 0.7) +
   labs(x = "Fitness", y = "Cue", color = "Infection", shape = "Infection") +
   scale_shape_manual(values = 15:18) +
-  theme_bw()
+  theme_bw()+
+  theme(axis.text = element_text(size = 6))
 
 cr_diff.pl <- ggplot(avg_cr.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
   geom_line(aes(group = label)) +
   geom_point(aes(color = infection, shape = infection), size = 2.5, alpha= 0.7) +
   labs(x = "Average conversion rate", y = "Cue", color = "Infection", shape = "Infection") +
   scale_shape_manual(values = 15:18) +
-  theme_bw()
+  theme_bw()+
+  theme(axis.text = element_text(size = 6))
 
-# look at plot
-time_diff.pl
-fitness_diff.pl
-cr_diff.pl
+RBC_diff.pl <- ggplot(RBC.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
+  geom_line(aes(group = label)) +
+  geom_point(aes(color = infection, shape = infection), size = 2.5, alpha= 0.7) +
+  labs(x = "Minimum RBC (cells/\U003BCL)", y = "Cue", color = "Infection", shape = "Infection") +
+  scale_shape_manual(values = 15:18) +
+  theme_bw() +
+  theme(axis.text = element_text(size = 6))
+
+# ggarrange
+opt_nonopt.pl <- ggarrange(fitness_diff.pl, cr_diff.pl, time_diff.pl, RBC_diff.pl,common.legend = T, align = "v")
+
+opt_nonopt.pl
 ```
 
+# putting everything together
+```{r}
+fitness_non_opt <- ggarrange(fitness_ci_si.pl, opt_nonopt.pl, ncol = 1, labels = c("B", "C"), heights = c(1, 1.5))
+
+ggarrange(ci_rn.pl, fitness_non_opt, ncol = 2, labels = c("A", ""), widths = c(1,2))
+ggsave(here("figures/report18/si_ci_comp.png"), width = 12.5, height = 10)
+```
+
+#----------------------------------------_#
+# figures plotting: co-invasion competition
+#-----------------------------------------#
+# Heatmap with optimized co-infection strategy agianst each other (static)
+```{r}
+# read in csv
+ci_comp_static.df <- read.csv(here("data/ci_comp_static.csv"))
+
+ci_comp_static.df <- select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff)
+
+# get reverse. Here, we will simply multiple fitness difference by -1
+ci_comp_static.df2 <- select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff)
+names(ci_comp_static.df2) <- c("id_2_alt", "id_1_alt","fitness_diff")
+ci_comp_static.df2$fitness_diff <- ci_comp_static.df2$fitness_diff*-1
+
+# cat
+ci_comp_static.df3 <- rbind(select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff), ci_comp_static.df2) %>% 
+  group_by(id_1_alt) %>% 
+  mutate(mean = mean(fitness_diff))
+
+# Heatmap
+ci_comp_static.map <- ggplot(data = ci_comp_static.df3, aes(x = id_2_alt, y = id_1_alt, fill = fitness_diff))+
+  geom_tile(color = "black") +
+  scale_fill_gradient2(low = "red", high = "blue", mid = "white", 
+   midpoint = 0, space = "Lab", lim = c(-1.8, 1.5), name="Fitness\ndifference") +
+  theme_minimal() +  
+  theme(legend.position = "left",
+  axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+  axis.ticks = element_blank(),
+  plot.margin=margin(r = 0)) + 
+  labs(x = "Strain 2 cue", y = "Strain 1 cue") +
+  coord_fixed()
+
+ci_comp_static.mean <- ggplot() +
+  geom_bar(data =  ci_comp_static.df3, aes(y = id_1_alt, x = mean), stat = "identity") +
+  labs(y = "", x = "Mean fitness\ndifference") +
+  theme_bw() +
+  theme(plot.margin = margin(l = 0),
+       panel.grid.major = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+    axis.text.y=element_blank(),
+    axis.ticks.y=element_blank())
+  
+ci_static.pl <- ggarrange(ci_comp_static.map, ci_comp_static.mean, align = "h", widths = c(1, 0.2))
+ggsave(here("figures/report18/ci_comp_static.png"), width = 10)
+```
+
+# invasion data
+```{r}
+invasion.df2 <- read.csv(here("data/ci_invasion_final.csv"))
+# get fitness (mean)
+invasion.df3 <- invasion.df2 %>% 
+  group_by(mut_alt) %>% 
+  summarize(mean = mean(fitness))
+
+ci_invade.pl1 <- ggplot(data = invasion.df2, aes(x = res_alt, y = mut_alt, fill = fitness))+
+  geom_tile(color = "black") +
+  scale_fill_gradient2(low = "red", high = "blue", mid = "white", 
+   midpoint = 0, space = "Lab", lim = c(-1.8, 1.5), name="Fitness\ndifference") +
+  theme_minimal() +  
+  theme(legend.position = "left",
+  axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  text = element_text(size = 15),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  axis.ticks = element_blank(),
+  plot.margin=margin(r = 0)) +
+  labs(x = "Residence cue", y = "Mutant cue") +
+ coord_fixed()
+
+# get mean
+ci_invade.pl2 <- ggplot() +
+  geom_bar(data =  invasion.df3, aes(y = mut_alt, x = mean), stat = "identity") +
+  labs(y = "", x = "Mean fitness\ndifference") +
+  theme_bw() +
+  theme(plot.margin = margin(l = 0),
+       panel.grid.major = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+    axis.text.y=element_blank(),
+    axis.ticks.y=element_blank())
+  
+ci_invade.pl <- ggarrange(ci_invade.pl1, ci_invade.pl2, align = "h", widths = c(1, 0.2))
+ggsave(here("figures/report18/ci_invade.png"), width = 10)
+
+```
+
+```{r}
+test <- left_join(ci_comp_static.df, invasion.df2, by = c("id_1_alt" = "mut_alt",
+                                                          "id_2_alt"= "res_alt"))
+test %>% 
+  filter(fitness < fitness_diff)
 
 
-
-
+ggplot() +
+  geom_point(data = test, aes(x = fitness_diff, y = fitness, color = 
+id_1_alt)) +
+  geom_abline(intercept = 0, slope = 1) +
+  theme_bw()
+```
 
 
 
