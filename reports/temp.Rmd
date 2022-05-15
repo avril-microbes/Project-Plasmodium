@@ -135,7 +135,7 @@ test.df$var4 <- -9.356682
 ```
 
 ```{r}
-check_ci_opt <- function(df){
+check_ci_opt <- function(df, n = 1000){
   
   # get label
   label <- df$label_3
@@ -145,7 +145,7 @@ check_ci_opt <- function(df){
   registerDoParallel(cl)
   registerDoRNG(137)
   
-  res <- foreach(i= 1:25, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
+  res <- foreach(i= 1:n, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
   # source function
   source(here("functions/chabaudi_ci_clean.R"))
     
@@ -343,6 +343,196 @@ ggplot() +
   theme_bw()
 
 ```
+
+#---------------------#
+# continued LBFGS optimization for DE
+#---------------------#
+Ensure that our DE parameters are as good as it gets!
+```{r}
+source(here("functions/chabaudi_ci_clean.R"))
+source(here("functions/co_infection_opt.R"))
+source(here("functions/co_infection_opt_do.R"))
+max(time_range)
+```
+
+# total gametocyte
+```{r}
+ci_G1_G2_opt <- co_infection_opt_alt(parameters_cr = c(1.000000,  -21.911779 , 338.362460,-4999.999660),
+                             limit = 0.01,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1+G2",
+                             cue_2 = "G1+G2",
+                             cue_range_1 = seq(0, 6*(10^4), (6*(10^4))/5000),
+                             cue_range_2 = seq(0, 6*(10^4), (6*(10^4))/5000),
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+
+# 1.47335 -40.5887 455.327 -4999.26 (0.2977774)
+# 2.37351 -357.796 447.259 -4999.44 (0.6773614)
+# 0.401419 -48.5977 781.709 -4971.52 (3.606348)
+# 1.07918 -47.6794 781.757 -4971.52 (2.704072)
+# 1.27179 -48.4816 781.586 -4971.53 (0.1746626)
+# 1.93922 -137.227 777.853 -4971.79 (0.2672778)
+# 1.86641 -863.926 776.093 -4972.56 (0.7118306)(CANNOT outcompete original)
+# 1.60268 -863.927 776.093 -4972.56 (0.05445573) 
+# 0.577886 -58.8971 778.208 -4972.96 ( 3.984319)
+# 1.1498 -49.127 778.772 -4972.92 (2.203271)
+# n1.54544 -69.2024 775.987 -4973.35 (0.1328694)
+# 3.21813 -767.445 766.282 -4973.91 ( 0.7715941) -> stuck at 0
+
+# check end parameter results with original. noone of the lbfgs is good. Let's just stick with the original one
+test <- chabaudi_ci_clean(
+  parameters_cr_1 = c(1.000000,  -21.911779 , 338.362460,-4999.999660),
+  parameters_cr_2 = c(1.86641, -863.926, 776.093, -4972.56),
+                  immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1+G2",
+                             cue_2 = "G1+G2",
+                             cue_range_1 = seq(0, 6*(10^4), (6*(10^4))/5000),
+                             cue_range_2 = seq(0, 6*(10^4), (6*(10^4))/5000),
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+
+test
+```
+
+#----------------------------#
+DE optimization for cycling cues
+#----------------------------#
+# total asexual iRBC log10
+```{r}
+ci_I1_I2_opt <- co_infection_opt_do(parameters_cr = rep(0.5,4),
+                             limit = 0.01,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "I1+I2",
+                             cue_2 = "I1+I2",
+                             cue_range_1 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                             cue_range_2 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none",
+                             neg = T)
+
+# 0.9999999   -9.1650326  -71.7214007 4998.7943898 
+```
+
+# total sexual iRBC log10
+```{r}
+ci_Ig1_Ig2_opt <- co_infection_opt_do(parameters_cr = rep(0.5, 4),
+                             limit = 0.01,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1+Ig2",
+                             cue_2 = "Ig1+Ig2",
+                             cue_range_1 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                             cue_range_2 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none",
+                             neg = T)
+
+ # 1.000000  -32.831645  378.108931-4999.999969
+```
+
+#-------------------------#
+# validation for gametocyte total
+#--------------------------#
+This is the 0 conversion strategy one. Need to validate further with 5000 randomized parameters
+```{r}
+g_tot_log.df <- ci_opt.df %>% filter(label == "Total\ngametocyte log10")
+
+g_tot_log.cf <- check_ci_opt(g_tot_log.df, n = 5000)
+```
+
+
+#----------------------------#
+# running invasion analysis
+#----------------------------#
+```{r}
+ci_cue_pair.ls3 <- ci_cue_pair.ls3[11:length(ci_cue_pair.ls3)]
+```
+
+
+```{r}
+surveillance::plapply(ci_cue_pair.ls3 , ci_invasion_analysis)
+
+```
+
+# bugged out at 19
+it seems that the G1+G2 log residence strategy is returning NA tau (basically meaning 0 transmission potential). Changed chabaudi ci clean such that is fitness difference is NA or Inf/-Inf, we automatically output 0 as transmission potential
+```{r}
+source(here("functions/chabaudi_ci_clean.R"))
+ci_cue_pair.ls4 <- ci_cue_pair.ls3[19:length(ci_cue_pair.ls3)]
+
+# for this, we need to turn default off, starting at original position. 
+ci_invasion_analysis(ci_cue_pair.ls4[[1]], default = F)
+ci_cue_pair.ls5 <- ci_cue_pair.ls3[20:length(ci_cue_pair.ls3)]
+surveillance::plapply(ci_cue_pair.ls5 , ci_invasion_analysis)
+```
+
+# rerun SEVERAL dataframes because short time frame of optimization. sum_none vs G1+G2 log. cannot optimizes. Trying to set default to F. 
+```{r}
+sum_non_G1_G2_log <- ci_cue_pair.ls3[[26]]
+G_log_G1_G2_log <- ci_cue_pair.ls3[[15]]
+G_none_G1_G2_log <- ci_cue_pair.ls3[[16]]
+Ig_none_G1_G2_log <- ci_cue_pair.ls3[[22]]
+Ig_log_G1_G2_log<- ci_cue_pair.ls3[[21]]
+G1_G2_none_G1_G2_log <- ci_cue_pair.ls3[[17]]
+
+ci_invasion_analysis(sum_non_G1_G2_log, default = F)
+ci_invasion_analysis(G_log_G1_G2_log, default = F)
+ci_invasion_analysis(G_none_G1_G2_log, default = F)
+ci_invasion_analysis(Ig_none_G1_G2_log, default = F)
+ci_invasion_analysis(Ig_log_G1_G2_log, default = F)
+
+ci_invasion_analysis(G1_G2_none_G1_G2_log, default = F)
+```
+
+# getting the rest of the newly optimized parameters. 54 new runs in total
+```{r}
+# getting the newer iteration of ci_opt
+ci_opt_new.df <- read.csv(here("data/ci_opt.csv"))
+cue_range_new.df <- read.csv(here("data/cue_range.csv"))
+
+# get unique id and join with cue range df
+ci_cue_new.df <- ci_opt_new.df %>% 
+  mutate(id = paste0(cue, "_", log)) %>% 
+  left_join(select(cue_range_new.df, c(id, low, high, by)), by = c("id" = "id"))
+
+# get all pairwise combinations
+ci_cue_pair_new.df <- ci_cue_new.df %>% 
+  setNames(paste0(names(ci_cue_new.df), '_2')) %>% 
+  tidyr::crossing(ci_cue_new.df, .name_repair = "check_unique") %>% 
+  janitor::clean_names()
+
+# filter out all the same cue optimization
+ci_cue_pair_new.df2 <- ci_cue_pair_new.df %>% filter(id!=id_2) %>% mutate(id_3 = paste0(id, id_2))
+
+# all all new df that is not present in original. we have 2 more cues, which amounts to 28 df?
+new_cue_pair.df <- ci_cue_pair_new.df2 %>% anti_join(ci_cue_pair.df3 %>% mutate(id_3 = paste0(id, id_2)), by = "id_3") 
+
+new_cue_pair.ls <- split(new_cue_pair.df, seq(nrow(new_cue_pair.df)))
+
+surveillance::plapply(new_cue_pair.ls , ci_invasion_analysis)
+
+
+new_cue_pair.ls[[54]]
+```
+
+
+
+
 
 
 
