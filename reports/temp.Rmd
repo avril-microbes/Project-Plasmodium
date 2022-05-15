@@ -526,9 +526,21 @@ new_cue_pair.ls <- split(new_cue_pair.df, seq(nrow(new_cue_pair.df)))
 
 surveillance::plapply(new_cue_pair.ls , ci_invasion_analysis)
 
-
-new_cue_pair.ls[[54]]
 ```
+
+# rerun some of the GI+G2 log optimization
+```{r}
+rerun.df <- ci_cue_pair_new.df2 %>% 
+  filter(id_2 == "G1+G2_log") %>% 
+  filter(id == "Ig1+Ig2_none" | id == "I1+I2_none" | id == "G1+G2_none" | id == "Ig-i_none" | id == "Ig-i_log")
+
+rerun.ls <- split(rerun.df, seq(nrow(rerun.df)))
+
+surveillance::plapply(rerun.ls , function(x){ci_invasion_analysis(x, default = F)})
+
+
+```
+
 
 
 
