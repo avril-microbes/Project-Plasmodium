@@ -1,0 +1,21 @@
+"","label","mean_cr_si_n"
+"1","Asexual iRBC ",0.0858827752420475
+"2","Asexual iRBC log10",0.138998955734387
+"3","Gametocyte ",0.307125004311487
+"4","Gametocyte log10",0.294072719660158
+"5","RBC ",0.2521028558516
+"6","RBC log10",0.260123286272864
+"7","Sexual iRBC ",0.249872910430865
+"8","Sexual iRBC log10",0.292219480726634
+"9","Total
+gametocyte ",0.296357241806635
+"10","Total
+gametocyte log10",0
+"11","Total asexual
+iRBC ",0.154143647219169
+"12","Total asexual
+iRBC log10",0.0985858115422571
+"13","Total iRBC ",0.0798077142237367
+"14","Total iRBC log10",0.0807943019110021
+"15","Total sexual
+iRBC ",0.268339283468116

@@ -1034,7 +1034,7 @@ ci_invasion_analysis <- function(df, default = T){
   
   # get resident info (being invaded)
   res_par <- c(df$var1_2, df$var2_2, df$var3_2, df$var4_2) ## resident parameter
-  if(stringr::str_detect(df$cue_2, "-i")){res_cue = paste0(gsub("*-i", "", df$cue_2), "1")} ## resident cue
+  if(stringr::str_detect(df$cue_2, "-i")){res_cue = paste0(gsub("*-i", "", df$cue_2), "2")} ## resident cue
   if(stringr::str_detect(df$cue_2, "-i", negate = T)){res_cue = df$cue_2} ## resident cue
   if(stringr::str_detect(df$log_2, "log")){res_log = "log10"} ## resident log
   if(stringr::str_detect(df$log_2, "none")){res_log = "none"} ## resident log
@@ -1042,7 +1042,7 @@ ci_invasion_analysis <- function(df, default = T){
 
   # get ids
   mut_id <- df$id
-  res_i <- id$id_2
+  res_id <- df$id_2
   
   # one way optimization
   ## start cluster
@@ -1057,8 +1057,8 @@ ci_invasion_analysis <- function(df, default = T){
     immunity = "tsukushi",
     parameters = parameters_tsukushi,
     time_range = seq(0, 20, by = 1e-3),
-    cue_range_1 <- mut_cue_range,
-    cue_range_2 <- res_cue_range,
+    cue_range_1 = mut_cue_range,
+    cue_range_2 = res_cue_range,
     cue_1 = mut_cue,
     cue_2 = res_cue,
     log_cue_1 = mut_log,
@@ -1079,12 +1079,705 @@ ci_invasion_analysis <- function(df, default = T){
                              res_var1 = df$var1_2, res_var2 = df$var2_2, res_var3 = df$var3_2, res_var4 = df$var4_2,
                              mut_var1_opt = mut_opt_par[1], mut_var2_opt = mut_opt_par[2], mut_var3_opt = mut_opt_par[3], mut_var4_opt = mut_opt_par[4])
   
+  write.csv(output, here(paste0("data/ci_invasion/", mut_id, "_", res_id, ".csv")))
   return(output)
+
   
 }
 ```
 
+
 ```{r}
-test <- ci_cue_pair.ls[[1]]
+# get all unique pairwise competition. zThis is already calculated above. For 13 cues, 13^2 = 169
+# get rid of all same
+ci_cue_pair.df3 <- ci_cue_pair.df %>% filter(id!=id_2)
+write.csv(ci_cue_pair.df3, here("job_scripts/ci_cue_par.csv"), row.names = F)
+
+ci_cue_pair.ls3 <- split(ci_cue_pair.df3, seq(nrow(ci_cue_pair.df3)))
+
 ```
+
+#=============================#
+# how does co-infection fare in single infection situation
+#=============================#
+
+Note translating co-infection cue to single infection cue
+
+1) individual based cues (e.g. I-i) is directly translated to I-i
+2) sum cues (I1+I2) is just I
+3) sum = I+Ig
+
+40 days simulation to ensure full resolution
+```{r}
+# function to get dynamics of optimal conversion 
+compare_ci_si_dyn <- function(df){
+  
+  # get info of cues (for co infection)
+  if(stringr::str_detect(df$cue, "-i")){cue_1 = paste0(gsub("*-i", "", df$cue), "1")}
+  if(stringr::str_detect(df$cue, "-i", negate = T)){cue_1 = df$cue}
+  if(stringr::str_detect(df$cue, "-i")){cue_2 = paste0(gsub("*-i", "", df$cue), "2")}
+  if(stringr::str_detect(df$cue, "-i", negate = T)){cue_2 = df$cue}
+  
+  # get log
+  if(stringr::str_detect(df$log, "log")){log = "log10"}
+  if(stringr::str_detect(df$log, "none")){log = "none"}
+  
+  # get info of cues for single infection model
+  cue_s <- df$cue
+  if(stringr::str_detect(df$cue, "-i")){cue_s = gsub("*-i", "", df$cue)} # convert any cues with X-i ending to just X
+  if(stringr::str_detect(df$cue, "1+")){cue_s = gsub("*1+.*", "", df$cue)} # convert any of the X1+X2 to just X
+  if(df$cue == "sum"){cue_s = "I+Ig"}# manual assignment
+  
+  # get parameters
+  par <- c(df$var1, df$var2, df$var3, df$var4)
+  # get cue range
+  cue_range <- seq(df$low, df$high, by = df$by)
+  # get label
+  label <- df$label_3
+  
+  # get dynamics of co infection
+  ci_dyn <- chabaudi_ci_clean(
+    parameters_cr_1 = par,
+    parameters_cr_2 = par,
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = cue_1,
+                  cue_2 = cue_2,
+                  cue_range_1 = cue_range,
+                 cue_range_2 = cue_range,
+                log_cue_1 = log,
+                log_cue_2 = log,
+                  solver = "vode",
+                  time_range = seq(0, 40, 0.001),
+    dyn = T)
+  
+  # get dynamics of single infection
+  si_dyn <- chabaudi_si_clean(
+        parameters_cr = par, 
+        parameters = parameters_tsukushi, 
+        immunity = "tsukushi",
+       time_range = seq(0, 40, 0.001), 
+        cue = cue_s, 
+        cue_range = cue_range, 
+        log_cue = log,
+        solver = "vode",
+        dyn = TRUE)
+  
+  # append label to all df
+ ci_dyn2 <- cbind(ci_dyn, label = rep(label, nrow(ci_dyn)))
+  si_dyn2 <- cbind(si_dyn, label = rep(label, nrow(si_dyn)))
+  
+  # return df
+ return(list(ci_dyn2, si_dyn2))
+
+  
+}
+
+```
+
+# processing input df (full set)
+```{r}
+source(here("functions/chabaudi_ci_clean.R"))
+# importing in updated co-infection df with full set (15 cues)
+ci_opt.df <- read.csv(here("data/ci_opt.csv"))
+
+# reclass for better labels
+ci_opt.df <- ci_opt.df %>% 
+  mutate(label_1 = case_when(
+  cue == "I-i" ~ "Asexual iRBC",
+  cue == "I1+I2" ~ "Total asexual\niRBC",
+  cue == "Ig-i" ~ "Sexual iRBC",
+  cue == "Ig1+Ig2" ~ "Total sexual\niRBC",
+  cue == "sum" ~ "Total iRBC",
+  cue == "G-i" ~ "Gametocyte",
+  cue == "G1+G2" ~ "Total\ngametocyte",
+  cue == "R" ~ "RBC"
+)) %>% 
+  mutate(label_2 = case_when(
+    log == "log" ~ "log10",
+    log == "none" ~ ""
+  )) %>% 
+  mutate(label_3 = paste(label_1, label_2),
+         id = paste0(cue, "_", log))
+
+# left join with cue range df
+cue_range.df <- read.csv(here("data/cue_range.csv"))
+
+ci_opt.df <- ci_opt.df %>% left_join(select(cue_range.df, low, high, by, id), by = c("id" = "id"))
+```
+
+# get si vs ci comparison
+```{r}
+ci_opt.ls <- split(ci_opt.df, seq(nrow(ci_opt.df)))
+ci_si_comp <- mclapply(ci_opt.ls, compare_ci_si_dyn, mc.cores = 8)
+
+# bind all ci dynamics
+ci_si_comp.ci <- lapply(ci_si_comp, function(x){rbind(x[[1]])})
+ci_si_comp.ci2 <- do.call(rbind, ci_si_comp.ci)
+
+# bind all si dynamics
+ci_si_comp.si <- lapply(ci_si_comp, function(x){rbind(x[[2]])})
+ci_si_comp.si2 <- do.call(rbind, ci_si_comp.si)
+
+
+# write parquet
+#arrow::write_parquet(ci_si_comp.ci2, here("data/ci_in_si/ci_si_comp_ci.parquet"))
+#arrow::write_parquet(ci_si_comp.si2, here("data/ci_in_si/ci_si_comp_si.parquet"))
+
+#read
+ci_si_comp.ci <- arrow::read_parquet(here("data/ci_dyn/ci_opt_40.parquet"))
+ci_si_comp.si <- arrow::read_parquet(here("data/si_dyn/si_non_opt_40.parquet"))
+
+```
+
+# process dataframe. Get time to resolution
+# we get the first point where the average iRBC dips below 9000 (number determined by trials and errors in 40 days simulation)
+```{r}
+# need to get period of infection resolution
+# we can define this as when total iRBC fill below certain criteria
+iRBC_bound <- 9000
+time_ci_si.si <- ci_si_comp.si %>% 
+  filter(variable == "I" | variable == "Ig") %>% 
+  filter(time > 10) %>% 
+  group_by(label, time) %>% 
+  mutate(avg = sum(value)/2) %>% 
+  filter(avg < iRBC_bound) %>% 
+  group_by(label) %>% 
+  arrange(time) %>% 
+  dplyr::slice_head(n = 1)
+
+time_ci_si.ci <- ci_si_comp.ci %>% 
+  filter(variable == "I1" | variable == "Ig1") %>% 
+  filter(time > 10) %>% 
+  group_by(label, time) %>% 
+  mutate(avg = sum(value)/2) %>% 
+  filter(avg < iRBC_bound) %>% 
+  group_by(label) %>% 
+  arrange(time) %>% 
+  dplyr::slice_head(n = 1)
+```
+
+
+#--------------------------------_#
+# comparing single infectio vs coinfection
+#---------------------------------#
+# compare fitness rank order for cues in single infection scenario vs co-infection scenario
+Will run this for 30 days. Note that here the parameter values are different and I am just taking the optimum for each one
+```{r}
+source(here("functions/chabaudi_si_clean.R"))
+# function fro getting dynamics
+get_si_dyn <- function(df){
+  par <- c(df$var1, df$var2, df$var3, df$var4)
+  cue <- df$cue
+  log <- ifelse(df$log=="log", "log10", "none")
+  cue_range <- seq(df$low, df$high, by = df$by)
+  id <- df$id
+  
+  # get dynamics. simulate 30 days to get resolution
+  dyn <- chabaudi_si_clean(
+            parameters_cr = par, 
+            parameters = parameters_tsukushi, 
+            time_range = seq(0, 30, 0.001), 
+            cue = cue, 
+            cue_range = cue_range, 
+            log_cue = log,
+            immunity = "tsukushi",
+            solver = "vode",
+            dyn = TRUE)
+  
+  # append id
+  dyn2 <- cbind(dyn, id = rep(id, nrow(dyn)))
+  
+ return(dyn2)
+}
+
+# import in si_opt
+si_opt.df <- read.csv(here("data/si_opt.csv"))
+# left join with cue range
+cue_range.si <- read.csv(here("data/cue_range_si.csv"))
+
+si_opt.df <- si_opt.df %>% left_join(cue_range.si)
+
+# loop through to get dynamics
+## split into list
+si_opt.ls <- split(si_opt.df, seq(nrow(si_opt.df)))
+si_dyn <- mclapply(si_opt.ls, get_si_dyn, mc.cores = 6)
+si_dyn.df <- do.call( rbind, si_dyn)
+
+#write_parquet(si_dyn.df, here("data/si_dyn/si_dyn_30.parquet"))
+si_dyn.df <- read_parquet(here("data/si_dyn/si_dyn_30.parquet"))
+```
+
+#---------------Which cues are good for both single infection and co-infection (if optimized separately?)-------#
+# process data -> get max fitness for single infection and pair that with co-infection data
+```{r}
+# get max fitness
+si_fitness <- si_dyn.df %>% 
+  filter(variable == "tau_cum") %>% 
+  group_by(id) %>% 
+  summarize(fitness = max(value))
+
+# get max fitness for ci
+ci_si_comp.ci <- arrow::read_parquet(here("data/ci_dyn/ci_opt_40.parquet"))
+ci_fitness <- ci_si_comp.ci %>% 
+  filter(variable == "tau_cum1") %>% 
+  mutate(value = ifelse(is.finite(value), value, 0)) %>% 
+  group_by(label) %>% 
+  summarise(fitness = max(value)*2)
+
+# recode si_fitness to get label
+si_fitness2 <- si_fitness %>% 
+  mutate(cue = gsub("_.*", "", id),
+         log = gsub(".*_", "",  id)) %>% 
+  mutate(label_si = ifelse(log == "log", paste(cue, log), cue)) %>% 
+  select(label_si, cue, fitness_si = fitness)
+
+# recode ci_fitness to get label
+ci_fitness2 <- ci_fitness %>% 
+  left_join(ci_opt.df, by = c("label"="label_3")) %>% 
+  mutate(label_ci = ifelse(log == "log", paste(cue, log), cue)) %>% 
+  mutate(cue_si = case_when(
+    stringr::str_detect(cue, "-i") ~ gsub("*-i", "", cue),
+    stringr::str_detect(cue, "1+") ~ gsub("*1+.*", "", cue),
+    stringr::str_detect(cue, "sum") ~ "I+Ig",
+    TRUE ~ cue
+  ),
+  label_si = ifelse(log == "log", paste(cue_si, log), cue_si)) %>% 
+  select(label_si, label_ci, cue, fitness_ci = fitness)
+
+si_ci_fitness2 <- left_join(ci_fitness2, si_fitness2, by = "label_si")
+
+# plot fitness!
+library(scales)
+# first part
+fitness_ci_si.pl1 <- ggplot() +
+  geom_point(data = si_ci_fitness2, aes(x = fitness_ci, y = fitness_si, color = label_si, shape = label_si), size = 2.5) +
+  ggrepel::geom_label_repel(data = si_ci_fitness2, aes(label = label_ci, x = fitness_ci, y = fitness_si),
+                            fill = "white",xlim = c(-Inf, Inf), ylim = c(NA, NA)) +
+  scale_x_continuous(n.breaks = 2,
+                     limits = c(0, 0.1)) +
+  labs(x = "", y = "Optimal single infection fitness",
+       color = "Single infection cue", shape = "Single infection cue") +
+  scale_shape_manual(values = 15:24) +
+  theme_bw() +
+  coord_cartesian(clip = "off") 
+
+# second part
+fitness_ci_si.pl2 <-ggplot() +
+  geom_point(data = si_ci_fitness2, aes(x = fitness_ci, y = fitness_si, color = label_si, shape = label_si), size = 2.5) +
+  coord_cartesian(clip = "off") +
+  ggrepel::geom_label_repel(data = si_ci_fitness2, aes(label = label_ci, x = fitness_ci, y = fitness_si),
+                            fill = "white") +
+  scale_x_continuous(
+    breaks = scales::pretty_breaks(n = 5),
+    labels = scales::number_format(accuracy = 0.01,
+                                 decimal.mark = '.'),
+    expand = expansion(mult = 0.5)) +
+  xlim(3,5) +
+  labs(x = "Optimal co-infection fitness", y = "",
+       color = "Single infection cue", shape = "Single infection cue") +
+  scale_shape_manual(values = 15:24) +
+  theme_bw()
+
+fitness_ci_si.pl <- ggarrange(fitness_ci_si.pl1, fitness_ci_si.pl2, widths = c(0.2, 1), align = "hv", common.legend = T)
+
+fitness_ci_si.pl
+```
+
+#-------------------------How does dynamics of optimal co-infection, optimal single-infection, non-optimal single infection, and non-optimal co-infection compare---------------------------------------------------#
+
+# we have previously simulated the dynamics of optimal ci, si, and non optimal si (where ci strategy is adopted). Need to simulate non-optimal ci (where si strategy is adopted)
+
+```{r}
+# import in non-optimal co-infection parameters
+ci_non_opt.df <- read.csv(here("data/ci_non_opt.csv"))
+
+# join with cue range 
+# reclass for better labels
+ci_non_opt.df <- ci_non_opt.df %>% 
+  mutate(label_1 = case_when(
+  cue == "I-i" ~ "Asexual iRBC",
+  cue == "I1+I2" ~ "Total asexual\niRBC",
+  cue == "Ig-i" ~ "Sexual iRBC",
+  cue == "Ig1+Ig2" ~ "Total sexual\niRBC",
+  cue == "sum" ~ "Total iRBC",
+  cue == "G-i" ~ "Gametocyte",
+  cue == "G1+G2" ~ "Total\ngametocyte",
+  cue == "R" ~ "RBC"
+)) %>% 
+  mutate(label_2 = case_when(
+    log == "log" ~ "log10",
+    log == "none" ~ ""
+  )) %>% 
+  mutate(label_3 = paste(label_1, label_2),
+         id = paste0(cue, "_", log))
+
+# left join with cue range df
+cue_range.df <- read.csv(here("data/cue_range.csv"))
+
+ci_non_opt.df<- ci_non_opt.df %>% left_join(select(cue_range.df, low, high, by, id), by = c("id" = "id"))
+```
+
+# function to get ci dynamics
+```{r}
+get_ci_dyn <- function(df){
+  
+  # get info of cues (for co infection)
+  if(stringr::str_detect(df$cue, "-i")){cue_1 = paste0(gsub("*-i", "", df$cue), "1")}
+  if(stringr::str_detect(df$cue, "-i", negate = T)){cue_1 = df$cue}
+  if(stringr::str_detect(df$cue, "-i")){cue_2 = paste0(gsub("*-i", "", df$cue), "2")}
+  if(stringr::str_detect(df$cue, "-i", negate = T)){cue_2 = df$cue}
+  
+  # get log
+  if(stringr::str_detect(df$log, "log")){log = "log10"}
+  if(stringr::str_detect(df$log, "none")){log = "none"}
+  
+  # get parameters
+  par <- c(df$var1, df$var2, df$var3, df$var4)
+  # get cue range
+  cue_range <- seq(df$low, df$high, by = df$by)
+  # get label
+  label <- df$label_3
+  
+  # get dynamics of co infection
+  ci_dyn <- chabaudi_ci_clean(
+    parameters_cr_1 = par,
+    parameters_cr_2 = par,
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = cue_1,
+                  cue_2 = cue_2,
+                  cue_range_1 = cue_range,
+                 cue_range_2 = cue_range,
+                log_cue_1 = log,
+                log_cue_2 = log,
+                  solver = "vode",
+                  time_range = seq(0, 40, 0.001),
+    dyn = T)
+  
+  # append label to all df
+ ci_dyn2 <- cbind(ci_dyn, label = rep(label, nrow(ci_dyn)))
+
+  # return df
+ return(ci_dyn2)
+}
+```
+
+# get non-optimal ci dynamics
+```{r}
+source(here("functions/chabaudi_ci_clean.R"))
+ci_non_opt.ls <- split(ci_non_opt.df, seq(nrow(ci_non_opt.df)))
+ci_non_opt.dyn <- mclapply(ci_non_opt.ls, get_ci_dyn, mc.cores = 6)
+ci_non_opt.res <- do.call(rbind, ci_non_opt.dyn)
+
+#write_parquet(ci_non_opt.res, here("data/ci_dyn/ci_non_opt_40.parquet"))
+```
+
+
+
+#------------------------- get conversion rate difference---------------#
+We need to filter each dataset based on resolution time (calculated above) and compare average conversion rate across the period
+```{r}
+# resolution time for optimal co-infectin
+resolution_time.ci <- time_ci_si.ci %>% 
+  select(resolution_time_ci = time, label)
+
+# resolution time for non-optimal single infection
+resolution_time.si_n <- time_ci_si.si %>% 
+  select(resolution_time_si = time, label)
+
+# calculate resolution for optial single ifneciton
+resolution_time.si <- si_dyn.df %>% 
+  filter(variable == "I" | variable == "Ig") %>% 
+  filter(time > 10) %>% 
+  group_by(id, time) %>% 
+  mutate(avg = sum(value)/2) %>% 
+  filter(avg < iRBC_bound) %>% 
+  group_by(id) %>% 
+  arrange(time) %>% 
+  dplyr::slice_head(n = 1) %>% 
+  select(resolution_time_si = time, id)
+
+# calculate resolution time for non-optimal co-infection
+resolution_time.ci_n <- ci_non_opt.res %>% 
+  filter(variable == "I1" | variable == "Ig1") %>% 
+  filter(time > 10) %>% 
+  group_by(label, time) %>% 
+  mutate(avg = sum(value)/2) %>% 
+  filter(avg < iRBC_bound) %>% 
+  group_by(label) %>% 
+  arrange(time) %>% 
+  dplyr::slice_head(n = 1) %>% 
+  select(resolution_time_ci_n = time, label)
+
+resolution_time.ci_n
+
+# save resolution time
+#write.csv(resolution_time.ci, here("data/si_ci_diff/opt_ci_resolution.csv"))
+#write.csv(resolution_time.si, here("data/si_ci_diff/opt_si_resolution.csv"))
+#write.csv(resolution_time.si_n, here("data/si_ci_diff/opt_si_n_resolution.csv"))
+#write.csv(resolution_time.ci_n, here("data/si_ci_diff/opt_ci_n_resolution.csv"))
+```
+
+# process conversion rate
+```{r}
+# get average conversion rate for optimal single infection
+avg_cr.si <- si_dyn.df %>% 
+  left_join(resolution_time.si) %>% 
+  filter(variable == "cr") %>% 
+  group_by(id) %>% 
+  filter(time <= resolution_time_si,
+         !is.na(value)) %>% 
+  summarise(mean_cr = mean(value))
+  
+#write.csv(avg_cr.si, here("data/si_ci_diff/opt_si_cr.csv"))
+
+# get average conversion rate for optimal co-infection
+avg_cr.ci <- ci_si_comp.ci %>% 
+  left_join(resolution_time.ci) %>% 
+  filter(variable == "cr_1") %>% 
+  group_by(label) %>% 
+  filter(time <= resolution_time_ci,
+         !is.na(value)) %>% 
+  summarise(mean_cr = mean(value))
+#write.csv(avg_cr.ci, here("data/si_ci_diff/opt_ci_cr.csv"))
+
+# get average conversion rate for non-optimal single infection (co-infeciton)
+avg_cr.si_non <- ci_si_comp.si %>% 
+  left_join(resolution_time.si_n) %>% 
+  filter(variable == "cr") %>% 
+  group_by(label) %>% 
+  filter(time <= resolution_time_si,
+         !is.na(value)) %>% 
+  summarise(mean_cr_si_n = mean(value))
+
+write.csv(avg_cr.si_non, here("data/si_ci_diff/non_opt_si_cr.csv"))
+
+# get average conversion rate for non-optimal co-infection
+avg_cr.ci_non <- ci_non_opt.res %>% 
+  left_join(resolution_time.ci_n) %>% 
+  filter(variable == "cr_1") %>% 
+  group_by(label) %>% 
+  filter(time <= resolution_time_ci_n,
+         !is.na(value)) %>% 
+  summarise(mean_cr_ci_n = mean(value))
+
+write.csv(avg_cr.ci_non, here("data/si_ci_diff/non_opt_ci_cr.csv"))
+```
+
+# process data for plotting. mainly adjusting the labels and transforming to long form
+```{r}
+avg_cr.si2 <- avg_cr.si %>% 
+  mutate(cue = gsub("_.*", "", id),
+         log = gsub(".*_", "",  id)) %>% 
+  mutate(label_si = ifelse(log == "log", paste(cue, log), cue)) %>% 
+  select(label_si, mean_cr_si = mean_cr)
+
+avg_cr.ci2 <- avg_cr.ci %>% 
+  left_join(ci_opt.df, by = c("label"="label_3")) %>% 
+  mutate(label_ci = ifelse(log == "log", paste(cue, log), cue)) %>% 
+  mutate(cue_si = case_when(
+    stringr::str_detect(cue, "-i") ~ gsub("*-i", "", cue),
+    stringr::str_detect(cue, "1+") ~ gsub("*1+.*", "", cue),
+    stringr::str_detect(cue, "sum") ~ "I+Ig",
+    TRUE ~ cue
+  ),
+  label_si = ifelse(log == "log", paste(cue_si, log), cue_si)) %>% 
+  select(label_si, mean_cr_ci = mean_cr, label)
+
+avg_cr.si_non2 <- avg_cr.si_non %>% 
+  left_join(select(avg_cr.ci2, label_si, label)) %>% 
+  select(label_si, mean_cr_si_n, label)
+
+avg_cr.ci_non2 <- avg_cr.ci_non %>% 
+  left_join(ci_opt.df, by = c("label"="label_3")) %>% 
+  mutate(label_ci = ifelse(log == "log", paste(cue, log), cue)) %>% 
+  mutate(cue_si = case_when(
+    stringr::str_detect(cue, "-i") ~ gsub("*-i", "", cue),
+    stringr::str_detect(cue, "1+") ~ gsub("*1+.*", "", cue),
+    stringr::str_detect(cue, "sum") ~ "I+Ig",
+    TRUE ~ cue
+  ),
+  label_si = ifelse(log == "log", paste(cue_si, log), cue_si)) %>% 
+  select(label_si, mean_cr_ci_n, label)
+
+# join
+avg_cr.all <- left_join(avg_cr.ci2, avg_cr.si2, by = "label_si") %>% 
+  left_join(avg_cr.si_non2, by = "label") %>% 
+  left_join(avg_cr.ci_non2, by = "label") %>% 
+  select(label = label, mean_cr_ci, mean_cr_si, mean_cr_si_n, mean_cr_ci_n)
+
+
+avg_cr.all2 <- tidyr::pivot_longer(avg_cr.all, -label) %>% 
+  mutate(infection = case_when(
+    name == "mean_cr_ci" ~ "Optimal co-infection",
+    name == "mean_cr_si" ~ "Optimal single infection",
+    name == "mean_cr_si_n" ~ "Non-optimal single infection",
+    name == "mean_cr_ci_n" ~ "Non-optimal co-infection"
+  )) %>% 
+  group_by(label) %>% 
+  mutate(avg = mean(value))
+
+
+```
+
+# plot. Co-infection leads to lower average conversion rate over course of infection. Even when co-infetion strategy is in single infection, we still see lower conversion rate.
+```{r}
+cr_diff.pl <- ggplot(avg_cr.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
+  geom_line(aes(group = label)) +
+  geom_point(aes(color = infection, shape = infection), size = 2.5, alpha= 0.7) +
+  labs(x = "Average conversion rate", y = "Cue", color = "Infection", shape = "Infection") +
+  scale_shape_manual(values = 15:18) +
+  theme_bw()
+```
+
+# how about resolution time?
+```{r}
+# need to process optimal ci so it has labels
+resolution_time.ci2 <- resolution_time.ci %>% 
+  left_join(ci_opt.df, by = c("label"="label_3")) %>% 
+  mutate(label_ci = ifelse(log == "log", paste(cue, log), cue)) %>% 
+  mutate(cue_si = case_when(
+    stringr::str_detect(cue, "-i") ~ gsub("*-i", "", cue),
+    stringr::str_detect(cue, "1+") ~ gsub("*1+.*", "", cue),
+    stringr::str_detect(cue, "sum") ~ "I+Ig",
+    TRUE ~ cue
+  ),
+  label_si = ifelse(log == "log", paste(cue_si, log), cue_si)) %>% 
+  select(label_si, resolution_time_ci, label)
+
+# process si to get label_si
+resolution_time.si2 <- resolution_time.si %>% 
+  mutate(cue = gsub("_.*", "", id),
+         log = gsub(".*_", "",  id)) %>% 
+  mutate(label_si = ifelse(log == "log", paste(cue, log), cue)) %>% 
+  select(label_si, resolution_time_si_opt = resolution_time_si)
+
+# left_join resolution time for nonoptimal single infection
+resolution_time.all <- left_join(resolution_time.ci2, resolution_time.si_n, by = "label") %>% 
+  left_join(resolution_time.ci_n, by = "label") %>% 
+  left_join(resolution_time.si2, by = "label_si")
+
+# make long and recode
+resolution_time.all2 <- tidyr::pivot_longer(select(resolution_time.all, -id, -label_si), -label) %>% 
+  mutate(infection = case_when(
+    name == "resolution_time_ci" ~ "Optimal co-infection",
+    name == "resolution_time_si" ~"Non-optimal single infection",
+    name == "resolution_time_si_opt" ~"Optimal single infection",
+    name == "resolution_time_ci_n" ~"Non-optimal co-infection"
+  )) %>% 
+  group_by(label) %>% 
+  mutate(avg = mean(value))
+
+time_diff.pl <- ggplot(resolution_time.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
+  geom_line(aes(group = label)) +
+  geom_point(aes(color = infection, shape = infection), size = 2.5, alpha = 0.7) +
+  labs(x = "Resolution time (days)", y = "Cue", color = "Infection", shape = "Infection") +
+  scale_shape_manual(values = 15:18) +
+  theme_bw()
+
+```
+
+# fitness difference
+# ge data
+```{r}
+# get maximum fitness for optimal single infection
+fitness.si <- si_dyn.df %>% 
+  filter(variable == "tau_cum") %>% 
+  group_by(id) %>%
+  mutate(value = ifelse(is.na(value), 0, value)) %>% 
+  summarise(fitness_si = max(value))
+  
+write.csv(fitness.si, here("data/si_ci_diff/si_opt_fitness.csv"))
+
+# get maximum fitness for optimal co-ineciton, note that we are multiplykng by 2 to get total infection of both strains (since they are adopting the same strategy)
+fitness.ci <- ci_si_comp.ci %>% 
+  filter(variable == "tau_cum1") %>% 
+  group_by(label) %>% 
+  mutate(value = ifelse(is.na(value), 0, value)) %>% 
+  summarise(fitness_ci = max(value)*2)
+
+write.csv(fitness.ci, here("data/si_ci_diff/ci_opt_fitness.csv"))
+
+# get average conversion rate for non-optimal single infection (co-infeciton)
+fitness_non.si <- ci_si_comp.si %>% 
+  filter(variable == "tau_cum") %>% 
+  group_by(label) %>%
+  mutate(value = ifelse(is.na(value), 0, value)) %>% 
+  summarise(fitness_non_si = max(value))
+
+write.csv(fitness_non.si, here("data/si_ci_diff/si_non_opt_fitness.csv"))
+
+# get average conversion rate for non-optimal co-infection
+fitness_non.ci <- ci_non_opt.res %>% 
+  filter(variable == "tau_cum1") %>% 
+  group_by(label) %>% 
+  mutate(value = ifelse(is.na(value), 0, value)) %>% 
+  summarise(fitness_non_ci = max(value)*2)
+  
+write.csv(fitness_non.ci, here("data/si_ci_diff/ci_non_opt_fitness.csv"))
+
+# join all
+## need to first get si_id
+fitness.ci2 <- fitness.ci %>% 
+  left_join(ci_opt.df, by = c("label"="label_3")) %>% 
+  mutate(label_ci = ifelse(log == "log", paste(cue, log), cue)) %>% 
+  mutate(cue_si = case_when(
+    stringr::str_detect(cue, "-i") ~ gsub("*-i", "", cue),
+    stringr::str_detect(cue, "1+") ~ gsub("*1+.*", "", cue),
+    stringr::str_detect(cue, "sum") ~ "I+Ig",
+    TRUE ~ cue
+  ),
+  label_si = ifelse(log == "log", paste(cue_si, log), cue_si)) %>% 
+  select(label_si, fitness_ci, label)
+
+fitness.si2 <- fitness.si %>% 
+  mutate(cue = gsub("_.*", "", id),
+         log = gsub(".*_", "",  id)) %>% 
+  mutate(label_si = ifelse(log == "log", paste(cue, log), cue)) %>% 
+  select(label_si, fitness_si)
+
+fitness.all <- left_join(fitness.ci2, fitness.si2, by = "label_si") %>% 
+  left_join(fitness_non.si,  by = "label") %>% 
+  left_join(fitness_non.ci, by = "label") %>% 
+  select(label, fitness_ci, fitness_si, fitness_non_si, fitness_non_ci)
+
+fitness.all2 <- tidyr::pivot_longer(fitness.all, -label) %>% 
+  mutate(infection = case_when(
+    name == "fitness_ci" ~ "Optimal co-infection",
+    name == "fitness_non_si" ~"Non-optimal single infection",
+    name == "fitness_si" ~"Optimal single infection",
+    name == "fitness_non_ci" ~"Non-optimal co-infection"
+  )) %>% 
+  group_by(label) %>% 
+  mutate(avg = mean(value))
+
+
+```
+
+# plot fitness difference
+```{r}
+fitness_diff.pl <- ggplot(fitness.all2, aes(x = value, y = reorder(label, avg))) + # rank by co-infection resolution time
+  geom_line(aes(group = label)) +
+  geom_point(aes(color = infection, shape = infection), size = 2.5, alpha = 0.7) +
+  labs(x = "Fitness", y = "Cue", color = "Infection", shape = "Infection") +
+  scale_shape_manual(values = 15:18) +
+  theme_bw()
+```
+
+```{r}
+time_diff.pl
+cr_diff.pl
+fitness_diff.pl
+```
+
+
+
+
+
+
+
+
+
+
 

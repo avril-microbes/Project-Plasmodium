@@ -1,0 +1,41 @@
+"","time","label","infection","min"
+"1",18.044,"Asexual iRBC ","Single infection",18.044
+"2",38.085,"Asexual iRBC log10","Single infection",15.919
+"3",11.892,"Gametocyte ","Single infection",11.649
+"4",13.21,"Gametocyte log10","Single infection",12.966
+"5",13.449,"RBC ","Single infection",12.552
+"6",13.249,"RBC log10","Single infection",12.376
+"7",14.685,"Sexual iRBC ","Single infection",12.283
+"8",12.853,"Sexual iRBC log10","Single infection",12.749
+"9",13.833,"Total
+gametocyte ","Single infection",13.085
+"10",18.069,"Total
+gametocyte log10","Single infection",15.928
+"11",23.043,"Total asexual
+iRBC ","Single infection",17.074
+"12",29.163,"Total asexual
+iRBC log10","Single infection",15.968
+"13",35.158,"Total iRBC ","Single infection",13.944
+"14",36.169,"Total iRBC log10","Single infection",14.833
+"15",13.572,"Total sexual
+iRBC ","Single infection",12.548
+"16",18.093,"Asexual iRBC ","Co-infection",18.044
+"17",15.919,"Asexual iRBC log10","Co-infection",15.919
+"18",11.649,"Gametocyte ","Co-infection",11.649
+"19",12.966,"Gametocyte log10","Co-infection",12.966
+"20",12.552,"RBC ","Co-infection",12.552
+"21",12.376,"RBC log10","Co-infection",12.376
+"22",12.283,"Sexual iRBC ","Co-infection",12.283
+"23",12.749,"Sexual iRBC log10","Co-infection",12.749
+"24",13.085,"Total
+gametocyte ","Co-infection",13.085
+"25",15.928,"Total
+gametocyte log10","Co-infection",15.928
+"26",17.074,"Total asexual
+iRBC ","Co-infection",17.074
+"27",15.968,"Total asexual
+iRBC log10","Co-infection",15.968
+"28",13.944,"Total iRBC ","Co-infection",13.944
+"29",14.833,"Total iRBC log10","Co-infection",14.833
+"30",12.548,"Total sexual
+iRBC ","Co-infection",12.548

@@ -604,11 +604,15 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
   # Get approximation of cumulative transmission potential
   tau1.sum <- sum(tau1.ls*int, na.rm = TRUE)
   tau2.sum <- sum(tau2.ls*int, na.rm = TRUE)
+  # get difference
+  tau.diff <- tau1.sum-tau2.sum
+  # process if 0 and I nf
+  if(any(is.na(tau.diff) | !is.finite(tau.diff) | is.nan(tau.diff) | is.infinite(tau.diff))){tau.diff=0}
   
   # return cumulative transmission potential difference between strain 1 and strain 2
   if(dyn == FALSE){
-    if(neg == F){return(tau1.sum-tau2.sum)}
-    if(neg == T){return((tau1.sum-tau2.sum)*-1)}
+    if(neg == F){return(tau.diff)}
+    if(neg == T){return((tau.diff)*-1)}
     }
   #-------------------------#
   # Simulating infection dynamics if Dyn == TRUE
