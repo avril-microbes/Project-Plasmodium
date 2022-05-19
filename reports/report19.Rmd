@@ -1,0 +1,396 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(here)
+library(deSolve)
+library(crone)
+library(optimParallel)
+library(doParallel)
+library(doRNG)
+library(arrow)
+library(stringr)
+library(parallel)
+library(ggpubr)
+```
+
+# load functions
+```{r}
+source(here("functions/chabaudi_si_clean.R"))
+source(here("functions/chabaudi_ci_clean.R"))
+
+parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+```
+
+#---------------------------------#
+# preparation for si validation
+#---------------------------------#
+```{r}
+# import in si optimum
+si_opt.df <- read.csv(here("data/si_opt.csv"))
+
+# import in si cue range
+si_cue_range <- read.csv(here("data/cue_range_si.csv"))
+
+# join
+si_opt.df2 <- si_opt.df %>% left_join(select(si_cue_range, low, high, by, id), by = "id")
+
+# write csv
+write.csv(si_opt.df2, here("job_scripts/si_opt2.csv"))
+```
+
+
+#===================================================#
+# Remaking ci reaction norm figure -> overlay single infection
+#===================================================#
+```{r}
+# import in ci dynamics
+ci_rn_lim.df <- read.csv(here("data/ci_dyn/ci_rn_lim.csv"))
+ci_rug.df <- read.csv(here("data/ci_dyn/ci_rug.csv"))
+
+# import in si dynamics (resimulated with 30 days to ensure resolution)
+
+
+```
+
+#===================================================#
+# what makes a successful competitor? dynamics analysis
+#===================================================#
+Here, I will simulate the disease curves and time-series cr of co-infection competition that either resulted in a "win" (fitness difference>0) or a lose (fitness difference<0). I will do this for both static competition and optimized competition results
+
+
+
+
+#--------------Static competition-------------------#
+```{r}
+# import in static competition results
+ci_static.df <- read.csv(here("data/ci_static/ci_comp_static.csv"))
+
+# import in optimal coinfection parameters
+ci_opt.df <- read.csv(here("data/ci_opt.csv"))
+ci_opt.df2 <- ci_opt.df %>% mutate(id = paste0(cue, "_", log))
+
+# join with cue range
+cue_range <- read.csv(here("data/cue_range.csv"))
+
+# join cue_1 cue range and cue_2 cue range. also join with optimal parameters
+ci_static.df2 <- left_join(ci_static.df, select(cue_range, low_1 = low, high_1 = high, by_1 = by, id),
+          by = c("id_1" = "id")) %>% 
+  left_join(select(cue_range, low_2 = low, high_2 = high, by_2 = by, id),
+            by = c("id_2" ="id")) %>% 
+  left_join(select(ci_opt.df2, var1_1 = var1, var2_1 = var2, var3_1 = var3, var4_1 = var4, id), by = c("id_1"= "id")) %>% 
+  left_join(select(ci_opt.df2, var1_2 = var1, var2_2 = var2, var3_2 = var3, var4_2 = var4, id), by = c("id_2"= "id")) %>% 
+  filter(id_1 != id_2) # filter out same comparison
+
+# filter out wins. 53
+ci_static.win <- ci_static.df2 %>% filter(fitness_diff>0)
+
+# filter out loses. 52
+ci_static.lose <- ci_static.df2 %>% filter(fitness_diff<0)
+
+```
+
+# function to run ci dynamics
+```{r}
+ci_dyn <- function(df, win){
+  
+  # read in df info
+  if(stringr::str_detect(df$id_1, "-i")){cue_1 = paste0(df$cue_1, "1")}
+  if(stringr::str_detect(df$id_1, "-i", negate = T)){cue_1 = df$cue_1}
+  if(stringr::str_detect(df$id_2, "-i")){cue_2 = paste0(df$cue_2, "2")}
+  if(stringr::str_detect(df$id_2, "-i", negate = T)){cue_2 = df$cue_2}
+  
+  # get log
+  if(stringr::str_detect(df$id_1, "log")){log_1 = "log10"}
+  if(stringr::str_detect(df$id_1, "none")){log_1 = "none"}
+  
+  if(stringr::str_detect(df$id_2, "log")){log_2 = "log10"}
+  if(stringr::str_detect(df$id_2, "none")){log_2 = "none"}
+  
+  # get parameters
+  par_1 <- c(df$var1_1, df$var2_1, df$var3_1, df$var4_1)
+  par_2 <- c(df$var1_2, df$var2_2, df$var3_2, df$var4_2)
+  
+  # get cue range
+  cue_range_1 <- seq(df$low_1, df$high_1, by = df$by_1)
+  cue_range_2 <- seq(df$low_2, df$high_2, by = df$by_2)
+  
+  # get unique id
+  id <- paste0(df$id_1, df$id_2)
+  
+  # get dynamics
+  dyn <- chabaudi_ci_clean(parameters_cr_1 = par_1,
+                  parameters_cr_2 = par_2,
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = cue_1,
+                  cue_2 = cue_2,
+                  cue_range_1 = cue_range_1,
+                  cue_range_2 = cue_range_2,
+                  log_cue_1 = log_1,
+                  log_cue_2 = log_2,
+                  solver = "vode",
+                  time_range = seq(0, 30, 0.001),
+                  dyn = T)
+  
+    dyn2 <- data.frame(dyn, id = rep(id, nrow(dyn)),
+                       win = rep(win, nrow(dyn)))
+    
+    # get filename
+    filename <- paste0(id, "_", win, "_dyn.csv")
+
+  write.csv(dyn2, here(paste0("data/ci_static/", filename)))
+}
+```
+
+# run function
+```{r}
+ci_static_win.ls <- split(ci_static.win, seq(nrow(ci_static.win)))
+ci_static_lose.ls <- split(ci_static.lose, seq(nrow(ci_static.lose)))
+
+mclapply(ci_static_win.ls, function(x){ci_dyn(x, win = "win")}, mc.cores = 6)
+mclapply(ci_static_lose.ls, function(x){ci_dyn(x, win = "lose")}, mc.cores = 6)
+```
+
+# process shit
+```{r}
+# convert to parquet you dumbass
+convert_parquet <- function(filename){
+  temp_csv <- read.csv(filename)
+  # get base name without csv
+  filename2 <- tools::file_path_sans_ext(basename(filename))
+  # write parquet
+  write_parquet(temp_csv, sink = here(paste0("data/ci_static/", filename2, ".parquet")))
+}
+
+# read in all files
+si_static.file <- list.files(path = here("data/ci_static"), pattern = "*_dyn.csv", full.names = T)
+
+# convert to parquet
+# mclapply(si_static.file,convert_parquet,  mc.cores = 6)
+
+# import back parquet
+si_static_win.file <- list.files(path = here("data/ci_static"), pattern = "*win_dyn.parquet", full.names = T)
+si_static_lose.file <- list.files(path = here("data/ci_static"), pattern = "*lose_dyn.parquet", full.names = T)
+
+si_static_win.dyn <- lapply(si_static_win.file, read_parquet)
+si_static_lose.dyn <- lapply(si_static_lose.file, read_parquet)
+
+si_static_win.dyn2 <- do.call(rbind, si_static_win.dyn)
+write_parquet(si_static_win.dyn2, here("data/ci_static/ci_static_win_final.parquet"))
+
+#si_static_lose.dyn2 <- do.call(rbind, si_static_lose.dyn)
+#write_parquet(si_static_lose.dyn2, here("data/ci_static/ci_static_lose_final.parquet"))
+
+
+# sanity check. look at tau_cum1. good
+si_static_win.dyn2 %>% 
+  filter(variable == "tau_cum1" | variable == "tau_cum2") %>% 
+  group_by(id, variable) %>% 
+  summarize(max_fitness = max(value, na.rm = TRUE)) %>% 
+  tidyr::spread(variable, max_fitness) %>% 
+  mutate(diff = tau_cum1-tau_cum2)
+
+si_static_lose.dyn2 %>% 
+  filter(variable == "tau_cum1" | variable == "tau_cum2") %>% 
+  group_by(id, variable) %>% 
+  summarize(max_fitness = max(value, na.rm = TRUE)) %>% 
+  tidyr::spread(variable, max_fitness) %>% 
+  mutate(diff = tau_cum1-tau_cum2)
+
+```
+
+# plot time series difference in dynamics for co infection static
+```{r}
+si_static_win.dyn2 <- read_parquet(here("data/ci_static/ci_static_win_final.parquet"))
+# calculate difference between winner and loser
+si_static_win.dyn3 <- si_static_win.dyn2 %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, id)) %>% 
+  mutate(total = I1+Ig1)
+
+# process dataframe
+si_static_win.dyn4 <- si_static_win.dyn3 %>% 
+  mutate(`Gametocyte difference` = G1-G2,
+         `Sexual iRBC difference` = Ig1-Ig2,
+         `Asexual iRBC difference` = I1-I2,
+         `Fitness difference` = tau1-tau2) %>% 
+  select(time, id, `Gametocyte difference`, `Sexual iRBC difference`, `Asexual iRBC difference`, `Fitness difference`) %>% 
+  tidyr::pivot_longer(!c(time, id)) %>% 
+  group_by(id, name) %>% 
+  arrange(time, .by_group = T)
+  
+# plot
+ggplot(data = si_static_win.dyn4 %>% filter(row_number() %% 100 ==0), aes(x = time, y = value)) +
+  geom_line(aes(group = id), alpha = 0.1) +
+  geom_smooth(na.rm = T, span = 0.1, se = 0.95) +
+  xlim(0,30)+
+  facet_wrap(~name, scales = "free_y") +
+  labs(x = "Time (day)", y = "Difference (winner-loser)") +
+  geom_hline(yintercept = 0, color = "red") +
+  theme_bw()
+
+# explicit plotting of the time-series conversion rate dynamics
+ggplot() +
+  geom_line(data = si_static_win.dyn3 %>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, group = id, color = "Winner"), alpha = 0.05) +
+  geom_smooth(data = si_static_win.dyn3 %>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, color = "Winner"),na.rm = T, span = 0.1, se = 0.95) +
+  geom_line(data = si_static_win.dyn3 %>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_2, group = id, color = "Loser"), alpha = 0.05) +
+  geom_smooth(data = si_static_win.dyn3 %>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_2, color = "Loser"),na.rm = T, span = 0.1, se = 0.95) +
+  xlim(0,30)+
+  labs(x = "Time (day)", y = "Conversion rate") +
+  scale_color_manual(name= "Competition status",
+                     breaks=c("Winner", "Loser"),
+                     values=c("Winner" = "blue", "Loser" = "red")) +
+  theme_bw()
+```
+
+#----------------optimized co-infection parameters---------------------#
+```{r}
+# import in time series dynamics of optimal co-infection
+ci_opt.dyn <- read_parquet(here("data/ci_dyn/ci_opt_40.parquet"))
+
+# import in time series dynamics of non-optimal coinfection
+ci_non_opt.dyn <- read_parquet(here("data/ci_dyn/ci_non_opt_40.parquet"))
+
+# function for ci processing
+ci_diff_process <- function(df){
+  res <- df %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, label)) %>% 
+  mutate(`Gametocyte difference` = G1-G2,
+         `Sexual iRBC difference` = Ig1-Ig2,
+         `Asexual iRBC difference` = I1-I2,
+         `Fitness difference` = tau1-tau2) %>% 
+  select(time, label, `Gametocyte difference`, `Sexual iRBC difference`, `Asexual iRBC difference`, `Fitness difference`) %>% 
+  tidyr::pivot_longer(!c(time, label)) %>% 
+  group_by(label, name) %>% 
+  arrange(time, .by_group = T)
+  
+  return(res)
+}
+
+# process df. 
+ci_opt.dyn2 <- ci_opt.dyn %>% 
+  mutate(infection = "Optimal co-infection") %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, label, infection)) %>% 
+  select(time, label, infection, R, I1, Ig1, G1, tau1, cr_1)
+  
+ci_non_opt.dyn2 <- ci_non_opt.dyn %>% 
+  mutate(infection = "Non-optimal co-infection") %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, label, infection)) %>% 
+  select(time, label, infection, R_n = R, I1_n = I1, Ig1_n = Ig1, G1_n = G1, tau1_n = tau1, cr_1_n = cr_1)
+
+ci_opt.all2 <- left_join(ci_opt.dyn2, ci_non_opt.dyn2, by = c("time", "label")) %>% 
+  mutate(`Gametocyte difference` = G1-G1_n,
+         `Sexual iRBC difference` = Ig1-Ig1_n,
+         `Asexual iRBC difference` = I1-I1_n,
+         `Fitness difference` = tau1-tau1_n) %>% 
+  select(time, label, `Gametocyte difference`, `Sexual iRBC difference`, `Asexual iRBC difference`, `Fitness difference`) %>% 
+  tidyr::pivot_longer(!c(time, label)) %>% 
+  group_by(label, name) %>% 
+  arrange(time, .by_group = T)
+ci_opt.all2
+
+# plot time-series dynamics difference
+ggplot(data = ci_opt.all2%>% filter(row_number() %% 100 ==0), aes(x = time, y = value)) +
+  geom_line(aes(group = label), alpha = 0.2) +
+  geom_smooth(na.rm = T, span = 0.1, se = 0.95) +
+  xlim(0,30)+
+  facet_wrap(~name, scales = "free_y") +
+  labs(x = "Time (day)", y = "Difference (optimal-non-optimal)") +
+  geom_hline(yintercept = 0, color = "red") +
+  theme_bw()
+
+# plot time-series conversion rate difference
+ggplot() +
+  geom_line(data = ci_opt.dyn2 %>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, group = label, color = "Optimal co-infection"), alpha = 0.15) +
+  geom_smooth(data = ci_opt.dyn2%>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, color = "Optimal co-infection"),na.rm = T, span = 0.1, se = 0.95) +
+  geom_line(data = ci_non_opt.dyn2 %>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1_n, group = label, color = "Non-optimal co-infection"), alpha = 0.15) +
+  geom_smooth(data = ci_non_opt.dyn2 %>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1_n, color = "Non-optimal co-infection"),na.rm = T, span = 0.1, se = 0.95) +
+  xlim(0,30)+
+  labs(x = "Time (day)", y = "Conversion rate") +
+  scale_color_manual(name= "Strategy status",
+                     breaks=c("Optimal co-infection", "Non-optimal co-infection"),
+                     values=c("Optimal co-infection" = "blue", "Non-optimal co-infection" = "red")) +
+  theme_bw()
+```
+
+#-----------------optimized co-infection----------------------------#
+```{r}
+
+```
+
+
+#====================================================================#
+# pairwise comparison of different co-infection competition
+#====================================================================#
+This graph shows the effects of different types of cue perception (total vs individual, log vs non-logged for both static and semi-dynamic co-infection competition)
+
+#---------------------static competition------------------------------#
+
+```{r}
+# import in static competition dynamics
+ci_static_win.df <- read_parquet(here("data/ci_static/ci_static_win_final.parquet"))
+ci_static_lose.df <- read_parquet(here("data/ci_static/ci_static_lose_final.parquet"))
+
+# for each df, get first cue, second cue
+test <- ci_static_win.df[1:1000000,]
+
+test2 <- test %>% 
+  mutate(cue_1 = stringr::str_split(id, "\\_|log|none") %>% 
+           purrr::map_chr(., 1),
+         cue_2 = stringr::str_split(id, "\\_|log|none") %>% 
+           purrr::map_chr(., 3))
+
+
+unique(test2$cue_2)
+```
+
+
+```{r}
+# get log vs non-logged
+## get logged dataset
+ci_static.df %>% 
+  filter((log_1 == "log10" & log_2 != "log10") |
+          (log_1 != "log10" & log_2 == "log10")) %>% ## get only log vs non-log data comp
+  mutate(fitness_2 = case_when(
+    log_1 == "log10" ~ s,
+    
+  ))
+
+n_distinct(si_static_lose.dyn2$id)
+```
+
+
+
+
+
