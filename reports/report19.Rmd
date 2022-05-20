@@ -344,9 +344,78 @@ ggplot() +
   theme_bw()
 ```
 
-#-----------------optimized co-infection----------------------------#
+#-----------------optimized co-infection (invasion)----------------------------#
 ```{r}
+# select for best fitness from two study sets: 1 with 0.5x4 starting point and another with original parameter as starting set
 
+# import in the two datasets
+ci_invade.file1 <- list.files(path = here("data/ci_invasion/"), pattern = "*.csv", full.names = T)
+ci_invade.file2 <- list.files(path = here("data/ci_invasion_2/"),pattern = "*.csv", full.names = T)
+
+ci_invade.df1 <- do.call(rbind, lapply(ci_invade.file1, read.csv))
+ci_invade.df2 <- do.call(rbind, lapply(ci_invade.file2, read.csv))
+
+# left_join
+ci_invade.df <- left_join(
+  select(ci_invade.df1, mut_id, res_id, fitness_1 = fitness),
+  select(ci_invade.df2, mut_id, res_id, fitness_2 = fitness),
+  by = c("mut_id", "res_id")
+  )
+
+# get best fitness
+ci_invade.df2 <- ci_invade.df %>% 
+  mutate(fitness_final = case_when(
+    fitness_1 >= fitness_2 ~ fitness_1,
+    fitness_2 > fitness_1 ~ fitness_2
+  )) %>% 
+  mutate(mut_cue = gsub("\\-.*|\\_.*", "", mut_id),
+         mut_log = gsub(".*_", "",  mut_id),
+         res_cue = gsub("\\-.*|\\_.*", "", res_id),
+         res_log = gsub(".*_", "",  res_id)) %>% 
+  mutate(mut_label = ifelse(mut_log == "log", paste(mut_cue, mut_log), mut_cue),
+         res_label = ifelse(res_log == "log", paste(res_cue, res_log), res_cue))
+
+write.csv(ci_invade.df2, here("data/ci_invasion_final.csv"))
+```
+
+# plot heat map and average
+```{r}
+ci_invade.pl1 <- ggplot(data = ci_invade.df2, aes(x = res_label, y = mut_label, fill = fitness_final))+
+  geom_tile(color = "black") +
+  scale_fill_gradient2(low = "red", high = "blue", mid = "white", 
+   midpoint = 0, space = "Lab", lim = c(-1.8, 1.5), name="Fitness\ndifference") +
+  theme_minimal() +  
+  theme(legend.position = "left",
+  axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+  axis.ticks = element_blank(),
+  plot.margin=margin(r = 0)) + 
+  labs(x = "Residence cue", y = "Mutant cue") +
+  coord_fixed()
+
+# get get average
+ci_invade.df3 <- ci_invade.df2 %>% 
+  group_by(mut_id) %>% 
+  mutate(mean_fitness = mean(fitness_final)) %>% 
+  distinct(mut_id, .keep_all = T)
+
+ci_invade.pl2 <- ggplot() +
+  geom_bar(data =  ci_invade.df3, aes(y = mut_label, x = mean_fitness), stat = "identity") +
+  labs(y = "", x = "Mean fitness\ndifference") +
+  theme_bw() +
+  theme(plot.margin = margin(l = 0),
+       panel.grid.major = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+    axis.text.y=element_blank(),
+    axis.ticks.y=element_blank())
+  
+ci_invade.pl <- ggarrange(ci_invade.pl1, ci_invade.pl2, align = "h", widths = c(1, 0.2))
+
+ggsave(here("figures/report19/ci_invade.png"), width = 10)
 ```
 
 
@@ -362,33 +431,97 @@ This graph shows the effects of different types of cue perception (total vs indi
 ci_static_win.df <- read_parquet(here("data/ci_static/ci_static_win_final.parquet"))
 ci_static_lose.df <- read_parquet(here("data/ci_static/ci_static_lose_final.parquet"))
 
-# for each df, get first cue, second cue
-test <- ci_static_win.df[1:1000000,]
+# combine these two
 
-test2 <- test %>% 
+ci_static_win.df2 <- ci_static_win.df %>% 
+  filter(variable == "tau_cum1" | variable == "tau_cum2") %>% 
+  filter(time == 30) %>% 
   mutate(cue_1 = stringr::str_split(id, "\\_|log|none") %>% 
            purrr::map_chr(., 1),
          cue_2 = stringr::str_split(id, "\\_|log|none") %>% 
-           purrr::map_chr(., 3))
+           purrr::map_chr(., 3),
+         temp_1 = stringr::str_split(id, "\\_") %>% 
+           purrr::map_chr(., 2),
+         temp_2 = stringr::str_split(id, "\\_") %>% 
+           purrr::map_chr(., 3)) %>% 
+  mutate(
+    log_1 = case_when(
+    str_detect(temp_1, "log") ~ "log10",
+    str_detect(temp_1, "none") ~ "none"),
+    log_2 = case_when(
+      str_detect(temp_2, "log") ~ "log10",
+      str_detect(temp_2, "none") ~ "none"),
+    )
+ci_static_win.df2
 
+write_parquet(ci_static_win.df2, here("data/ci_static/ci_static_win2.parquet"))
 
-unique(test2$cue_2)
+ci_static_lose.df2 <- ci_static_lose.df %>% 
+  filter(variable == "tau_cum1" | variable == "tau_cum2") %>% 
+  filter(time == 30) %>% 
+  mutate(cue_1 = stringr::str_split(id, "\\_|log|none") %>% 
+           purrr::map_chr(., 1),
+         cue_2 = stringr::str_split(id, "\\_|log|none") %>% 
+           purrr::map_chr(., 3),
+         temp_1 = stringr::str_split(id, "\\_") %>% 
+           purrr::map_chr(., 2),
+         temp_2 = stringr::str_split(id, "\\_") %>% 
+           purrr::map_chr(., 3)) %>% 
+  mutate(
+    log_1 = case_when(
+    str_detect(temp_1, "log") ~ "log10",
+    str_detect(temp_1, "none") ~ "none"),
+    log_2 = case_when(
+      str_detect(temp_2, "log") ~ "log10",
+      str_detect(temp_2, "none") ~ "none"),
+    )
+write_parquet(ci_static_lose.df2, here("data/ci_static/ci_static_lose2.parquet"))
+
+# combine both
+ci_static.comp <- rbind(ci_static_win.df2, ci_static_lose.df2)
 ```
 
-
+# plot log
 ```{r}
-# get log vs non-logged
-## get logged dataset
-ci_static.df %>% 
-  filter((log_1 == "log10" & log_2 != "log10") |
-          (log_1 != "log10" & log_2 == "log10")) %>% ## get only log vs non-log data comp
-  mutate(fitness_2 = case_when(
-    log_1 == "log10" ~ s,
-    
+# get log vs non-log
+ci_static_comp.log <- ci_static.comp %>% 
+  filter((log_1 == "log10" & log_2 == "none") | (log_1 == "none" & log_2 == "log10")) %>% 
+  filter(cue_1 == cue_2) %>% 
+  select(strain, value, cue = cue_1, log_1, log_2) %>% 
+  mutate(log_alt = case_when(
+    strain == 1 & log_1 == "none" ~ "none",
+    strain == 2 & log_2 == "log10" ~ "log10"
   ))
 
-n_distinct(si_static_lose.dyn2$id)
+log_pair.pl <- ggpaired(ci_static_comp.log, x = "log_alt", y = "value", id = "cue") +
+  labs(x = "Cue perception", y = "Fitness")
 ```
+
+# plot combine vs individual
+```{r}
+ci_static_comp.comb <- ci_static.comp %>% 
+  mutate(cue_alt_1 = case_when(
+    stringr::str_detect(cue_1, "-i") ~ gsub("*-i", "", cue_1),
+    stringr::str_detect(cue_1, "1+") ~ gsub("*1+.*", "", cue_1)),
+    cue_alt_2 = case_when(
+    stringr::str_detect(cue_2, "-i") ~ gsub("*-i", "", cue_2),
+    stringr::str_detect(cue_2, "1+") ~ gsub("*1+.*", "", cue_2))) %>% 
+  filter(cue_alt_1 == cue_alt_2 & log_1 == log_2) %>% 
+  mutate(combine = case_when(
+    strain == 1 & str_detect(cue_1, "\\+") ~ "Combined",
+    strain == 2 & str_detect(cue_2, "-i") ~ "Individual")
+  )
+
+comb_pair.pl <- ggpaired(ci_static_comp.comb, x = "combine", y = "value", id = "temp_1") +
+  labs(x = "Cue perception", y = "Fitness")
+```
+
+```{r}
+log_pair.pl
+comb_pair.pl
+```
+
+
 
 
 
