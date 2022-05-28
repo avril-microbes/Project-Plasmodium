@@ -108,6 +108,8 @@ ci_opt_I_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
+
+lapply(lapply(ci_opt_I_log, unlist), write, "test.txt", append = T, ncolumns = 1000)
 ```
 
 2. I1+I2 none/log
