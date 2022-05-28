@@ -15,3 +15,5 @@ G1+G2,none,0,60000,12,G1+G2_none
 G1+G2,log,0,4.77815125,0.00095563,G1+G2_log
 R,none,1.00E+06,1.00E+07,1800,R_none
 R,log,6,7,2.00E-04,R_log
+I-i+Ig-i,none,0,6.00E+06,1200,I-i+Ig-i_none
+I-i+Ig-i,log,0,6.77815125,0.00135563,I-i+Ig-i_log

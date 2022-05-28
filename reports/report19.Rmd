@@ -120,15 +120,15 @@ ci_dyn <- function(df, win){
   # read in df info
   if(stringr::str_detect(df$id_1, "-i")){cue_1 = paste0(df$cue_1, "1")}
   if(stringr::str_detect(df$id_1, "-i", negate = T)){cue_1 = df$cue_1}
-  if(stringr::str_detect(df$id_2, "-i")){cue_2 = paste0(df$cue_2, "2")}
-  if(stringr::str_detect(df$id_2, "-i", negate = T)){cue_2 = df$cue_2}
+  if(stringr::str_detect(df$res_id, "-i")){cue_2 = paste0(df$cue_2, "2")}
+  if(stringr::str_detect(df$res_id, "-i", negate = T)){cue_2 = df$cue_2}
   
   # get log
   if(stringr::str_detect(df$id_1, "log")){log_1 = "log10"}
   if(stringr::str_detect(df$id_1, "none")){log_1 = "none"}
   
   if(stringr::str_detect(df$id_2, "log")){log_2 = "log10"}
-  if(stringr::str_detect(df$id_2, "none")){log_2 = "none"}
+  if(stringr::str_detect(df$idd_2, "none")){log_2 = "none"}
   
   # get parameters
   par_1 <- c(df$var1_1, df$var2_1, df$var3_1, df$var4_1)
@@ -230,6 +230,7 @@ si_static_win.dyn2 <- read_parquet(here("data/ci_static/ci_static_win_final.parq
 si_static_win.dyn3 <- si_static_win.dyn2 %>% 
   tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, id)) %>% 
   mutate(total = I1+Ig1)
+write_parquet(si_static_win.dyn3, here("data/ci_dyn_int/ci_static_dyn3.parquet"))
 
 # process dataframe
 si_static_win.dyn4 <- si_static_win.dyn3 %>% 
@@ -242,26 +243,29 @@ si_static_win.dyn4 <- si_static_win.dyn3 %>%
   group_by(id, name) %>% 
   arrange(time, .by_group = T)
   
+write_parquet(si_static_win.dyn4, here("data/ci_dyn_int/ci_static_dyn4.parquet"))
+
+
 # plot
-ggplot(data = si_static_win.dyn4 %>% filter(row_number() %% 100 ==0), aes(x = time, y = value)) +
-  geom_line(aes(group = id), alpha = 0.1) +
-  geom_smooth(na.rm = T, span = 0.1, se = 0.95) +
+ci_static_dyn.pl1 <- ggplot(data = si_static_win.dyn4 %>% filter(row_number() %% 100 ==0), aes(x = time, y = value)) +
+  geom_line(aes(group = id), alpha = 0.05, color = "#4575b4") +
+  geom_smooth(na.rm = T, span = 0.1, se = 0.95, color = "#4575b4") +
   xlim(0,30)+
-  facet_wrap(~name, scales = "free_y") +
-  labs(x = "Time (day)", y = "Difference (winner-loser)") +
-  geom_hline(yintercept = 0, color = "red") +
+  facet_wrap(~name, scales = "free_y", ncol = 4) +
+  labs(x = "Time (day)", y = "Difference\n(winner-loser)") +
+  geom_hline(yintercept = 0, color = "#fc8d59") +
   theme_bw()
 
 # explicit plotting of the time-series conversion rate dynamics
-ggplot() +
+ci_static_dyn.pl2 <-ggplot() +
   geom_line(data = si_static_win.dyn3 %>% 
-         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, group = id, color = "Winner"), alpha = 0.05) +
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, group = id, color = "Winner"), alpha = 0.05, color = "#4575b4") +
   geom_smooth(data = si_static_win.dyn3 %>% 
-         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, color = "Winner"),na.rm = T, span = 0.1, se = 0.95) +
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, color = "Winner"),na.rm = T, span = 0.1, se = 0.95, color = "#4575b4") +
   geom_line(data = si_static_win.dyn3 %>% 
-         filter(row_number() %% 100 ==0), aes(x = time, y = cr_2, group = id, color = "Loser"), alpha = 0.05) +
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_2, group = id, color = "Loser"), alpha = 0.05, color = "#fc8d59") +
   geom_smooth(data = si_static_win.dyn3 %>% 
-         filter(row_number() %% 100 ==0), aes(x = time, y = cr_2, color = "Loser"),na.rm = T, span = 0.1, se = 0.95) +
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_2, color = "Loser"),na.rm = T, span = 0.1, se = 0.95, color = "#fc8d59") +
   xlim(0,30)+
   labs(x = "Time (day)", y = "Conversion rate") +
   scale_color_manual(name= "Competition status",
@@ -271,6 +275,7 @@ ggplot() +
 ```
 
 #----------------optimized co-infection parameters---------------------#
+Note here the comparison is between optimized and non-optimized parameters
 ```{r}
 # import in time series dynamics of optimal co-infection
 ci_opt.dyn <- read_parquet(here("data/ci_dyn/ci_opt_40.parquet"))
@@ -317,25 +322,25 @@ ci_opt.all2 <- left_join(ci_opt.dyn2, ci_non_opt.dyn2, by = c("time", "label")) 
 ci_opt.all2
 
 # plot time-series dynamics difference
-ggplot(data = ci_opt.all2%>% filter(row_number() %% 100 ==0), aes(x = time, y = value)) +
-  geom_line(aes(group = label), alpha = 0.2) +
-  geom_smooth(na.rm = T, span = 0.1, se = 0.95) +
+ci_opt_dyn.pl1 <- ggplot(data = ci_opt.all2%>% filter(row_number() %% 100 ==0), aes(x = time, y = value)) +
+  geom_line(aes(group = label), alpha = 0.2, color = "#4575b4") +
+  geom_smooth(na.rm = T, span = 0.1, se = 0.95, color ="#4575b4") +
   xlim(0,30)+
-  facet_wrap(~name, scales = "free_y") +
-  labs(x = "Time (day)", y = "Difference (optimal-non-optimal)") +
-  geom_hline(yintercept = 0, color = "red") +
+  facet_wrap(~name, scales = "free_y", ncol = 4) +
+  labs(x = "Time (day)", y = "Difference\n(optimal-non-optimal)") +
+  geom_hline(yintercept = 0, color = "#fc8d59") +
   theme_bw()
 
 # plot time-series conversion rate difference
-ggplot() +
+ci_opt_dyn.pl2 <- ggplot() +
   geom_line(data = ci_opt.dyn2 %>% 
-         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, group = label, color = "Optimal co-infection"), alpha = 0.15) +
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, group = label, color = "Optimal co-infection"), alpha = 0.15, color = "#4575b4") +
   geom_smooth(data = ci_opt.dyn2%>% 
-         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, color = "Optimal co-infection"),na.rm = T, span = 0.1, se = 0.95) +
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, color = "Optimal co-infection"),na.rm = T, span = 0.1, se = 0.95, color = "#4575b4") +
   geom_line(data = ci_non_opt.dyn2 %>% 
-         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1_n, group = label, color = "Non-optimal co-infection"), alpha = 0.15) +
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1_n, group = label, color = "Non-optimal co-infection"), alpha = 0.15, color = "#fc8d59") +
   geom_smooth(data = ci_non_opt.dyn2 %>% 
-         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1_n, color = "Non-optimal co-infection"),na.rm = T, span = 0.1, se = 0.95) +
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1_n, color = "Non-optimal co-infection"),na.rm = T, span = 0.1, se = 0.95, color = "#fc8d59") +
   xlim(0,30)+
   labs(x = "Time (day)", y = "Conversion rate") +
   scale_color_manual(name= "Strategy status",
@@ -344,6 +349,207 @@ ggplot() +
   theme_bw()
 ```
 
+#--------------------co-infection invasion--------------------------------------#
+```{r}
+# import in the table
+ci_invasion.df <- read.csv(here("data/ci_invasion_final.csv"))
+
+# join with cue range
+ci_cue_range.df <- read.csv(here("data/cue_range.csv"))
+ci_invasion.df2 <- ci_invasion.df %>% 
+  left_join(select(ci_cue_range.df, id, low_mut = low, high_mut = high, by_mut = by), by = c("mut_id" = "id")) %>% 
+  left_join(select(ci_cue_range.df, id ,low_res = low, high_res = high, by_res = by), by = c("res_id" = "id"))
+
+# sort by winning and losing
+ci_invasion.win <- ci_invasion.df2 %>% filter(fitness_final > 0) %>% mutate(win = "Winner")
+ci_invasion.lose <- ci_invasion.df2 %>% filter(fitness_final < 0) %>% mutate(win = "Loser")
+```
+
+# separate function for getting dynamics
+```{r}
+ci_dyn_invasion <- function(df, win){
+  
+  # read in df info
+  if(stringr::str_detect(df$mut_id, "-i")){cue_1 = paste0(df$mut_cue, "1")}
+  if(stringr::str_detect(df$mut_id, "-i", negate = T)){cue_1 = df$mut_cue}
+  if(stringr::str_detect(df$res_id, "-i")){cue_2 = paste0(df$res_cue, "2")}
+  if(stringr::str_detect(df$res_id, "-i", negate = T)){cue_2 = df$res_cue}
+  
+  # get log
+  if(stringr::str_detect(df$mut_id, "log")){log_1 = "log10"}
+  if(stringr::str_detect(df$mut_id, "none")){log_1 = "none"}
+  
+  if(stringr::str_detect(df$res_id, "log")){log_2 = "log10"}
+  if(stringr::str_detect(df$res_id, "none")){log_2 = "none"}
+  
+  # get parameters
+  par_1 <- c(df$mut_var1_opt, df$mut_var2_opt, df$mut_var3_opt, df$mut_var4_opt)
+  par_2 <- c(df$res_var1, df$res_var2, df$res_var3, df$res_var4)
+  
+  # get cue range
+  cue_range_1 <- seq(df$low_mut, df$high_mut, by = df$by_mut)
+  cue_range_2 <- seq(df$low_res, df$high_res, by = df$by_res)
+  
+  # get unique id
+  id <- paste0(df$mut_id, df$res_id)
+  
+  # get dynamics
+  dyn <- chabaudi_ci_clean(parameters_cr_1 = par_1,
+                  parameters_cr_2 = par_2,
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = cue_1,
+                  cue_2 = cue_2,
+                  cue_range_1 = cue_range_1,
+                  cue_range_2 = cue_range_2,
+                  log_cue_1 = log_1,
+                  log_cue_2 = log_2,
+                  solver = "vode",
+                  time_range = seq(0, 30, 0.001),
+                  dyn = T)
+  
+    dyn2 <- data.frame(dyn, id = rep(id, nrow(dyn)),
+                       win = rep(win, nrow(dyn)))
+    
+    # get filename
+    filename <- paste0(id, "_", win, "_dyn.parquet")
+
+  write_parquet(dyn2, here(paste0("data/ci_invasion_dyn/", filename)))
+}
+```
+
+# run dynamics simulation
+```{r}
+ci_invasion_win.ls <- split(ci_invasion.win, seq(nrow(ci_invasion.win)))
+ci_invasion_lose.ls <- split(ci_invasion.lose, seq(nrow(ci_invasion.lose)))
+
+mclapply(ci_invasion_win.ls, function(x){ci_dyn_invasion(x, win = "win")})
+mclapply(ci_invasion_lose.ls, function(x){ci_dyn_invasion(x, win = "lose")})
+```
+
+# process
+```{r}
+# import in dataframes
+ci_invasion_win.file <- list.files(path = here("data/ci_invasion_dyn"), pattern = "*win_dyn.parquet", full.names = T)
+ci_invasion_lose.file <- list.files(path = here("data/ci_invasion_dyn"), pattern = "*lose_dyn.parquet", full.names = T)
+
+ci_invasion_win.file2 <- lapply(ci_invasion_win.file, read_parquet)
+ci_invasion_lose.file2 <- lapply(ci_invasion_lose.file, read_parquet)
+
+# bind rows
+#ci_invasion_win.df <- dplyr::bind_rows(ci_invasion_win.file2)
+#write_parquet(ci_invasion_win.df, here("data/ci_invasion_dyn/ci_invasion_win_final.parquet"))
+ci_invasion_win.df <- read_parquet(here("data/ci_invasion_dyn/ci_invasion_win_final.parquet"))
+#ci_invasion_lose.df <- dplyr::bind_rows(ci_invasion_lose.file2)
+#write_parquet(ci_invasion_lose.df, here("data/ci_invasion_dyn/ci_invasion_lose_final.parquet"))
+ci_invasion_lose.df <- read_parquet(here("data/ci_invasion_dyn/ci_invasion_lose_final.parquet"))
+
+# process
+ci_invasion_win.df2 <- ci_invasion_win.df %>% 
+  mutate(infection = "Winner") %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, id, infection)) %>% 
+  select(time, id, infection, I1, I2, Ig1,Ig2, G1, G2, tau1,tau2, cr_1)
+
+write_parquet(ci_invasion_win.df2, here("data/ci_dyn_int/ci_invasion_win2.parquet"))
+
+ci_invasion_lose.df2 <- ci_invasion_lose.df %>% 
+  mutate(infection = "Loser") %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, id, infection)) %>% 
+  select(time, id, infection, I1, I2, Ig1,Ig2, G1, G2, tau1,tau2, cr_1)
+write_parquet(ci_invasion_lose.df2, here("data/ci_dyn_int/ci_invasion_lose2.parquet"))
+
+# get difference
+ci_invasion_win.df3 <- ci_invasion_win.df2 %>% 
+  mutate(`Gametocyte difference` = G1-G2,
+         `Sexual iRBC difference` = Ig1-Ig2,
+         `Asexual iRBC difference` = I1-I2,
+         `Fitness difference` = tau1-tau2) %>% 
+  select(time, id, `Gametocyte difference`, `Sexual iRBC difference`, `Asexual iRBC difference`, `Fitness difference`) %>% 
+  tidyr::pivot_longer(!c(time, id)) %>% 
+  group_by(id, name) %>% 
+  arrange(time, .by_group = T)
+
+ci_invasion_lose.df3 <- ci_invasion_lose.df2 %>% 
+  mutate(`Gametocyte difference` = G1-G2,
+         `Sexual iRBC difference` = Ig1-Ig2,
+         `Asexual iRBC difference` = I1-I2,
+         `Fitness difference` = tau1-tau2) %>% 
+  select(time, id, `Gametocyte difference`, `Sexual iRBC difference`, `Asexual iRBC difference`, `Fitness difference`) %>% 
+  tidyr::pivot_longer(!c(time, id)) %>% 
+  group_by(id, name) %>% 
+  arrange(time, .by_group = T)
+
+write_parquet(ci_invasion_win.df3, here("data/ci_dyn_int/ci_invasion_win3.parquet"))
+write_parquet(ci_invasion_lose.df3, here("data/ci_dyn_int/ci_invasion_lose3.parquet"))
+```
+
+# plot time series dynamics of parasite and host factors
+```{r}
+ci_invasion_win.df3 <- read_parquet(here("data/ci_dyn_int/ci_invasion_win3.parquet"))
+ci_invasion_lose.df3 <- read_parquet(here("data/ci_dyn_int/ci_invasion_lose3.parquet"))
+
+# plot time-series dynamics difference
+ci_invade_win.pl1 <- ggplot(data = ci_invasion_win.df3 %>% filter(row_number() %% 1000 ==0), aes(x = time, y = value, color = "Winner")) +
+  geom_line(aes(group = id), alpha = 0.01, color = "#4575b4") +
+  geom_smooth(na.rm = T, span = 0.1, se = 0.95, color = "#4575b4") +
+  xlim(0,30)+
+  facet_wrap(~name, scales = "free_y") +
+  labs(x = "Time (day)", y = "Difference\n(strain 1-strain 2)") +
+  geom_hline(yintercept = 0, color = "black") +
+  theme_bw()
+
+ci_invade.pl2 <- ci_invade_win.pl1 +
+  geom_line(data = ci_invasion_lose.df3 %>% filter(row_number() %% 1000 ==0), aes(x = time, y = value, group = id, color = "Loser"), alpha = 0.01, color = "#fc8d59") +
+  geom_smooth(data = ci_invasion_lose.df3 %>% filter(row_number() %% 1000 ==0), aes(x = time, y = value), na.rm = T, span = 0.1, se = 0.95, color = "#fc8d59") +
+  xlim(0,20)+
+  facet_wrap(~name, scales = "free_y", ncol = 4) +
+  labs(x = "Time (day)", y = "Difference\n(strain 1-strain 2)") +
+  theme_bw() +
+  scale_color_manual(name = "Infection", values = c("Winner" = "#4575b4", "Loser" = "#fc8d59"))
+ci_invade.pl2
+```
+
+# time-series conversion rate
+```{r}
+ci_invasion_win.df2 <- read_parquet(here("data/ci_dyn_int/ci_invasion_win2.parquet"))
+ci_invasion_lose.df2 <- read_parquet(here("data/ci_dyn_int/ci_invasion_lose2.parquet"))
+
+# plot!
+ci_invade.pl3 <- ggplot() +
+  geom_line(data = ci_invasion_win.df2 %>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, group = id, color = "Optimal co-infection"), alpha = 0.025, color = "#4575b4") +
+  geom_smooth(data = ci_invasion_win.df2 %>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, color = "Optimal co-infection"),na.rm = T, span = 0.1, se = 0.95, color = "#4575b4") +
+  geom_line(data = ci_invasion_lose.df2 %>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, group = id, color = "Non-optimal co-infection"), alpha = 0.025, color = "#fc8d59") +
+  geom_smooth(data = ci_invasion_lose.df2 %>% 
+         filter(row_number() %% 100 ==0), aes(x = time, y = cr_1, color = "Non-optimal co-infection"),na.rm = T, span = 0.1, se = 0.95, color = "#fc8d59") +
+  xlim(0,30)+
+  labs(x = "Time (day)", y = "Conversion rate") +
+  scale_color_manual(name= "Strategy status",
+                     breaks=c("Optimal co-infection", "Non-optimal co-infection"),
+                     values=c("Invasion winner" = "#4575b4", "Invasion loser" = "#fc8d59")) +
+  theme_bw()
+
+```
+
+#-------arrange all graphs-----------------#
+```{r}
+# difference in parasite dynamics
+ci_dyn_diff.pl <- ggarrange(ci_opt_dyn.pl1, ci_static_dyn.pl1, ci_invade.pl2, ncol = 1)
+
+# difference in conversion rate dynamics
+ci_cr_diff.pl <- ggarrange(ci_opt_dyn.pl2, ci_static_dyn.pl2, ci_invade.pl3, ncol = 3)
+
+#  combine
+ggarrange(ci_cr_diff.pl, ci_dyn_diff.pl, ncol = 1, labels = c("A", "B"), align = "v", heights = c(1,3))
+ggsave(here("figures/report19/ci_dyn_diff.png"), height = 8, width = 8)
+```
+
+
+#================================================================================#
+# invasion dynamics heat map
+#================================================================================#
 #-----------------optimized co-infection (invasion)----------------------------#
 ```{r}
 # select for best fitness from two study sets: 1 with 0.5x4 starting point and another with original parameter as starting set
@@ -357,33 +563,51 @@ ci_invade.df2 <- do.call(rbind, lapply(ci_invade.file2, read.csv))
 
 # left_join
 ci_invade.df <- left_join(
-  select(ci_invade.df1, mut_id, res_id, fitness_1 = fitness),
-  select(ci_invade.df2, mut_id, res_id, fitness_2 = fitness),
+  select(ci_invade.df1, mut_id, res_id, fitness_1 = fitness,
+         mut_var1_opt_1 = mut_var1_opt, mut_var2_opt_1 = mut_var2_opt, mut_var3_opt_1 = mut_var3_opt, mut_var4_opt_1 = mut_var4_opt, res_var1, res_var2, res_var3, res_var4),
+  select(ci_invade.df2, mut_id, res_id, fitness_2 = fitness, mut_var1_opt_2 = mut_var1_opt, mut_var2_opt_2 = mut_var2_opt, mut_var3_opt_2 = mut_var3_opt, mut_var4_opt_2 = mut_var4_opt),
   by = c("mut_id", "res_id")
   )
 
 # get best fitness
-ci_invade.df2 <- ci_invade.df %>% 
+ci_invade.final <- ci_invade.df %>% 
   mutate(fitness_final = case_when(
     fitness_1 >= fitness_2 ~ fitness_1,
     fitness_2 > fitness_1 ~ fitness_2
+  )) %>% 
+  mutate(mut_var1_opt = case_when(
+    fitness_1 >= fitness_2 ~ mut_var1_opt_1,
+    fitness_2 > fitness_1 ~ mut_var1_opt_2
+  )) %>% 
+  mutate(mut_var2_opt = case_when(
+    fitness_1 >= fitness_2 ~ mut_var2_opt_1,
+    fitness_2 > fitness_1 ~ mut_var2_opt_2
+  )) %>% 
+  mutate(mut_var3_opt = case_when(
+    fitness_1 >= fitness_2 ~ mut_var3_opt_1,
+    fitness_2 > fitness_1 ~ mut_var3_opt_2
+  )) %>% 
+  mutate(mut_var4_opt = case_when(
+    fitness_1 >= fitness_2 ~ mut_var4_opt_1,
+    fitness_2 > fitness_1 ~ mut_var4_opt_2
   )) %>% 
   mutate(mut_cue = gsub("\\-.*|\\_.*", "", mut_id),
          mut_log = gsub(".*_", "",  mut_id),
          res_cue = gsub("\\-.*|\\_.*", "", res_id),
          res_log = gsub(".*_", "",  res_id)) %>% 
   mutate(mut_label = ifelse(mut_log == "log", paste(mut_cue, mut_log), mut_cue),
-         res_label = ifelse(res_log == "log", paste(res_cue, res_log), res_cue))
+         res_label = ifelse(res_log == "log", paste(res_cue, res_log), res_cue)) %>% 
+  select(mut_id, res_id, fitness_final, mut_var1_opt, mut_var2_opt, mut_var3_opt, mut_var4_opt, res_var1, res_var2, res_var3, res_var4, mut_cue, mut_log, res_cue, res_log, mut_label, res_label)
 
-write.csv(ci_invade.df2, here("data/ci_invasion_final.csv"))
+write.csv(ci_invade.final, here("data/ci_invasion_final.csv"))
 ```
 
 # plot heat map and average
 ```{r}
-ci_invade.pl1 <- ggplot(data = ci_invade.df2, aes(x = res_label, y = mut_label, fill = fitness_final))+
+ci_invade.pl1 <- ggplot(data = ci_invade.final, aes(x = res_label, y = mut_label, fill = fitness_final))+
   geom_tile(color = "black") +
-  scale_fill_gradient2(low = "red", high = "blue", mid = "white", 
-   midpoint = 0, space = "Lab", lim = c(-1.8, 1.5), name="Fitness\ndifference") +
+  scale_fill_gradient2(low = "#fc8d59", high = "#4575b4", mid = "white", 
+   midpoint = 0, space = "Lab", lim = c(-1.1, 1.5), name="Fitness\ndifference") +
   theme_minimal() +  
   theme(legend.position = "left",
   axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
@@ -397,7 +621,7 @@ ci_invade.pl1 <- ggplot(data = ci_invade.df2, aes(x = res_label, y = mut_label, 
   coord_fixed()
 
 # get get average
-ci_invade.df3 <- ci_invade.df2 %>% 
+ci_invade.df3 <- ci_invade.final %>% 
   group_by(mut_id) %>% 
   mutate(mean_fitness = mean(fitness_final)) %>% 
   distinct(mut_id, .keep_all = T)
@@ -413,9 +637,213 @@ ci_invade.pl2 <- ggplot() +
     axis.text.y=element_blank(),
     axis.ticks.y=element_blank())
   
-ci_invade.pl <- ggarrange(ci_invade.pl1, ci_invade.pl2, align = "h", widths = c(1, 0.2))
 
+ci_invade.pl <- ggarrange(ci_invade.pl1, ci_invade.pl2, align = "h", widths = c(1, 0.2))
 ggsave(here("figures/report19/ci_invade.png"), width = 10)
+```
+
+
+#====================================================================#
+# invasion matrix
+#====================================================================#
+# sanity checks
+Not due to delay
+```{r}
+source(here("functions/test_ci.R"))
+source(here("functions/chabaudi_ci_clean.R"))
+#I1+I2 vs Ig2 logged. 2.106175
+test1 <- chabaudi_ci_clean(parameters_cr_1 = c(0.9999999,	-9.1650326,	-71.7214007,	4998.79439),
+                  parameters_cr_2 = c(2.189146,	-5.450051,	4.543525,	-9.356682),
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = "I1+I2",
+                  cue_2 = "Ig2",
+                  cue_range_1 = seq(0, 6*10^6, by = 1200),
+                  cue_range_2 = seq(0, log10(6*10^6), log10((6*10^6)/5000)),
+                  log_cue_1 = "none",
+                  log_cue_2 = "log10",
+                  solver = "vode",
+                  time_range = seq(0, 20, by = 1e-3),
+                  dyn = F)
+
+# -4.270119
+test2 <- chabaudi_ci_clean(parameters_cr_1 = c(2.189146,	-5.450051,	4.543525,	-9.356682),
+                  parameters_cr_2 = c(0.9999999,	-9.1650326,	-71.7214007,	4998.79439),
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = "Ig1",
+                  cue_2 = "I1+I2",
+                  cue_range_1 = seq(0, log10(6*(10^6)), log10((6*(10^6))/5000)),
+                  cue_range_2 = seq(0, 6*(10^6), (6*(10^6))/5000),
+                  log_cue_1 = "log10",
+                  log_cue_2 = "none",
+                  solver = "vode",
+                  time_range = seq(0, 20, by = 1e-3),
+                  dyn = F)
+
+ggplot() +
+  geom_line(data = test1, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free_y")
+
+ggplot() +
+  geom_line(data = test2, aes(x = time, y = value, color = strain)) +
+  facet_wrap(~variable_alt, scales = "free_y")
+```
+
+
+```{r}
+ci_invade.df <- read.csv(here("data/ci_invasion_final.csv"))
+
+ci_invade.mat <- ci_invade.df %>% 
+  group_by(V1 = pmin(mut_id, res_id), V2 = pmax(mut_id, res_id)) %>% # group by cue competition, irregardless of order
+  mutate(id_alt = paste0(V1, V2),
+         invade = case_when(
+           fitness_final > 0 ~ "invade",
+           fitness_final < 0 ~ "not invade"
+         )) %>% 
+  group_by(id_alt) %>% 
+  mutate(
+    mut_is_V1 = case_when(
+    mut_id == V1 ~ "V1_invade",
+    mut_id != V1 ~ "V1_invaded")) %>% 
+  arrange(id_alt) %>% 
+  select(mut_label, res_label, fitness_final, V1, V2, id_alt, invade, mut_is_V1) %>% 
+  tidyr::pivot_wider(names_from = mut_is_V1, values_from = fitness_final) %>% 
+  group_by(id_alt) %>% 
+  mutate(V1_invade2 = gsub("NA", "", paste0(V1_invade, collapse = "")),
+         V1_invaded2 = gsub("NA", "", paste0(V1_invaded, collapse = ""))) %>% 
+  distinct(id_alt, .keep_all = T) %>% 
+  mutate(
+    category = case_when(
+    V1_invade2 > 0 & V1_invaded2 > 0 ~ "Mutual invasion",
+    V1_invade2 > 0 & V1_invaded2 < 0 ~ "Only strain 1 invasion",
+    V1_invade2 < 0 & V1_invaded2 > 0 ~ "Only strain 2 invasion",
+    V1_invade2 < 0 & V1_invaded2 < 0 ~ "Mutual non-invasion"
+  )) %>% 
+  select(V1, V2, invasion = category)
+  
+# for plotting, need to get all same cue vs same cue, which we will set to NA
+ci_invade.NA <- cbind.data.frame(`V1` = unique(ci_invade.mat$V1),
+      `V2` = unique(ci_invade.mat$V1),
+      invasion = NA)
+
+ci_invade.mat2 <- rbind(ci_invade.mat, ci_invade.NA)
+
+# get label
+ci_invade.mat3 <- ci_invade.mat2 %>% 
+  left_join(select(ci_invade.df, mut_id, V1_label = mut_label), by = c("V1" = "mut_id")) %>% 
+  left_join(select(ci_invade.df, res_id, V2_label = res_label), by = c("V2" = "res_id")) %>% 
+  distinct(`V1`, `V2`, .keep_all = T) %>% 
+  select(V1_label, V2_label, invasion)
+
+ci_invade.mat3
+# reorder so that ggplot do not mess up
+library(gtools)
+
+levels <- mixedsort(unique(c(ci_invade.mat3$V1_label, ci_invade.mat3$V2_label)))
+
+ci_invade.mat4 <- rbind(ci_invade.mat3, 
+                        ci_invade.mat3 %>% 
+                          rename(V2_label = V1_label, V1_label = V2_label) %>% 
+                          select(V1_label, V2_label, invasion)) %>%
+  mutate(across(ends_with("label"),
+                ~factor(.x, levels = levels))) %>%
+  filter(as.integer(V1_label) < as.integer(V2_label)) %>%
+  mutate(V2_label = forcats::fct_rev(V2_label))
+
+# plot
+invasion_mat.pl <- ggplot(data = ci_invade.mat4, aes(x = V2_label, y = V1_label, fill = invasion)) +
+  geom_tile(color = "black") +
+  theme_minimal() +  
+  theme(legend.position = "right",
+  axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+  axis.ticks = element_blank(),
+  plot.margin=margin(r = 0)) + 
+  labs(fill = "Invasion", x = "Strain 2 cue", y = "Strain 1 cue") +
+  #scale_x_discrete(limits = rev) +
+  scale_y_discrete(limits = rev) +
+  scale_fill_manual(values = c("Only strain 1 invasion" = "#4575b4",
+                               "Only strain 2 invasion" = "#fc8d59",
+                               "Mutual invasion" = "#fee090",
+                               "Mutual non-invasion" = "#91bfdb")) +
+  theme(legend.position = "none")
+
+
+```
+
+# create summary bar chart
+```{r}
+# create a stacked barchart for summary
+## filter out na
+ci_invade.matalt <- ci_invade.mat3 %>% na.exclude()
+
+# get frquency from both sides. Note when grouping for V2, from the perspective of cue 2, scenarrio when strain 2 invade = strain 1 invade
+ci_invade.matalt1 <- ci_invade.matalt %>% group_by(V1_label, invasion) %>% 
+  summarize(frequency_1 = n())
+
+ci_invade.mat3
+```
+
+
+```{r}
+ci_invade.matalt2 <- ci_invade.matalt %>%
+  mutate(invasion_alt = case_when(
+    invasion == "Only strain 1 invasion" ~ "Only strain 2 invasion",
+    invasion == "Only strain 2 invasion" ~ "Only strain 1 invasion",
+    invasion == "Mutual invasion" ~ "Mutual invasion",
+    invasion == "Mutual non-invasion" ~ "Mutual non-invasion"
+  )) %>% 
+  group_by(V2_label, invasion_alt) %>% 
+  summarize(frequency_2 = n())     
+
+# full join and sum. has confirmed all of them add up to 14 
+ci_invade.matalt3 <- full_join(ci_invade.matalt1, ci_invade.matalt2, by = c("V1_label" = "V2_label", "invasion" = "invasion_alt"))
+ci_invade.matalt3[is.na(ci_invade.matalt3)] <- 0
+ci_invade.matalt4 <- ci_invade.matalt3 %>% 
+  mutate(freq = frequency_1 + frequency_2) %>% 
+  mutate(temp = case_when(
+    invasion == "Only strain 1 invasion" ~ freq
+  )) %>% 
+  group_by(V1_label) %>% 
+  mutate(invade_1_freq = max(temp, na.rm = T))
+  
+invasion_mat.pl2 <- ggplot() +
+  geom_bar(data = ci_invade.matalt4, aes(x = freq, y = reorder(V1_label, invade_1_freq), fill = forcats::fct_rev(factor(invasion, levels = c("Only strain 1 invasion", "Only strain 2 invasion", "Mutual invasion", "Mutual non-invasion")))), stat = "identity") +
+  labs(x = "Frequency", fill = "Invasion", y = "Strain 1 cue") +
+  theme_bw()  +
+  scale_fill_manual(values = c("Only strain 1 invasion" = "#4575b4",
+                               "Only strain 2 invasion" = "#fc8d59",
+                               "Mutual invasion" = "#fee090",
+                               "Mutual non-invasion" = "#91bfdb")) +
+  theme(text = element_text(size = 15))
+
+ggarrange(invasion_mat.pl, invasion_mat.pl2, align = "h", common.legend = T, widths = c(1.5, 1))
+ggsave(here("figures/report19/invasion_matrix.png"), width = 9, height = 5)
+```
+
+
+#====================================================================#
+# validation of single infection strategies
+#=====================================================================#
+```{r}
+# import in all single infection data
+si_val.ls <- list.files(path = here("data/si_validation"), pattern = "*.csv", full.names = T)
+
+si_val.df <- lapply(si_val.ls, read.csv)
+si_val.df <- do.call(rbind, si_val.df)
+
+# get max fitness from simulation. left join with si_opt
+si_opt.df <- read.csv(here("data/si_opt.csv"))
+
+si_val.df %>% group_by(id) %>% summarise(max_fitness = max(V1)) %>% 
+  left_join(si_opt.df, by =c("id" = "id")) %>% 
+  mutate(difference = fitness_20 - max_fitness)
+
+# wee that all fitness in 20 days simulation is higehr than the maximum simultaed fitness. Hence validated!
 ```
 
 
@@ -425,101 +853,125 @@ ggsave(here("figures/report19/ci_invade.png"), width = 10)
 This graph shows the effects of different types of cue perception (total vs individual, log vs non-logged for both static and semi-dynamic co-infection competition)
 
 #---------------------static competition------------------------------#
-
+# logging cues
 ```{r}
-# import in static competition dynamics
-ci_static_win.df <- read_parquet(here("data/ci_static/ci_static_win_final.parquet"))
-ci_static_lose.df <- read_parquet(here("data/ci_static/ci_static_lose_final.parquet"))
+# derived from code from report 18
+ ci_static_log.pair <- ci_comp_static.df3 %>% 
+  mutate(cue_1 = gsub(" .*|1+.*", "", trimws(id_1_alt)),
+         log_status = ifelse(str_detect(trimws(id_1_alt), "log"), "log", "none")) %>% 
+  group_by(cue_1, id_2_alt) %>% 
+  filter(log_status == "log") %>% 
+  select(cue_1, Log10 = fitness_diff, id_2_alt)
 
-# combine these two
+ci_static_log.pair2 <- ci_comp_static.df3 %>% 
+  mutate(cue_1 = gsub(" .*|1+.*", "", trimws(id_1_alt)),
+         log_status = ifelse(str_detect(trimws(id_1_alt), "log"), "log", "none")) %>% 
+  group_by(cue_1, id_2_alt) %>% 
+  filter(log_status == "none") %>% 
+  select(cue_1, None = fitness_diff, id_2_alt)
+  
+ci_static_log.pair3 <- left_join(ci_static_log.pair, ci_static_log.pair2, by = c("cue_1", "id_2_alt")) %>% 
+  filter(!is.na(None) & !is.na(Log10)) %>% 
+  mutate(difference = ifelse(Log10>None, "Log better", "None better"))
 
-ci_static_win.df2 <- ci_static_win.df %>% 
-  filter(variable == "tau_cum1" | variable == "tau_cum2") %>% 
-  filter(time == 30) %>% 
-  mutate(cue_1 = stringr::str_split(id, "\\_|log|none") %>% 
-           purrr::map_chr(., 1),
-         cue_2 = stringr::str_split(id, "\\_|log|none") %>% 
-           purrr::map_chr(., 3),
-         temp_1 = stringr::str_split(id, "\\_") %>% 
-           purrr::map_chr(., 2),
-         temp_2 = stringr::str_split(id, "\\_") %>% 
-           purrr::map_chr(., 3)) %>% 
-  mutate(
-    log_1 = case_when(
-    str_detect(temp_1, "log") ~ "log10",
-    str_detect(temp_1, "none") ~ "none"),
-    log_2 = case_when(
-      str_detect(temp_2, "log") ~ "log10",
-      str_detect(temp_2, "none") ~ "none"),
-    )
-ci_static_win.df2
+ci_static_log_pair.pl <- ggpaired(ci_static_log.pair3, cond1 = "None", cond2 = "Log10", line.color = "difference", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect") +
+  scale_color_manual(values = c("None better" = "#fc8d59", "Log better" = "#4575b4"))
 
-write_parquet(ci_static_win.df2, here("data/ci_static/ci_static_win2.parquet"))
-
-ci_static_lose.df2 <- ci_static_lose.df %>% 
-  filter(variable == "tau_cum1" | variable == "tau_cum2") %>% 
-  filter(time == 30) %>% 
-  mutate(cue_1 = stringr::str_split(id, "\\_|log|none") %>% 
-           purrr::map_chr(., 1),
-         cue_2 = stringr::str_split(id, "\\_|log|none") %>% 
-           purrr::map_chr(., 3),
-         temp_1 = stringr::str_split(id, "\\_") %>% 
-           purrr::map_chr(., 2),
-         temp_2 = stringr::str_split(id, "\\_") %>% 
-           purrr::map_chr(., 3)) %>% 
-  mutate(
-    log_1 = case_when(
-    str_detect(temp_1, "log") ~ "log10",
-    str_detect(temp_1, "none") ~ "none"),
-    log_2 = case_when(
-      str_detect(temp_2, "log") ~ "log10",
-      str_detect(temp_2, "none") ~ "none"),
-    )
-write_parquet(ci_static_lose.df2, here("data/ci_static/ci_static_lose2.parquet"))
-
-# combine both
-ci_static.comp <- rbind(ci_static_win.df2, ci_static_lose.df2)
 ```
 
-# plot log
+# combine
 ```{r}
-# get log vs non-log
-ci_static_comp.log <- ci_static.comp %>% 
-  filter((log_1 == "log10" & log_2 == "none") | (log_1 == "none" & log_2 == "log10")) %>% 
-  filter(cue_1 == cue_2) %>% 
-  select(strain, value, cue = cue_1, log_1, log_2) %>% 
-  mutate(log_alt = case_when(
-    strain == 1 & log_1 == "none" ~ "none",
-    strain == 2 & log_2 == "log10" ~ "log10"
-  ))
+ci_static_comb.pair <- ci_comp_static.df3 %>% 
+  distinct(id_1_alt, id_2_alt, .keep_all = T) %>% 
+  mutate(mut_cue_alt = trimws(gsub("1+.*", "", gsub(" log10", "", trimws(id_1_alt)))),
+         mut_log = ifelse(str_detect(id_1_alt, "log"), "log10", ""),
+         mut_label_alt = trimws(paste(mut_cue_alt, mut_log)),
+         comb = ifelse(trimws(id_1_alt) == trimws(mut_label_alt), "Self", "Total")) %>% 
+  select(fitness_diff, mut_label_alt, id_2_alt, comb) %>% 
+  tidyr::pivot_wider(names_from = comb, values_from = fitness_diff) %>% 
+  filter(!is.na(Self) & !is.na(Total)) %>% 
+  mutate(difference = ifelse(Self>Total, "Self better", "Total better"))
 
-log_pair.pl <- ggpaired(ci_static_comp.log, x = "log_alt", y = "value", id = "cue") +
-  labs(x = "Cue perception", y = "Fitness")
+ci_static_comb_pair.pl <- ggpaired(ci_static_comb.pair, cond1 = "Total", cond2 = "Self", line.color = "difference", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect")+
+  scale_color_manual(values = c("Total better" = "#fc8d59", "Self better" = "#4575b4"))
 ```
 
-# plot combine vs individual
+#--------------------------------------------------------------#
+invasion pairwise
+#--------------------------------------------------------------#
+# logging cues
 ```{r}
-ci_static_comp.comb <- ci_static.comp %>% 
-  mutate(cue_alt_1 = case_when(
-    stringr::str_detect(cue_1, "-i") ~ gsub("*-i", "", cue_1),
-    stringr::str_detect(cue_1, "1+") ~ gsub("*1+.*", "", cue_1)),
-    cue_alt_2 = case_when(
-    stringr::str_detect(cue_2, "-i") ~ gsub("*-i", "", cue_2),
-    stringr::str_detect(cue_2, "1+") ~ gsub("*1+.*", "", cue_2))) %>% 
-  filter(cue_alt_1 == cue_alt_2 & log_1 == log_2) %>% 
-  mutate(combine = case_when(
-    strain == 1 & str_detect(cue_1, "\\+") ~ "Combined",
-    strain == 2 & str_detect(cue_2, "-i") ~ "Individual")
-  )
+ci_invade.final <- read.csv(here("data/ci_invasion_final.csv"))
+# process dataframes to get dataframes grouped by the same mutant cue (log or non-logged) vs the same residence cue
+ci_invasion_log.pair <- ci_invade.final %>% 
+  group_by(mut_cue, res_label) %>% 
+  mutate(log_status = case_when(
+    trimws(mut_log) == "log" ~ "log",
+    trimws(mut_log) == "none" ~ "none"
+  )) %>% 
+  filter(log_status == "log") %>% 
+  mutate(mut_cue_alt = trimws(mut_cue),
+         res_label_alt = trimws(res_label)) %>% 
+  select(res_id, Log10 = fitness_final, mut_cue_alt, mut_log, mut_label, res_label_alt)
 
-comb_pair.pl <- ggpaired(ci_static_comp.comb, x = "combine", y = "value", id = "temp_1") +
-  labs(x = "Cue perception", y = "Fitness")
+ci_invasion_log.pair2 <- ci_invade.final %>% 
+  group_by(mut_cue, res_label) %>% 
+  mutate(log_status = case_when(
+    trimws(mut_log) == "log" ~ "log",
+    trimws(mut_log) == "none" ~ "none"
+  )) %>% 
+  filter(log_status == "none") %>% 
+  mutate(mut_cue_alt = trimws(mut_cue),
+         res_label_alt = trimws(res_label)) %>% 
+  select(res_id, None = fitness_final, mut_cue_alt, mut_log, mut_label, res_label_alt) 
+  
+ci_invasion_log.pair3 <- left_join(ci_invasion_log.pair, ci_invasion_log.pair2, by = c("mut_cue", "res_label", "res_id")) %>% 
+  filter(!is.na(None) & !is.na(Log10)) %>% 
+  mutate(difference = ifelse(Log10>None, "Log better", "None better"))
+
+
+ci_invasion_log_pair.pl <- ggpaired(ci_invasion_log.pair3, cond1 = "None", cond2 = "Log10", line.color = "difference", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect") +
+  scale_color_manual(values = c("None better" = "#fc8d59", "Log better" = "#4575b4"))
 ```
 
+# combine or individual 
 ```{r}
-log_pair.pl
-comb_pair.pl
+ci_invasion_comb.pair <- ci_invade.final %>% 
+  mutate(mut_cue_alt = case_when(
+    stringr::str_detect(mut_id, "-i") ~ gsub("*-i", "", trimws(mut_cue)),
+    stringr::str_detect(mut_id, "1+") ~ gsub("*1+.*", "", trimws(mut_cue)),
+    stringr::str_detect(mut_id, "-i|1+", negate = T) ~ trimws(mut_cue)),
+    res_label_alt = trimws(res_label)) %>% 
+  mutate(comb = case_when(
+    trimws(mut_cue_alt) == trimws(mut_cue) ~ "Self",
+    trimws(mut_cue_alt) != trimws(mut_cue) ~ "Total"
+  ),
+  mut_label_alt = trimws(paste(trimws(mut_cue_alt), mut_log))) %>% 
+  select(fitness_final, mut_label_alt, res_label_alt, comb) %>% 
+  tidyr::pivot_wider(names_from = comb, values_from = fitness_final) %>% 
+  filter(!is.na(Self) & !is.na(Total)) %>% 
+  mutate(difference = ifelse(Self>Total, "Self better", "Total better"))
+
+ci_invasion_comb_pair.pl <- ggpaired(ci_invasion_comb.pair, cond1 = "Total", cond2 = "Self", line.color = "difference", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect") +
+  scale_color_manual(values = c("Total better" = "#fc8d59", "Self better" = "#4575b4"))
+  
 ```
+
+#----------arrange plots----------------#
+```{r}
+static_pair.pl <- ggarrange(ci_static_log_pair.pl, ci_static_comb_pair.pl)
+invasion_pair.pl <- ggarrange(ci_invasion_log_pair.pl, ci_invasion_comb_pair.pl)
+
+ggarrange(static_pair.pl,invasion_pair.pl, ncol = 1, align = "hv")
+ggsave(here("figures/report19/ci_static_invasion_pair.png"), height = 7)
+```
+
+
+
 
 
 

@@ -3,7 +3,7 @@
 #-------------------#
 # Used for infection simulation of co-infection model and for optimization of best conversion rate strategy
 # Avril Wang
-# last edited 2022-05-27
+# last edited 2022-03-25
 ## added heaviside transfromation to constrain cue range
 ## Note, added "sum" as possibility for cue. This would give us I1+I2+Ig1+Ig2
 
@@ -13,7 +13,7 @@
 # infection manipulation (altering injection and timing of invasion) only applies to strain 1
 # dual cue not implemented due to potential performance issues
 
-chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 conversion rate strategy
+test_ci <- function(parameters_cr_1, # parameters for strain 1 conversion rate strategy
                               parameters_cr_2, # parameters for strain 2 conversion rate strategy
                               immunity, # mode of immunity. ni, i, or tsukushi available
                               parameters, # parameters for model
@@ -26,7 +26,6 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
                               log_cue_2 = "none", # whether to log transform cue 2
                               solver = "lsoda", # solver for numerical integration. Vode often gives faster runs
                               dyn = FALSE, # whether to simulate infection dynamics (false for optimization)
-                              delay = 0, # when strain 1 injection occurs days-post infection
                               ratio = 1,# ratio of # of strain 1 injected compared to strain 2
                               neg = F){  # turn to TRUE if using minimization optimization. Turns final output negative
   
@@ -47,7 +46,6 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
   force(dyn)
   force(log_cue_1)
   force(log_cue_2)
-  force(delay)
   force(ratio)
   
   #-------------------------#
@@ -61,7 +59,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
                Mg1 = 0, # sexual merozoite density of strain 1
                Mg2 = 0, # sexual merozoite density of strain 2
                ID = 0, # death rate of all iRBC (same across strain 1 and strain 2)
-               I1 = 0, # initial iRBC density injected for strain 1. set to 0 for delayed infection. If not delayed, I0 parasite inject @ 0.001
+               I1 = parameters[["I0"]], # initial iRBC density injected for strain 1. set to 0 for delayed infection. If not delayed, I0 parasite inject @ 0.001
                I2 = parameters[["I0"]], # initial iRBC density injected for strain2 (residence)
                Ig1 = 0, # sexual iRBC density of strain 1
                Ig2 = 0, # sexual iRBC density of strain 2
@@ -77,7 +75,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
                Mg1 = 0,
                Mg2 = 0,
                ID = 0,
-               I1 = 0, # set to 0 for delayed infection. If not delayed, parasite inject @ 0.001
+               I1 = parameters[["I0"]], # set to 0 for delayed infection. If not delayed, parasite inject @ 0.001
                I2 = parameters[["I0"]],
                Ig1 = 0,
                Ig2 = 0,
@@ -88,58 +86,49 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
                cr_t1 = 0,
                cr_t2 = 0)
   }
-    
-    #-------------------------#
-    # Ensure inputs are correct
-    #------------------------#
-    # Ensure immunity input is correct
-    if (immunity != "ni" && immunity != "i" && immunity != "tsukushi") {
-      stop("Immunity must be either 'ni', 'i', tsukushi'")
-    }
-    
-    # Ensure cue is correct
-    ## cue of strain 1
-    if (!(unlist(stringr::str_split(cue_1, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
-        !((cue_1 %in% names(state)) | cue_1 == "sum") && cue_1 != "t") {
-      stop("Cue 1 must be one of the states or time")
-    }
-    
-    ## cue of strain 2
-    if (!(unlist(stringr::str_split(cue_2, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
-        !((cue_2 %in% names(state)) | cue_2 == "sum") && cue_2 != "t") {
-      stop("Cue 2 must be one of the states or time")
-    }
-    
-    # Ensure that time_range is used as cue_range when t is used
-    if(cue_1 == "t" && (!isTRUE(all.equal(cue_range_1, time_range)))){
-      stop("Time is chosen as cue_1. Cue_range_1 must equal to time_range")
-    }
-    if(cue_2 == "t" && (!isTRUE(all.equal(cue_range_2, time_range)))){
-      stop("Time is chosen as cue_2. Cue_range_2 must equal to time_range")
-    }
+  
+  #-------------------------#
+  # Ensure inputs are correct
+  #------------------------#
+  # Ensure immunity input is correct
+  if (immunity != "ni" && immunity != "i" && immunity != "tsukushi") {
+    stop("Immunity must be either 'ni', 'i', tsukushi'")
+  }
+  
+  # Ensure cue is correct
+  ## cue of strain 1
+  if (!(unlist(stringr::str_split(cue_1, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
+      !((cue_1 %in% names(state)) | cue_1 == "sum") && cue_1 != "t") {
+    stop("Cue 1 must be one of the states or time")
+  }
+  
+  ## cue of strain 2
+  if (!(unlist(stringr::str_split(cue_2, "\\+|\\-|\\*|\\/")) %in% names(state)) && 
+      !((cue_2 %in% names(state)) | cue_2 == "sum") && cue_2 != "t") {
+    stop("Cue 2 must be one of the states or time")
+  }
+  
+  # Ensure that time_range is used as cue_range when t is used
+  if(cue_1 == "t" && (!isTRUE(all.equal(cue_range_1, time_range)))){
+    stop("Time is chosen as cue_1. Cue_range_1 must equal to time_range")
+  }
+  if(cue_2 == "t" && (!isTRUE(all.equal(cue_range_2, time_range)))){
+    stop("Time is chosen as cue_2. Cue_range_2 must equal to time_range")
+  }
+  
+  # Ensure that cue transformation is entered correctly
+  if(log_cue_1 != "none" && log_cue_1 != "log10"){
+    stop("log_cue_1 must be either 'none' or 'log10'")
+  }
+  if(log_cue_2 != "none" && log_cue_2 != "log10"){
+    stop("log_cue_2 must be either 'none' or 'log10'")
+  }
+  
 
-    # Ensure that cue transformation is entered correctly
-    if(log_cue_1 != "none" && log_cue_1 != "log10"){
-      stop("log_cue_1 must be either 'none' or 'log10'")
-    }
-    if(log_cue_2 != "none" && log_cue_2 != "log10"){
-      stop("log_cue_2 must be either 'none' or 'log10'")
-    }
-    
-    # Ensure delay is...
-    ## not longer then infection period
-    if(delay > max(time_range)){
-      stop("Delay must be before infection period ends")
-    }
-    ## not negative
-    if(delay < 0){
-      stop("Delay must be positive")
-    }
-    
-    # Ensure ratio is within acceptable range (not 0 or negative)
-    if(ratio <= 0){
-      stop("Ratio must be above 0!")
-    }
+  # Ensure ratio is within acceptable range (not 0 or negative)
+  if(ratio <= 0){
+    stop("Ratio must be above 0!")
+  }
   
   #-------------------------#
   # Function to describe population 
@@ -150,7 +139,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     res = I0*(dbeta(t, sp, sp))
   }
   
-
+  
   #----------------------#
   # define Heaviside transformation
   #----------------------#
@@ -188,11 +177,11 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
   # use spline function to predict cr. Double exponentitate to get conversion rate to be between 0 and 1
   cr_fit_t_1 <- exp(-exp(predict(dummy_cr.mod_1, newdata = data.frame(cue_range_1))))
   cr_fit_t_2 <- exp(-exp(predict(dummy_cr.mod_2, newdata = data.frame(cue_range_2))))
-
+  
   # Get spline function where cr ~ cue
   cr_1_fun <- splinefun(cbind(cue_range_1, cr_fit_t_1))
   cr_2_fun <- splinefun(cbind(cue_range_2, cr_fit_t_2))
-    
+  
   
   #---------------------------#
   #---------------------------#
@@ -220,7 +209,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       a <- parameters["a"] # maximum iRBC removal rate /day for saturating immunity (not used if i or tsukushi chosen for immunity)
       b <- parameters["b"] # total iRBC density needed to activate half of maximum iRBC removal 
     }
-
+    
     # additional parameters if tsukushi's model of immunity is used
     if (immunity == "tsukushi") {
       psin <- parameters["psin"] # activation strength for indiscriminate RBC removal
@@ -233,7 +222,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     
     # only no immunity or saturating immunity uses lambda
     if(immunity != "tsukushi"){lambda <- parameters["lambda"]} # maximum RBC replenishment rate
-
+    
     #----------------------#
     # Rename states for cleaner code
     #----------------------#
@@ -251,7 +240,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     G2 <- state["G2"]  # gametocyte density of strain 2
     cr_t1 <- state["cr_t1"] # track conversion rate of strain 1
     cr_t2 <- state["cr_t2"] # track conversion rate of strain 2
-
+    
     if (immunity == "tsukushi"){
       N <- state["N"] # extent of indiscriminant RBC removal
       W <- state["W"] # extent of targetted iRBC removal
@@ -261,15 +250,15 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     # Define initial iRBC population structure
     # based on beta distribution
     #---------------------#
-    pulseBeta_1 <- pulseBeta_fun(I0*ratio, sp, t-delay) # only strain 1 can experience delay and decrease in injected amount
+    pulseBeta_1 <- pulseBeta_fun(I0*ratio, sp, t) # only strain 1 can experience delay and decrease in injected amount
     pulseBeta_2 <- pulseBeta_fun(I0, sp, t) # strain 2 does not experience delay
     
     #---------------------#
     # Define lag terms
     #---------------------#
     #------strain 1-------# (a for alpha days ago, b = for alphag ago. 1 for strain number)
-    if(t>alpha+delay){lag_a_1 = deSolve::lagvalue(t-alpha)} ## lag state for asexual development
-    if(t>alphag+delay){lag_b_1 = deSolve::lagvalue(t-alphag)} ## lag state for gametocyte development
+    if(t>alpha){lag_a_1 = deSolve::lagvalue(t-alpha)} ## lag state for asexual development
+    if(t>alphag){lag_b_1 = deSolve::lagvalue(t-alphag)} ## lag state for gametocyte development
     
     #------strain 2-------#
     if(t>alpha){lag_a_2 = deSolve::lagvalue(t-alpha)} # lag state for asexual development
@@ -294,44 +283,44 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     #-----------Simple cue without addition for strain 1------------#
     if(stringr::str_detect(cue_1, "\\+|\\-|\\*|\\/", negate = TRUE)){
       ## time-based cue for strain 1
-      if(t>alpha+delay && cue_1 == "t"){ ### cue lagged alpha days ago
+      if(t>alpha && cue_1 == "t"){ ### cue lagged alpha days ago
         cue_lag_a1 <- t-alpha
       } 
       ## State-based cue for strain 1
-      if(t>alpha+delay && cue_1 != "t" && cue_1 != "sum"){ ### cue lagged alpha days ago
+      if(t>alpha && cue_1 != "t" && cue_1 != "sum"){ ### cue lagged alpha days ago
         cue_lag_a1 <- lag_a_1[lag.i_1]
       }
-      if(t>alpha+delay && cue_1 == "sum"){cue_lag_a1 <- lag_a_1[7]+lag_a_1[8]+lag_a_1[9]+lag_a_1[10]} ## if sum is chosen as cue, add up all iRBC values (I1+I2+Ig1+Ig2)
+      if(t>alpha && cue_1 == "sum"){cue_lag_a1 <- lag_a_1[7]+lag_a_1[8]+lag_a_1[9]+lag_a_1[10]} ## if sum is chosen as cue, add up all iRBC values (I1+I2+Ig1+Ig2)
     } #-----------------------complex cues for addition-based cues-----------------------#
     if(stringr::str_detect(cue_1, "\\+")){ # addition only (currently only supports two cues addition)
-        if(t>alpha+delay && cue_1 != "t"){cue_lag_a1 <- lag_a_1[lag.i_1[1]]+lag_a_1[lag.i_1[2]]}
-      }
-
+      if(t>alpha && cue_1 != "t"){cue_lag_a1 <- lag_a_1[lag.i_1[1]]+lag_a_1[lag.i_1[2]]}
+    }
+    
     
     #----------------Simple cue without addition for strain 2-------#
     if(stringr::str_detect(cue_2, "\\+|\\-|\\*|\\/", negate = TRUE)){
       ## time-based cues
-      if(t>alpha+delay && cue_2 == "t"){
+      if(t>alpha && cue_2 == "t"){
         cue_lag_a2 <- t-alpha
       } 
       
       ## state-based cues
-      if(t>alpha+delay && cue_2 != "t" && cue_2 != "sum"){
+      if(t>alpha && cue_2 != "t" && cue_2 != "sum"){
         cue_lag_a2 <- lag_a_2[lag.i_2]
       }
-      if(t>alpha+delay && cue_2 == "sum"){cue_lag_a2 <- lag_a_2[7]+lag_a_2[8]+lag_a_2[9]+lag_a_2[10]}
+      if(t>alpha && cue_2 == "sum"){cue_lag_a2 <- lag_a_2[7]+lag_a_2[8]+lag_a_2[9]+lag_a_2[10]}
       
     } #------------complex cues involving addition of 2 cues-----------------------#
     if(stringr::str_detect(cue_2, "\\+")){ # if it contains plus. strain 1
-        if(t>alpha+delay && cue_2 != "t"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]+lag_a_2[lag.i_2[2]]}
-      }
+      if(t>alpha && cue_2 != "t"){cue_lag_a2 <- lag_a_2[lag.i_2[1]]+lag_a_2[lag.i_2[2]]}
+    }
     
     
     #------------------#
     # Process cue values
     #------------------#
     # Strain 1
-    if(t>alpha+delay){
+    if(t>alpha){
       if(log_cue_1 == "log10"){cue_lag1_p <- heaviside_trans(log10(abs(cue_lag_a1)+5e-324), max(cue_range_1))} # log the lagged cue
       if(log_cue_1 == "none"){cue_lag1_p <- heaviside_trans(cue_lag_a1, max(cue_range_1))} # keep it the same
       cr_1 <- cr_1_fun(cue_lag1_p)
@@ -353,14 +342,14 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     #-------Strain 1-------#
     ## hazard function is constant (mu) if no immunity is used
     if(immunity == "ni"){
-      if(t<=alpha+delay){S_1 <- exp(-mu*t)}
-      if(t>alpha+delay){S_1 <- exp(-mu*alpha)}
-      } 
+      if(t<=alpha){S_1 <- exp(-mu*t)}
+      if(t>alpha){S_1 <- exp(-mu*alpha)}
+    } 
     
     ## hazard function varies if tsukushi or saturating immunity is used
     if(immunity != "ni"){
-      if(t<=alpha+delay){S_1 <- exp(-ID)}
-      if(t>alpha+delay){S_1 <- exp(-ID + lag_a_1[6])} ## subtracts lagged ID from overall hazard rate
+      if(t<=alpha){S_1 <- exp(-ID)}
+      if(t>alpha){S_1 <- exp(-ID + lag_a_1[6])} ## subtracts lagged ID from overall hazard rate
     }
     
     #-------Strain 2-------#
@@ -376,7 +365,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     
     #-------Survival function of sexual iRBC---------------#
     ## before production of sexual iRBC, set to 0
-    if(t<=alpha+delay){
+    if(t<=alpha){
       Sg_1 <- 0 ### strain 1
     }
     
@@ -387,27 +376,27 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     ## if saturating immunity or no immunity is used. Sexual iRBC not killed by immunity
     if(immunity != "tsukushi"){
       ## after production of first sexual iRBC but before any of them  burst
-      if(t>alpha+delay && t<=alpha+alphag+delay){
+      if(t>alpha && t<=alpha+alphag){
         Sg_1 <- exp(-mu*t) ### strain 1
-        } 
+      } 
       
       if(t>alpha && t<=alpha+alphag){
         Sg_2 <- exp(-mu*t) ### strain 2
-        } 
+      } 
       
       ## after first burst of sexual iRBC
-      if(t>alpha+alphag+delay){
+      if(t>alpha+alphag){
         Sg_1 <- exp(-mu*alphag) ### strain 1
-        }
+      }
       
       if(t>alpha+alphag){
         Sg_2 <- exp(-mu*alphag) ### strain 2
-        }
+      }
     }
     
     ## if tsukushi's mode of immunity is used. Sexual iRBC is killed by immunity
     if(immunity == "tsukushi"){
-      if(t>alpha+delay && t<=alpha+alphag+delay){
+      if(t>alpha && t<=alpha+alphag){
         Sg_1 <- exp(-ID)
       }
       
@@ -415,7 +404,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
         Sg_2 <- exp(-ID)
       }
       
-      if(t>alpha+alphag+delay){
+      if(t>alpha+alphag){
         Sg_1 <- exp(-ID + lag_b_1[6])
       }
       
@@ -443,7 +432,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     dG2_nolag <- -mug*G2
     
     # tracks cr 
-    if(t>alpha+delay){dcr_t1 <- cr_1} else{dcr_t1 <- 0}
+    if(t>alpha){dcr_t1 <- cr_1} else{dcr_t1 <- 0}
     if(t>alpha){dcr_t2 <- cr_2} else{dcr_t2 <- 0}
     
     # ODEs exclusive to tsukushi's model
@@ -484,17 +473,15 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     #----------------------------#
     # Tracking variables with lagged states
     #----------------------------#
-    #------Before delay----------#
-    if(t<delay){dI1 <- 0} # strain 1 not injected yet
     
     #------Before first asexual iRBC burst-------------#
     ## Strain 1
-    if(t<=alpha+delay){
+    if(t<=alpha){
       dI1 <- dI1_nolag-(pulseBeta_1*S_1)
       dM1 <- dM1_nolag+(beta*pulseBeta_1*S_1) # all of them are asexual merozoite
       dMg1 <- 0 # should have no Mg before day alpha
-      dIg1 <- 0 #first wave starts on day alpha+delay
-      dG1 <- 0 # first wave starts on day alpha+alphag+delay
+      dIg1 <- 0 #first wave starts on day alpha
+      dG1 <- 0 # first wave starts on day alpha+alphag
     }
     
     ## Strain 2
@@ -508,7 +495,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     
     #------After first asexual iRBC burst but before first sexual iRBC burst-----------#
     ## Strain 1
-    if(t>alpha+delay && t<=alpha+alphag+delay){
+    if(t>alpha && t<=alpha+alphag){
       dG1 <- 0 # no production of gametocyte yet
       dIg1 <- dIg1_nolag # no death due to mature sexual iRBC bursting
     }
@@ -521,12 +508,12 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     
     #-----After first asexual iRBC burst-----#
     ## Strain 1
-    if(t>alpha+delay){
+    if(t>alpha){
       dI1 <- dI1_nolag-(p*lag_a_1[1]*lag_a_1[2]*S_1)
       dM1 <- dM1_nolag+(beta*(1-cr_1)*p*lag_a_1[1]*lag_a_1[2]*S_1)
       dMg1 <- dMg1_nolag+(beta*cr_1*p*lag_a_1[1]*lag_a_1[2]*S_1)
-
-      }
+      
+    }
     
     ## Strain 2
     if(t>alpha){
@@ -537,7 +524,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     
     #-----After first sexual iRBC burst-----#
     ## Strain 1
-    if(t>alpha+alphag+delay){
+    if(t>alpha+alphag){
       dG1 <- dG1_nolag+(p*lag_b_1[1]*lag_b_1[4]*Sg_1)
       dIg1 <- dIg1_nolag-(p*lag_b_1[1]*lag_b_1[4]*Sg_1)
     }
@@ -561,14 +548,6 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
   #----------------------------#
   #----------------------------#
   
-  #--------------------------#
-  # Create event for strain 1 injection (delayed)
-  #--------------------------#
-  delay_injection <- data.frame(var = "I1",
-                                time = delay,
-                                value = parameters["I0"]*ratio,
-                                method = "add")
-  
   #-------------------------#
   # Run single-infection model
   #------------------------#
@@ -577,7 +556,6 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
                                                 func = chabaudi_ci_dyn,
                                                 p = parameters,
                                                 method = solver,
-                                                events = list(data = delay_injection),
                                                 control=list(mxhist = 1e6)))
   
   #-------------------------#
@@ -613,7 +591,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
   if(dyn == FALSE){
     if(neg == F){return(tau.diff)}
     if(neg == T){return((tau.diff)*-1)}
-    }
+  }
   #-------------------------#
   # Simulating infection dynamics if Dyn == TRUE
   #------------------------# 
@@ -631,20 +609,20 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     
     #------Calculate cr------#
     ## time-based conversion rate
-   if(cue_1 == "t"){
-    cr.ls1 <- cr_1_fun(time_range)
-    chabaudi_ci.df$cr_1 <- cr.ls1}
+    if(cue_1 == "t"){
+      cr.ls1 <- cr_1_fun(time_range)
+      chabaudi_ci.df$cr_1 <- cr.ls1}
     
     if(cue_2 == "t"){
       cr.ls2 <- cr_2_fun(time_range)
       chabaudi_ci.df$cr_2 <- cr.ls2}
-
+    
     ## state-based conversion rate
     if(cue_1 != "t"){
       chabaudi_ci.df <- chabaudi_ci.df %>% 
-      dplyr::mutate(cr_1 = (cr_t1 - dplyr::lag(cr_t1))*1000)}
+        dplyr::mutate(cr_1 = (cr_t1 - dplyr::lag(cr_t1))*1000)}
     
-   if(cue_2 != "t"){
+    if(cue_2 != "t"){
       chabaudi_ci.df <- chabaudi_ci.df %>% 
         dplyr::mutate(cr_2 = (cr_t2 - dplyr::lag(cr_t2))*1000)
     }

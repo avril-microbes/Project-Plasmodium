@@ -1858,18 +1858,18 @@ ci_comp_static.df <- select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff)
 # get reverse. Here, we will simply multiple fitness difference by -1
 ci_comp_static.df2 <- select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff)
 names(ci_comp_static.df2) <- c("id_2_alt", "id_1_alt","fitness_diff")
-ci_comp_static.df2$fitness_diff <- ci_comp_static.df2$fitness_diff*-1
+ci_comp_static.df2$fitness_diff <- ci_comp_static.df$fitness_diff*-1
 
 # cat
-ci_comp_static.df3 <- rbind(select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff), ci_comp_static.df2) %>% 
-  group_by(id_1_alt) %>% 
-  mutate(mean = mean(fitness_diff))
+ci_comp_static.df3 <- rbind(select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff),
+                            select(ci_comp_static.df2, id_1_alt, id_2_alt, fitness_diff))
+
 
 # Heatmap
-ci_comp_static.map <- ggplot(data = ci_comp_static.df3, aes(x = id_2_alt, y = id_1_alt, fill = fitness_diff))+
+ci_comp_static.pl1 <- ggplot(data = ci_comp_static.df3, aes(x = id_2_alt, y = id_1_alt, fill = fitness_diff))+
   geom_tile(color = "black") +
-  scale_fill_gradient2(low = "red", high = "blue", mid = "white", 
-   midpoint = 0, space = "Lab", lim = c(-1.8, 1.5), name="Fitness\ndifference") +
+  scale_fill_gradient2(low = "#fc8d59", high = "#4575b4", mid = "white", 
+   midpoint = 0, space = "Lab", lim = c(-1.1, 1.5), name="Fitness\ndifference") +
   theme_minimal() +  
   theme(legend.position = "left",
   axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
@@ -1882,8 +1882,14 @@ ci_comp_static.map <- ggplot(data = ci_comp_static.df3, aes(x = id_2_alt, y = id
   labs(x = "Strain 2 cue", y = "Strain 1 cue") +
   coord_fixed()
 
-ci_comp_static.mean <- ggplot() +
-  geom_bar(data =  ci_comp_static.df3, aes(y = id_1_alt, x = mean), stat = "identity") +
+# do mean
+ci_comp_static.mean <- ci_comp_static.df3 %>% 
+  group_by(id_1_alt) %>% 
+  summarize(mean = mean(fitness_diff, na.rm = T))
+
+
+ci_comp_static.pl2 <- ggplot() +
+  geom_bar(data =  ci_comp_static.mean, aes(y = id_1_alt, x = mean), stat = "identity") +
   labs(y = "", x = "Mean fitness\ndifference") +
   theme_bw() +
   theme(plot.margin = margin(l = 0),
@@ -1893,64 +1899,11 @@ ci_comp_static.mean <- ggplot() +
     axis.text.y=element_blank(),
     axis.ticks.y=element_blank())
   
-ci_static.pl <- ggarrange(ci_comp_static.map, ci_comp_static.mean, align = "h", widths = c(1, 0.2))
-ggsave(here("figures/report18/ci_comp_static.png"), width = 10)
+
+ci_static.pl <- ggarrange(ci_comp_static.pl1, ci_comp_static.pl2, align = "h", widths = c(1, 0.2))
+ggsave(here("figures/report19/ci_comp_static.png"), width = 10)
 ```
 
-# invasion data
-```{r}
-invasion.df2 <- read.csv(here("data/ci_invasion_final.csv"))
-# get fitness (mean)
-invasion.df3 <- invasion.df2 %>% 
-  group_by(mut_alt) %>% 
-  summarize(mean = mean(fitness))
-
-ci_invade.pl1 <- ggplot(data = invasion.df2, aes(x = res_alt, y = mut_alt, fill = fitness))+
-  geom_tile(color = "black") +
-  scale_fill_gradient2(low = "red", high = "blue", mid = "white", 
-   midpoint = 0, space = "Lab", lim = c(-1.8, 1.5), name="Fitness\ndifference") +
-  theme_minimal() +  
-  theme(legend.position = "left",
-  axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
-  text = element_text(size = 15),
-  panel.grid.major = element_blank(),
-  panel.border = element_blank(),
-  panel.background = element_blank(),
-  axis.ticks = element_blank(),
-  plot.margin=margin(r = 0)) +
-  labs(x = "Residence cue", y = "Mutant cue") +
- coord_fixed()
-
-# get mean
-ci_invade.pl2 <- ggplot() +
-  geom_bar(data =  invasion.df3, aes(y = mut_alt, x = mean), stat = "identity") +
-  labs(y = "", x = "Mean fitness\ndifference") +
-  theme_bw() +
-  theme(plot.margin = margin(l = 0),
-       panel.grid.major = element_blank(),
-  panel.background = element_blank(),
-  text = element_text(size = 15),
-    axis.text.y=element_blank(),
-    axis.ticks.y=element_blank())
-  
-ci_invade.pl <- ggarrange(ci_invade.pl1, ci_invade.pl2, align = "h", widths = c(1, 0.2))
-ggsave(here("figures/report18/ci_invade.png"), width = 10)
-
-```
-
-```{r}
-test <- left_join(ci_comp_static.df, invasion.df2, by = c("id_1_alt" = "mut_alt",
-                                                          "id_2_alt"= "res_alt"))
-test %>% 
-  filter(fitness < fitness_diff)
-
-
-ggplot() +
-  geom_point(data = test, aes(x = fitness_diff, y = fitness, color = 
-id_1_alt)) +
-  geom_abline(intercept = 0, slope = 1) +
-  theme_bw()
-```
 
 
 

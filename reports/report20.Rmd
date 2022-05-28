@@ -1,0 +1,155 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Report 20
+Found and fixed major bug in chabaudi_ci_clean. Ran sanity checks with reversed cues and got expected results. You f*cking idiot. Alright, I need to rerun the following shit:
+1) co-infection optimization (20 days for acute infection)
+2) co-infection validation (30 days dynamics)
+3) co-infection static competition (30 days dynamics)
+4) co-infection ci-invasion (30 days dynamics)
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(here)
+library(deSolve)
+library(crone)
+library(optimParallel)
+library(doParallel)
+library(doRNG)
+library(arrow)
+library(stringr)
+library(parallel)
+library(ggpubr)
+```
+
+# load functions
+```{r}
+source(here("functions/co_infection_opt_alt.R"))
+source(here("functions/chabaudi_ci_clean.R"))
+
+parameters_tsukushi <- c(R1 = 8.89*(10^6), # slightly higher
+                lambda = 3.7*(10^5),
+                mu = 0.025, 
+                p = 8*(10^-6), # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+```
+
+
+#---------------------------------------------------------#
+# optimization co-infection strategy
+#---------------------------------------------------------#
+Need to complete co-infection optimization for following cues. altogether 18 cues combination
+1. I-i none/log
+2. I1+I2 none/log
+3. Ig-i none/log
+4. Ig1+Ig2 none/log
+5. I-i+Ig-i none/log
+6. sum (I1+I2+Ig1+Ig2) none/log
+7. G-i none/log
+8. G1+G2 none/log
+9. R none/log
+# using alternative optimization script that is simpler and engages in the "skipping" out to 0.5x4 if fitness = 0
+
+```{r}
+time_range <- seq(0, 20, 1e-3)
+limit <- 0.01
+
+# different cue_range
+I_range_none <- seq(0, 6*(10^6), by = (6*(10^6))/5000)
+I_range_log <- seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000)
+```
+
+1. I-i none/log
+```{r}
+# 1.958208  -69.747557 1519.003656 -253.527388
+ci_opt_I_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "I1",
+                             cue_2 = "I2",
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+
+#296.2970 -407.8744 -253.2560 -312.6993
+ci_opt_I_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "I1",
+                             cue_2 = "I2",
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+```
+
+2. I1+I2 none/log
+```{r}
+# cyclical
+ci_opt_Ic_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "I1+I2",
+                             cue_2 = "I1+I2",
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+# 2.06714 -22.6038 151.899 -27.7256 
+#1.90662 -27.147 191.417 -32.1722 (0.190248)
+# 1.9354 -40.1153 443.934 -25.6366 (0.1005077)
+# 1.935404 -40.115340 443.934475 -25.636603 (0.05366637)
+# 1.87256 -38.04314 444.07897 -25.63538 (0.4778339)
+# 2.07101 -22.53386 151.09835 -42.46750 (0.1945505)
+# 1.904238 -27.114894 191.057457 -43.145945 (0.101616)
+# 1.938786 -40.337610 448.221987 -34.698676
+#1.977151 -48.109852 648.187448 -54.472470
+
+ci_opt_Ic_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "I1+I2",
+                             cue_2 = "I1+I2",
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+```
+
+
+
