@@ -1305,6 +1305,7 @@ microbenchmark(nn_fun2(1,1))
 ```
 # sanity checkz
 ```{r}
+source(here("functions/test.R"))
 # switching between cue and cue_b. should not make a difference
 # 4.469067
 test(parameters_cr = rep(0.5, 5),
@@ -1379,6 +1380,27 @@ test(parameters_cr = rep(0.5, 5),
        log_cue_b = "log10"
        )
 
+# checing single cue infection. same 
+## 4.724804
+test(parameters_cr = rep(0.5, 4),
+       immunity = "tsukushi",
+       parameters = parameters_tsukushi,
+       time_range = seq(0, 20, 0.01),
+       cue = "I",
+       cue_range = I_range_none,
+       solver = "vode",
+       log_cue = "none",
+       )
+# 4.724804
+chabaudi_si_clean(parameters_cr = rep(0.5, 4),
+       immunity = "tsukushi",
+       parameters = parameters_tsukushi,
+       time_range = seq(0, 20, 0.01),
+       cue = "I",
+       cue_range = I_range_none,
+       solver = "vode",
+       log_cue = "none",
+       )
 ```
 
 
