@@ -217,31 +217,85 @@ pre code {
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuYGBgclxubGlicmFyeShkcGx5cilcbmxpYnJhcnkoZ2dwbG90MilcbmxpYnJhcnkoaGVyZSlcbmxpYnJhcnkoZGVTb2x2ZSlcbmxpYnJhcnkoY3JvbmUpXG5saWJyYXJ5KG9wdGltUGFyYWxsZWwpXG5saWJyYXJ5KGRvUGFyYWxsZWwpXG5saWJyYXJ5KGRvUk5HKVxubGlicmFyeShhcnJvdylcbmxpYnJhcnkoc3RyaW5ncilcbmxpYnJhcnkocGFyYWxsZWwpXG5saWJyYXJ5KGdncHVicilcbmxpYnJhcnkoREVvcHRpbSlcbmxpYnJhcnkobWFycUxldkFsZylcbmBgYFxuYGBgXG5gYGAifQ== -->
-<pre class="r"><code>```r
-```r
-library(dplyr)
-library(ggplot2)
-library(here)
-library(deSolve)
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShkcGx5cilcbmBgYCJ9 -->
+<pre class="r"><code>library(dplyr)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG5BdHRhY2hpbmcgcGFja2FnZTog4oCYZHBseXLigJlcblxuVGhlIGZvbGxvd2luZyBvYmplY3RzIGFyZSBtYXNrZWQgZnJvbSDigJhwYWNrYWdlOnN0YXRz4oCZOlxuXG4gICAgZmlsdGVyLCBsYWdcblxuVGhlIGZvbGxvd2luZyBvYmplY3RzIGFyZSBtYXNrZWQgZnJvbSDigJhwYWNrYWdlOmJhc2XigJk6XG5cbiAgICBpbnRlcnNlY3QsIHNldGRpZmYsIHNldGVxdWFsLCB1bmlvblxuIn0= -->
+<pre><code>
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShnZ3Bsb3QyKVxubGlicmFyeShoZXJlKVxuYGBgIn0= -->
+<pre class="r"><code>library(ggplot2)
+library(here)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiaGVyZSgpIHN0YXJ0cyBhdCAvVXNlcnMvYXZyaWx3YW5nL0Rlc2t0b3AvUHJvamVjdC1QbGFzbW9kaXVtXG4ifQ== -->
+<pre><code>here() starts at /Users/avrilwang/Desktop/Project-Plasmodium</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShkZVNvbHZlKVxubGlicmFyeShjcm9uZSlcbmxpYnJhcnkob3B0aW1QYXJhbGxlbClcbmBgYCJ9 -->
+<pre class="r"><code>library(deSolve)
 library(crone)
-library(optimParallel)
-library(doParallel)
-library(doRNG)
-library(arrow)
-library(stringr)
+library(optimParallel)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiTG9hZGluZyByZXF1aXJlZCBwYWNrYWdlOiBwYXJhbGxlbFxuIn0= -->
+<pre><code>Loading required package: parallel</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShkb1BhcmFsbGVsKVxuYGBgIn0= -->
+<pre class="r"><code>library(doParallel)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiTG9hZGluZyByZXF1aXJlZCBwYWNrYWdlOiBmb3JlYWNoXG5Mb2FkaW5nIHJlcXVpcmVkIHBhY2thZ2U6IGl0ZXJhdG9yc1xuIn0= -->
+<pre><code>Loading required package: foreach
+Loading required package: iterators</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShkb1JORylcbmBgYCJ9 -->
+<pre class="r"><code>library(doRNG)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiTG9hZGluZyByZXF1aXJlZCBwYWNrYWdlOiBybmd0b29sc1xuIn0= -->
+<pre><code>Loading required package: rngtools</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShhcnJvdylcbmBgYCJ9 -->
+<pre class="r"><code>library(arrow)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG5BdHRhY2hpbmcgcGFja2FnZTog4oCYYXJyb3figJlcblxuVGhlIGZvbGxvd2luZyBvYmplY3QgaXMgbWFza2VkIGZyb20g4oCYcGFja2FnZTp1dGlsc+KAmTpcblxuICAgIHRpbWVzdGFtcFxuIn0= -->
+<pre><code>
+Attaching package: ‘arrow’
+
+The following object is masked from ‘package:utils’:
+
+    timestamp</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShzdHJpbmdyKVxubGlicmFyeShwYXJhbGxlbClcbmxpYnJhcnkoZ2dwdWJyKVxubGlicmFyeShERW9wdGltKVxuYGBgIn0= -->
+<pre class="r"><code>library(stringr)
 library(parallel)
 library(ggpubr)
-library(DEoptim)
-library(marqLevAlg)</code></pre>
-<pre><code></code></pre>
+library(DEoptim)</code></pre>
 <!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG5ERW9wdGltIHBhY2thZ2VcbkRpZmZlcmVudGlhbCBFdm9sdXRpb24gYWxnb3JpdGhtIGluIFJcbkF1dGhvcnM6IEQuIEFyZGlhLCBLLiBNdWxsZW4sIEIuIFBldGVyc29uIGFuZCBKLiBVbHJpY2hcbiJ9 -->
+<pre><code>
+DEoptim package
+Differential Evolution algorithm in R
+Authors: D. Ardia, K. Mullen, B. Peterson and J. Ulrich</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShtYXJxTGV2QWxnKVxuYGBgIn0= -->
+<pre class="r"><code>library(marqLevAlg)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3IgaW4gbGlicmFyeShtYXJxTGV2QWxnKSA6IHRoZXJlIGlzIG5vIHBhY2thZ2UgY2FsbGVkIOKAmG1hcnFMZXZBbGfigJlcbiJ9 -->
+<pre><code>Error in library(marqLevAlg) : there is no package called ‘marqLevAlg’</code></pre>
+<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuIyBjaGVjayBlbmQgcGFyYW1ldGVyIHJlc3VsdHMgd2l0aCBvcmlnaW5hbFxudGVzdCA8LSBjaGFiYXVkaV9jaV9jbGVhbihcbiAgcGFyYW1ldGVyc19jcl8xID0gYygxLjAwMDAwMCwgIC0yMS45MTE3NzkgLCAzMzguMzYyNDYwLC00OTk5Ljk5OTY2MCksXG4gIHBhcmFtZXRlcnNfY3JfMiA9IGMoMS44NjY0MSwgLTg2My45MjYsIDc3Ni4wOTMsIC00OTcyLjU2KSxcbiAgICAgICAgICAgICAgICAgIGltbXVuaXR5ID0gXFx0c3VrdXNoaVxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGltZV9yYW5nZSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8xID0gXFxHMStHMlxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFxcRzErRzJcXCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzEgPSBzZXEoMCwgNiooMTBeNCksICg2KigxMF40KSkvNTAwMCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8yID0gc2VxKDAsIDYqKDEwXjQpLCAoNiooMTBeNCkpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcXHZvZGVcXCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8xID0gXFxub25lXFwsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFxcbm9uZVxcKVxuIyBjaGVjayBlbmQgcGFyYW1ldGVyIHJlc3VsdHMgd2l0aCBvcmlnaW5hbFxudGVzdCA8LSBjaGFiYXVkaV9jaV9jbGVhbihcbiAgcGFyYW1ldGVyc19jcl8xID0gYygxLjAwMDAwMCwgIC0yMS45MTE3NzkgLCAzMzguMzYyNDYwLC00OTk5Ljk5OTY2MCksXG4gIHBhcmFtZXRlcnNfY3JfMiA9IGMoMS44NjY0MSwgLTg2My45MjYsIDc3Ni4wOTMsIC00OTcyLjU2KSxcbiAgICAgICAgICAgICAgICAgIGltbXVuaXR5ID0gXFx0c3VrdXNoaVxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGltZV9yYW5nZSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8xID0gXFxHMStHMlxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFxcRzErRzJcXCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzEgPSBzZXEoMCwgNiooMTBeNCksICg2KigxMF40KSkvNTAwMCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8yID0gc2VxKDAsIDYqKDEwXjQpLCAoNiooMTBeNCkpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcXHZvZGVcXCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8xID0gXFxub25lXFwsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFxcbm9uZVxcKVxudGVzdFxuXG5gYGBcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuYGBgclxuIyBjaGVjayBlbmQgcGFyYW1ldGVyIHJlc3VsdHMgd2l0aCBvcmlnaW5hbFxudGVzdCA8LSBjaGFiYXVkaV9jaV9jbGVhbihcbiAgcGFyYW1ldGVyc19jcl8xID0gYygxLjAwMDAwMCwgIC0yMS45MTE3NzkgLCAzMzguMzYyNDYwLC00OTk5Ljk5OTY2MCksXG4gIHBhcmFtZXRlcnNfY3JfMiA9IGMoMS44NjY0MSwgLTg2My45MjYsIDc3Ni4wOTMsIC00OTcyLjU2KSxcbiAgICAgICAgICAgICAgICAgIGltbXVuaXR5ID0gXFx0c3VrdXNoaVxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGltZV9yYW5nZSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8xID0gXFxHMStHMlxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFxcRzErRzJcXCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzEgPSBzZXEoMCwgNiooMTBeNCksICg2KigxMF40KSkvNTAwMCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8yID0gc2VxKDAsIDYqKDEwXjQpLCAoNiooMTBeNCkpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcXHZvZGVcXCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8xID0gXFxub25lXFwsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFxcbm9uZVxcKVxuIyBjaGVjayBlbmQgcGFyYW1ldGVyIHJlc3VsdHMgd2l0aCBvcmlnaW5hbFxudGVzdCA8LSBjaGFiYXVkaV9jaV9jbGVhbihcbiAgcGFyYW1ldGVyc19jcl8xID0gYygxLjAwMDAwMCwgIC0yMS45MTE3NzkgLCAzMzguMzYyNDYwLC00OTk5Ljk5OTY2MCksXG4gIHBhcmFtZXRlcnNfY3JfMiA9IGMoMS44NjY0MSwgLTg2My45MjYsIDc3Ni4wOTMsIC00OTcyLjU2KSxcbiAgICAgICAgICAgICAgICAgIGltbXVuaXR5ID0gXFx0c3VrdXNoaVxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGltZV9yYW5nZSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8xID0gXFxHMStHMlxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFxcRzErRzJcXCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzEgPSBzZXEoMCwgNiooMTBeNCksICg2KigxMF40KSkvNTAwMCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8yID0gc2VxKDAsIDYqKDEwXjQpLCAoNiooMTBeNCkpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcXHZvZGVcXCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8xID0gXFxub25lXFwsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFxcbm9uZVxcKVxudGVzdFxuXG5gYGBcbmBgYFxuYGBgIn0= -->
 <pre class="r"><code>```r
+```r
 # check end parameter results with original
 test &lt;- chabaudi_ci_clean(
   parameters_cr_1 = c(1.000000,  -21.911779 , 338.362460,-4999.999660),
@@ -272,35 +326,39 @@ test &lt;- chabaudi_ci_clean(
                              log_cue_2 = \none\)
 test
 </code></pre>
-<pre><code>
-&lt;!-- rnb-source-end --&gt;
-
-&lt;!-- rnb-output-begin eyJkYXRhIjoiWzFdIDAuODAxNDU1NlxuIn0= --&gt;
-</code></pre>
-<p>[1] 0.8014556</p>
-<pre><code>
-
-
-&lt;!-- rnb-output-end --&gt;
-
-&lt;!-- rnb-chunk-end --&gt;
-
-
-&lt;!-- rnb-text-begin --&gt;
-
-
-
-
-&lt;!-- rnb-text-end --&gt;
-
-
-&lt;!-- rnb-chunk-begin --&gt;
-
-
-&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuY2lfSTFfSTJfb3B0IDwtIGNvX2luZmVjdGlvbl9vcHRfZG8ocGFyYW1ldGVyc19jciA9IHJlcCgwLjUsNCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbWl0ID0gMC4wMSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcXHRzdWt1c2hpXFwsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcXEkxK0kyXFwsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8yID0gXFxJMStJMlxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMSA9IHNlcSgwLCA2KigxMF42KSwgYnkgPSAoNiooMTBeNikpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMiA9IHNlcSgwLCA2KigxMF42KSwgYnkgPSAoNiooMTBeNikpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcXHZvZGVcXCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8xID0gXFxub25lXFwsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFxcbm9uZVxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBuZWcgPSBUKVxuXG4jIDAuOTk5OTk5OSAgIC05LjE2NTAzMjYgIC03MS43MjE0MDA3IDQ5OTguNzk0Mzg5OCBcbmBgYFxuYGBgIn0= --&gt;
-
+<pre><code></code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuYGBgclxuc3VtX25vbl9HMV9HMl9sb2cgPC0gY2lfY3VlX3BhaXIubHMzW1syNl1dXG5HX2xvZ19HMV9HMl9sb2cgPC0gY2lfY3VlX3BhaXIubHMzW1sxNV1dXG5HX25vbmVfRzFfRzJfbG9nIDwtIGNpX2N1ZV9wYWlyLmxzM1tbMTZdXVxuSWdfbm9uZV9HMV9HMl9sb2cgPC0gY2lfY3VlX3BhaXIubHMzW1syMl1dXG5JZ19sb2dfRzFfRzJfbG9nPC0gY2lfY3VlX3BhaXIubHMzW1syMV1dXG5HMV9HMl9ub25lX0cxX0cyX2xvZyA8LSBjaV9jdWVfcGFpci5sczNbWzE3XV1cblxuY2lfaW52YXNpb25fYW5hbHlzaXMoc3VtX25vbl9HMV9HMl9sb2csIGRlZmF1bHQgPSBGKVxuY2lfaW52YXNpb25fYW5hbHlzaXMoR19sb2dfRzFfRzJfbG9nLCBkZWZhdWx0ID0gRilcbmNpX2ludmFzaW9uX2FuYWx5c2lzKEdfbm9uZV9HMV9HMl9sb2csIGRlZmF1bHQgPSBGKVxuY2lfaW52YXNpb25fYW5hbHlzaXMoSWdfbm9uZV9HMV9HMl9sb2csIGRlZmF1bHQgPSBGKVxuY2lfaW52YXNpb25fYW5hbHlzaXMoSWdfbG9nX0cxX0cyX2xvZywgZGVmYXVsdCA9IEYpXG5cbmNpX2ludmFzaW9uX2FuYWx5c2lzKEcxX0cyX25vbmVfRzFfRzJfbG9nLCBkZWZhdWx0ID0gRilcbmBgYFxuYGBgXG5gYGAifQ== -->
+<pre class="r"><code>```r
 ```r
-```r
+sum_non_G1_G2_log &lt;- ci_cue_pair.ls3[[26]]
+G_log_G1_G2_log &lt;- ci_cue_pair.ls3[[15]]
+G_none_G1_G2_log &lt;- ci_cue_pair.ls3[[16]]
+Ig_none_G1_G2_log &lt;- ci_cue_pair.ls3[[22]]
+Ig_log_G1_G2_log&lt;- ci_cue_pair.ls3[[21]]
+G1_G2_none_G1_G2_log &lt;- ci_cue_pair.ls3[[17]]
+
+ci_invasion_analysis(sum_non_G1_G2_log, default = F)
+ci_invasion_analysis(G_log_G1_G2_log, default = F)
+ci_invasion_analysis(G_none_G1_G2_log, default = F)
+ci_invasion_analysis(Ig_none_G1_G2_log, default = F)
+ci_invasion_analysis(Ig_log_G1_G2_log, default = F)
+
+ci_invasion_analysis(G1_G2_none_G1_G2_log, default = F)</code></pre>
+<pre><code></code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<div id="trying-de-optim.-works-although-slow" class="section level1">
+<h1>trying DE optim. works although slow</h1>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuY2lfSTFfSTJfb3B0IDwtIGNvX2luZmVjdGlvbl9vcHRfZG8ocGFyYW1ldGVyc19jciA9IHJlcCgwLjUsNCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbWl0ID0gMC4wMSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcXHRzdWt1c2hpXFwsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcXEkxK0kyXFwsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8yID0gXFxJMStJMlxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMSA9IHNlcSgwLCA2KigxMF42KSwgYnkgPSAoNiooMTBeNikpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMiA9IHNlcSgwLCA2KigxMF42KSwgYnkgPSAoNiooMTBeNikpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcXHZvZGVcXCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8xID0gXFxub25lXFwsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFxcbm9uZVxcLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBuZWcgPSBUKVxuXG4jIDAuOTk5OTk5OSAgIC05LjE2NTAzMjYgIC03MS43MjE0MDA3IDQ5OTguNzk0Mzg5OCBcbmBgYFxuYGBgIn0= -->
+<pre class="r"><code>```r
 ci_I1_I2_opt &lt;- co_infection_opt_do(parameters_cr = rep(0.5,4),
                              limit = 0.01,
                              model = chabaudi_ci_clean,
@@ -326,7 +384,7 @@ ci_I1_I2_opt &lt;- co_infection_opt_do(parameters_cr = rep(0.5,4),
 &lt;!-- rnb-text-begin --&gt;
 
 
-# trying DE optim. works although slow
+# trying DE optim coinfection
 
 &lt;!-- rnb-text-end --&gt;
 
@@ -363,7 +421,8 @@ ci_Ig1_Ig2_opt &lt;- co_infection_opt_do(parameters_cr = rep(0.5, 4),
 &lt;!-- rnb-text-begin --&gt;
 
 
-# trying DE optim coinfection
+# Ig alone logged
+note started at 0.5x4.
 
 &lt;!-- rnb-text-end --&gt;
 
@@ -387,8 +446,7 @@ g_tot_log.cf &lt;- check_ci_opt(g_tot_log.df, n = 5000)</code></pre>
 &lt;!-- rnb-text-begin --&gt;
 
 
-# Ig alone logged
-note started at 0.5x4.
+# trying alt where last round of optimization is started with 0.5 x 4
 
 &lt;!-- rnb-text-end --&gt;
 
@@ -410,7 +468,6 @@ ci_cue_pair.ls3 &lt;- ci_cue_pair.ls3[11:length(ci_cue_pair.ls3)]</code></pre>
 &lt;!-- rnb-text-begin --&gt;
 
 
-# trying alt where last round of optimization is started with 0.5 x 4
 
 &lt;!-- rnb-text-end --&gt;
 
@@ -434,103 +491,47 @@ surveillance::plapply(ci_cue_pair.ls3 , ci_invasion_analysis)
 
 
 
+#-----------------------#
+# code for invasion analysis of ci
+#-----------------------#
+
 &lt;!-- rnb-text-end --&gt;
 
 
 &lt;!-- rnb-chunk-begin --&gt;
 
 
-&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2hlY2tfY2lfb3B0IDwtIGZ1bmN0aW9uKGRmLCBuID0gMTAwMCl7XG4gIFxuICAjIGdldCBsYWJlbFxuICBsYWJlbCA8LSBkZiRsYWJlbF8zXG4gIFxuICAjIGNsdXN0ZXIgaW5pdGlhbGl6YXRpb25cbiAgY2wgPC0gbWFrZUNsdXN0ZXIoZGV0ZWN0Q29yZXMoKSk7IHNldERlZmF1bHRDbHVzdGVyKGNsID0gY2wpXG4gIHJlZ2lzdGVyRG9QYXJhbGxlbChjbClcbiAgcmVnaXN0ZXJEb1JORygxMzcpXG4gIFxuICByZXMgPC0gZm9yZWFjaChpPSAxOm4sIC5wYWNrYWdlcyA9IGMoXCJkb1BhcmFsbGVsXCIsIFwiZG9STkdcIiwgXCJkZVNvbHZlXCIsIFwic3BsaW5lczJcIiwgXCJzdHJpbmdyXCIsIFwiZHBseXJcIiwgXCJ0aWR5clwiLCBcImNyb25lXCIsIFwiaGVyZVwiKSkgJWRvcm5nJSB7XG4gICMgc291cmNlIGZ1bmN0aW9uXG4gIHNvdXJjZShoZXJlKFwiZnVuY3Rpb25zL2NoYWJhdWRpX2NpX2NsZWFuLlJcIikpXG4gICAgXG4gICMgcGFyYW1ldGVycyBcbiAgcGFyYW1ldGVyc190c3VrdXNoaSA8LSBjKFIxID0gOC44OSoxMF42LCAjIHNsaWdodGx5IGhpZ2hlclxuICAgICAgICAgICAgICAgIGxhbWJkYSA9IDMuNyoxMF41LFxuICAgICAgICAgICAgICAgIG11ID0gMC4wMjUsIFxuICAgICAgICAgICAgICAgIHAgPSA4KjEwXi02LCAjIGRvdWJsZWQgZm9ybSBvcmlnaW5hbFxuICAgICAgICAgICAgICAgIGFscGhhZyA9IDIsIFxuICAgICAgICAgICAgICAgIGJldGEgPSA1LjcyMSwgXG4gICAgICAgICAgICAgICAgbXVtID0gNDgsIFxuICAgICAgICAgICAgICAgIG11ZyA9IDQsIFxuICAgICAgICAgICAgICAgIEkwID0gNDMuODU5NjUsIFxuICAgICAgICAgICAgICAgIElnMCA9IDAsIFxuICAgICAgICAgICAgICAgIGEgPSAxNTAsIFxuICAgICAgICAgICAgICAgIGIgPSAxMDAsIFxuICAgICAgICAgICAgICAgIHNwID0gMSxcbiAgICAgICAgICAgICAgICBwc2luID0gMTYuNjkyMzQsXG4gICAgICAgICAgICAgICAgcHNpdyA9IDAuODQzMTc4NSxcbiAgICAgICAgICAgICAgICBwaGluID0gMC4wMzUyMDU5MSwgXG4gICAgICAgICAgICAgICAgcGhpdyA9IDU1MC44NDIsXG4gICAgICAgICAgICAgICAgaW90YSA9IDIuMTgqKDEwXjYpLFxuICAgICAgICAgICAgICAgIHJobyA9IDAuMjYyNzE1NilcbiAgXG4gICMgcmVhZCBpbiBkZiBpbmZvXG4gIGlmKHN0cmluZ3I6OnN0cl9kZXRlY3QoZGYkY3VlLCBcIi1pXCIpKXtjdWVfMSA9IHBhc3RlMChnc3ViKFwiKi1pXCIsIFwiXCIsIGRmJGN1ZSksIFwiMVwiKX1cbiAgaWYoc3RyaW5ncjo6c3RyX2RldGVjdChkZiRjdWUsIFwiLWlcIiwgbmVnYXRlID0gVCkpe2N1ZV8xID0gZGYkY3VlfVxuICBpZihzdHJpbmdyOjpzdHJfZGV0ZWN0KGRmJGN1ZSwgXCItaVwiKSl7Y3VlXzIgPSBwYXN0ZTAoZ3N1YihcIiotaVwiLCBcIlwiLCBkZiRjdWUpLCBcIjJcIil9XG4gIGlmKHN0cmluZ3I6OnN0cl9kZXRlY3QoZGYkY3VlLCBcIi1pXCIsIG5lZ2F0ZSA9IFQpKXtjdWVfMiA9IGRmJGN1ZX1cbiAgaWYoc3RyaW5ncjo6c3RyX2RldGVjdChkZiRsb2csIFwibG9nXCIpKXtsb2dfMSA9IFwibG9nMTBcIn1cbiAgaWYoc3RyaW5ncjo6c3RyX2RldGVjdChkZiRsb2csIFwibm9uZVwiKSl7bG9nXzEgPSBcIm5vbmVcIn1cbiAgaWYoc3RyaW5ncjo6c3RyX2RldGVjdChkZiRsb2csIFwibG9nXCIpKXtsb2dfMiA9IFwibG9nMTBcIn1cbiAgaWYoc3RyaW5ncjo6c3RyX2RldGVjdChkZiRsb2csIFwibm9uZVwiKSl7bG9nXzIgPSBcIm5vbmVcIn1cbiAgcGFyIDwtIGMoZGYkdmFyMSwgZGYkdmFyMiwgZGYkdmFyMywgZGYkdmFyNClcbiAgY3VlX3JhbmdlIDwtIHNlcShkZiRsb3csIGRmJGhpZ2gsIGJ5ID0gZGYkYnkpXG4gIFxuICAjIGdlbmVyYXRlIHJhbmRvbSBwYXIsIGJvdW5kcyBmb3IgcGFyYW1ldGVycyBiYXNlZCBvbiBwcmV2aW91cyBkZXRlcm1pbmVkIGJvdW5kc1xuICBwYXIxIDwtIHJ1bmlmKDEsIC0xLCAxKVxuICBwYXIyIDwtIHJ1bmlmKDEsIC0xMDAsIDEwMClcbiAgcGFyMyA8LSBydW5pZigxLCAtMTAwMCwgMTAwMDApXG4gIHBhcjQgPC0gcnVuaWYoMSwgLTUwMDAsIDUwMDApXG4gIFxuICBwYXJfcmFuZCA8LSBjKHBhcjEsIHBhcjIsIHBhcjMsIHBhcjQpXG4gIFxuICAjIGdldCBmaXRuZXNzLiAyMCBkYXlzIHNpbXVsYXRpb24gdG8gY3V0IGRvd24gb24gY29tcHV0YXRpb24gdGltZVxuICBmaXRuZXNzIDwtIGNoYWJhdWRpX2NpX2NsZWFuKHBhcmFtZXRlcnNfY3JfMSA9IHBhcixcbiAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnNfY3JfMiA9IHBhcl9yYW5kLFxuICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgIGN1ZV8xID0gY3VlXzEsXG4gICAgICAgICAgICAgICAgICBjdWVfMiA9IGN1ZV8yLFxuICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzEgPSBjdWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMiA9IGN1ZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMSA9IGxvZ18xLFxuICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8yID0gbG9nXzIsXG4gICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcInZvZGVcIixcbiAgICAgICAgICAgICAgICAgIHRpbWVfcmFuZ2UgPSBzZXEoMCwgMzAsIGJ5ID0gMWUtMyksXG4gICAgICAgICAgICAgICAgICBkeW4gPSBGKVxuICB9XG4gIHN0b3BDbHVzdGVyKGNsKVxuICBcbiAgIyMgZ2V0IGZpdG5lc3MuZGZcbiAgZml0bmVzcy5kZiA8LSBkby5jYWxsKFwicmJpbmRcIiwgcmVzKVxuXG4gICMjIHJiaW5kXG4gIGZpdG5lc3MuZGYgPC0gYXMuZGF0YS5mcmFtZShjYmluZChmaXRuZXNzLmRmLCBsYWJlbCA9IHJlcChsYWJlbCwgbnJvdyhmaXRuZXNzLmRmKSkpKVxuICBcbiAgcmV0dXJuKGZpdG5lc3MuZGYpXG59XG5gYGAifQ== --&gt;
+&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuc291cmNlKGhlcmUoXFxmdW5jdGlvbnMvY2hhYmF1ZGlfY2lfY2xlYW4uUlxcKSlcbmNpX2N1ZV9wYWlyLmxzNCA8LSBjaV9jdWVfcGFpci5sczNbMTk6bGVuZ3RoKGNpX2N1ZV9wYWlyLmxzMyldXG5cbiMgZm9yIHRoaXMsIHdlIG5lZWQgdG8gdHVybiBkZWZhdWx0IG9mZiwgc3RhcnRpbmcgYXQgb3JpZ2luYWwgcG9zaXRpb24uIFxuY2lfaW52YXNpb25fYW5hbHlzaXMoY2lfY3VlX3BhaXIubHM0W1sxXV0sIGRlZmF1bHQgPSBGKVxuY2lfY3VlX3BhaXIubHM1IDwtIGNpX2N1ZV9wYWlyLmxzM1syMDpsZW5ndGgoY2lfY3VlX3BhaXIubHMzKV1cbnN1cnZlaWxsYW5jZTo6cGxhcHBseShjaV9jdWVfcGFpci5sczUgLCBjaV9pbnZhc2lvbl9hbmFseXNpcylcbmBgYFxuYGBgIn0= --&gt;
 
 ```r
-check_ci_opt &lt;- function(df, n = 1000){
-  
-  # get label
-  label &lt;- df$label_3
-  
-  # cluster initialization
-  cl &lt;- makeCluster(detectCores()); setDefaultCluster(cl = cl)
-  registerDoParallel(cl)
-  registerDoRNG(137)
-  
-  res &lt;- foreach(i= 1:n, .packages = c(&quot;doParallel&quot;, &quot;doRNG&quot;, &quot;deSolve&quot;, &quot;splines2&quot;, &quot;stringr&quot;, &quot;dplyr&quot;, &quot;tidyr&quot;, &quot;crone&quot;, &quot;here&quot;)) %dorng% {
-  # source function
-  source(here(&quot;functions/chabaudi_ci_clean.R&quot;))
-    
-  # parameters 
-  parameters_tsukushi &lt;- c(R1 = 8.89*10^6, # slightly higher
-                lambda = 3.7*10^5,
-                mu = 0.025, 
-                p = 8*10^-6, # doubled form original
-                alphag = 2, 
-                beta = 5.721, 
-                mum = 48, 
-                mug = 4, 
-                I0 = 43.85965, 
-                Ig0 = 0, 
-                a = 150, 
-                b = 100, 
-                sp = 1,
-                psin = 16.69234,
-                psiw = 0.8431785,
-                phin = 0.03520591, 
-                phiw = 550.842,
-                iota = 2.18*(10^6),
-                rho = 0.2627156)
-  
-  # read in df info
-  if(stringr::str_detect(df$cue, &quot;-i&quot;)){cue_1 = paste0(gsub(&quot;*-i&quot;, &quot;&quot;, df$cue), &quot;1&quot;)}
-  if(stringr::str_detect(df$cue, &quot;-i&quot;, negate = T)){cue_1 = df$cue}
-  if(stringr::str_detect(df$cue, &quot;-i&quot;)){cue_2 = paste0(gsub(&quot;*-i&quot;, &quot;&quot;, df$cue), &quot;2&quot;)}
-  if(stringr::str_detect(df$cue, &quot;-i&quot;, negate = T)){cue_2 = df$cue}
-  if(stringr::str_detect(df$log, &quot;log&quot;)){log_1 = &quot;log10&quot;}
-  if(stringr::str_detect(df$log, &quot;none&quot;)){log_1 = &quot;none&quot;}
-  if(stringr::str_detect(df$log, &quot;log&quot;)){log_2 = &quot;log10&quot;}
-  if(stringr::str_detect(df$log, &quot;none&quot;)){log_2 = &quot;none&quot;}
-  par &lt;- c(df$var1, df$var2, df$var3, df$var4)
-  cue_range &lt;- seq(df$low, df$high, by = df$by)
-  
-  # generate random par, bounds for parameters based on previous determined bounds
-  par1 &lt;- runif(1, -1, 1)
-  par2 &lt;- runif(1, -100, 100)
-  par3 &lt;- runif(1, -1000, 10000)
-  par4 &lt;- runif(1, -5000, 5000)
-  
-  par_rand &lt;- c(par1, par2, par3, par4)
-  
-  # get fitness. 20 days simulation to cut down on computation time
-  fitness &lt;- chabaudi_ci_clean(parameters_cr_1 = par,
-                  parameters_cr_2 = par_rand,
-                  immunity = &quot;tsukushi&quot;,
-                  parameters = parameters_tsukushi,
-                  cue_1 = cue_1,
-                  cue_2 = cue_2,
-                  cue_range_1 = cue_range,
-                  cue_range_2 = cue_range,
-                  log_cue_1 = log_1,
-                  log_cue_2 = log_2,
-                  solver = &quot;vode&quot;,
-                  time_range = seq(0, 30, by = 1e-3),
-                  dyn = F)
-  }
-  stopCluster(cl)
-  
-  ## get fitness.df
-  fitness.df &lt;- do.call(&quot;rbind&quot;, res)
+```r
+source(here(\functions/chabaudi_ci_clean.R\))
+ci_cue_pair.ls4 &lt;- ci_cue_pair.ls3[19:length(ci_cue_pair.ls3)]
 
-  ## rbind
-  fitness.df &lt;- as.data.frame(cbind(fitness.df, label = rep(label, nrow(fitness.df))))
-  
-  return(fitness.df)
-}</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<p>#———————–# # code for invasion analysis of ci #———————–#</p>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuc3VtX25vbl9HMV9HMl9sb2cgPC0gY2lfY3VlX3BhaXIubHMzW1syNl1dXG5HX2xvZ19HMV9HMl9sb2cgPC0gY2lfY3VlX3BhaXIubHMzW1sxNV1dXG5HX25vbmVfRzFfRzJfbG9nIDwtIGNpX2N1ZV9wYWlyLmxzM1tbMTZdXVxuSWdfbm9uZV9HMV9HMl9sb2cgPC0gY2lfY3VlX3BhaXIubHMzW1syMl1dXG5JZ19sb2dfRzFfRzJfbG9nPC0gY2lfY3VlX3BhaXIubHMzW1syMV1dXG5HMV9HMl9ub25lX0cxX0cyX2xvZyA8LSBjaV9jdWVfcGFpci5sczNbWzE3XV1cblxuY2lfaW52YXNpb25fYW5hbHlzaXMoc3VtX25vbl9HMV9HMl9sb2csIGRlZmF1bHQgPSBGKVxuY2lfaW52YXNpb25fYW5hbHlzaXMoR19sb2dfRzFfRzJfbG9nLCBkZWZhdWx0ID0gRilcbmNpX2ludmFzaW9uX2FuYWx5c2lzKEdfbm9uZV9HMV9HMl9sb2csIGRlZmF1bHQgPSBGKVxuY2lfaW52YXNpb25fYW5hbHlzaXMoSWdfbm9uZV9HMV9HMl9sb2csIGRlZmF1bHQgPSBGKVxuY2lfaW52YXNpb25fYW5hbHlzaXMoSWdfbG9nX0cxX0cyX2xvZywgZGVmYXVsdCA9IEYpXG5cbmNpX2ludmFzaW9uX2FuYWx5c2lzKEcxX0cyX25vbmVfRzFfRzJfbG9nLCBkZWZhdWx0ID0gRilcbmBgYFxuYGBgIn0= -->
-<pre class="r"><code>```r
+# for this, we need to turn default off, starting at original position. 
+ci_invasion_analysis(ci_cue_pair.ls4[[1]], default = F)
+ci_cue_pair.ls5 &lt;- ci_cue_pair.ls3[20:length(ci_cue_pair.ls3)]
+surveillance::plapply(ci_cue_pair.ls5 , ci_invasion_analysis)</code></pre>
+<pre><code>
+&lt;!-- rnb-source-end --&gt;
+
+&lt;!-- rnb-chunk-end --&gt;
+
+
+&lt;!-- rnb-text-begin --&gt;
+
+
+
+&lt;!-- rnb-text-end --&gt;
+
+
+&lt;!-- rnb-chunk-begin --&gt;
+
+
+&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuc3VtX25vbl9HMV9HMl9sb2cgPC0gY2lfY3VlX3BhaXIubHMzW1syNl1dXG5HX2xvZ19HMV9HMl9sb2cgPC0gY2lfY3VlX3BhaXIubHMzW1sxNV1dXG5HX25vbmVfRzFfRzJfbG9nIDwtIGNpX2N1ZV9wYWlyLmxzM1tbMTZdXVxuSWdfbm9uZV9HMV9HMl9sb2cgPC0gY2lfY3VlX3BhaXIubHMzW1syMl1dXG5JZ19sb2dfRzFfRzJfbG9nPC0gY2lfY3VlX3BhaXIubHMzW1syMV1dXG5HMV9HMl9ub25lX0cxX0cyX2xvZyA8LSBjaV9jdWVfcGFpci5sczNbWzE3XV1cblxuY2lfaW52YXNpb25fYW5hbHlzaXMoc3VtX25vbl9HMV9HMl9sb2csIGRlZmF1bHQgPSBGKVxuY2lfaW52YXNpb25fYW5hbHlzaXMoR19sb2dfRzFfRzJfbG9nLCBkZWZhdWx0ID0gRilcbmNpX2ludmFzaW9uX2FuYWx5c2lzKEdfbm9uZV9HMV9HMl9sb2csIGRlZmF1bHQgPSBGKVxuY2lfaW52YXNpb25fYW5hbHlzaXMoSWdfbm9uZV9HMV9HMl9sb2csIGRlZmF1bHQgPSBGKVxuY2lfaW52YXNpb25fYW5hbHlzaXMoSWdfbG9nX0cxX0cyX2xvZywgZGVmYXVsdCA9IEYpXG5cbmNpX2ludmFzaW9uX2FuYWx5c2lzKEcxX0cyX25vbmVfRzFfRzJfbG9nLCBkZWZhdWx0ID0gRilcbmBgYFxuYGBgIn0= --&gt;
+
+```r
+```r
 sum_non_G1_G2_log &lt;- ci_cue_pair.ls3[[26]]
 G_log_G1_G2_log &lt;- ci_cue_pair.ls3[[15]]
 G_none_G1_G2_log &lt;- ci_cue_pair.ls3[[16]]
@@ -554,51 +555,6 @@ ci_invasion_analysis(G1_G2_none_G1_G2_log, default = F)</code></pre>
 &lt;!-- rnb-text-begin --&gt;
 
 
-
-&lt;!-- rnb-text-end --&gt;
-
-
-&lt;!-- rnb-chunk-begin --&gt;
-
-
-&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuIyBnZXR0aW5nIHRoZSBuZXdlciBpdGVyYXRpb24gb2YgY2lfb3B0XG5jaV9vcHRfbmV3LmRmIDwtIHJlYWQuY3N2KGhlcmUoXFxkYXRhL2NpX29wdC5jc3ZcXCkpXG5jdWVfcmFuZ2VfbmV3LmRmIDwtIHJlYWQuY3N2KGhlcmUoXFxkYXRhL2N1ZV9yYW5nZS5jc3ZcXCkpXG5cbiMgZ2V0IHVuaXF1ZSBpZCBhbmQgam9pbiB3aXRoIGN1ZSByYW5nZSBkZlxuY2lfY3VlX25ldy5kZiA8LSBjaV9vcHRfbmV3LmRmICU+JSBcbiAgbXV0YXRlKGlkID0gcGFzdGUwKGN1ZSwgXFxfXFwsIGxvZykpICU+JSBcbiAgbGVmdF9qb2luKHNlbGVjdChjdWVfcmFuZ2VfbmV3LmRmLCBjKGlkLCBsb3csIGhpZ2gsIGJ5KSksIGJ5ID0gYyhcXGlkXFwgPSBcXGlkXFwpKVxuXG4jIGdldCBhbGwgcGFpcndpc2UgY29tYmluYXRpb25zXG5jaV9jdWVfcGFpcl9uZXcuZGYgPC0gY2lfY3VlX25ldy5kZiAlPiUgXG4gIHNldE5hbWVzKHBhc3RlMChuYW1lcyhjaV9jdWVfbmV3LmRmKSwgJ18yJykpICU+JSBcbiAgdGlkeXI6OmNyb3NzaW5nKGNpX2N1ZV9uZXcuZGYsIC5uYW1lX3JlcGFpciA9IFxcY2hlY2tfdW5pcXVlXFwpICU+JSBcbiAgamFuaXRvcjo6Y2xlYW5fbmFtZXMoKVxuXG4jIGZpbHRlciBvdXQgYWxsIHRoZSBzYW1lIGN1ZSBvcHRpbWl6YXRpb25cbmNpX2N1ZV9wYWlyX25ldy5kZjIgPC0gY2lfY3VlX3BhaXJfbmV3LmRmICU+JSBmaWx0ZXIoaWQhPWlkXzIpICU+JSBtdXRhdGUoaWRfMyA9IHBhc3RlMChpZCwgaWRfMikpXG5cbiMgYWxsIGFsbCBuZXcgZGYgdGhhdCBpcyBub3QgcHJlc2VudCBpbiBvcmlnaW5hbC4gd2UgaGF2ZSAyIG1vcmUgY3Vlcywgd2hpY2ggYW1vdW50cyB0byAyOCBkZj9cbm5ld19jdWVfcGFpci5kZiA8LSBjaV9jdWVfcGFpcl9uZXcuZGYyICU+JSBhbnRpX2pvaW4oY2lfY3VlX3BhaXIuZGYzICU+JSBtdXRhdGUoaWRfMyA9IHBhc3RlMChpZCwgaWRfMikpLCBieSA9IFxcaWRfM1xcKSBcblxubmV3X2N1ZV9wYWlyLmxzIDwtIHNwbGl0KG5ld19jdWVfcGFpci5kZiwgc2VxKG5yb3cobmV3X2N1ZV9wYWlyLmRmKSkpXG5cbnN1cnZlaWxsYW5jZTo6cGxhcHBseShuZXdfY3VlX3BhaXIubHMgLCBjaV9pbnZhc2lvbl9hbmFseXNpcylcblxuYGBgXG5gYGAifQ== --&gt;
-
-```r
-```r
-# getting the newer iteration of ci_opt
-ci_opt_new.df &lt;- read.csv(here(\data/ci_opt.csv\))
-cue_range_new.df &lt;- read.csv(here(\data/cue_range.csv\))
-
-# get unique id and join with cue range df
-ci_cue_new.df &lt;- ci_opt_new.df %&gt;% 
-  mutate(id = paste0(cue, \_\, log)) %&gt;% 
-  left_join(select(cue_range_new.df, c(id, low, high, by)), by = c(\id\ = \id\))
-
-# get all pairwise combinations
-ci_cue_pair_new.df &lt;- ci_cue_new.df %&gt;% 
-  setNames(paste0(names(ci_cue_new.df), &#39;_2&#39;)) %&gt;% 
-  tidyr::crossing(ci_cue_new.df, .name_repair = \check_unique\) %&gt;% 
-  janitor::clean_names()
-
-# filter out all the same cue optimization
-ci_cue_pair_new.df2 &lt;- ci_cue_pair_new.df %&gt;% filter(id!=id_2) %&gt;% mutate(id_3 = paste0(id, id_2))
-
-# all all new df that is not present in original. we have 2 more cues, which amounts to 28 df?
-new_cue_pair.df &lt;- ci_cue_pair_new.df2 %&gt;% anti_join(ci_cue_pair.df3 %&gt;% mutate(id_3 = paste0(id, id_2)), by = \id_3\) 
-
-new_cue_pair.ls &lt;- split(new_cue_pair.df, seq(nrow(new_cue_pair.df)))
-
-surveillance::plapply(new_cue_pair.ls , ci_invasion_analysis)
-</code></pre>
-<pre><code>
-&lt;!-- rnb-source-end --&gt;
-
-&lt;!-- rnb-chunk-end --&gt;
-
-
-&lt;!-- rnb-text-begin --&gt;
-
-
 #---------------------#
 # continued LBFGS optimization for DE
 #---------------------#
@@ -610,154 +566,22 @@ Ensure that our DE parameters are as good as it gets!
 &lt;!-- rnb-chunk-begin --&gt;
 
 
-&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuc3VydmVpbGxhbmNlOjpwbGFwcGx5KHJlcnVuLmxzICwgZnVuY3Rpb24oeCl7Y2lfaW52YXNpb25fYW5hbHlzaXMoeCwgZGVmYXVsdCA9IEYpfSlcblxuYGBgXG5gYGAifQ== --&gt;
+&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxubmV3X2N1ZV9wYWlyLmxzIDwtIHNwbGl0KG5ld19jdWVfcGFpci5kZiwgc2VxKG5yb3cobmV3X2N1ZV9wYWlyLmRmKSkpXG5cbmBgYFxuYGBgIn0= --&gt;
 
 ```r
 ```r
-surveillance::plapply(rerun.ls , function(x){ci_invasion_analysis(x, default = F)})
+new_cue_pair.ls &lt;- split(new_cue_pair.df, seq(nrow(new_cue_pair.df)))
 </code></pre>
 <pre><code>
 &lt;!-- rnb-source-end --&gt;
 
-&lt;!-- rnb-output-begin eyJkYXRhIjoiXG4gIHwgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgXG4gIHwgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgfCAgIDAlTiA9IDQsIE0gPSA1IG1hY2hpbmUgcHJlY2lzaW9uID0gMi4yMjA0NWUtMTZcbkwgPSAtaW5mIC1pbmYgLWluZiAtaW5mIFxuWDAgPSAxIC0yMS45MTE4IDMzOC4zNjIgLTUwMDAgXG5VID0gaW5mIGluZiBpbmYgaW5mIFxuVGhpcyBwcm9ibGVtIGlzIHVuY29uc3RyYWluZWQuXG5BdCBYMCwgMCB2YXJpYWJsZXMgYXJlIGV4YWN0bHkgYXQgdGhlIGJvdW5kc1xuQXQgaXRlcmF0ZSAgICAgMCAgZj0gICAgICAgMC43OTQ5ICB8cHJvaiBnfD0gICAgICAgMS4wODQzXG5JdGVyYXRpb24gICAgIDBcblxuLS0tLS0tLS0tLS0tLS0tLSBDQVVDSFkgZW50ZXJlZC0tLS0tLS0tLS0tLS0tLS0tLS1cblxuVGhlcmUgYXJlIDAgIGJyZWFrcG9pbnRzXG5cbkdDUCBmb3VuZCBpbiB0aGlzIHNlZ21lbnRcblBpZWNlICAgICAgMSBmMSwgZjIgYXQgc3RhcnQgcG9pbnQgLTEuMTc1OWUrMDAgIDEuMTc1OWUrMDBcbkRpc3RhbmNlIHRvIHRoZSBzdGF0aW9uYXJ5IHBvaW50ID0gICAxLjAwMDBlKzAwXG5DYXVjaHkgWCA9ICAyLjA4NDI3IC0yMS45Mjc2IDMzOC4zNjIgLTUwMDAgXG5cbi0tLS0tLS0tLS0tLS0tLS0gZXhpdCBDQVVDSFktLS0tLS0tLS0tLS0tLS0tLS0tLS0tXG5cbjQgIHZhcmlhYmxlcyBhcmUgZnJlZSBhdCBHQ1Agb24gaXRlcmF0aW9uIDFcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDFcblggPSAxLjk5OTg5IC0yMS45MjY0IDMzOC4zNjIgLTUwMDAgXG5HID0gMC4wMDgwNzQ0IDEuNzAxNjhlLTA2IC04LjM0MjQ5ZS0wOCAtMS4wMDQwNGUtMDcgXG5JdGVyYXRpb24gICAgIDFcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDA3MzkwOThcblggPSAxLjk5MjUgLTIxLjkyNjQgMzM4LjM2MiAtNTAwMCBcbkcgPSAwLjAwNzAwNzU3IDEuODQ3NTllLTA2IC0xLjkxNDllLTA5IC0yLjI5MTYyZS0xMiBcbkl0ZXJhdGlvbiAgICAgMlxuV2FybmluZyBpbiBVc2VNZXRob2QoXFxzdW1tYXJ5XFwpIDpcbiAgY2xvc2luZyB1bnVzZWQgY29ubmVjdGlvbiAzMCAoPC1sb2NhbGhvc3Q6MTE3OTApXG5XYXJuaW5nIGluIFVzZU1ldGhvZChcXHN1bW1hcnlcXCkgOlxuICBjbG9zaW5nIHVudXNlZCBjb25uZWN0aW9uIDI5ICg8LWxvY2FsaG9zdDoxMTc5MClcbldhcm5pbmcgaW4gVXNlTWV0aG9kKFxcc3VtbWFyeVxcKSA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMjggKDwtbG9jYWxob3N0OjExNzkwKVxuV2FybmluZyBpbiBVc2VNZXRob2QoXFxzdW1tYXJ5XFwpIDpcbiAgY2xvc2luZyB1bnVzZWQgY29ubmVjdGlvbiAyNyAoPC1sb2NhbGhvc3Q6MTE3OTApXG5XYXJuaW5nIGluIFVzZU1ldGhvZChcXHN1bW1hcnlcXCkgOlxuICBjbG9zaW5nIHVudXNlZCBjb25uZWN0aW9uIDI2ICg8LWxvY2FsaG9zdDoxMTc5MClcbldhcm5pbmcgaW4gVXNlTWV0aG9kKFxcc3VtbWFyeVxcKSA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMjUgKDwtbG9jYWxob3N0OjExNzkwKVxuV2FybmluZyBpbiBVc2VNZXRob2QoXFxzdW1tYXJ5XFwpIDpcbiAgY2xvc2luZyB1bnVzZWQgY29ubmVjdGlvbiAyNCAoPC1sb2NhbGhvc3Q6MTE3OTApXG5XYXJuaW5nIGluIFVzZU1ldGhvZChcXHN1bW1hcnlcXCkgOlxuICBjbG9zaW5nIHVudXNlZCBjb25uZWN0aW9uIDIzICg8LWxvY2FsaG9zdDoxMTc5MClcbldhcm5pbmcgaW4gVXNlTWV0aG9kKFxcc3VtbWFyeVxcKSA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMjIgKDwtbG9jYWxob3N0OjExNzkwKVxuV2FybmluZyBpbiBVc2VNZXRob2QoXFxzdW1tYXJ5XFwpIDpcbiAgY2xvc2luZyB1bnVzZWQgY29ubmVjdGlvbiAyMSAoPC1sb2NhbGhvc3Q6MTE3OTApXG5XYXJuaW5nIGluIFVzZU1ldGhvZChcXHN1bW1hcnlcXCkgOlxuICBjbG9zaW5nIHVudXNlZCBjb25uZWN0aW9uIDIwICg8LWxvY2FsaG9zdDoxMTc5MClcbldhcm5pbmcgaW4gVXNlTWV0aG9kKFxcc3VtbWFyeVxcKSA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMTkgKDwtbG9jYWxob3N0OjExNzkwKVxuV2FybmluZyBpbiBVc2VNZXRob2QoXFxzdW1tYXJ5XFwpIDpcbiAgY2xvc2luZyB1bnVzZWQgY29ubmVjdGlvbiAxOCAoPC1sb2NhbGhvc3Q6MTE3OTApXG5XYXJuaW5nIGluIFVzZU1ldGhvZChcXHN1bW1hcnlcXCkgOlxuICBjbG9zaW5nIHVudXNlZCBjb25uZWN0aW9uIDE3ICg8LWxvY2FsaG9zdDoxMTc5MClcbldhcm5pbmcgaW4gVXNlTWV0aG9kKFxcc3VtbWFyeVxcKSA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMTYgKDwtbG9jYWxob3N0OjExNzkwKVxuV2FybmluZyBpbiBVc2VNZXRob2QoXFxzdW1tYXJ5XFwpIDpcbiAgY2xvc2luZyB1bnVzZWQgY29ubmVjdGlvbiAxNSAoPC1sb2NhbGhvc3Q6MTE3OTApXG5XYXJuaW5nIGluIFVzZU1ldGhvZChcXHN1bW1hcnlcXCkgOlxuICBjbG9zaW5nIHVudXNlZCBjb25uZWN0aW9uIDE0ICg8LWxvY2FsaG9zdDoxMTc5MClcbldhcm5pbmcgaW4gVXNlTWV0aG9kKFxcc3VtbWFyeVxcKSA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMTMgKDwtbG9jYWxob3N0OjExNzkwKVxuV2FybmluZyBpbiBVc2VNZXRob2QoXFxzdW1tYXJ5XFwpIDpcbiAgY2xvc2luZyB1bnVzZWQgY29ubmVjdGlvbiAxMiAoPC1sb2NhbGhvc3Q6MTE3OTApXG5XYXJuaW5nIGluIFVzZU1ldGhvZChcXHN1bW1hcnlcXCkgOlxuICBjbG9zaW5nIHVudXNlZCBjb25uZWN0aW9uIDExICg8LWxvY2FsaG9zdDoxMTc5MClcbldhcm5pbmcgaW4gVXNlTWV0aG9kKFxcc3VtbWFyeVxcKSA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMTAgKDwtbG9jYWxob3N0OjExNzkwKVxuV2FybmluZyBpbiBVc2VNZXRob2QoXFxzdW1tYXJ5XFwpIDpcbiAgY2xvc2luZyB1bnVzZWQgY29ubmVjdGlvbiA5ICg8LWxvY2FsaG9zdDoxMTc5MClcbldhcm5pbmcgaW4gVXNlTWV0aG9kKFxcc3VtbWFyeVxcKSA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gOCAoPC1sb2NhbGhvc3Q6MTE3OTApXG5XYXJuaW5nIGluIFVzZU1ldGhvZChcXHN1bW1hcnlcXCkgOlxuICBjbG9zaW5nIHVudXNlZCBjb25uZWN0aW9uIDcgKDwtbG9jYWxob3N0OjExNzkwKVxuV2FybmluZyBpbiBVc2VNZXRob2QoXFxzdW1tYXJ5XFwpIDpcbiAgY2xvc2luZyB1bnVzZWQgY29ubmVjdGlvbiA2ICg8LWxvY2FsaG9zdDoxMTc5MClcbldhcm5pbmcgaW4gVXNlTWV0aG9kKFxcc3VtbWFyeVxcKSA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gNSAoPC1sb2NhbGhvc3Q6MTE3OTApXG5XYXJuaW5nIGluIFVzZU1ldGhvZChcXHN1bW1hcnlcXCkgOlxuICBjbG9zaW5nIHVudXNlZCBjb25uZWN0aW9uIDQgKDwtbG9jYWxob3N0OjExNzkwKVxuV2FybmluZyBpbiBVc2VNZXRob2QoXFxzdW1tYXJ5XFwpIDpcbiAgY2xvc2luZyB1bnVzZWQgY29ubmVjdGlvbiAzICg8LWxvY2FsaG9zdDoxMTc5MClcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDAzMTA0NDFcblggPSAxLjk4OTQgLTIxLjkyNjQgMzM4LjM2MiAtNTAwMCBcbkcgPSAwLjAwNjAzMzI0IDEuODQ1OTFlLTA2IC01LjExMjI1ZS0wOSAtMS41NjM2N2UtMTAgXG5JdGVyYXRpb24gICAgIDNcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDA2MzAyNjJcblggPSAxLjk4MzA5IC0yMS45MjY0IDMzOC4zNjIgLTUwMDAgXG5HID0gMC4wMDIzMDQ2NyAxLjYwNjc0ZS0wNiAzLjgyNDM2ZS0xMCA4LjA2MzM3ZS0xMCBcbkl0ZXJhdGlvbiAgICAgNFxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDE5NDUyNFxuWCA9IDEuOTgxMTUgLTIxLjkyNjQgMzM4LjM2MiAtNTAwMCBcbkcgPSA1LjMwNzg3ZS0wNSAxLjM5OTMzZS0wNiAxLjA0OTM3ZS0wOCA5LjU1MDg0ZS0wOSBcbkl0ZXJhdGlvbiAgICAgNVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gNC41ODc1OGUtMDVcblggPSAxLjk4MTEgLTIxLjkyNjQgMzM4LjM2MiAtNTAwMCBcbkcgPSAtMS4zOTc5OGUtMDUgMS4zOTUxNmUtMDYgMy40OTRlLTA5IC02LjYzNDY4ZS0xMCBcbkl0ZXJhdGlvbiAgICAgNlxuTElORSBTRUFSQ0ggNyB0aW1lczsgbm9ybSBvZiBzdGVwID0gMi4yMTk0NGUtMTJcblggPSAxLjk4MTEgLTIxLjkyNjQgMzM4LjM2MiAtNTAwMCBcbkcgPSAtMS4zOTY4NmUtMDUgMS4zOTMyN2UtMDYgMy44NTUxM2UtMTAgLTEuNzcyNjdlLTEzIFxuXG5pdGVyYXRpb25zIDdcbmZ1bmN0aW9uIGV2YWx1YXRpb25zIDE4XG5zZWdtZW50cyBleHBsb3JlZCBkdXJpbmcgQ2F1Y2h5IHNlYXJjaGVzIDFcbkJGR1MgdXBkYXRlcyBza2lwcGVkIDBcbmFjdGl2ZSBib3VuZHMgYXQgZmluYWwgZ2VuZXJhbGl6ZWQgQ2F1Y2h5IHBvaW50IDBcbm5vcm0gb2YgdGhlIGZpbmFsIHByb2plY3RlZCBncmFkaWVudCAxLjM5Njg2ZS0wNVxuZmluYWwgZnVuY3Rpb24gdmFsdWUgLTAuMDAwODg4ODcxXG5cblggPSAxLjk4MTEgLTIxLjkyNjQgMzM4LjM2MiAtNTAwMCBcbkYgPSAtMC4wMDA4ODg4NzFcbmZpbmFsICB2YWx1ZSAtMC4wMDA4ODkgXG5jb252ZXJnZWRcblxuICB8ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFxuICB8PT09PT09PT09PT09PSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHwgIDIwJU4gPSA0LCBNID0gNSBtYWNoaW5lIHByZWNpc2lvbiA9IDIuMjIwNDVlLTE2XG5MID0gLWluZiAtaW5mIC1pbmYgLWluZiBcblgwID0gMSAtOS4xNjUwMyAtNzEuNzIxNCA0OTk4Ljc5IFxuVSA9IGluZiBpbmYgaW5mIGluZiBcblRoaXMgcHJvYmxlbSBpcyB1bmNvbnN0cmFpbmVkLlxuQXQgWDAsIDAgdmFyaWFibGVzIGFyZSBleGFjdGx5IGF0IHRoZSBib3VuZHNcbkF0IGl0ZXJhdGUgICAgIDAgIGY9ICAgICAgMC45NjA2MiAgfHByb2ogZ3w9ICAgICAgIDEuNjMwM1xuSXRlcmF0aW9uICAgICAwXG5cbi0tLS0tLS0tLS0tLS0tLS0gQ0FVQ0hZIGVudGVyZWQtLS0tLS0tLS0tLS0tLS0tLS0tXG5cblRoZXJlIGFyZSAwICBicmVha3BvaW50c1xuXG5HQ1AgZm91bmQgaW4gdGhpcyBzZWdtZW50XG5QaWVjZSAgICAgIDEgZjEsIGYyIGF0IHN0YXJ0IHBvaW50IC0yLjY1ODllKzAwICAyLjY1ODllKzAwXG5EaXN0YW5jZSB0byB0aGUgc3RhdGlvbmFyeSBwb2ludCA9ICAgMS4wMDAwZSswMFxuQ2F1Y2h5IFggPSAgMi42MzAzNCAtOS4xOTQ4MSAtNzEuNzIzNiA0OTk4Ljc5IFxuXG4tLS0tLS0tLS0tLS0tLS0tIGV4aXQgQ0FVQ0hZLS0tLS0tLS0tLS0tLS0tLS0tLS0tLVxuXG40ICB2YXJpYWJsZXMgYXJlIGZyZWUgYXQgR0NQIG9uIGl0ZXJhdGlvbiAxXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxXG5YID0gMS45OTk4MyAtOS4xODMyOSAtNzEuNzIyNyA0OTk4Ljc5IFxuRyA9IC0wLjYzNDU3NiAwLjA2MDc2NDYgMC4wMDQ4NzUxOCAwLjAwMDEyMjc2NyBcbkl0ZXJhdGlvbiAgICAgMVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC42NDc4NjdcblggPSAyLjY0MTAyIC05LjI3NTc5IC03MS43MzAyIDQ5OTguNzkgXG5HID0gLTAuNTA5MDgzIC0wLjA1MzI3MTYgLTAuMDAyMzU5MTggLTMuMDIyMzllLTA1IFxuSXRlcmF0aW9uICAgICAyXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAzLjU1MDJcblggPSA2LjA2MzEyIC04LjMzMTk1IC03MS42ODIyIDQ5OTguNzkgXG5HID0gNS45MjIxN2UtMTA0IDguMTkzMDNlLTEwNSA0LjQ4MTdlLTEwNiA4LjE4ODM3ZS0xMDggXG5JdGVyYXRpb24gICAgIDNcbkJhZCBkaXJlY3Rpb24gaW4gdGhlIGxpbmUgc2VhcmNoO1xuICAgcmVmcmVzaCB0aGUgbGJmZ3MgbWVtb3J5IGFuZCByZXN0YXJ0IHRoZSBpdGVyYXRpb24uXG5JdGVyYXRpb24gICAgIDNcblxuLS0tLS0tLS0tLS0tLS0tLSBDQVVDSFkgZW50ZXJlZC0tLS0tLS0tLS0tLS0tLS0tLS1cblxuVGhlcmUgYXJlIDAgIGJyZWFrcG9pbnRzXG5cbkdDUCBmb3VuZCBpbiB0aGlzIHNlZ21lbnRcblBpZWNlICAgICAgMSBmMSwgZjIgYXQgc3RhcnQgcG9pbnQgLTMuNTc0NWUtMjA3IDMuNTc0NWUtMjA3XG5EaXN0YW5jZSB0byB0aGUgc3RhdGlvbmFyeSBwb2ludCA9ICAgMS4wMDAwZSswMFxuQ2F1Y2h5IFggPSAgNi4wNjMxMiAtOC4zMzE5NSAtNzEuNjgyMiA0OTk4Ljc5IFxuXG4tLS0tLS0tLS0tLS0tLS0tIGV4aXQgQ0FVQ0hZLS0tLS0tLS0tLS0tLS0tLS0tLS0tLVxuXG40ICB2YXJpYWJsZXMgYXJlIGZyZWUgYXQgR0NQIG9uIGl0ZXJhdGlvbiA0XG5EZXJpdmF0aXZlID49IDAsIGJhY2t0cmFja2luZyBsaW5lIHNlYXJjaCBpbXBvc3NpYmxlLmZpbmFsICB2YWx1ZSAtMC4wMDAwMDAgXG5zdG9wcGVkIGFmdGVyIDMgaXRlcmF0aW9uc1xuXG4gIHwgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgXG4gIHw9PT09PT09PT09PT09PT09PT09PT09PT09PT0gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgfCAgNDAlTiA9IDQsIE0gPSA1IG1hY2hpbmUgcHJlY2lzaW9uID0gMi4yMjA0NWUtMTZcbkwgPSAtaW5mIC1pbmYgLWluZiAtaW5mIFxuWDAgPSAyLjE4OTE1IC01LjQ1MDA1IDQuNTQzNTIgLTkuMzU2NjggXG5VID0gaW5mIGluZiBpbmYgaW5mIFxuVGhpcyBwcm9ibGVtIGlzIHVuY29uc3RyYWluZWQuXG5BdCBYMCwgMCB2YXJpYWJsZXMgYXJlIGV4YWN0bHkgYXQgdGhlIGJvdW5kc1xuQXQgaXRlcmF0ZSAgICAgMCAgZj0gICAgIC0wLjk1NTk0ICB8cHJvaiBnfD0gICAgICAgMy43NzI2XG5JdGVyYXRpb24gICAgIDBcblxuLS0tLS0tLS0tLS0tLS0tLSBDQVVDSFkgZW50ZXJlZC0tLS0tLS0tLS0tLS0tLS0tLS1cblxuVGhlcmUgYXJlIDAgIGJyZWFrcG9pbnRzXG5cbkdDUCBmb3VuZCBpbiB0aGlzIHNlZ21lbnRcblBpZWNlICAgICAgMSBmMSwgZjIgYXQgc3RhcnQgcG9pbnQgLTEuNDIzNmUrMDEgIDEuNDIzNmUrMDFcbkRpc3RhbmNlIHRvIHRoZSBzdGF0aW9uYXJ5IHBvaW50ID0gICAxLjAwMDBlKzAwXG5DYXVjaHkgWCA9ICA1Ljk2MTc0IC01LjM5MjkzIDQuNTU0ODIgLTkuMzU4MDkgXG5cbi0tLS0tLS0tLS0tLS0tLS0gZXhpdCBDQVVDSFktLS0tLS0tLS0tLS0tLS0tLS0tLS0tXG5cbjQgIHZhcmlhYmxlcyBhcmUgZnJlZSBhdCBHQ1Agb24gaXRlcmF0aW9uIDFcbkxJTkUgU0VBUkNIIDIgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDg3NDM4OVxuWCA9IDIuMjc2NTcgLTUuNDQ4NzMgNC41NDM3OSAtOS4zNTY3MSBcbkcgPSAtMS44MzI0MSAwLjE3MzY2OSAwLjIzNjQzMyAwLjE0MTM0OCBcbkl0ZXJhdGlvbiAgICAgMVxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMjgwODYzXG5YID0gMi4zMDMzMSAtNS40NTM1MiA0LjUzNzYzIC05LjM2MDM1IFxuRyA9IC0wLjgwNDI2MyAwLjI2Mzk4OSAwLjMxNDMxOSAwLjE4MDgyIFxuSXRlcmF0aW9uICAgICAyXG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAxNjkwMzNcblggPSAyLjMxNjA2IC01LjQ2MDA5IDQuNTI5ODggLTkuMzY0OCBcbkcgPSAwLjM2NDkxOSAwLjMwODQ3NyAwLjM0MzU1NCAwLjE5NDY0NiBcbkl0ZXJhdGlvbiAgICAgM1xuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wNTc0MTY0XG5YID0gMi4zMjI0OCAtNS40OTQ1MyA0LjQ5MDM3IC05LjM4NzM2IFxuRyA9IDAuODgyMzM1IDAuMjg0MTk0IDAuMzA1MzM5IDAuMTcyMjk0IFxuSXRlcmF0aW9uICAgICA0XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjMwMDgxOVxuWCA9IDIuMzMyMjUgLTUuNjc2MzQgNC4yODI0MiAtOS41MDYwOSBcbkcgPSAwLjY2NTg5OSAwLjEwMjE2NCAwLjA5NjI4NjYgMC4wNTM5OTc4IFxuSXRlcmF0aW9uICAgICA1XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjEyNzY0XG5YID0gMi4zMzE5NyAtNS43NTcgNC4xOTY2OCAtOS41NTU0MiBcbkcgPSAtMC4xMDMzMSAwLjAzMDMzOTggMC4wMjM4MiAwLjAxMzI3ODUgXG5JdGVyYXRpb24gICAgIDZcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDY4MzEzN1xuWCA9IDIuMzM1MDYgLTUuNzk5ODggNC4xNTA2NCAtOS41ODE4NSBcbkcgPSAwLjA1MjkyNzcgMC4wMTE4NjI5IDAuMDAxMTUwMSAwLjAwMDM2MzE5OSBcbkl0ZXJhdGlvbiAgICAgN1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMTI1Njc1XG5YID0gMi4zMzUxMiAtNS44MDg0NyA0LjE0MjY4IC05LjU4NjQxIFxuRyA9IC0wLjAwNDYxMTE0IDAuMDA2NTkyMyAtMC4wMDQxMzM1MSAtMC4wMDI1OTI4MyBcbkl0ZXJhdGlvbiAgICAgOFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDIyNzg2M1xuWCA9IDIuMzM1MjIgLTUuODEwMjMgNC4xNDE0MSAtOS41ODcxMyBcbkcgPSAwLjAwMDUwNzM3MiAwLjAwNjAzNDk3IC0wLjAwNDc5MTk0IC0wLjAwMjk2MDkxIFxuSXRlcmF0aW9uICAgICA5XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwMzUxODkyXG5YID0gMi4zMzUxNiAtNS44MTM1OCA0LjE0MDQ3IC05LjU4NzYyIFxuRyA9IC0wLjAyOTIxMTYgMC4wMDQzODI0MyAtMC4wMDYyNTE3OCAtMC4wMDM3NDE4MSBcbkl0ZXJhdGlvbiAgICAxMFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDQ1NzA1XG5YID0gMi4zMzUyNCAtNS44MTgxNSA0LjE0MDQyIC05LjU4NzU3IFxuRyA9IC0wLjAzMzc0NjMgMC4wMDMzMzE0NyAtMC4wMDcyMzI2MiAtMC4wMDQyMzQwOSBcbkl0ZXJhdGlvbiAgICAxMVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMjgxNDY2XG5YID0gMi4zMzU2OCAtNS44NDUxOSA0LjE0NjkyIC05LjU4MzI1IFxuRyA9IC0wLjA0NzM2NTggLTAuMDAwNzY1OTE4IC0wLjAxMDYwMTIgLTAuMDA1Njg5MjQgXG5JdGVyYXRpb24gICAgMTJcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDU0NDY0NlxuWCA9IDIuMzM2MDEgLTUuODkyNjggNC4xNjk2MSAtOS41NjkyNSBcbkcgPSAtMC4xMDAwNTMgLTAuMDA1NzI2NDkgLTAuMDEzNDI1MyAtMC4wMDYzNDYwMSBcbkl0ZXJhdGlvbiAgICAxM1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wOTI0MDU2XG5YID0gMi4zMzc0OCAtNS45Njg3MiA0LjIxNDQ2IC05LjU0MiBcbkcgPSAwLjAxNjUxNzQgLTAuMDA2NTcwNzUgLTAuMDExNzg3IC0wLjAwMzg1NzQgXG5JdGVyYXRpb24gICAgMTRcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDYwNjM0OVxuWCA9IDIuMzM3MDggLTYuMDA4MTEgNC4yNTQxIC05LjUxODQ2IFxuRyA9IC0wLjA2NTM5ODYgLTAuMDA2MjQ4NzYgLTAuMDA4MDQzNDEgLTAuMDAwNTY2NzEyIFxuSXRlcmF0aW9uICAgIDE1XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAyMDAzNjZcblggPSAyLjMzNzU1IC02LjAwNTk4IDQuMjcxNDUgLTkuNTA4NjggXG5HID0gMC4wOTI1NTg4IDAuMDAyMjEzOSAwLjAwMDU5OTk0NyAwLjAwNDU5NDE4IFxuSXRlcmF0aW9uICAgIDE2XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAxNTI5MTlcblggPSAyLjMzNjk3IC01Ljk5NDkxIDQuMjYyNDMgLTkuNTE0MDkgXG5HID0gMC4wMDE2NzY3OCAtNy4wNDQwMWUtMDUgLTAuMDAxNzM5MzIgMC4wMDMwMDI3NiBcbkl0ZXJhdGlvbiAgICAxN1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDI4OTA5OFxuWCA9IDIuMzM2OTMgLTUuOTkyNDUgNC4yNjExNCAtOS41MTQ5MSBcbkcgPSAtMC4wMDAyNDkxODYgMy45MDE5NWUtMDUgLTAuMDAxNzE3ODMgMC4wMDI5NjM2MSBcbkl0ZXJhdGlvbiAgICAxOFxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDM3NDk2NVxuWCA9IDIuMzM2ODcgLTUuOTg5MzUgNC4yNjA5OCAtOS41MTcwMSBcbkcgPSAtMC4wMDI1NjUyMiAwLjAwMDM1IC0wLjAwMTQ5OTQ4IDAuMDAzMDE3NCBcbkl0ZXJhdGlvbiAgICAxOVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMzg3ODE0XG5YID0gMi4zMzY2IC01Ljk2NjE1IDQuMjU0ODYgLTkuNTQ3NDggXG5HID0gLTAuMDE5ODQzNCAwLjAwMDI2OTg2MiAtMC4wMDMxNzUzOCAwLjAwMTI0OTI5IFxuSXRlcmF0aW9uICAgIDIwXG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAyNTQ4MlxuWCA9IDIuMzM1OTggLTUuOTYzOTUgNC4yNzU2NCAtOS41NjIwNSBcbkcgPSAtMC4wODAxMTQxIDAuMDAxOTEzNCAtMC4wMDA4MjE3OTcgMC4wMDI1MTM3MSBcbkl0ZXJhdGlvbiAgICAyMVxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4xNTI2OTlcblggPSAyLjMzNjUgLTUuOTk1OCA0LjM3MjczIC05LjY3NTUzIFxuRyA9IC0wLjAxOTk0MjUgMC4wMDQ3NTgwMSAwLjAwMDkzNjg5NCAwLjAwMjc2NjQxIFxuSXRlcmF0aW9uICAgIDIyXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxLjg2NDQ1XG5YID0gMi4zNDA1OCAtNi41ODE0NyA1LjU4NDUxIC0xMC45NjU4IFxuRyA9IC0wLjE5OTk3NiAtMC4wMDc4MjU3OCAtMC4wMTE0NzMzIC0wLjAwODQwNDM3IFxuSXRlcmF0aW9uICAgIDIzXG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjEzNjE2NFxuWCA9IDIuMzQxODkgLTYuNjI2NTkgNS42ODkyNyAtMTEuMDQwMSBcbkcgPSAwLjA0NTU1NTQgMC4wMDE3OTIzMSAtMC4wMDIwNjA3NyAtMC4wMDMxMDU5IFxuSXRlcmF0aW9uICAgIDI0XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjE2NDc5MlxuWCA9IDIuMzQxNTkgLTYuNjE2NzEgNS42MDcyNCAtMTAuODk3NSBcbkcgPSAwLjAxNTM4MDYgMC4wMDE1MTUyMiA3LjM5NjQ5ZS0wNSAtMC4wMDA1ODg0NDMgXG5JdGVyYXRpb24gICAgMjVcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDM1OTY3OFxuWCA9IDIuMzQxNzYgLTYuNjQyMDcgNS42MTQ3NiAtMTAuODczMiBcbkcgPSAwLjAwMjE2MDM1IDAuMDAwMjI1NjI3IDAuMDAwMTUyMTA0IDkuMzA5OTdlLTA1IFxuSXRlcmF0aW9uICAgIDI2XG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwNDU2NDIxXG5YID0gMi4zNDE4IC02LjY0NDQ2IDUuNjE3NDkgLTEwLjg3NTkgXG5HID0gMC4wMDQ2NDE1MSAwLjAwMDEwNjMwMiAtMy4wOTgzNmUtMDUgLTEuMDI4MTJlLTA1IFxuSXRlcmF0aW9uICAgIDI3XG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAxMDU3MzJcblggPSAyLjM0MTg1IC02LjY0ODk1IDUuNjI0NTUgLTEwLjg4MjQgXG5HID0gMC4wMDUxMDAyNiAtOC44MjA1M2UtMDUgLTAuMDAwMTQ1MjU3IC03LjU1MTQ0ZS0wNSBcbkl0ZXJhdGlvbiAgICAyOFxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDM4Nzk4OFxuWCA9IDIuMzQxODMgLTYuNjQ5MTcgNS42MjY3OCAtMTAuODg1NiBcbkcgPSAwLjAwMTY5OTA0IC05LjAwOTM4ZS0wNSAtMC4wMDAxNTg5NTggLTAuMDAwMTA4NDU2IFxuSXRlcmF0aW9uICAgIDI5XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwMDY2NTAxNVxuWCA9IDIuMzQxODEgLTYuNjQ5MzMgNS42MjcyOSAtMTAuODg1MiBcbkcgPSAwLjAwMDQxMTYxNiAtMS45OTA3ZS0wNiAtMi42MzExNmUtMDUgLTIuMTU1MTVlLTA1IFxuSXRlcmF0aW9uICAgIDMwXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwMDY5MzExNVxuWCA9IDIuMzQxOCAtNi42NDk2MSA1LjYyNzIxIC0xMC44ODQ1IFxuRyA9IC0wLjAwMTA2ODggLTMuOTk1NjRlLTA1IC0zLjQ0MDQzZS0wNSAtMS40NDE5ZS0wNSBcbkl0ZXJhdGlvbiAgICAzMVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDExMzkyMlxuWCA9IDIuMzQxODEgLTYuNjQ5ODMgNS42Mjc5OCAtMTAuODg1NCBcbkcgPSAtNi43MjM0NWUtMDUgMi45MTE5NWUtMDYgNC43MjA2NWUtMDYgMy4zMTMwNmUtMDYgXG5JdGVyYXRpb24gICAgMzJcbkxJTkUgU0VBUkNIIDE1IHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAzLjM5Mjc4ZS0xNFxuWCA9IDIuMzQxODEgLTYuNjQ5ODMgNS42Mjc5OCAtMTAuODg1NCBcbkcgPSAtNi4zOTg5NmUtMDUgNS42MjkzMWUtMDYgNC43MjFlLTA2IDMuMzEzMjRlLTA2IFxuXG5pdGVyYXRpb25zIDMzXG5mdW5jdGlvbiBldmFsdWF0aW9ucyA2MVxuc2VnbWVudHMgZXhwbG9yZWQgZHVyaW5nIENhdWNoeSBzZWFyY2hlcyAxXG5CRkdTIHVwZGF0ZXMgc2tpcHBlZCAwXG5hY3RpdmUgYm91bmRzIGF0IGZpbmFsIGdlbmVyYWxpemVkIENhdWNoeSBwb2ludCAwXG5ub3JtIG9mIHRoZSBmaW5hbCBwcm9qZWN0ZWQgZ3JhZGllbnQgNi4zOTg5NmUtMDVcbmZpbmFsIGZ1bmN0aW9uIHZhbHVlIC0xLjI2MjYxXG5cblggPSAyLjM0MTgxIC02LjY0OTgzIDUuNjI3OTggLTEwLjg4NTQgXG5GID0gLTEuMjYyNjFcbldhcm5pbmc6ICBtb3JlIHRoYW4gMTAgZnVuY3Rpb24gYW5kIGdyYWRpZW50IGV2YWx1YXRpb25zXG4gICBpbiB0aGUgbGFzdCBsaW5lIHNlYXJjaFxuZmluYWwgIHZhbHVlIC0xLjI2MjYxNCBcbmNvbnZlcmdlZFxuXG4gIHwgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgXG4gIHw9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09ICAgICAgICAgICAgICAgICAgICAgICAgICAgfCAgNjAlTiA9IDQsIE0gPSA1IG1hY2hpbmUgcHJlY2lzaW9uID0gMi4yMjA0NWUtMTZcbkwgPSAtaW5mIC1pbmYgLWluZiAtaW5mIFxuWDAgPSAxLjA5Njg2IC04MC40OTY5IDE0MTIuNDYgMy40NjMwOCBcblUgPSBpbmYgaW5mIGluZiBpbmYgXG5UaGlzIHByb2JsZW0gaXMgdW5jb25zdHJhaW5lZC5cbkF0IFgwLCAwIHZhcmlhYmxlcyBhcmUgZXhhY3RseSBhdCB0aGUgYm91bmRzXG5BdCBpdGVyYXRlICAgICAwICBmPSAgICAgICAwLjY2MjggIHxwcm9qIGd8PSAgICAgICAxLjcyMjNcbkl0ZXJhdGlvbiAgICAgMFxuXG4tLS0tLS0tLS0tLS0tLS0tIENBVUNIWSBlbnRlcmVkLS0tLS0tLS0tLS0tLS0tLS0tLVxuXG5UaGVyZSBhcmUgMCAgYnJlYWtwb2ludHNcblxuR0NQIGZvdW5kIGluIHRoaXMgc2VnbWVudFxuUGllY2UgICAgICAxIGYxLCBmMiBhdCBzdGFydCBwb2ludCAtMi45NjYyZSswMCAgMi45NjYyZSswMFxuRGlzdGFuY2UgdG8gdGhlIHN0YXRpb25hcnkgcG9pbnQgPSAgIDEuMDAwMGUrMDBcbkNhdWNoeSBYID0gIDIuODE5MTMgLTgwLjQ5NCAxNDEyLjQ2IDMuNDYzMDggXG5cbi0tLS0tLS0tLS0tLS0tLS0gZXhpdCBDQVVDSFktLS0tLS0tLS0tLS0tLS0tLS0tLS0tXG5cbjQgIHZhcmlhYmxlcyBhcmUgZnJlZSBhdCBHQ1Agb24gaXRlcmF0aW9uIDFcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDFcblggPSAyLjA5Njg2IC04MC40OTUyIDE0MTIuNDYgMy40NjMwOCBcbkcgPSAwLjAwMzExMDk0IDEuMDU5NjZlLTA3IDcuOTMzNzJlLTEyIDMuODE1ODVlLTEwIFxuSXRlcmF0aW9uICAgICAxXG5MSU5FIFNFQVJDSCA3IHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjExMzQyOFxuWCA9IDEuOTgzNDMgLTgwLjQ5NTIgMTQxMi40NiAzLjQ2MzA4IFxuRyA9IDAuMDAxNzQwMjggNS4zNzUzN2UtMDcgLTUuNjMyNjFlLTEwIC0yLjk3Nzk0ZS0xMCBcbkl0ZXJhdGlvbiAgICAgMlxuTElORSBTRUFSQ0ggMiB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDAzNDMyNzJcblggPSAxLjk4MzA4IC04MC40OTUyIDE0MTIuNDYgMy40NjMwOCBcbkcgPSAwLjAwMTM2ODUzIDQuODQ1MTllLTA3IDIuNTg4NTllLTA5IDIuMTY0ZS0xMCBcbkl0ZXJhdGlvbiAgICAgM1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDEyNjM2N1xuWCA9IDEuOTgxODIgLTgwLjQ5NTIgMTQxMi40NiAzLjQ2MzA4IFxuRyA9IC0wLjAwMDI4ODk3OCA0LjMyMDY0ZS0wNyAtMi45NzgyM2UtMDkgLTUuMjQ1NGUtMDkgXG5JdGVyYXRpb24gICAgIDRcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDAwMjIwMzE0XG5YID0gMS45ODIwNCAtODAuNDk1MiAxNDEyLjQ2IDMuNDYzMDggXG5HID0gMy44NjM0NGUtMDUgNC40MDU1M2UtMDcgNC4yOTkzMmUtMTEgNi4xMjQ2NmUtMTMgXG5JdGVyYXRpb24gICAgIDVcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDIuNTk4MjNlLTA1XG5YID0gMS45ODIwMiAtODAuNDk1MiAxNDEyLjQ2IDMuNDYzMDggXG5HID0gOS44MTU1M2UtMDcgNC4zODM2MmUtMDcgMS4wNTI1OWUtMDggMi42OTEzM2UtMDkgXG5cbml0ZXJhdGlvbnMgNlxuZnVuY3Rpb24gZXZhbHVhdGlvbnMgMTZcbnNlZ21lbnRzIGV4cGxvcmVkIGR1cmluZyBDYXVjaHkgc2VhcmNoZXMgMVxuQkZHUyB1cGRhdGVzIHNraXBwZWQgMFxuYWN0aXZlIGJvdW5kcyBhdCBmaW5hbCBnZW5lcmFsaXplZCBDYXVjaHkgcG9pbnQgMFxubm9ybSBvZiB0aGUgZmluYWwgcHJvamVjdGVkIGdyYWRpZW50IDkuODE1NTNlLTA3XG5maW5hbCBmdW5jdGlvbiB2YWx1ZSAtMC4wMDA4OTI0NFxuXG5YID0gMS45ODIwMiAtODAuNDk1MiAxNDEyLjQ2IDMuNDYzMDggXG5GID0gLTAuMDAwODkyNDRcbmZpbmFsICB2YWx1ZSAtMC4wMDA4OTIgXG5jb252ZXJnZWRcblxuICB8ICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIFxuICB8PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09ICAgICAgICAgICAgIHwgIDgwJU4gPSA0LCBNID0gNSBtYWNoaW5lIHByZWNpc2lvbiA9IDIuMjIwNDVlLTE2XG5MID0gLWluZiAtaW5mIC1pbmYgLWluZiBcblgwID0gMSAtMzIuODMxNiAzNzguMTA5IC01MDAwIFxuVSA9IGluZiBpbmYgaW5mIGluZiBcblRoaXMgcHJvYmxlbSBpcyB1bmNvbnN0cmFpbmVkLlxuQXQgWDAsIDAgdmFyaWFibGVzIGFyZSBleGFjdGx5IGF0IHRoZSBib3VuZHNcbkF0IGl0ZXJhdGUgICAgIDAgIGY9ICAgICAgMC44ODAyOCAgfHByb2ogZ3w9ICAgICAgIDIuMTc3OVxuSXRlcmF0aW9uICAgICAwXG5cbi0tLS0tLS0tLS0tLS0tLS0gQ0FVQ0hZIGVudGVyZWQtLS0tLS0tLS0tLS0tLS0tLS0tXG5cblRoZXJlIGFyZSAwICBicmVha3BvaW50c1xuXG5HQ1AgZm91bmQgaW4gdGhpcyBzZWdtZW50XG5QaWVjZSAgICAgIDEgZjEsIGYyIGF0IHN0YXJ0IHBvaW50IC00Ljc0MzhlKzAwICA0Ljc0MzhlKzAwXG5EaXN0YW5jZSB0byB0aGUgc3RhdGlvbmFyeSBwb2ludCA9ICAgMS4wMDAwZSswMFxuQ2F1Y2h5IFggPSAgMy4xNzc5NSAtMzIuODEzMSAzNzguMTA5IC01MDAwIFxuXG4tLS0tLS0tLS0tLS0tLS0tIGV4aXQgQ0FVQ0hZLS0tLS0tLS0tLS0tLS0tLS0tLS0tLVxuXG40ICB2YXJpYWJsZXMgYXJlIGZyZWUgYXQgR0NQIG9uIGl0ZXJhdGlvbiAxXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxXG5YID0gMS45OTk5NiAtMzIuODIzMSAzNzguMTA5IC01MDAwIFxuRyA9IDAuMDA3ODczMDEgNS44MjgwMmUtMDcgLTEuODk0NDhlLTA5IC0xLjk1NzA3ZS0wOCBcbkl0ZXJhdGlvbiAgICAgMVxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMTgwMDg2XG5YID0gMS45ODE5NiAtMzIuODIzMSAzNzguMTA5IC01MDAwIFxuRyA9IDAuMDAxOTkyMDggNC45MjgxNWUtMDcgLTMuMDkwMjFlLTA5IC04LjU5MzMzZS0wOSBcbkl0ZXJhdGlvbiAgICAgMlxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDE2NzgwMVxuWCA9IDEuOTgwMjggLTMyLjgyMzEgMzc4LjEwOSAtNTAwMCBcbkcgPSAwLjAwMDE3OTE3NSA0LjE4MDI2ZS0wNyAyLjAxNzgzZS0wOSAtOS4wMTE0OWUtMTAgXG5JdGVyYXRpb24gICAgIDNcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDAwMTY1ODQ0XG5YID0gMS45ODAxMSAtMzIuODIzMSAzNzguMTA5IC01MDAwIFxuRyA9IC00LjE1NjYzZS0wNSA0LjIwNzQzZS0wNyAtMS4zMzExNWUtMDkgMS40MjQyMmUtMDggXG5JdGVyYXRpb24gICAgIDRcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDQuMDM3MzJlLTA2XG5YID0gMS45ODAxMiAtMzIuODIzMSAzNzguMTA5IC01MDAwIFxuRyA9IC0zLjU5ODk1ZS0wNSA0LjA3NDI4ZS0wNyAtOS4wMjA3MmUtMTAgOC44NTc5M2UtMTQgXG5cbml0ZXJhdGlvbnMgNVxuZnVuY3Rpb24gZXZhbHVhdGlvbnMgOVxuc2VnbWVudHMgZXhwbG9yZWQgZHVyaW5nIENhdWNoeSBzZWFyY2hlcyAxXG5CRkdTIHVwZGF0ZXMgc2tpcHBlZCAwXG5hY3RpdmUgYm91bmRzIGF0IGZpbmFsIGdlbmVyYWxpemVkIENhdWNoeSBwb2ludCAwXG5ub3JtIG9mIHRoZSBmaW5hbCBwcm9qZWN0ZWQgZ3JhZGllbnQgMy41OTg5NWUtMDVcbmZpbmFsIGZ1bmN0aW9uIHZhbHVlIC0wLjAwMDg3MzE3MlxuXG5YID0gMS45ODAxMiAtMzIuODIzMSAzNzguMTA5IC01MDAwIFxuRiA9IC0wLjAwMDg3MzE3MlxuZmluYWwgIHZhbHVlIC0wLjAwMDg3MyBcbmNvbnZlcmdlZFxuXG4gIHwgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgXG4gIHw9PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09fCAxMDAlXG4kYDFgXG5cbiRgMmBcbiJ9 --&gt;
+&lt;!-- rnb-output-begin eyJkYXRhIjoiRXJyb3IgaW4gc3BsaXQobmV3X2N1ZV9wYWlyLmRmLCBzZXEobnJvdyhuZXdfY3VlX3BhaXIuZGYpKSkgOiBcbiAgb2JqZWN0ICduZXdfY3VlX3BhaXIuZGYnIG5vdCBmb3VuZFxuIn0= --&gt;
 </code></pre>
-<p>|<br />
-| | 0%N = 4, M = 5 machine precision = 2.22045e-16 L = -inf -inf -inf -inf X0 = 1 -21.9118 338.362 -5000 U = inf inf inf inf This problem is unconstrained. At X0, 0 variables are exactly at the bounds At iterate 0 f= 0.7949 |proj g|= 1.0843 Iteration 0</p>
-<p>—————- CAUCHY entered——————-</p>
-<p>There are 0 breakpoints</p>
-<p>GCP found in this segment Piece 1 f1, f2 at start point -1.1759e+00 1.1759e+00 Distance to the stationary point = 1.0000e+00 Cauchy X = 2.08427 -21.9276 338.362 -5000</p>
-<p>—————- exit CAUCHY———————-</p>
-<p>4 variables are free at GCP on iteration 1 LINE SEARCH 0 times; norm of step = 1 X = 1.99989 -21.9264 338.362 -5000 G = 0.0080744 1.70168e-06 -8.34249e-08 -1.00404e-07 Iteration 1 LINE SEARCH 0 times; norm of step = 0.00739098 X = 1.9925 -21.9264 338.362 -5000 G = 0.00700757 1.84759e-06 -1.9149e-09 -2.29162e-12 Iteration 2 Warning in UseMethod() : closing unused connection 30 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 29 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 28 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 27 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 26 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 25 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 24 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 23 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 22 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 21 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 20 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 19 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 18 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 17 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 16 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 15 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 14 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 13 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 12 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 11 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 10 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 9 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 8 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 7 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 6 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 5 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 4 (&lt;-localhost:11790) Warning in UseMethod() : closing unused connection 3 (&lt;-localhost:11790) LINE SEARCH 1 times; norm of step = 0.00310441 X = 1.9894 -21.9264 338.362 -5000 G = 0.00603324 1.84591e-06 -5.11225e-09 -1.56367e-10 Iteration 3 LINE SEARCH 1 times; norm of step = 0.00630262 X = 1.98309 -21.9264 338.362 -5000 G = 0.00230467 1.60674e-06 3.82436e-10 8.06337e-10 Iteration 4 LINE SEARCH 1 times; norm of step = 0.00194524 X = 1.98115 -21.9264 338.362 -5000 G = 5.30787e-05 1.39933e-06 1.04937e-08 9.55084e-09 Iteration 5 LINE SEARCH 0 times; norm of step = 4.58758e-05 X = 1.9811 -21.9264 338.362 -5000 G = -1.39798e-05 1.39516e-06 3.494e-09 -6.63468e-10 Iteration 6 LINE SEARCH 7 times; norm of step = 2.21944e-12 X = 1.9811 -21.9264 338.362 -5000 G = -1.39686e-05 1.39327e-06 3.85513e-10 -1.77267e-13</p>
-<p>iterations 7 function evaluations 18 segments explored during Cauchy searches 1 BFGS updates skipped 0 active bounds at final generalized Cauchy point 0 norm of the final projected gradient 1.39686e-05 final function value -0.000888871</p>
-<p>X = 1.9811 -21.9264 338.362 -5000 F = -0.000888871 final value -0.000889 converged</p>
-<p>|<br />
-|============= | 20%N = 4, M = 5 machine precision = 2.22045e-16 L = -inf -inf -inf -inf X0 = 1 -9.16503 -71.7214 4998.79 U = inf inf inf inf This problem is unconstrained. At X0, 0 variables are exactly at the bounds At iterate 0 f= 0.96062 |proj g|= 1.6303 Iteration 0</p>
-<p>—————- CAUCHY entered——————-</p>
-<p>There are 0 breakpoints</p>
-<p>GCP found in this segment Piece 1 f1, f2 at start point -2.6589e+00 2.6589e+00 Distance to the stationary point = 1.0000e+00 Cauchy X = 2.63034 -9.19481 -71.7236 4998.79</p>
-<p>—————- exit CAUCHY———————-</p>
-<p>4 variables are free at GCP on iteration 1 LINE SEARCH 0 times; norm of step = 1 X = 1.99983 -9.18329 -71.7227 4998.79 G = -0.634576 0.0607646 0.00487518 0.000122767 Iteration 1 LINE SEARCH 0 times; norm of step = 0.647867 X = 2.64102 -9.27579 -71.7302 4998.79 G = -0.509083 -0.0532716 -0.00235918 -3.02239e-05 Iteration 2 LINE SEARCH 0 times; norm of step = 3.5502 X = 6.06312 -8.33195 -71.6822 4998.79 G = 5.92217e-104 8.19303e-105 4.4817e-106 8.18837e-108 Iteration 3 Bad direction in the line search; refresh the lbfgs memory and restart the iteration. Iteration 3</p>
-<p>—————- CAUCHY entered——————-</p>
-<p>There are 0 breakpoints</p>
-<p>GCP found in this segment Piece 1 f1, f2 at start point -3.5745e-207 3.5745e-207 Distance to the stationary point = 1.0000e+00 Cauchy X = 6.06312 -8.33195 -71.6822 4998.79</p>
-<p>—————- exit CAUCHY———————-</p>
-<p>4 variables are free at GCP on iteration 4 Derivative &gt;= 0, backtracking line search impossible.final value -0.000000 stopped after 3 iterations</p>
-<p>|<br />
-|=========================== | 40%N = 4, M = 5 machine precision = 2.22045e-16 L = -inf -inf -inf -inf X0 = 2.18915 -5.45005 4.54352 -9.35668 U = inf inf inf inf This problem is unconstrained. At X0, 0 variables are exactly at the bounds At iterate 0 f= -0.95594 |proj g|= 3.7726 Iteration 0</p>
-<p>—————- CAUCHY entered——————-</p>
-<p>There are 0 breakpoints</p>
-<p>GCP found in this segment Piece 1 f1, f2 at start point -1.4236e+01 1.4236e+01 Distance to the stationary point = 1.0000e+00 Cauchy X = 5.96174 -5.39293 4.55482 -9.35809</p>
-<p>—————- exit CAUCHY———————-</p>
-<p>4 variables are free at GCP on iteration 1 LINE SEARCH 2 times; norm of step = 0.0874389 X = 2.27657 -5.44873 4.54379 -9.35671 G = -1.83241 0.173669 0.236433 0.141348 Iteration 1 LINE SEARCH 1 times; norm of step = 0.0280863 X = 2.30331 -5.45352 4.53763 -9.36035 G = -0.804263 0.263989 0.314319 0.18082 Iteration 2 LINE SEARCH 1 times; norm of step = 0.0169033 X = 2.31606 -5.46009 4.52988 -9.3648 G = 0.364919 0.308477 0.343554 0.194646 Iteration 3 LINE SEARCH 1 times; norm of step = 0.0574164 X = 2.32248 -5.49453 4.49037 -9.38736 G = 0.882335 0.284194 0.305339 0.172294 Iteration 4 LINE SEARCH 0 times; norm of step = 0.300819 X = 2.33225 -5.67634 4.28242 -9.50609 G = 0.665899 0.102164 0.0962866 0.0539978 Iteration 5 LINE SEARCH 0 times; norm of step = 0.12764 X = 2.33197 -5.757 4.19668 -9.55542 G = -0.10331 0.0303398 0.02382 0.0132785 Iteration 6 LINE SEARCH 0 times; norm of step = 0.0683137 X = 2.33506 -5.79988 4.15064 -9.58185 G = 0.0529277 0.0118629 0.0011501 0.000363199 Iteration 7 LINE SEARCH 0 times; norm of step = 0.0125675 X = 2.33512 -5.80847 4.14268 -9.58641 G = -0.00461114 0.0065923 -0.00413351 -0.00259283 Iteration 8 LINE SEARCH 0 times; norm of step = 0.00227863 X = 2.33522 -5.81023 4.14141 -9.58713 G = 0.000507372 0.00603497 -0.00479194 -0.00296091 Iteration 9 LINE SEARCH 0 times; norm of step = 0.00351892 X = 2.33516 -5.81358 4.14047 -9.58762 G = -0.0292116 0.00438243 -0.00625178 -0.00374181 Iteration 10 LINE SEARCH 0 times; norm of step = 0.0045705 X = 2.33524 -5.81815 4.14042 -9.58757 G = -0.0337463 0.00333147 -0.00723262 -0.00423409 Iteration 11 LINE SEARCH 0 times; norm of step = 0.0281466 X = 2.33568 -5.84519 4.14692 -9.58325 G = -0.0473658 -0.000765918 -0.0106012 -0.00568924 Iteration 12 LINE SEARCH 0 times; norm of step = 0.0544646 X = 2.33601 -5.89268 4.16961 -9.56925 G = -0.100053 -0.00572649 -0.0134253 -0.00634601 Iteration 13 LINE SEARCH 0 times; norm of step = 0.0924056 X = 2.33748 -5.96872 4.21446 -9.542 G = 0.0165174 -0.00657075 -0.011787 -0.0038574 Iteration 14 LINE SEARCH 0 times; norm of step = 0.0606349 X = 2.33708 -6.00811 4.2541 -9.51846 G = -0.0653986 -0.00624876 -0.00804341 -0.000566712 Iteration 15 LINE SEARCH 0 times; norm of step = 0.0200366 X = 2.33755 -6.00598 4.27145 -9.50868 G = 0.0925588 0.0022139 0.000599947 0.00459418 Iteration 16 LINE SEARCH 0 times; norm of step = 0.0152919 X = 2.33697 -5.99491 4.26243 -9.51409 G = 0.00167678 -7.04401e-05 -0.00173932 0.00300276 Iteration 17 LINE SEARCH 0 times; norm of step = 0.00289098 X = 2.33693 -5.99245 4.26114 -9.51491 G = -0.000249186 3.90195e-05 -0.00171783 0.00296361 Iteration 18 LINE SEARCH 1 times; norm of step = 0.00374965 X = 2.33687 -5.98935 4.26098 -9.51701 G = -0.00256522 0.00035 -0.00149948 0.0030174 Iteration 19 LINE SEARCH 0 times; norm of step = 0.0387814 X = 2.3366 -5.96615 4.25486 -9.54748 G = -0.0198434 0.000269862 -0.00317538 0.00124929 Iteration 20 LINE SEARCH 1 times; norm of step = 0.025482 X = 2.33598 -5.96395 4.27564 -9.56205 G = -0.0801141 0.0019134 -0.000821797 0.00251371 Iteration 21 LINE SEARCH 1 times; norm of step = 0.152699 X = 2.3365 -5.9958 4.37273 -9.67553 G = -0.0199425 0.00475801 0.000936894 0.00276641 Iteration 22 LINE SEARCH 0 times; norm of step = 1.86445 X = 2.34058 -6.58147 5.58451 -10.9658 G = -0.199976 -0.00782578 -0.0114733 -0.00840437 Iteration 23 LINE SEARCH 1 times; norm of step = 0.136164 X = 2.34189 -6.62659 5.68927 -11.0401 G = 0.0455554 0.00179231 -0.00206077 -0.0031059 Iteration 24 LINE SEARCH 0 times; norm of step = 0.164792 X = 2.34159 -6.61671 5.60724 -10.8975 G = 0.0153806 0.00151522 7.39649e-05 -0.000588443 Iteration 25 LINE SEARCH 0 times; norm of step = 0.0359678 X = 2.34176 -6.64207 5.61476 -10.8732 G = 0.00216035 0.000225627 0.000152104 9.30997e-05 Iteration 26 LINE SEARCH 1 times; norm of step = 0.00456421 X = 2.3418 -6.64446 5.61749 -10.8759 G = 0.00464151 0.000106302 -3.09836e-05 -1.02812e-05 Iteration 27 LINE SEARCH 1 times; norm of step = 0.0105732 X = 2.34185 -6.64895 5.62455 -10.8824 G = 0.00510026 -8.82053e-05 -0.000145257 -7.55144e-05 Iteration 28 LINE SEARCH 1 times; norm of step = 0.00387988 X = 2.34183 -6.64917 5.62678 -10.8856 G = 0.00169904 -9.00938e-05 -0.000158958 -0.000108456 Iteration 29 LINE SEARCH 0 times; norm of step = 0.000665015 X = 2.34181 -6.64933 5.62729 -10.8852 G = 0.000411616 -1.9907e-06 -2.63116e-05 -2.15515e-05 Iteration 30 LINE SEARCH 0 times; norm of step = 0.000693115 X = 2.3418 -6.64961 5.62721 -10.8845 G = -0.0010688 -3.99564e-05 -3.44043e-05 -1.4419e-05 Iteration 31 LINE SEARCH 0 times; norm of step = 0.00113922 X = 2.34181 -6.64983 5.62798 -10.8854 G = -6.72345e-05 2.91195e-06 4.72065e-06 3.31306e-06 Iteration 32 LINE SEARCH 15 times; norm of step = 3.39278e-14 X = 2.34181 -6.64983 5.62798 -10.8854 G = -6.39896e-05 5.62931e-06 4.721e-06 3.31324e-06</p>
-<p>iterations 33 function evaluations 61 segments explored during Cauchy searches 1 BFGS updates skipped 0 active bounds at final generalized Cauchy point 0 norm of the final projected gradient 6.39896e-05 final function value -1.26261</p>
-<p>X = 2.34181 -6.64983 5.62798 -10.8854 F = -1.26261 Warning: more than 10 function and gradient evaluations in the last line search final value -1.262614 converged</p>
-<p>|<br />
-|======================================== | 60%N = 4, M = 5 machine precision = 2.22045e-16 L = -inf -inf -inf -inf X0 = 1.09686 -80.4969 1412.46 3.46308 U = inf inf inf inf This problem is unconstrained. At X0, 0 variables are exactly at the bounds At iterate 0 f= 0.6628 |proj g|= 1.7223 Iteration 0</p>
-<p>—————- CAUCHY entered——————-</p>
-<p>There are 0 breakpoints</p>
-<p>GCP found in this segment Piece 1 f1, f2 at start point -2.9662e+00 2.9662e+00 Distance to the stationary point = 1.0000e+00 Cauchy X = 2.81913 -80.494 1412.46 3.46308</p>
-<p>—————- exit CAUCHY———————-</p>
-<p>4 variables are free at GCP on iteration 1 LINE SEARCH 0 times; norm of step = 1 X = 2.09686 -80.4952 1412.46 3.46308 G = 0.00311094 1.05966e-07 7.93372e-12 3.81585e-10 Iteration 1 LINE SEARCH 7 times; norm of step = 0.113428 X = 1.98343 -80.4952 1412.46 3.46308 G = 0.00174028 5.37537e-07 -5.63261e-10 -2.97794e-10 Iteration 2 LINE SEARCH 2 times; norm of step = 0.000343272 X = 1.98308 -80.4952 1412.46 3.46308 G = 0.00136853 4.84519e-07 2.58859e-09 2.164e-10 Iteration 3 LINE SEARCH 0 times; norm of step = 0.00126367 X = 1.98182 -80.4952 1412.46 3.46308 G = -0.000288978 4.32064e-07 -2.97823e-09 -5.2454e-09 Iteration 4 LINE SEARCH 0 times; norm of step = 0.000220314 X = 1.98204 -80.4952 1412.46 3.46308 G = 3.86344e-05 4.40553e-07 4.29932e-11 6.12466e-13 Iteration 5 LINE SEARCH 0 times; norm of step = 2.59823e-05 X = 1.98202 -80.4952 1412.46 3.46308 G = 9.81553e-07 4.38362e-07 1.05259e-08 2.69133e-09</p>
-<p>iterations 6 function evaluations 16 segments explored during Cauchy searches 1 BFGS updates skipped 0 active bounds at final generalized Cauchy point 0 norm of the final projected gradient 9.81553e-07 final function value -0.00089244</p>
-<p>X = 1.98202 -80.4952 1412.46 3.46308 F = -0.00089244 final value -0.000892 converged</p>
-<p>|<br />
-|====================================================== | 80%N = 4, M = 5 machine precision = 2.22045e-16 L = -inf -inf -inf -inf X0 = 1 -32.8316 378.109 -5000 U = inf inf inf inf This problem is unconstrained. At X0, 0 variables are exactly at the bounds At iterate 0 f= 0.88028 |proj g|= 2.1779 Iteration 0</p>
-<p>—————- CAUCHY entered——————-</p>
-<p>There are 0 breakpoints</p>
-<p>GCP found in this segment Piece 1 f1, f2 at start point -4.7438e+00 4.7438e+00 Distance to the stationary point = 1.0000e+00 Cauchy X = 3.17795 -32.8131 378.109 -5000</p>
-<p>—————- exit CAUCHY———————-</p>
-<p>4 variables are free at GCP on iteration 1 LINE SEARCH 0 times; norm of step = 1 X = 1.99996 -32.8231 378.109 -5000 G = 0.00787301 5.82802e-07 -1.89448e-09 -1.95707e-08 Iteration 1 LINE SEARCH 1 times; norm of step = 0.0180086 X = 1.98196 -32.8231 378.109 -5000 G = 0.00199208 4.92815e-07 -3.09021e-09 -8.59333e-09 Iteration 2 LINE SEARCH 1 times; norm of step = 0.00167801 X = 1.98028 -32.8231 378.109 -5000 G = 0.000179175 4.18026e-07 2.01783e-09 -9.01149e-10 Iteration 3 LINE SEARCH 0 times; norm of step = 0.000165844 X = 1.98011 -32.8231 378.109 -5000 G = -4.15663e-05 4.20743e-07 -1.33115e-09 1.42422e-08 Iteration 4 LINE SEARCH 1 times; norm of step = 4.03732e-06 X = 1.98012 -32.8231 378.109 -5000 G = -3.59895e-05 4.07428e-07 -9.02072e-10 8.85793e-14</p>
-<p>iterations 5 function evaluations 9 segments explored during Cauchy searches 1 BFGS updates skipped 0 active bounds at final generalized Cauchy point 0 norm of the final projected gradient 3.59895e-05 final function value -0.000873172</p>
-<p>X = 1.98012 -32.8231 378.109 -5000 F = -0.000873172 final value -0.000873 converged</p>
-<p>|<br />
-|===================================================================| 100% $<code>1</code></p>
-<p>$<code>2</code></p>
+<p>Error in split(new_cue_pair.df, seq(nrow(new_cue_pair.df))) : object ‘new_cue_pair.df’ not found</p>
 <pre><code>
 
 
 &lt;!-- rnb-output-end --&gt;
-
-&lt;!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjoiZGF0YS5mcmFtZSIsIm5yb3ciOjEsIm5jb2wiOjE1LCJzdW1tYXJ5Ijp7IkRlc2NyaXB0aW9uIjoiZGYgWzEgw5cgMTVdIn19LCJyZGYiOiJINHNJQUFBQUFBQUFBd3R5aVREbWl1QmlZR0JnWm1BQlFtWldJSk9CTlRURVRkZUNnWUdGQ2NoaEJBcHpndWdLb0NKaElJTWZpQVdRSkxqY0RiWGRqZUx6OHZOUzBXUTRJVEk1K2VsQURoOUl3dDVYSVZucndKb1VPUDhEQXd5QStRZE1YMlpGV3VuK2hQRWRTbFhQTExxZHVCc3V2N245Lzh2dCsrWGg4aHBtU1dGbXVWVUkvZHdxeVQzVGcrRjhFYTZtRjdVNk5YQyt3ZHYxdFFacjNlSDIvOTgwODQ1ajRHcUUvcmVhQjBUbVRVQ3kvMVNycThoZlpQdGZsYWlFbzRVTmExNWlibW94MVBmOFVFRzIzTktTK013VUdLOG90UmpCWTAvTExNbExMUzZHY2psQVNzc1Npd3pSK0Vab2ZHTTB2Z21NRHpJY1dUK1ViNFRHTjBiancvVHp3T3lQenk4b1FSTXp3aUptakVYTUJDeUdHaTZjUmZubGVyQ3c0UVZMZ0RGcTRDWG5KQmJEQWcrZXFGSVNTeEwxMG9xQWVvRzhmMmhhMklGV1plYm5BVFV4Z1ZJa0s1cG14aUkwQVlIU1BKQXJVblNUTTByenNuVU5UVUEyUUozRGdPbzBPSnNmWWlmVGY2aFpyTENJVE0xTHp3UW1kYWpqY3hLVFVuT2dIRDZnZDhHKzFTc295c3lEQlJBWFVMUllyeVMvSkJHbWppczVQd2NtQXZZY3d6OEFRUXp0R0lrREFBQT0ifQ== --&gt;
-
-&lt;div data-pagedtable=&quot;false&quot;&gt;
-  &lt;script data-pagedtable-source type=&quot;application/json&quot;&gt;
-{&quot;columns&quot;:[{&quot;label&quot;:[&quot;mut_id&quot;],&quot;name&quot;:[1],&quot;type&quot;:[&quot;chr&quot;],&quot;align&quot;:[&quot;left&quot;]},{&quot;label&quot;:[&quot;res_id&quot;],&quot;name&quot;:[2],&quot;type&quot;:[&quot;chr&quot;],&quot;align&quot;:[&quot;left&quot;]},{&quot;label&quot;:[&quot;fitness&quot;],&quot;name&quot;:[3],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var1&quot;],&quot;name&quot;:[4],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var2&quot;],&quot;name&quot;:[5],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var3&quot;],&quot;name&quot;:[6],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var4&quot;],&quot;name&quot;:[7],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var1&quot;],&quot;name&quot;:[8],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var2&quot;],&quot;name&quot;:[9],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var3&quot;],&quot;name&quot;:[10],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var4&quot;],&quot;name&quot;:[11],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var1_opt&quot;],&quot;name&quot;:[12],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var2_opt&quot;],&quot;name&quot;:[13],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var3_opt&quot;],&quot;name&quot;:[14],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var4_opt&quot;],&quot;name&quot;:[15],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]}],&quot;data&quot;:[{&quot;1&quot;:&quot;G1+G2_none&quot;,&quot;2&quot;:&quot;G1+G2_log&quot;,&quot;3&quot;:&quot;0.0008888706&quot;,&quot;4&quot;:&quot;1&quot;,&quot;5&quot;:&quot;-21.91178&quot;,&quot;6&quot;:&quot;338.3625&quot;,&quot;7&quot;:&quot;-5000&quot;,&quot;8&quot;:&quot;12.10622&quot;,&quot;9&quot;:&quot;-21.04352&quot;,&quot;10&quot;:&quot;-5.010265&quot;,&quot;11&quot;:&quot;-16.92846&quot;,&quot;12&quot;:&quot;1.981104&quot;,&quot;13&quot;:&quot;-21.92642&quot;,&quot;14&quot;:&quot;338.3619&quot;,&quot;15&quot;:&quot;-5000&quot;}],&quot;options&quot;:{&quot;columns&quot;:{&quot;min&quot;:{},&quot;max&quot;:[10],&quot;total&quot;:[15]},&quot;rows&quot;:{&quot;min&quot;:[10],&quot;max&quot;:[10],&quot;total&quot;:[1]},&quot;pages&quot;:{}}}
-  &lt;/script&gt;
-&lt;/div&gt;
-
-&lt;!-- rnb-frame-end --&gt;
-
-&lt;!-- rnb-output-begin eyJkYXRhIjoiXG4kYDNgXG4ifQ== --&gt;
-</code></pre>
-<p>$<code>3</code></p>
-<pre><code>
-
-
-&lt;!-- rnb-output-end --&gt;
-
-&lt;!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjoiZGF0YS5mcmFtZSIsIm5yb3ciOjEsIm5jb2wiOjE1LCJzdW1tYXJ5Ijp7IkRlc2NyaXB0aW9uIjoiZGYgWzEgw5cgMTVdIn19LCJyZGYiOiJINHNJQUFBQUFBQUFBd3R5aVREbWl1QmlZR0JnWm1BQlFtWldJSk9CTlRURVRkZUNnWUdGQ2NoaEJBcHpndWdLb0NKaElJTWZpQVdRSkxnOERiVTlqZUx6OHZOUzBXUTQzUTIxM1kzaWMvTFRnUncra0lRVzQvTGdKZFVabmpDKy9mdi8vMDhGU0oyRzhROG9oZFNycS9lWXdmbUI3N1J6cnhkL2dQRWROcmVkamxXWjV3cm5hNWdsaFpubFZzSFZtM0tySlBkTUQ0YnpSYmlhWHRUcTFNRDVCbS9YMXhxc2RZZnJsM0JZWkdXMG9nMHVyN0R5NjA5VDE0c0krMSt2dkJHdzlSZXkvUzFkMGRWb1ljT2FsNWliV2d6MVBUOVVrQzIzdENRK013WEdLMG90UnZEWTB6Skw4bEtMaTZGY0RwRFNzc1FpUXpTK0VScmZHSTF2QXVPRERFZldEK1Vib2ZHTjBmZ3cvVHd3KytQekMwclF4SXl3aUJsakVUTUJpNkdHQzJkUmZya2VMR3g0d1JKZ2pCcDR5VG1KeGJEQWd5ZXFsTVNTUkwyMElxQmVJTzhmbWhaMm9GV1orWGxBVFV5Z0ZNbUtwcG14Q0UxQW9EUVA1SW9VM2VTTTByeHNYVU1Ua0ExUTV6Q2dPZzNPNW9mWXlmUWZhaFlyTENKVDg5SXpnVWtkNnZpY3hLVFVIQ2lIRCtoZHNHLzFDb295ODJBQnhBVVVMZFlyeVM5SmhLbmpTczdQZ1ltQVBjZndEd0JyQkcwK2lRTUFBQT09In0= --&gt;
-
-&lt;div data-pagedtable=&quot;false&quot;&gt;
-  &lt;script data-pagedtable-source type=&quot;application/json&quot;&gt;
-{&quot;columns&quot;:[{&quot;label&quot;:[&quot;mut_id&quot;],&quot;name&quot;:[1],&quot;type&quot;:[&quot;chr&quot;],&quot;align&quot;:[&quot;left&quot;]},{&quot;label&quot;:[&quot;res_id&quot;],&quot;name&quot;:[2],&quot;type&quot;:[&quot;chr&quot;],&quot;align&quot;:[&quot;left&quot;]},{&quot;label&quot;:[&quot;fitness&quot;],&quot;name&quot;:[3],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var1&quot;],&quot;name&quot;:[4],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var2&quot;],&quot;name&quot;:[5],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var3&quot;],&quot;name&quot;:[6],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var4&quot;],&quot;name&quot;:[7],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var1&quot;],&quot;name&quot;:[8],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var2&quot;],&quot;name&quot;:[9],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var3&quot;],&quot;name&quot;:[10],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var4&quot;],&quot;name&quot;:[11],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var1_opt&quot;],&quot;name&quot;:[12],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var2_opt&quot;],&quot;name&quot;:[13],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var3_opt&quot;],&quot;name&quot;:[14],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var4_opt&quot;],&quot;name&quot;:[15],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]}],&quot;data&quot;:[{&quot;1&quot;:&quot;I1+I2_none&quot;,&quot;2&quot;:&quot;G1+G2_log&quot;,&quot;3&quot;:&quot;2.405389e-106&quot;,&quot;4&quot;:&quot;0.9999999&quot;,&quot;5&quot;:&quot;-9.165033&quot;,&quot;6&quot;:&quot;-71.7214&quot;,&quot;7&quot;:&quot;4998.794&quot;,&quot;8&quot;:&quot;12.10622&quot;,&quot;9&quot;:&quot;-21.04352&quot;,&quot;10&quot;:&quot;-5.010265&quot;,&quot;11&quot;:&quot;-16.92846&quot;,&quot;12&quot;:&quot;6.063119&quot;,&quot;13&quot;:&quot;-8.331955&quot;,&quot;14&quot;:&quot;-71.68224&quot;,&quot;15&quot;:&quot;4998.795&quot;}],&quot;options&quot;:{&quot;columns&quot;:{&quot;min&quot;:{},&quot;max&quot;:[10],&quot;total&quot;:[15]},&quot;rows&quot;:{&quot;min&quot;:[10],&quot;max&quot;:[10],&quot;total&quot;:[1]},&quot;pages&quot;:{}}}
-  &lt;/script&gt;
-&lt;/div&gt;
-
-&lt;!-- rnb-frame-end --&gt;
-
-&lt;!-- rnb-output-begin eyJkYXRhIjoiXG4kYDRgXG4ifQ== --&gt;
-</code></pre>
-<p>$<code>4</code></p>
-<pre><code>
-
-
-&lt;!-- rnb-output-end --&gt;
-
-&lt;!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjoiZGF0YS5mcmFtZSIsIm5yb3ciOjEsIm5jb2wiOjE1LCJzdW1tYXJ5Ijp7IkRlc2NyaXB0aW9uIjoiZGYgWzEgw5cgMTVdIn19LCJyZGYiOiJINHNJQUFBQUFBQUFBd3R5aVREbWl1QmlZR0JnWm1BQlFtWldJSk9CTlRURVRkZUNnWUdGQ2NoaEJBcHpndWdLb0NKaElJTWZpQVdRSkRnODAzVXo0M1B5MDlIRU9kME50ZDJOb0JKOElBbjdMOGFyR1cyU2o4SDREb3pOY2I4U28vcGcvQU9pWjI1cFJ5bmNnOHNMNlV5ODZHZDlGaTZ2dEcwKzZ5dVZNM0I1RGJPa01MUGNLcmk4S2JkS2NzLzBZRGhmaEt2cFJhMU9EWnh2OEhaOXJjRmFkN2grcGoxc3Qxb1dzY1BscFdibTdoQmEreEF1TDliTW8zazFMQW91cjNyVWQ1SFlIaHUwa0dITlM4eE5MWWI2bmg4cXlKWmJXaEtmbVFMakZhVVdJM2pzYVprbGVhbkZ4YkFBQkNrdFN5d3lST01ib2ZHTjBmZ21NRDdJY0dUOVVMNFJHdDhZalEvVHp3T3pQejYvb0FSTnpBaUxtREVXTVJPd0dHcTRjQmJsbCt2QndvWVhMQUhHcUlHWG5KTllEQXM4bUNCWFNtSkpvbDVhRVZBdmtQY1BUUXM3MEtyTS9EeWdKaVpRZW1SRjA4eFloQ1lnVUpvSGNrV0tibkpHYVY2MnJxRUp5QWFvY3hoUW5RWm44MFBzWlBvUE5Zc1ZGcEdwZWVtWmVha3d4K2NrSnFYbVFEbDhRTytDZmF0WFVKU1pCd3NnTHFCb3NWNUpma2tpVEIxWGNuNE9UQVRzT1laL0FIaDREbFNIQXdBQSJ9 --&gt;
-
-&lt;div data-pagedtable=&quot;false&quot;&gt;
-  &lt;script data-pagedtable-source type=&quot;application/json&quot;&gt;
-{&quot;columns&quot;:[{&quot;label&quot;:[&quot;mut_id&quot;],&quot;name&quot;:[1],&quot;type&quot;:[&quot;chr&quot;],&quot;align&quot;:[&quot;left&quot;]},{&quot;label&quot;:[&quot;res_id&quot;],&quot;name&quot;:[2],&quot;type&quot;:[&quot;chr&quot;],&quot;align&quot;:[&quot;left&quot;]},{&quot;label&quot;:[&quot;fitness&quot;],&quot;name&quot;:[3],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var1&quot;],&quot;name&quot;:[4],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var2&quot;],&quot;name&quot;:[5],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var3&quot;],&quot;name&quot;:[6],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var4&quot;],&quot;name&quot;:[7],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var1&quot;],&quot;name&quot;:[8],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var2&quot;],&quot;name&quot;:[9],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var3&quot;],&quot;name&quot;:[10],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var4&quot;],&quot;name&quot;:[11],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var1_opt&quot;],&quot;name&quot;:[12],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var2_opt&quot;],&quot;name&quot;:[13],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var3_opt&quot;],&quot;name&quot;:[14],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var4_opt&quot;],&quot;name&quot;:[15],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]}],&quot;data&quot;:[{&quot;1&quot;:&quot;Ig-i_log&quot;,&quot;2&quot;:&quot;G1+G2_log&quot;,&quot;3&quot;:&quot;1.262614&quot;,&quot;4&quot;:&quot;2.189146&quot;,&quot;5&quot;:&quot;-5.450051&quot;,&quot;6&quot;:&quot;4.543525&quot;,&quot;7&quot;:&quot;-9.356682&quot;,&quot;8&quot;:&quot;12.10622&quot;,&quot;9&quot;:&quot;-21.04352&quot;,&quot;10&quot;:&quot;-5.010265&quot;,&quot;11&quot;:&quot;-16.92846&quot;,&quot;12&quot;:&quot;2.34181&quot;,&quot;13&quot;:&quot;-6.649833&quot;,&quot;14&quot;:&quot;5.627976&quot;,&quot;15&quot;:&quot;-10.88536&quot;}],&quot;options&quot;:{&quot;columns&quot;:{&quot;min&quot;:{},&quot;max&quot;:[10],&quot;total&quot;:[15]},&quot;rows&quot;:{&quot;min&quot;:[10],&quot;max&quot;:[10],&quot;total&quot;:[1]},&quot;pages&quot;:{}}}
-  &lt;/script&gt;
-&lt;/div&gt;
-
-&lt;!-- rnb-frame-end --&gt;
-
-&lt;!-- rnb-output-begin eyJkYXRhIjoiXG4kYDVgXG4ifQ== --&gt;
-</code></pre>
-<p>$<code>5</code></p>
-<pre><code>
-
-
-&lt;!-- rnb-output-end --&gt;
-
-&lt;!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjoiZGF0YS5mcmFtZSIsIm5yb3ciOjEsIm5jb2wiOjE1LCJzdW1tYXJ5Ijp7IkRlc2NyaXB0aW9uIjoiZGYgWzEgw5cgMTVdIn19LCJyZGYiOiJINHNJQUFBQUFBQUFBd3R5aVREbWl1QmlZR0JnWm1BQlFtWldJSk9CTlRURVRkZUNnWUdGQ2NoaEJBcHpndWdLb0NKaElJTWZpQVdRSkRnOTAzVXo0L1B5ODFMUkpkd050ZDJONG5QeTA0RWNQcENFdmE5ZHlML0pyWmZnL0k4OU85OThzMkNBOFErRXlKL1ZGSlk3Q09NN1RCTzhJY0o3K1IrY3o3MGw2YkR6ZG40NFg4TXNLY3dzdHdxdTM1UmJKYmxuZWpDY0w4TFY5S0pXcHdiT04zaTd2dFpnclR2Yy92L2JRcHZaOXA5R3NuK1RzTm5PZWNqMmkvMVJGVWEyLzZ6SmtTOW9RY09hbDVpYldnejFQVDlVa0MyM3RDUStNd1hHSzBvdFJ2RFkwekpMOGxLTGk2RmNEcERTc3NRaVF6UytFUnJmR0kxdkF1T0RERWZXRCtVYm9mR04wZmd3L1R3dysrUHpDMHJReEl5d2lCbGpFVE1CaTZHR0MyZFJmcmtlTEd4NHdSSmdqQnA0eVRtSnhiREFnd2x5cFNTV0pPcWxGUUgxQW5uLzBMU3dBNjNLek04RGFtSUNSUTBybW1iR0lqUUJnZEk4a0N0U2RKTXpTdk95ZFExTlFEWkFuY09BNmpRNG14OWlKOU4vcUZtc3NJaE16VXZQQkNaMXFPTnpFcE5TYzZBY1BxQjN3YjdWS3lqS3pJTUZFQmRRdEZpdkpMOGtFYWFPS3prL0J5WUM5aHpEUHdBb2M2bWVpQU1BQUE9PSJ9 --&gt;
-
-&lt;div data-pagedtable=&quot;false&quot;&gt;
-  &lt;script data-pagedtable-source type=&quot;application/json&quot;&gt;
-{&quot;columns&quot;:[{&quot;label&quot;:[&quot;mut_id&quot;],&quot;name&quot;:[1],&quot;type&quot;:[&quot;chr&quot;],&quot;align&quot;:[&quot;left&quot;]},{&quot;label&quot;:[&quot;res_id&quot;],&quot;name&quot;:[2],&quot;type&quot;:[&quot;chr&quot;],&quot;align&quot;:[&quot;left&quot;]},{&quot;label&quot;:[&quot;fitness&quot;],&quot;name&quot;:[3],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var1&quot;],&quot;name&quot;:[4],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var2&quot;],&quot;name&quot;:[5],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var3&quot;],&quot;name&quot;:[6],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var4&quot;],&quot;name&quot;:[7],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var1&quot;],&quot;name&quot;:[8],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var2&quot;],&quot;name&quot;:[9],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var3&quot;],&quot;name&quot;:[10],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var4&quot;],&quot;name&quot;:[11],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var1_opt&quot;],&quot;name&quot;:[12],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var2_opt&quot;],&quot;name&quot;:[13],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var3_opt&quot;],&quot;name&quot;:[14],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var4_opt&quot;],&quot;name&quot;:[15],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]}],&quot;data&quot;:[{&quot;1&quot;:&quot;Ig-i_none&quot;,&quot;2&quot;:&quot;G1+G2_log&quot;,&quot;3&quot;:&quot;0.0008924403&quot;,&quot;4&quot;:&quot;1.096857&quot;,&quot;5&quot;:&quot;-80.4969&quot;,&quot;6&quot;:&quot;1412.461&quot;,&quot;7&quot;:&quot;3.463079&quot;,&quot;8&quot;:&quot;12.10622&quot;,&quot;9&quot;:&quot;-21.04352&quot;,&quot;10&quot;:&quot;-5.010265&quot;,&quot;11&quot;:&quot;-16.92846&quot;,&quot;12&quot;:&quot;1.982015&quot;,&quot;13&quot;:&quot;-80.49524&quot;,&quot;14&quot;:&quot;1412.461&quot;,&quot;15&quot;:&quot;3.463079&quot;}],&quot;options&quot;:{&quot;columns&quot;:{&quot;min&quot;:{},&quot;max&quot;:[10],&quot;total&quot;:[15]},&quot;rows&quot;:{&quot;min&quot;:[10],&quot;max&quot;:[10],&quot;total&quot;:[1]},&quot;pages&quot;:{}}}
-  &lt;/script&gt;
-&lt;/div&gt;
-
-&lt;!-- rnb-frame-end --&gt;
-
-&lt;!-- rnb-output-begin eyJkYXRhIjoiTkFcbiJ9 --&gt;
-</code></pre>
-<p>NA</p>
-<pre><code>
-
-
-&lt;!-- rnb-output-end --&gt;
-
-&lt;!-- rnb-frame-begin eyJtZXRhZGF0YSI6eyJjbGFzc2VzIjoiZGF0YS5mcmFtZSIsIm5yb3ciOjEsIm5jb2wiOjE1LCJzdW1tYXJ5Ijp7IkRlc2NyaXB0aW9uIjoiZGYgWzEgw5cgMTVdIn19LCJyZGYiOiJINHNJQUFBQUFBQUFBd3R5aVREbWl1QmlZR0JnWm1BQlFtWldJSk9CTlRURVRkZUNnWUdGQ2NoaEJBcHpndWdLb0NKaElJTWZpQVdRSkhnODB3MjFQZE9ONHZQeTgxTFI1RGpkRGJYZGplSno4dE9CSEQ2UWhMM1BuSTB6VjVnc2gvTS9NTUFBbUgvQUlhczQvRm5CWXhqZm9YemhQcjI4RlNGdytjM3QvLzkrZjhFQ2w5Y3dTd296eTYyQ3k1dHlxeVQzVEErRzgwVzRtbDdVNnRUQStRWnYxOWNhckhXSDIvOS9YYTl2WS9sMmhQMlpNUjdIbEI4aDJiL2Z3akoyUG9yOXAzNFZvb1VPYTE1aWJtb3gxUGY4VUVHMjNOS1MrTXdVR0s4b3RSakJZMC9MTE1sTExTNkdjamxBU3NzU2l3elIrRVpvZkdNMHZnbU1EekljV1QrVWI0VEdOMGJqdy9UendPeVB6eThvUVJNendpSm1qRVhNQkN5R0dpNmNSZm5sZXJDdzRRVkxnREZxNENYbkpCYkRBZzhteUpXU1dKS29sMVlFMUF2ay9VUFR3ZzYwS2pNL0Q2aUpDWlFtV2RFME14YWhDUWlVNW9GY2thS2JuRkdhbDYxcmFBS3lBZW9jQmxTbndkbjhFRHVaL2tQTllvVkZaR3BlZWlZd3FVTWRuNU9ZbEpvRDVmQUJ2UXYyclY1QlVXWWVMSUM0Z0tMRmVpWDVKWWt3ZFZ6SitUa3dFYkRuR1A0QkFJR3hrOTZMQXdBQSJ9 --&gt;
-
-&lt;div data-pagedtable=&quot;false&quot;&gt;
-  &lt;script data-pagedtable-source type=&quot;application/json&quot;&gt;
-{&quot;columns&quot;:[{&quot;label&quot;:[&quot;mut_id&quot;],&quot;name&quot;:[1],&quot;type&quot;:[&quot;chr&quot;],&quot;align&quot;:[&quot;left&quot;]},{&quot;label&quot;:[&quot;res_id&quot;],&quot;name&quot;:[2],&quot;type&quot;:[&quot;chr&quot;],&quot;align&quot;:[&quot;left&quot;]},{&quot;label&quot;:[&quot;fitness&quot;],&quot;name&quot;:[3],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var1&quot;],&quot;name&quot;:[4],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var2&quot;],&quot;name&quot;:[5],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var3&quot;],&quot;name&quot;:[6],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var4&quot;],&quot;name&quot;:[7],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var1&quot;],&quot;name&quot;:[8],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var2&quot;],&quot;name&quot;:[9],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var3&quot;],&quot;name&quot;:[10],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;res_var4&quot;],&quot;name&quot;:[11],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var1_opt&quot;],&quot;name&quot;:[12],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var2_opt&quot;],&quot;name&quot;:[13],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var3_opt&quot;],&quot;name&quot;:[14],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]},{&quot;label&quot;:[&quot;mut_var4_opt&quot;],&quot;name&quot;:[15],&quot;type&quot;:[&quot;dbl&quot;],&quot;align&quot;:[&quot;right&quot;]}],&quot;data&quot;:[{&quot;1&quot;:&quot;Ig1+Ig2_none&quot;,&quot;2&quot;:&quot;G1+G2_log&quot;,&quot;3&quot;:&quot;0.0008731715&quot;,&quot;4&quot;:&quot;1&quot;,&quot;5&quot;:&quot;-32.83165&quot;,&quot;6&quot;:&quot;378.1089&quot;,&quot;7&quot;:&quot;-5000&quot;,&quot;8&quot;:&quot;12.10622&quot;,&quot;9&quot;:&quot;-21.04352&quot;,&quot;10&quot;:&quot;-5.010265&quot;,&quot;11&quot;:&quot;-16.92846&quot;,&quot;12&quot;:&quot;1.980115&quot;,&quot;13&quot;:&quot;-32.82313&quot;,&quot;14&quot;:&quot;378.1092&quot;,&quot;15&quot;:&quot;-5000&quot;}],&quot;options&quot;:{&quot;columns&quot;:{&quot;min&quot;:{},&quot;max&quot;:[10],&quot;total&quot;:[15]},&quot;rows&quot;:{&quot;min&quot;:[10],&quot;max&quot;:[10],&quot;total&quot;:[1]},&quot;pages&quot;:{}}}
-  &lt;/script&gt;
-&lt;/div&gt;
-
-&lt;!-- rnb-frame-end --&gt;
 
 &lt;!-- rnb-chunk-end --&gt;
 
@@ -773,117 +597,162 @@ surveillance::plapply(rerun.ls , function(x){ci_invasion_analysis(x, default = F
 &lt;!-- rnb-chunk-begin --&gt;
 
 
-&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2lfRzFfRzJfb3B0IDwtIGNvX2luZmVjdGlvbl9vcHRfYWx0KHBhcmFtZXRlcnNfY3IgPSBjKDEuMDAwMDAwLCAgLTIxLjkxMTc3OSAsIDMzOC4zNjI0NjAsLTQ5OTkuOTk5NjYwKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbGltaXQgPSAwLjAxLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBtb2RlbCA9IGNoYWJhdWRpX2NpX2NsZWFuLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBpbW11bml0eSA9IFwidHN1a3VzaGlcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgcGFyYW1ldGVycyA9IHBhcmFtZXRlcnNfdHN1a3VzaGksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHRpbWVfcmFuZ2UgPSB0aW1lX3JhbmdlLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMSA9IFwiRzErRzJcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzIgPSBcIkcxK0cyXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8xID0gc2VxKDAsIDYqKDEwXjQpLCAoNiooMTBeNCkpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMiA9IHNlcSgwLCA2KigxMF40KSwgKDYqKDEwXjQpKS81MDAwKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc29sdmVyID0gXCJ2b2RlXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMSA9IFwibm9uZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzIgPSBcIm5vbmVcIilcblxuIyAxLjQ3MzM1IC00MC41ODg3IDQ1NS4zMjcgLTQ5OTkuMjYgKDAuMjk3Nzc3NClcbiMgMi4zNzM1MSAtMzU3Ljc5NiA0NDcuMjU5IC00OTk5LjQ0ICgwLjY3NzM2MTQpXG4jIDAuNDAxNDE5IC00OC41OTc3IDc4MS43MDkgLTQ5NzEuNTIgKDMuNjA2MzQ4KVxuIyAxLjA3OTE4IC00Ny42Nzk0IDc4MS43NTcgLTQ5NzEuNTIgKDIuNzA0MDcyKVxuIyAxLjI3MTc5IC00OC40ODE2IDc4MS41ODYgLTQ5NzEuNTMgKDAuMTc0NjYyNilcbiMgMS45MzkyMiAtMTM3LjIyNyA3NzcuODUzIC00OTcxLjc5ICgwLjI2NzI3NzgpXG4jIDEuODY2NDEgLTg2My45MjYgNzc2LjA5MyAtNDk3Mi41NiAoMC43MTE4MzA2KShDQU5OT1Qgb3V0Y29tcGV0ZSBvcmlnaW5hbClcbiMgMS42MDI2OCAtODYzLjkyNyA3NzYuMDkzIC00OTcyLjU2ICgwLjA1NDQ1NTczKSBcbiMgMC41Nzc4ODYgLTU4Ljg5NzEgNzc4LjIwOCAtNDk3Mi45NiAoIDMuOTg0MzE5KVxuIyAxLjE0OTggLTQ5LjEyNyA3NzguNzcyIC00OTcyLjkyICgyLjIwMzI3MSlcbiMgbjEuNTQ1NDQgLTY5LjIwMjQgNzc1Ljk4NyAtNDk3My4zNSAoMC4xMzI4Njk0KVxuIyAzLjIxODEzIC03NjcuNDQ1IDc2Ni4yODIgLTQ5NzMuOTEgKCAwLjc3MTU5NDEpIC0+IHN0dWNrIGF0IDBcblxuIyBjaGVjayBlbmQgcGFyYW1ldGVyIHJlc3VsdHMgd2l0aCBvcmlnaW5hbC4gbm9vbmUgb2YgdGhlIGxiZmdzIGlzIGdvb2QuIExldCdzIGp1c3Qgc3RpY2sgd2l0aCB0aGUgb3JpZ2luYWwgb25lXG50ZXN0IDwtIGNoYWJhdWRpX2NpX2NsZWFuKFxuICBwYXJhbWV0ZXJzX2NyXzEgPSBjKDEuMDAwMDAwLCAgLTIxLjkxMTc3OSAsIDMzOC4zNjI0NjAsLTQ5OTkuOTk5NjYwKSxcbiAgcGFyYW1ldGVyc19jcl8yID0gYygxLjg2NjQxLCAtODYzLjkyNiwgNzc2LjA5MywgLTQ5NzIuNTYpLFxuICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcIkcxK0cyXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8yID0gXCJHMStHMlwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMSA9IHNlcSgwLCA2KigxMF40KSwgKDYqKDEwXjQpKS81MDAwKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzIgPSBzZXEoMCwgNiooMTBeNCksICg2KigxMF40KSkvNTAwMCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNvbHZlciA9IFwidm9kZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzEgPSBcIm5vbmVcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8yID0gXCJub25lXCIpXG5cbnRlc3RcbmBgYCJ9 --&gt;
+&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxucmVydW4uZGYgPC0gY2lfY3VlX3BhaXJfbmV3LmRmMiAlPiUgXG4gIGZpbHRlcihpZF8yID09IFxcRzErRzJfbG9nXFwpICU+JSBcbiAgZmlsdGVyKGlkID09IFxcSWcxK0lnMl9ub25lXFwgfCBpZCA9PSBcXEkxK0kyX25vbmVcXCB8IGlkID09IFxcRzErRzJfbm9uZVxcIHwgaWQgPT0gXFxJZy1pX25vbmVcXCB8IGlkID09IFxcSWctaV9sb2dcXClcblxucmVydW4ubHMgPC0gc3BsaXQocmVydW4uZGYsIHNlcShucm93KHJlcnVuLmRmKSkpXG5cbnN1cnZlaWxsYW5jZTo6cGxhcHBseShyZXJ1bi5scyAsIGZ1bmN0aW9uKHgpe2NpX2ludmFzaW9uX2FuYWx5c2lzKHgsIGRlZmF1bHQgPSBGKX0pXG5cblxuYGBgXG5gYGAifQ== --&gt;
 
 ```r
-ci_G1_G2_opt &lt;- co_infection_opt_alt(parameters_cr = c(1.000000,  -21.911779 , 338.362460,-4999.999660),
-                             limit = 0.01,
-                             model = chabaudi_ci_clean,
-                             immunity = &quot;tsukushi&quot;,
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = &quot;G1+G2&quot;,
-                             cue_2 = &quot;G1+G2&quot;,
-                             cue_range_1 = seq(0, 6*(10^4), (6*(10^4))/5000),
-                             cue_range_2 = seq(0, 6*(10^4), (6*(10^4))/5000),
-                             solver = &quot;vode&quot;,
-                             log_cue_1 = &quot;none&quot;,
-                             log_cue_2 = &quot;none&quot;)
+```r
+rerun.df &lt;- ci_cue_pair_new.df2 %&gt;% 
+  filter(id_2 == \G1+G2_log\) %&gt;% 
+  filter(id == \Ig1+Ig2_none\ | id == \I1+I2_none\ | id == \G1+G2_none\ | id == \Ig-i_none\ | id == \Ig-i_log\)
 
-# 1.47335 -40.5887 455.327 -4999.26 (0.2977774)
-# 2.37351 -357.796 447.259 -4999.44 (0.6773614)
-# 0.401419 -48.5977 781.709 -4971.52 (3.606348)
-# 1.07918 -47.6794 781.757 -4971.52 (2.704072)
-# 1.27179 -48.4816 781.586 -4971.53 (0.1746626)
-# 1.93922 -137.227 777.853 -4971.79 (0.2672778)
-# 1.86641 -863.926 776.093 -4972.56 (0.7118306)(CANNOT outcompete original)
-# 1.60268 -863.927 776.093 -4972.56 (0.05445573) 
-# 0.577886 -58.8971 778.208 -4972.96 ( 3.984319)
-# 1.1498 -49.127 778.772 -4972.92 (2.203271)
-# n1.54544 -69.2024 775.987 -4973.35 (0.1328694)
-# 3.21813 -767.445 766.282 -4973.91 ( 0.7715941) -&gt; stuck at 0
+rerun.ls &lt;- split(rerun.df, seq(nrow(rerun.df)))
 
-# check end parameter results with original. noone of the lbfgs is good. Let&#39;s just stick with the original one
-test &lt;- chabaudi_ci_clean(
-  parameters_cr_1 = c(1.000000,  -21.911779 , 338.362460,-4999.999660),
-  parameters_cr_2 = c(1.86641, -863.926, 776.093, -4972.56),
-                  immunity = &quot;tsukushi&quot;,
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = &quot;G1+G2&quot;,
-                             cue_2 = &quot;G1+G2&quot;,
-                             cue_range_1 = seq(0, 6*(10^4), (6*(10^4))/5000),
-                             cue_range_2 = seq(0, 6*(10^4), (6*(10^4))/5000),
-                             solver = &quot;vode&quot;,
-                             log_cue_1 = &quot;none&quot;,
-                             log_cue_2 = &quot;none&quot;)
+surveillance::plapply(rerun.ls , function(x){ci_invasion_analysis(x, default = F)})
+</code></pre>
+<pre><code>
+&lt;!-- rnb-source-end --&gt;
 
-test</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<p>#—————————-# DE optimization for cycling cues #—————————-# # total asexual iRBC log10</p>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2lfSTFfSTJfb3B0IDwtIGNvX2luZmVjdGlvbl9vcHRfZG8ocGFyYW1ldGVyc19jciA9IHJlcCgwLjUsNCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbWl0ID0gMC4wMSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcIkkxK0kyXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8yID0gXCJJMStJMlwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMSA9IHNlcSgwLCA2KigxMF42KSwgYnkgPSAoNiooMTBeNikpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMiA9IHNlcSgwLCA2KigxMF42KSwgYnkgPSAoNiooMTBeNikpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcInZvZGVcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8xID0gXCJub25lXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFwibm9uZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBuZWcgPSBUKVxuXG4jIDAuOTk5OTk5OSAgIC05LjE2NTAzMjYgIC03MS43MjE0MDA3IDQ5OTguNzk0Mzg5OCBcbmBgYCJ9 -->
-<pre class="r"><code>ci_I1_I2_opt &lt;- co_infection_opt_do(parameters_cr = rep(0.5,4),
-                             limit = 0.01,
-                             model = chabaudi_ci_clean,
-                             immunity = &quot;tsukushi&quot;,
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = &quot;I1+I2&quot;,
-                             cue_2 = &quot;I1+I2&quot;,
-                             cue_range_1 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
-                             cue_range_2 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
-                             solver = &quot;vode&quot;,
-                             log_cue_1 = &quot;none&quot;,
-                             log_cue_2 = &quot;none&quot;,
-                             neg = T)
+&lt;!-- rnb-chunk-end --&gt;
 
-# 0.9999999   -9.1650326  -71.7214007 4998.7943898 </code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<div id="total-sexual-irbc-log10" class="section level1">
-<h1>total sexual iRBC log10</h1>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2lfSWcxX0lnMl9vcHQgPC0gY29faW5mZWN0aW9uX29wdF9kbyhwYXJhbWV0ZXJzX2NyID0gcmVwKDAuNSwgNCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbWl0ID0gMC4wMSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcIklnMStJZzJcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzIgPSBcIklnMStJZzJcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzEgPSBzZXEoMCwgNiooMTBeNiksIGJ5ID0gKDYqKDEwXjYpKS81MDAwKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzIgPSBzZXEoMCwgNiooMTBeNiksIGJ5ID0gKDYqKDEwXjYpKS81MDAwKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc29sdmVyID0gXCJ2b2RlXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMSA9IFwibm9uZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzIgPSBcIm5vbmVcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbmVnID0gVClcblxuICMgMS4wMDAwMDAgIC0zMi44MzE2NDUgIDM3OC4xMDg5MzEtNDk5OS45OTk5NjlcbmBgYCJ9 -->
-<pre class="r"><code>ci_Ig1_Ig2_opt &lt;- co_infection_opt_do(parameters_cr = rep(0.5, 4),
-                             limit = 0.01,
-                             model = chabaudi_ci_clean,
-                             immunity = &quot;tsukushi&quot;,
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = &quot;Ig1+Ig2&quot;,
-                             cue_2 = &quot;Ig1+Ig2&quot;,
-                             cue_range_1 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
-                             cue_range_2 = seq(0, 6*(10^6), by = (6*(10^6))/5000),
-                             solver = &quot;vode&quot;,
-                             log_cue_1 = &quot;none&quot;,
-                             log_cue_2 = &quot;none&quot;,
-                             neg = T)
 
- # 1.000000  -32.831645  378.108931-4999.999969</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<p>#————————-# # validation for gametocyte total #————————–# This is the 0 conversion strategy one. Need to validate further with 5000 randomized parameters</p>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZ190b3RfbG9nLmRmIDwtIGNpX29wdC5kZiAlPiUgZmlsdGVyKGxhYmVsID09IFwiVG90YWxcXG5nYW1ldG9jeXRlIGxvZzEwXCIpXG5cbmdfdG90X2xvZy5jZiA8LSBjaGVja19jaV9vcHQoZ190b3RfbG9nLmRmLCBuID0gNTAwMClcbmBgYCJ9 -->
-<pre class="r"><code>g_tot_log.df &lt;- ci_opt.df %&gt;% filter(label == &quot;Total\ngametocyte log10&quot;)
+&lt;!-- rnb-text-begin --&gt;
 
-g_tot_log.cf &lt;- check_ci_opt(g_tot_log.df, n = 5000)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<p>#—————————-# # running invasion analysis #—————————-#</p>
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2lfY3VlX3BhaXIubHMzIDwtIGNpX2N1ZV9wYWlyLmxzM1sxMTpsZW5ndGgoY2lfY3VlX3BhaXIubHMzKV1cbmBgYCJ9 -->
-<pre class="r"><code>ci_cue_pair.ls3 &lt;- ci_cue_pair.ls3[11:length(ci_cue_pair.ls3)]</code></pre>
+
+#----------------------------#
+DE optimization for cycling cues
+#----------------------------#
+# total asexual iRBC log10
+
+&lt;!-- rnb-text-end --&gt;
+
+
+&lt;!-- rnb-chunk-begin --&gt;
+
+
+&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuY2lfY29tcF9zdGF0aWMuZGYgPC0gcmVhZC5jc3YoaGVyZShcXGRhdGEvY2lfY29tcF9zdGF0aWMuY3N2XFwpKVxuIyBnZXQgcmV2ZXJzZS4gSGVyZSwgd2Ugd2lsbCBzaW1wbHkgbXVsdGlwbGUgZml0bmVzcyBkaWZmZXJlbmNlIGJ5IC0xXG5jaV9jb21wX3N0YXRpYy5kZjIgPC0gc2VsZWN0KGNpX2NvbXBfc3RhdGljLmRmLCBpZF8xX2FsdCwgaWRfMl9hbHQsIGZpdG5lc3NfZGlmZilcbm5hbWVzKGNpX2NvbXBfc3RhdGljLmRmMikgPC0gYyhcXGlkXzJfYWx0XFwsIFxcaWRfMV9hbHRcXCxcXGZpdG5lc3NfZGlmZlxcKVxuY2lfY29tcF9zdGF0aWMuZGYyJGZpdG5lc3NfZGlmZiA8LSBjaV9jb21wX3N0YXRpYy5kZjIkZml0bmVzc19kaWZmKi0xXG5cbmludmFzaW9uLmRmMiA8LSByZWFkLmNzdihoZXJlKFxcZGF0YS9jaV9pbnZhc2lvbl9maW5hbC5jc3ZcXCkpXG5cbiMgbGVmdCBqb2luIGFuZCBmaWx0ZXIgb3V0IHRob3NlIHRoYXQgaGF2ZSBhIGZpdG5lc3MgKG9wdGltaXplZCkgdGhhdCBpcyBsZXNzIHRoYW4gZml0bmVzcyBkaWZmICh1bm9pcHRpbWl6ZWQpXG5zdGF0aWNfaW52YXNpb24uZGYgPC0gbGVmdF9qb2luKGNpX2NvbXBfc3RhdGljLmRmLCBpbnZhc2lvbi5kZjIsIGJ5ID0gYyhcXGlkXzFfYWx0XFwgPSBcXG11dF9hbHRcXCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBcXGlkXzJfYWx0XFw9IFxccmVzX2FsdFxcKSkgJT4lIFxuICBmaWx0ZXIoZml0bmVzczxmaXRuZXNzX2RpZmYpICU+JSBcbiAgc2VsZWN0KG11dF9pZCwgcmVzX2lkKVxuXG5zdGF0aWNfaW52YXNpb24uZGYyIDwtIGxlZnRfam9pbihzdGF0aWNfaW52YXNpb24uZGYsIGNpX2N1ZV9wYWlyLmRmLCBieSA9IGMoXFxtdXRfaWRcXCA9IFxcaWRcXCwgXFxyZXNfaWRcXCA9IFxcaWRfMlxcKSkgJT4lIFxuICBtdXRhdGUobGFiZWxfMSA9IGNhc2Vfd2hlbihcbiAgY3VlID09IFxcSS1pXFwgfiBcXEFzZXh1YWwgaVJCQ1xcLFxuICBjdWUgPT0gXFxJMStJMlxcIH4gXFxUb3RhbCBhc2V4dWFsXFxuaVJCQ1xcLFxuICBjdWUgPT0gXFxJZy1pXFwgfiBcXFNleHVhbCBpUkJDXFwsXG4gIGN1ZSA9PSBcXElnMStJZzJcXCB+IFxcVG90YWwgc2V4dWFsXFxuaVJCQ1xcLFxuICBjdWUgPT0gXFxzdW1cXCB+IFxcVG90YWwgaVJCQ1xcLFxuICBjdWUgPT0gXFxHLWlcXCB+IFxcR2FtZXRvY3l0ZVxcLFxuICBjdWUgPT0gXFxHMStHMlxcIH4gXFxUb3RhbFxcbmdhbWV0b2N5dGVcXCxcbiAgY3VlID09IFxcUlxcIH4gXFxSQkNcXFxuKSkgJT4lIFxuICBtdXRhdGUobGFiZWxfMiA9IGNhc2Vfd2hlbihcbiAgICBsb2cgPT0gXFxsb2dcXCB+IFxcbG9nMTBcXCxcbiAgICBsb2cgPT0gXFxub25lXFwgfiBcXFxcXG4gICkpICU+JSBcbiAgbXV0YXRlKGxhYmVsXzMgPSBwYXN0ZShsYWJlbF8xLCBsYWJlbF8yKSxcbiAgICAgICAgIGlkID0gcGFzdGUwKGN1ZSwgXFxfXFwsIGxvZykpXG5cbnN0YXRpY19pbnZhc2lvbi5kZjJcbiMgcmVydW4gd2l0aGQgZWZhdWx0IHR1cm5lZCBvZmZcbnN0YXRpY19pbnZhc2lvbi5scyA8LSBzcGxpdChzdGF0aWNfaW52YXNpb24uZGYyLCBzZXEobnJvdyhzdGF0aWNfaW52YXNpb24uZGYyKSkpXG5zdXJ2ZWlsbGFuY2U6OnBsYXBwbHkoc3RhdGljX2ludmFzaW9uLmxzLCBmdW5jdGlvbih4KXtjaV9pbnZhc2lvbl9hbmFseXNpcyh4LCBkZWZhdWx0ID0gRil9KVxuXG5gYGBcbmBgYCJ9 --&gt;
+
+```r
+```r
+ci_comp_static.df &lt;- read.csv(here(\data/ci_comp_static.csv\))
+# get reverse. Here, we will simply multiple fitness difference by -1
+ci_comp_static.df2 &lt;- select(ci_comp_static.df, id_1_alt, id_2_alt, fitness_diff)
+names(ci_comp_static.df2) &lt;- c(\id_2_alt\, \id_1_alt\,\fitness_diff\)
+ci_comp_static.df2$fitness_diff &lt;- ci_comp_static.df2$fitness_diff*-1
+
+invasion.df2 &lt;- read.csv(here(\data/ci_invasion_final.csv\))
+
+# left join and filter out those that have a fitness (optimized) that is less than fitness diff (unoiptimized)
+static_invasion.df &lt;- left_join(ci_comp_static.df, invasion.df2, by = c(\id_1_alt\ = \mut_alt\,
+                                                          \id_2_alt\= \res_alt\)) %&gt;% 
+  filter(fitness&lt;fitness_diff) %&gt;% 
+  select(mut_id, res_id)
+
+static_invasion.df2 &lt;- left_join(static_invasion.df, ci_cue_pair.df, by = c(\mut_id\ = \id\, \res_id\ = \id_2\)) %&gt;% 
+  mutate(label_1 = case_when(
+  cue == \I-i\ ~ \Asexual iRBC\,
+  cue == \I1+I2\ ~ \Total asexual\niRBC\,
+  cue == \Ig-i\ ~ \Sexual iRBC\,
+  cue == \Ig1+Ig2\ ~ \Total sexual\niRBC\,
+  cue == \sum\ ~ \Total iRBC\,
+  cue == \G-i\ ~ \Gametocyte\,
+  cue == \G1+G2\ ~ \Total\ngametocyte\,
+  cue == \R\ ~ \RBC\
+)) %&gt;% 
+  mutate(label_2 = case_when(
+    log == \log\ ~ \log10\,
+    log == \none\ ~ \\
+  )) %&gt;% 
+  mutate(label_3 = paste(label_1, label_2),
+         id = paste0(cue, \_\, log))
+
+static_invasion.df2
+# rerun withd efault turned off
+static_invasion.ls &lt;- split(static_invasion.df2, seq(nrow(static_invasion.df2)))
+surveillance::plapply(static_invasion.ls, function(x){ci_invasion_analysis(x, default = F)})
+</code></pre>
+<pre><code>
+&lt;!-- rnb-source-end --&gt;
+
+&lt;!-- rnb-chunk-end --&gt;
+
+
+&lt;!-- rnb-text-begin --&gt;
+
+
+# total sexual iRBC log10
+
+&lt;!-- rnb-text-end --&gt;
+
+
+&lt;!-- rnb-chunk-begin --&gt;
+
+
+&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuY2lfY3VlX3BhaXIuZGYzIDwtIGNpX2N1ZV9wYWlyLmRmICU+JSBmaWx0ZXIoaWQhPWlkXzIpXG5jaV9jdWVfcGFpci5scyA8LSBzcGxpdChjaV9jdWVfcGFpci5kZjMsIHNlcShucm93KGNpX2N1ZV9wYWlyLmRmMykpKVxubGVuZ3RoKGNpX2N1ZV9wYWlyLmxzKVxuc3VydmVpbGxhbmNlOjpwbGFwcGx5KGNpX2N1ZV9wYWlyX25ldy5scywgZnVuY3Rpb24oeCl7Y2lfaW52YXNpb25fYW5hbHlzaXMoeCwgZGVmYXVsdCA9IEYpfSlcbmBgYFxuYGBgIn0= --&gt;
+
+```r
+```r
+ci_cue_pair.df3 &lt;- ci_cue_pair.df %&gt;% filter(id!=id_2)
+ci_cue_pair.ls &lt;- split(ci_cue_pair.df3, seq(nrow(ci_cue_pair.df3)))
+length(ci_cue_pair.ls)
+surveillance::plapply(ci_cue_pair_new.ls, function(x){ci_invasion_analysis(x, default = F)})</code></pre>
+<pre><code>
+&lt;!-- rnb-source-end --&gt;
+
+&lt;!-- rnb-chunk-end --&gt;
+
+
+&lt;!-- rnb-text-begin --&gt;
+
+
+#-------------------------#
+# validation for gametocyte total
+#--------------------------#
+This is the 0 conversion strategy one. Need to validate further with 5000 randomized parameters
+
+&lt;!-- rnb-text-end --&gt;
+
+
+&lt;!-- rnb-chunk-begin --&gt;
+
+
+&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuYGBgclxuc2lfb3B0LmRmMiA8LSByZWFkLmNzdihoZXJlKFxcZGF0YS9zaV9vcHQyLmNzdlxcKSlcblxuYGBgXG5gYGAifQ== --&gt;
+
+```r
+```r
+si_opt.df2 &lt;- read.csv(here(\data/si_opt2.csv\))
+</code></pre>
+<pre><code>
+&lt;!-- rnb-source-end --&gt;
+
+&lt;!-- rnb-output-begin eyJkYXRhIjoiY2Fubm90IG9wZW4gZmlsZSAnL1VzZXJzL2F2cmlsd2FuZy9EZXNrdG9wL1Byb2plY3QtUGxhc21vZGl1bS9kYXRhL3NpX29wdDIuY3N2JzogTm8gc3VjaCBmaWxlIG9yIGRpcmVjdG9yeUVycm9yIGluIGZpbGUoZmlsZSwgXFxydFxcKSA6IGNhbm5vdCBvcGVuIHRoZSBjb25uZWN0aW9uXG4ifQ== --&gt;
+</code></pre>
+<p>cannot open file ‘/Users/avrilwang/Desktop/Project-Plasmodium/data/si_opt2.csv’: No such file or directoryError in file(file, ) : cannot open the connection</p>
+<pre><code>
+
+
+&lt;!-- rnb-output-end --&gt;
+
+&lt;!-- rnb-chunk-end --&gt;
+
+
+&lt;!-- rnb-text-begin --&gt;
+
+
+
+#----------------------------#
+# running invasion analysis
+#----------------------------#
+
+&lt;!-- rnb-text-end --&gt;
+
+
+&lt;!-- rnb-chunk-begin --&gt;
+
+
+&lt;!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2lfY3VlX3BhaXIubHMzIDwtIGNpX2N1ZV9wYWlyLmxzM1sxMTpsZW5ndGgoY2lfY3VlX3BhaXIubHMzKV1cbmBgYCJ9 --&gt;
+
+```r
+ci_cue_pair.ls3 &lt;- ci_cue_pair.ls3[11:length(ci_cue_pair.ls3)]</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
@@ -940,14 +809,33 @@ ci_invasion_analysis(G1_G2_none_G1_G2_log, default = F)</code></pre>
 <h1>getting the rest of the newly optimized parameters. 54 new runs in total</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubmV3X2N1ZV9wYWlyLmxzIDwtIHNwbGl0KG5ld19jdWVfcGFpci5kZiwgc2VxKG5yb3cobmV3X2N1ZV9wYWlyLmRmKSkpXG5cbmBgYCJ9 -->
-<pre class="r"><code>new_cue_pair.ls &lt;- split(new_cue_pair.df, seq(nrow(new_cue_pair.df)))
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBnZXR0aW5nIHRoZSBuZXdlciBpdGVyYXRpb24gb2YgY2lfb3B0XG5jaV9vcHRfbmV3LmRmIDwtIHJlYWQuY3N2KGhlcmUoXCJkYXRhL2NpX29wdC5jc3ZcIikpXG5jdWVfcmFuZ2VfbmV3LmRmIDwtIHJlYWQuY3N2KGhlcmUoXCJkYXRhL2N1ZV9yYW5nZS5jc3ZcIikpXG5cbiMgZ2V0IHVuaXF1ZSBpZCBhbmQgam9pbiB3aXRoIGN1ZSByYW5nZSBkZlxuY2lfY3VlX25ldy5kZiA8LSBjaV9vcHRfbmV3LmRmICU+JSBcbiAgbXV0YXRlKGlkID0gcGFzdGUwKGN1ZSwgXCJfXCIsIGxvZykpICU+JSBcbiAgbGVmdF9qb2luKHNlbGVjdChjdWVfcmFuZ2VfbmV3LmRmLCBjKGlkLCBsb3csIGhpZ2gsIGJ5KSksIGJ5ID0gYyhcImlkXCIgPSBcImlkXCIpKVxuXG4jIGdldCBhbGwgcGFpcndpc2UgY29tYmluYXRpb25zXG5jaV9jdWVfcGFpcl9uZXcuZGYgPC0gY2lfY3VlX25ldy5kZiAlPiUgXG4gIHNldE5hbWVzKHBhc3RlMChuYW1lcyhjaV9jdWVfbmV3LmRmKSwgJ18yJykpICU+JSBcbiAgdGlkeXI6OmNyb3NzaW5nKGNpX2N1ZV9uZXcuZGYsIC5uYW1lX3JlcGFpciA9IFwiY2hlY2tfdW5pcXVlXCIpICU+JSBcbiAgamFuaXRvcjo6Y2xlYW5fbmFtZXMoKVxuXG4jIGZpbHRlciBvdXQgYWxsIHRoZSBzYW1lIGN1ZSBvcHRpbWl6YXRpb25cbmNpX2N1ZV9wYWlyX25ldy5kZjIgPC0gY2lfY3VlX3BhaXJfbmV3LmRmICU+JSBmaWx0ZXIoaWQhPWlkXzIpICU+JSBtdXRhdGUoaWRfMyA9IHBhc3RlMChpZCwgaWRfMikpXG5cbiMgYWxsIGFsbCBuZXcgZGYgdGhhdCBpcyBub3QgcHJlc2VudCBpbiBvcmlnaW5hbC4gd2UgaGF2ZSAyIG1vcmUgY3Vlcywgd2hpY2ggYW1vdW50cyB0byAyOCBkZj9cbm5ld19jdWVfcGFpci5kZiA8LSBjaV9jdWVfcGFpcl9uZXcuZGYyICU+JSBhbnRpX2pvaW4oY2lfY3VlX3BhaXIuZGYzICU+JSBtdXRhdGUoaWRfMyA9IHBhc3RlMChpZCwgaWRfMikpLCBieSA9IFwiaWRfM1wiKSBcblxubmV3X2N1ZV9wYWlyLmxzIDwtIHNwbGl0KG5ld19jdWVfcGFpci5kZiwgc2VxKG5yb3cobmV3X2N1ZV9wYWlyLmRmKSkpXG5cbnN1cnZlaWxsYW5jZTo6cGxhcHBseShuZXdfY3VlX3BhaXIubHMgLCBjaV9pbnZhc2lvbl9hbmFseXNpcylcblxuYGBgIn0= -->
+<pre class="r"><code># getting the newer iteration of ci_opt
+ci_opt_new.df &lt;- read.csv(here(&quot;data/ci_opt.csv&quot;))
+cue_range_new.df &lt;- read.csv(here(&quot;data/cue_range.csv&quot;))
+
+# get unique id and join with cue range df
+ci_cue_new.df &lt;- ci_opt_new.df %&gt;% 
+  mutate(id = paste0(cue, &quot;_&quot;, log)) %&gt;% 
+  left_join(select(cue_range_new.df, c(id, low, high, by)), by = c(&quot;id&quot; = &quot;id&quot;))
+
+# get all pairwise combinations
+ci_cue_pair_new.df &lt;- ci_cue_new.df %&gt;% 
+  setNames(paste0(names(ci_cue_new.df), &#39;_2&#39;)) %&gt;% 
+  tidyr::crossing(ci_cue_new.df, .name_repair = &quot;check_unique&quot;) %&gt;% 
+  janitor::clean_names()
+
+# filter out all the same cue optimization
+ci_cue_pair_new.df2 &lt;- ci_cue_pair_new.df %&gt;% filter(id!=id_2) %&gt;% mutate(id_3 = paste0(id, id_2))
+
+# all all new df that is not present in original. we have 2 more cues, which amounts to 28 df?
+new_cue_pair.df &lt;- ci_cue_pair_new.df2 %&gt;% anti_join(ci_cue_pair.df3 %&gt;% mutate(id_3 = paste0(id, id_2)), by = &quot;id_3&quot;) 
+
+new_cue_pair.ls &lt;- split(new_cue_pair.df, seq(nrow(new_cue_pair.df)))
+
+surveillance::plapply(new_cue_pair.ls , ci_invasion_analysis)
 </code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3IgaW4gc3BsaXQobmV3X2N1ZV9wYWlyLmRmLCBzZXEobnJvdyhuZXdfY3VlX3BhaXIuZGYpKSkgOiBcbiAgb2JqZWN0ICduZXdfY3VlX3BhaXIuZGYnIG5vdCBmb3VuZFxuIn0= -->
-<pre><code>Error in split(new_cue_pair.df, seq(nrow(new_cue_pair.df))) : 
-  object &#39;new_cue_pair.df&#39; not found</code></pre>
-<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -1029,13 +917,67 @@ surveillance::plapply(ci_cue_pair_new.ls, function(x){ci_invasion_analysis(x, de
 <p>#————————————-# validate single infection data #————————————-_#</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuc2lfb3B0LmRmMiA8LSByZWFkLmNzdihoZXJlKFwiZGF0YS9zaV9vcHQyLmNzdlwiKSlcblxuYGBgIn0= -->
-<pre class="r"><code>si_opt.df2 &lt;- read.csv(here(&quot;data/si_opt2.csv&quot;))
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuXG5zaV9vcHQuZGYyIDwtIHJlYWQuY3N2KGhlcmUoXCJqb2Jfc2NyaXB0cy9zaV9vcHQyLmNzdlwiKSlcbnNpX29wdC5scyA8LSBzcGxpdChzaV9vcHQuZGYyLCBzZXEobnJvdyhzaV9vcHQuZGYyKSkpXG5cbnZhbGlkYXRlIDwtIGZ1bmN0aW9uKGRmKXtcbiAgIyBjbHVzdGVyIGluaXRpYWxpemF0aW9uXG4gIGNsIDwtIG1ha2VDbHVzdGVyKGRldGVjdENvcmVzKCkpOyBzZXREZWZhdWx0Q2x1c3RlcihjbCA9IGNsKVxuICByZWdpc3RlckRvUGFyYWxsZWwoY2wpXG4gIHJlZ2lzdGVyRG9STkcoMTM3KVxuICBcbiAgcmVzIDwtIGZvcmVhY2goaT0gMToxMDAwLCAudmVyYm9zZSA9IFQsIC5wYWNrYWdlcyA9IGMoXCJkb1BhcmFsbGVsXCIsIFwiZG9STkdcIiwgXCJkZVNvbHZlXCIsIFwic3BsaW5lczJcIiwgXCJzdHJpbmdyXCIsIFwiZHBseXJcIiwgXCJ0aWR5clwiLCBcImNyb25lXCIsIFwiaGVyZVwiKSkgJWRvcm5nJSB7XG4gICAgIyBnZW5lcmF0ZSByYW5kb20gcGFyLCBib3VuZHMgZm9yIHBhcmFtZXRlcnMgYmFzZWQgb24gcHJldmlvdXMgZGV0ZXJtaW5lZCBib3VuZHNcbiAgICBwYXIxIDwtIHJ1bmlmKDEsIC0xLCAxKVxuICAgIHBhcjIgPC0gcnVuaWYoMSwgLTEwMCwgMTAwKVxuICAgIHBhcjMgPC0gcnVuaWYoMSwgLTEwMDAsIDEwMDAwKVxuICAgIHBhcjQgPC0gcnVuaWYoMSwgLTUwMDAsIDUwMDApXG4gICAgXG4gICAgIyBnZXQgcmFuZG9tIHBhcmFtZXRlcnNcbiAgICBwYXJfcmFuZCA8LSBjKHBhcjEsIHBhcjIsIHBhcjMsIHBhcjQpXG4gICAgXG4gICAgIyBnZXQgbG9nXG4gICAgaWYoZGYkbG9nID09IFwibG9nXCIpe2xvZyA9IFwibG9nMTBcIn1cbiAgICBpZihkZiRsb2cgPT0gXCJub25lXCIpe2xvZyA9IFwibm9uZVwifVxuICAgIFxuICAgICMgZ2V0IGN1ZV9yYW5nZVxuICAgIGN1ZV9yYW5nZSA8LSBzZXEoZGYkbG93LCBkZiRoaWdoLCBieSA9IGRmJGJ5KVxuICAgIFxuICAgICMgZ2V0IGZpdG5lc3MuIDIwIGRheXMgc2ltdWxhdGlvbiB0byBjdXQgZG93biBvbiBjb21wdXRhdGlvbiB0aW1lXG4gICBmaXRuZXNzIDwtIGNoYWJhdWRpX3NpX2NsZWFuKHBhcmFtZXRlcnNfY3IgPSBwYXJfcmFuZCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgcGFyYW1ldGVycz0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBpbW11bml0eSA9IFwidHN1a3VzaGlcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gc2VxKDAsMzAsMC4wMDEpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlID0gZGYkY3VlLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZSA9IGxvZyxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZSA9IGN1ZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGR5biA9IEYpXG4gICAgXG4gICAgcHJpbnQoZml0bmVzcylcbiAgfVxuICBcbiAgIyMgZ2V0IGZpdG5lc3MuZGZcbiAgZml0bmVzcy5kZiA8LSBkby5jYWxsKFwicmJpbmRcIiwgcmVzKVxuICAjIyByYmluZFxuICBmaXRuZXNzLmRmIDwtIGFzLmRhdGEuZnJhbWUoY2JpbmQoZml0bmVzcy5kZiwgXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWUgPSByZXAoZGYkY3VlLCBucm93KGZpdG5lc3MuZGYpKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZyA9IHJlcChkZiRsb2csIG5yb3coZml0bmVzcy5kZikpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaWQgPSByZXAoZGYkaWQsIG5yb3coZml0bmVzcy5kZikpKSlcbiAgXG4gIGZpbGVuYW1lIDwtIHBhc3RlMChcInNpX1wiLCBkZiRpZCwgXCJfY2YuY3N2XCIpXG4gIFxuICAjIyB3cml0ZS5jc3ZcbiAgd3JpdGUuY3N2KGZpdG5lc3MuZGYsIGhlcmUocGFzdGUwKFwiZGF0YS9zaV92YWxpZGF0aW9uL1wiLCBmaWxlbmFtZSkpKVxufVxuXG5cbiMgY2x1c3RlciBpbml0aWFsaXphdGlvblxuXG5zdXJ2ZWlsbGFuY2U6OnBsYXBwbHkoc2lfb3B0LmxzLCB2YWxpZGF0ZSlcblxuXG5cbmBgYCJ9 -->
+<pre class="r"><code>
+si_opt.df2 &lt;- read.csv(here(&quot;job_scripts/si_opt2.csv&quot;))
+si_opt.ls &lt;- split(si_opt.df2, seq(nrow(si_opt.df2)))
+
+validate &lt;- function(df){
+  # cluster initialization
+  cl &lt;- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  registerDoParallel(cl)
+  registerDoRNG(137)
+  
+  res &lt;- foreach(i= 1:1000, .verbose = T, .packages = c(&quot;doParallel&quot;, &quot;doRNG&quot;, &quot;deSolve&quot;, &quot;splines2&quot;, &quot;stringr&quot;, &quot;dplyr&quot;, &quot;tidyr&quot;, &quot;crone&quot;, &quot;here&quot;)) %dorng% {
+    # generate random par, bounds for parameters based on previous determined bounds
+    par1 &lt;- runif(1, -1, 1)
+    par2 &lt;- runif(1, -100, 100)
+    par3 &lt;- runif(1, -1000, 10000)
+    par4 &lt;- runif(1, -5000, 5000)
+    
+    # get random parameters
+    par_rand &lt;- c(par1, par2, par3, par4)
+    
+    # get log
+    if(df$log == &quot;log&quot;){log = &quot;log10&quot;}
+    if(df$log == &quot;none&quot;){log = &quot;none&quot;}
+    
+    # get cue_range
+    cue_range &lt;- seq(df$low, df$high, by = df$by)
+    
+    # get fitness. 20 days simulation to cut down on computation time
+   fitness &lt;- chabaudi_si_clean(parameters_cr = par_rand,
+                                parameters= parameters_tsukushi,
+                               immunity = &quot;tsukushi&quot;,
+                               time_range = seq(0,30,0.001),
+                                 cue = df$cue,
+                                 log_cue = log,
+                                 cue_range = cue_range,
+                                 dyn = F)
+    
+    print(fitness)
+  }
+  
+  ## get fitness.df
+  fitness.df &lt;- do.call(&quot;rbind&quot;, res)
+  ## rbind
+  fitness.df &lt;- as.data.frame(cbind(fitness.df, 
+                                    cue = rep(df$cue, nrow(fitness.df)),
+                                    log = rep(df$log, nrow(fitness.df)),
+                                    id = rep(df$id, nrow(fitness.df))))
+  
+  filename &lt;- paste0(&quot;si_&quot;, df$id, &quot;_cf.csv&quot;)
+  
+  ## write.csv
+  write.csv(fitness.df, here(paste0(&quot;data/si_validation/&quot;, filename)))
+}
+
+
+# cluster initialization
+
+surveillance::plapply(si_opt.ls, validate)
 </code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiY2Fubm90IG9wZW4gZmlsZSAnL1VzZXJzL2F2cmlsd2FuZy9EZXNrdG9wL1Byb2plY3QtUGxhc21vZGl1bS9kYXRhL3NpX29wdDIuY3N2JzogTm8gc3VjaCBmaWxlIG9yIGRpcmVjdG9yeUVycm9yIGluIGZpbGUoZmlsZSwgXCJydFwiKSA6IGNhbm5vdCBvcGVuIHRoZSBjb25uZWN0aW9uXG4ifQ== -->
-<pre><code>cannot open file &#39;/Users/avrilwang/Desktop/Project-Plasmodium/data/si_opt2.csv&#39;: No such file or directoryError in file(file, &quot;rt&quot;) : cannot open the connection</code></pre>
-<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->

@@ -75,7 +75,16 @@ limit <- 0.01
 # different cue_range
 I_range_none <- seq(0, 6*(10^6), by = (6*(10^6))/5000)
 I_range_log <- seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000)
+G_range_none <- seq(0, 6*(10^4), by = (6*(10^4))/5000)
+G_range_log <- seq(0, log10(6*(10^4)), by = (log10(6*(10^4)))/5000)
 ```
+
+```{r}
+write_opt <- function(res, name){
+  lapply(lapply(res, unlist), write, here(paste0("data/ci_opt/", name, ".txt")), append = T, ncolumns = 1000)
+}
+```
+
 
 1. I-i none/log
 ```{r}
@@ -108,13 +117,11 @@ ci_opt_I_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
-
-lapply(lapply(ci_opt_I_log, unlist), write, "test.txt", append = T, ncolumns = 1000)
 ```
 
 2. I1+I2 none/log
 ```{r}
-# cyclical
+# cyclical. do DO
 ci_opt_Ic_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
                              limit = limit,
                              model = chabaudi_ci_clean,
@@ -151,7 +158,789 @@ ci_opt_Ic_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
                              solver = "vode",
                              log_cue_1 = "log10",
                              log_cue_2 = "log10")
+
+write_opt(ci_opt_Ic_log, "ci_opt_Ic_log")
 ```
+3. Ig-i none/log
+```{r}
+source(here("functions/co_infection_opt_alt.R"))
+ci_opt_Ig_none <- co_infection_opt_alt(parameters_cr = c(59.08092, -101.28757,  -30.07456,  -76.75252),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1",
+                             cue_2 = "Ig2",
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+write_opt(ci_opt_Ig_none, "ci_opt_Ig_none")
+# 59.0809 -101.288 -30.0746 -76.7525 
+# 59.08092 -101.28757  -30.07456  -76.75252 (0)
+# 0.88779 -103.705 -0.00623161 0.499137 
+# 8.877895e-01 -1.037050e+02 -6.231606e-03  4.991369e-01
+# 0.8207182 -23.1028240   1.6827922   0.4422300
+```
+
+
+
+```{r}
+
+ci_opt_Ig_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1",
+                             cue_2 = "Ig2",
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+write_opt(ci_opt_Ig_log, "ci_opt_Ig_log")
+
+
+#4. Ig1+Ig2 none/log
+
+ci_opt_Igc_none <- co_infection_opt_alt(parameters_cr = c(4.707722, -1821.744619,   420.111232,    25.925959),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1+Ig2",
+                             cue_2 = "Ig1+Ig2",
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+write_opt(ci_opt_Igc_none, "ci_opt_Igc_none")
+#0.9587687 -29.5962433 376.2577969  12.6380446
+#1.380575 -63.439317 374.901687  12.606076
+#1.971191 -373.668380  375.737443   14.089601
+#1.380892 -373.670917  375.737439   14.089601
+#0.291643  -9.406301 122.692692   2.804829
+# 2.298371 -1135.129211  0 516.630638   -44.411499
+```
+
+
+```{r}
+ci_opt_Igc_log <- co_infection_opt_alt(parameters_cr = rep(0.5,4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1+Ig2",
+                             cue_2 = "Ig1+Ig2",
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+write_opt(ci_opt_Igc_log, "ci_opt_Igc_log")
+```
+
+
+```{r}
+#5. I-i+Ig-i none/log
+ci_opt_Ig_I_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "I1+Ig1",
+                             cue_2 = "I2+Ig2",
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+write_opt(ci_opt_Ig_I_none, "ci_opt_Ig_I_none")
+```
+
+
+```{r}
+ci_opt_I_Ig_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "I1+Ig1",
+                             cue_2 = "I2+Ig2",
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+write_opt(ci_opt_I_Ig_log, "ci_opt_I_Ig_log")
+
+
+#6. sum (I1+I2+Ig1+Ig2) none/log
+
+ci_opt_sum_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "sum",
+                             cue_2 = "sum",
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+write_opt(ci_opt_sum_none, "ci_opt_sum_none")
+
+
+ci_opt_sum_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "sum",
+                             cue_2 = "sum",
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+write_opt(ci_opt_sum_log, "ci_opt_sum_log")
+
+
+#7. G-i none/log
+
+ci_opt_G_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1",
+                             cue_2 = "G2",
+                             cue_range_1 = G_range_none,
+                             cue_range_2 = G_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+write_opt(ci_opt_G_none, "ci_opt_G_none")
+
+
+ci_opt_G_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1",
+                             cue_2 = "G2",
+                             cue_range_1 = G_range_log,
+                             cue_range_2 = G_range_log,
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+write_opt(ci_opt_G_log, "ci_opt_G_log")
+
+
+#8. G1+G2 none/log
+
+ci_opt_Gc_none <- co_infection_opt_alt(parameters_cr = c(5.12969, -8610.857, 942.8288, -16501.5),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1+G2",
+                             cue_2 = "G1+G2",
+                             cue_range_1 = G_range_none,
+                             cue_range_2 = G_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+write_opt(ci_opt_Gc_none, "ci_opt_Gc_none")
+
+
+ci_opt_Gc_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1+G2",
+                             cue_2 = "G1+G2",
+                             cue_range_1 = G_range_log,
+                             cue_range_2 = G_range_log,
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+write_opt(ci_opt_Gc_log, "ci_opt_Gc_log")
+
+
+#9. R none/log
+
+ci_opt_R_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "R",
+                             cue_2 = "R",
+                             cue_range_1 = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
+                             cue_range_2 = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+write_opt(ci_opt_R_none, "ci_opt_R_none")
+
+
+ci_opt_R_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "R",
+                             cue_2 = "R",
+                             cue_range_1 = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+                             cue_range_2 = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+write_opt(ci_opt_R_log, "ci_opt_R_log")
+```
+
+#------------------------------------#
+# DO optimization for cyclical
+#------------------------------------#
+```{r}
+source(here("functions/co_infection_opt_do.R"))
+
+ci_opt_Ic_none <- co_infection_opt_do(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "I1+I2",
+                             cue_2 = "I1+I2",
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none",
+                             neg = T)
+#  0.9999997   -9.1495804  -71.9937848 4998.2438791 
+```
+
+```{r}
+ci_opt_Gc_none <- co_infection_opt_alt(parameters_cr = c(5.12969, -8610.857, 942.8288, -16501.5),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1+G2",
+                             cue_2 = "G1+G2",
+                             cue_range_1 = G_range_none,
+                             cue_range_2 = G_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+write_opt(ci_opt_Gc_none, "ci_opt_Gc_none")
+
+ci_opt_Gc_log <- co_infection_opt_alt(parameters_cr = c(12.08053, -21.00252, -4.9925, -16.8979),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1+G2",
+                             cue_2 = "G1+G2",
+                             cue_range_1 = G_range_log,
+                             cue_range_2 = G_range_log,
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10")
+write_opt(ci_opt_Gc_log, "ci_opt_Gc_log")
+```
+
+```{r}
+# 1.00000   -20.67279   324.78499 -4999.96816 
+ci_opt_Gc_none <- co_infection_opt_do(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1+G2",
+                             cue_2 = "G1+G2",
+                             cue_range_1 = G_range_none,
+                             cue_range_2 = G_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none",
+                             neg = T)
+# cylical
+ci_opt_Gc_log <- co_infection_opt_do(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1+G2",
+                             cue_2 = "G1+G2",
+                             cue_range_1 = G_range_log,
+                             cue_range_2 = G_range_log,
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10",
+                             neg = T)
+
+# 0.9994208  -82.4144925  433.3841129 -887.6407506 
+# 0.3553413   91.9056553 -491.3807617 1766.2288431 
+# 0.8733899  2.6227727 -5.0665193 -0.2450776 
+#  0.9513253 -0.5757788 -0.1729814 -2.5911515 
+```
+
+```{r}
+ci_opt_Gc_none <- co_infection_opt_alt(parameters_cr = c(1.00000,   -20.67279,   324.78499, -4999.96816 ),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "G1+G2",
+                             cue_2 = "G1+G2",
+                             cue_range_1 = G_range_none,
+                             cue_range_2 = G_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+write_opt(ci_opt_Gc_none, "ci_opt_Gc_none")
+```
+
+#-----------------------------------#
+# validation
+#-----------------------------------#
+```{r}
+check_ci_opt <- function(df, n = 1000){
+  
+  # get label
+  label <- df$label
+  
+  # cluster initialization
+  cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  registerDoParallel(cl)
+  registerDoRNG(137)
+  
+  res <- foreach(i= 1:n) %dorng% {
+  # source function
+  source(here::here("functions/chabaudi_ci_clean.R"))
+    
+  # parameters 
+parameters_tsukushi <- c(R1 = 8.89*(10^6), # slightly higher
+                lambda = 3.7*(10^5),
+                mu = 0.025, 
+                p = 8*(10^-6), # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+  
+  # read in df info
+  if(stringr::str_detect(df$cue, "-i") && df$cue != "I-i+Ig-i"){cue_1 = paste0(gsub("*-i", "", df$cue), "1")}
+  if(stringr::str_detect(df$cue, "-i", negate = T)){cue_1 = df$cue}
+  if(stringr::str_detect(df$cue, "-i") &&  df$cue != "I-i+Ig-i"){cue_2 = paste0(gsub("*-i", "", df$cue), "2")}
+  if(stringr::str_detect(df$cue, "-i", negate = T)){cue_2 = df$cue}
+  if(df$id == "I-i+Ig-i_none" | df$id == "I-i+Ig-i_log"){
+    cue_1 = "I1+Ig1"
+    cue_2 = "I2+Ig2"
+    }
+  if(stringr::str_detect(df$log, "log")){log_1 = "log10"}
+  if(stringr::str_detect(df$log, "none")){log_1 = "none"}
+  if(stringr::str_detect(df$log, "log")){log_2 = "log10"}
+  if(stringr::str_detect(df$log, "none")){log_2 = "none"}
+  par <- c(df$var1, df$var2, df$var3, df$var4)
+  cue_range <- seq(df$low, df$high, by = df$by)
+  
+  # generate random par, bounds for parameters based on previous determined bounds
+  par1 <- runif(1, -1, 1)
+  par2 <- runif(1, -100, 100)
+  par3 <- runif(1, -1000, 10000)
+  par4 <- runif(1, -5000, 5000)
+  
+  par_rand <- c(par1, par2, par3, par4)
+  
+  # get fitness. 20 days simulation to cut down on computation time
+  fitness <- chabaudi_ci_clean(parameters_cr_1 = par,
+                  parameters_cr_2 = par_rand,
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = cue_1,
+                  cue_2 = cue_2,
+                  cue_range_1 = cue_range,
+                  cue_range_2 = cue_range,
+                  log_cue_1 = log_1,
+                  log_cue_2 = log_2,
+                  solver = "vode",
+                  time_range = seq(0, 20, by = 1e-3),
+                  dyn = F)
+
+  }
+  stopCluster(cl)
+  
+  ## get fitness.df
+  fitness.df <- do.call("rbind", res)
+
+  ## rbind
+  fitness.df <- as.data.frame(cbind(fitness.df, label = rep(label, nrow(fitness.df))))
+  
+  filename <- paste0(df$id, "_validation.csv")
+  write.csv(fitness.df, paste0(here("data/ci_validation/"), filename))
+  return(fitness.df)
+}
+```
+
+# import in ci_opt and join with cue range
+```{r}
+ci_opt.df <- read.csv(here("data/ci_opt.csv"))
+cue_range.df <- read.csv(here("data/cue_range_ci.csv"))
+
+ci_opt.df2 <- left_join(ci_opt.df, cue_range.df, by= c("id", "cue", "log"))
+
+# split
+ci_opt.ls <- split(ci_opt.df2, seq(nrow(ci_opt.df2)))
+ci_opt.ls <- lapply(ci_opt.ls,check_ci_opt)
+```
+
+# check for  fitness validation
+```{r}
+ci_opt.res <- do.call(rbind, ci_opt.ls)
+
+#Ig1+Ig2 and Ig1+Ig2 log did not pass validation. need to redo 
+ci_opt.res %>% filter(V1 <0) %>% distinct(label, .keep_all = T)
+```
+
+# looks good
+```{r}
+source(here("functions/chabaudi_ci_clean.R"))
+# -4.662937e-15
+chabaudi_ci_clean(parameters_cr_1 = c(-0.002962282,	1191.274,	277.2743,	-108.9794),
+                  parameters_cr_2 = c(-0.002962282,	1191.274,	277.2743,	-108.9794),
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = "Ig1+Ig2",
+                  cue_2 = "Ig1+Ig2",
+                  cue_range_1 = I_range_log,
+                  cue_range_2 = I_range_log,
+                  log_cue_1 = "log10",
+                  log_cue_2 = "log10",
+                  solver = "vode",
+                  time_range = seq(0, 20, 0.001),
+                  dyn = F)
+
+#0
+chabaudi_ci_clean(parameters_cr_1 = c(2.298371,	-1135.129,	516.6306,	-44.4115),
+                  parameters_cr_2 = c(2.298371,	-1135.129,	516.6306,	-44.4115),
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = "Ig1+Ig2",
+                  cue_2 = "Ig1+Ig2",
+                  cue_range_1 = I_range_none,
+                  cue_range_2 = I_range_none,
+                  log_cue_1 = "none",
+                  log_cue_2 = "none",
+                  solver = "vode",
+                  time_range = seq(0, 20, 0.001),
+                  dyn = F)
+```
+
+# do global optimization
+```{r}
+source(here("functions/co_infection_opt_do.R"))
+# 1.00000   -31.28019   341.47294 -4999.99774 
+ci_opt_Igc_none <- co_infection_opt_do(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1+Ig2",
+                             cue_2 = "Ig1+Ig2",
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none",
+                             neg = T)
+# cylical for do as well.
+ci_opt_Igc_log <- co_infection_opt_do(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "Ig1+Ig2",
+                             cue_2 = "Ig1+Ig2",
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = "vode",
+                             log_cue_1 = "log10",
+                             log_cue_2 = "log10",
+                             neg = T)
+# 0.9081705  3.8089818 -3.6687014 -1.4892336 
+# 0.9999402  14.4492788 -21.6942680   5.1319831 
+# -0.3174233  -83.7763750  524.0144588 -435.2361970 
+#  -0.303715   73.954785  652.272854-1101.012169
+#  -0.3243293  51.1974442 -51.1340971  34.9527681 
+#0.2446835  46.7353411 -35.5595259  18.1054796 
+# 0.6927347   -78.4283754   783.7642381 -1313.7029111 
+# -0.436628  -91.583248  853.784383 -627.900249
+```
+
+# additional validation for Igc none
+```{r}
+check_ci_opt(ci_opt.df2[7,])
+
+# looks good. no negatives
+Igc_none.val <- read.csv(here("data/ci_validation/Ig1+Ig2_none_validation.csv"))
+Igc_none.val %>% filter(V1< 0)
+```
+
+#------------------------------------------------#
+# static analysis
+#------------------------------------------------#
+```{r}
+ci_comp_static <- function(df){
+  
+  # process cue. if detect _i, suggesting individual cue. 
+  if(stringr::str_detect(df$cue, "-i")){cue_1 = paste0(gsub("*-i", "", df$cue), "1")}
+  if(stringr::str_detect(df$cue, "-i", negate = T)){cue_1 = df$cue}
+  
+  if(stringr::str_detect(df$cue_2, "-i")){cue_2 = paste0(gsub("*-i", "", df$cue_2), "2")}
+  if(stringr::str_detect(df$cue_2, "-i", negate = T)){cue_2 = df$cue_2}
+  
+  if(df$cue == "I-i+Ig-i"){cue_1 = "I1+Ig1"}
+  if(df$cue_2 == "I-i+Ig-i"){cue_2 = "I2+Ig2"}
+  
+  # process log10
+  if(stringr::str_detect(df$log, "log")){log_1 = "log10"}
+  if(stringr::str_detect(df$log, "none")){log_1 = "none"}
+  
+  if(stringr::str_detect(df$log_2, "log")){log_2 = "log10"}
+  if(stringr::str_detect(df$log_2, "none")){log_2 = "none"}
+  
+  # get fitness difference between strain and strain 2 
+  # simulated fort 30 days for transmission resolution (infectino may not resolve but transmission accumulation has halted)
+  # past test suggests very little difference between 20 vs 30 days.
+  dyn <- chabaudi_ci_clean(parameters_cr_1 = c(df$var1, df$var2, df$var3, df$var4),
+                  parameters_cr_2 = c(df$var1_2, df$var2_2, df$var3_2, df$var4_2),
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = cue_1,
+                  cue_2 = cue_2,
+                  cue_range_1 = seq(df$low, df$high, by = df$by),
+                  cue_range_2 = seq(df$low_2, df$high_2, by = df$by_2),
+                  log_cue_1 = log_1,
+                  log_cue_2 = log_2,
+                  solver = "vode",
+                  time_range = seq(0, 30, 0.001),
+                  dyn = T)
+  
+  dyn2 <- cbind(id_1 = rep(df$id, nrow(dyn)), id_2 = rep(df$id_2, nrow(dyn)),
+                dyn)
+  filename <- paste0(df$id, "_", df$id_2, "_static.parquet")
+  write_parquet(dyn2, here(paste0("data/ci_static/", filename)))
+  
+  # get fitness
+  fitness_1 <- max(dyn2 %>% filter(variable == "tau_cum1") %>% select(value), na.rm = T)
+  fitness_2 <- max(dyn2 %>% filter(variable == "tau_cum2") %>% select(value), na.rm = T)
+  
+  # return list
+  return(list(df$id, df$id_2, fitness_1, fitness_2))
+}
+```
+
+# sanity checks. Manually choose 3 runs and check for fitness difference. passed
+```{r}
+df <- ci_cue_pair.ls[[48]]
+# good 1, good 2, 
+chabaudi_ci_clean(parameters_cr_1 = c(df$var1_2, df$var2_2, df$var3_2, df$var4_2),
+                  parameters_cr_2 = c(df$var1, df$var2, df$var3, df$var4),
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = "I1",
+                  cue_2 = "I2+Ig2",
+                  cue_range_1 = I_range_log,
+                  cue_range_2 = I_range_log,
+                  log_cue_1 = "log10",
+                  log_cue_2 = "log10",
+                  solver = "vode",
+                  time_range = seq(0, 30, 0.001),
+                  dyn = F)
+df
+```
+
+# run loop
+```{r}
+ci_opt.df <- read.csv(here("data/ci_opt.csv"))
+cue_range.df <- read.csv(here("data/cue_range_ci.csv"))
+
+ci_opt.df2 <- left_join(ci_opt.df, cue_range.df, by= c("id", "cue", "log"))
+
+# get all pairwise combinations
+ci_cue_pair.df <- ci_opt.df2 %>% 
+  setNames(paste0(names(ci_opt.df2), '_2')) %>% # add 2 infront of all col names
+  tidyr::crossing(ci_opt.df2, .name_repair = "check_unique") %>% 
+  janitor::clean_names()
+
+# keep only unique pairwise combinations
+ci_cue_pair.df2 <- ci_cue_pair.df[!duplicated(apply(select(ci_cue_pair.df, id, id_2), 1, function(x) paste(sort(x),collapse=''))),]
+
+# split to list
+ci_cue_pair.ls <- split(ci_cue_pair.df2, seq(nrow(ci_cue_pair.df2)))
+
+# preliminary testing
+ci_comp_static(ci_cue_pair.ls[[81]])
+
+# parallelized lapply
+ci_static <- mclapply(ci_cue_pair.ls, ci_comp_static)
+ci_static.df <- data.frame(do.call(rbind, lapply(ci_static, unlist)))
+names(ci_static.df) <- c("id_1", "id_2", "fitness_1", "fitness_2")
+ci_static.df$fitness_1 <- as.numeric(ci_static.df$fitness_1)
+ci_static.df$fitness_2 <- as.numeric(ci_static.df$fitness_2)
+
+write.csv(ci_static.df, here("data/ci_static.csv"))
+```
+
+#------------------------------------------------#
+# invasion analysis
+#------------------------------------------------#
+```{r}
+ci_invasion_analysis <- function(df){
+
+  # get cue
+  if(stringr::str_detect(df$cue, "-i")){mut_cue = paste0(gsub("*-i", "", df$cue), "1")} ## mutant cue
+  if(stringr::str_detect(df$cue, "-i", negate = T)){mut_cue = df$cue} ## mutant cue
+  if(df$cue == "I-i+Ig-i"){mut_cue = "I1+Ig1"}
+  
+  if(stringr::str_detect(df$log, "log")){mut_log = "log10"} ## mutant log
+  if(stringr::str_detect(df$log, "none")){mut_log = "none"} ## mutant log
+  mut_cue_range <- seq(df$low, df$high, by = df$by) ## mutant cue range
+  
+  # get resident info (being invaded)
+  res_par <- c(df$var1_2, df$var2_2, df$var3_2, df$var4_2) ## resident parameter
+  if(stringr::str_detect(df$cue_2, "-i")){res_cue = paste0(gsub("*-i", "", df$cue_2), "2")} ## resident cue
+  if(stringr::str_detect(df$cue_2, "-i", negate = T)){res_cue = df$cue_2} ## resident cue
+  if(df$cue_2 == "I-i+Ig-i"){res_cue = "I2+Ig2"}
+  if(stringr::str_detect(df$log_2, "log")){res_log = "log10"} ## resident log
+  if(stringr::str_detect(df$log_2, "none")){res_log = "none"} ## resident log
+  res_cue_range <- seq(df$low_2, df$high_2, by = df$by_2) ## resident cue range
+
+  # get ids
+  mut_id <- df$id
+  res_id <- df$id_2
+  
+  # one way optimization
+  ## start cluster
+  cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  
+  # start optimization LFBGS
+  res_1 <- optimParallel(
+    par = rep(0.5,4), # start at 0.5x4
+    fn = chabaudi_ci_clean, 
+    control = list(trace = 6, fnscale = -1),
+    parameters_cr_2 = res_par,
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range_1 = mut_cue_range,
+    cue_range_2 = res_cue_range,
+    cue_1 = mut_cue,
+    cue_2 = res_cue,
+    log_cue_1 = mut_log,
+    log_cue_2 = res_log,
+    solver = "vode")
+  
+  res_2 <- optimParallel(
+    par = c(df$var1, df$var2, df$var3, df$var4), # start at previous optimal parameter
+    fn = chabaudi_ci_clean, 
+    control = list(trace = 6, fnscale = -1),
+    parameters_cr_2 = res_par,
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range_1 = mut_cue_range,
+    cue_range_2 = res_cue_range,
+    cue_1 = mut_cue,
+    cue_2 = res_cue,
+    log_cue_1 = mut_log,
+    log_cue_2 = res_log,
+    solver = "vode")
+  
+  # close cluster
+  stopCluster(cl)
+  
+  # assign final result to which starting point that yields highest fitness
+  if(res_1$value>res_2$value){final_res <- res_1}
+  if(res_2$value>=res_1$value){final_res <- res_2}
+  
+  # get model output
+  fitness <- final_res$value ## fitness difference between mutant and residence
+  mut_opt_par <- final_res$par ## optimized parameters of mutant
+  
+  # produce output
+  output <- cbind.data.frame(mut_id = mut_id, res_id = res_id, 
+                             fitness = fitness, 
+                             mut_var1 = df$var1, mut_var2 = df$var2, mut_var3 = df$var3, mut_var4 = df$var4,
+                             res_var1 = df$var1_2, res_var2 = df$var2_2, res_var3 = df$var3_2, res_var4 = df$var4_2,
+                             mut_var1_opt = mut_opt_par[1], mut_var2_opt = mut_opt_par[2], mut_var3_opt = mut_opt_par[3], mut_var4_opt = mut_opt_par[4])
+  
+  write.csv(output, here(paste0("data/ci_invasion/", mut_id, "_", res_id, ".csv")))
+  return(output)
+}
+```
+
+```{r}
+# do all pairwise ssexcept for those of the same id
+ci_cue_pair.df3 <- ci_cue_pair.df %>% filter(id != id_2)
+
+# do preliminary analysis
+ci_invasion_analysis(ci_cue_pair.df3[1,])
+
+# split
+ci_cue_pair.ls3 <- split(ci_cue_pair.df3, seq(nrow(ci_cue_pair.df3)))
+
+# run
+lapply(ci_cue_pair.ls3, ci_invasion_analysis)
+```
+
+
+
+
 
 
 

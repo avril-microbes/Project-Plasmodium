@@ -29,35 +29,30 @@ co_infection_opt_alt <- function(parameters_cr,  # preliminary parameter set
     if(index == 1){
       residence_par <- parameters_cr
       mutant_par <- parameters_cr
+      print(residence_par)
+      print(mutant_par)
     } else{
       ### if strain 1 is fitter than strain 2, assign both strains to adopt the optimized par
       if(fitness > 0){
         residence_par <- par
         mutant_par <- par
         print("Strain 1 is fitter than strain 2.")
-      }
-      ### if strain 1 is less fit than strain 2, repeat optimization with par
-      if(fitness < 0){
-        if(index > 2){
-          residence_par <- output_ls[[index - 1]][[4]] ### assign residence parameter to previous iteratio
-          mutant_par <- par #### assign mutant to optimal par
-          }
-        if(index == 2){
-          residence_par <- parameters_cr # special case. If first round of optimization fails, go back to initial parameter set
-          mutant_par <- par
-        } 
-        lower_repeat <- TRUE
-        print("Strain 1 is less fit than strain 2. Repeat optimization with 0.5x4")
+        print(residence_par)
+        print(mutant_par)
       }
       ### special case: if fitness difference = 0, need skip out 
       if(fitness == 0){
         if(index > 2){
-          residence_par <- output_ls[[index - 1]][[4]] ### assign residence parameter to previous iteratio
+          residence_par <- par ### assign residence parameter to previous iteratio
           mutant_par <- rep(0.5, 4) #### assign mutant to 0.5 x4 
+          print(residence_par)
+          print(mutant_par)
         }
         if(index == 2){
-          residence_par <- parameters_cr # special case. If first round of optimization fails, go back to initial parameter set
+          residence_par <- par # special case. If first round of optimization fails, go back to initial parameter set
           mutant_par <- rep(0.5, 4)
+          print(residence_par)
+          print(mutant_par)
         } 
         lower_repeat <- TRUE
         print("Strain 1 has same fitness than strain 2. Repeat optimization with 0.5x4")
@@ -86,8 +81,8 @@ co_infection_opt_alt <- function(parameters_cr,  # preliminary parameter set
     
     # exit loop IF
     ## previous run converged, strain 1 is fitter than strain 2, and that the fitness difference is minute
-    if(fitness > 0 && fitness < limit){
-      print("Strain 1 is fitter than strain 2 but difference is minute.")
+    if(fitness < limit && fitness != 0){
+      print("Strain 1 difference is minute.")
       stopCluster(cl)
       break
     }

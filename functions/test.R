@@ -1,7 +1,7 @@
 #-----------------------#
 # Newest iteration of single infection model of Plasmodium chabaudi
 # Avril Wang
-# Last edited 2022-02-21
+# Last edited 2022-03-05
 #-----------------------#
 
 test <- function(
@@ -18,7 +18,7 @@ test <- function(
   drug_dose = 0, # drug dosage in mg/kg
   drug_admin = 0, # day at which drug is administered
   cue_b = "none", # if second cue is incorporated
-  cue_b_range = "none", # if second cue is used, the range of cue that parasite use to adjust conversion rate to
+  cue_range_b = "none", # if second cue is used, the range of cue that parasite use to adjust conversion rate to
   log_cue_b = "none",  # whether to log10 transform cue_b
   dyn = FALSE, # whether the function should return simulation dynamics rather than fitness
   neg = FALSE # set to TRUE if using minimization function
@@ -40,7 +40,7 @@ test <- function(
   force(drug_dose)
   force(drug_admin)
   force(cue_b)
-  force(cue_b_range)
+  force(cue_range_b)
   force(log_cue_b)
   force(dyn)
   
@@ -155,8 +155,32 @@ test <- function(
     cr_fun <- splinefun(cbind(cue_range, cr_fit))
   }
   
-  ## Double cue conversion rate
-  ### LATER 
+  ## Dual cue conversion rate
+  ### note that we are using gam with tensor product smoothing k = c(3,3)
+  if(cue_b != "none"){
+    ## create all combinations of 2 cues
+    cr_grid <- expand.grid(cue_range, cue_range_b)
+    ## rename
+    names(cr_grid) <- c("cue_range", "cue_range_b")
+    ## create dummy y
+    dummy_y <- runif(length(cue_range_b), 0, 1)
+    ## put together df
+    dummy_df <- data.frame(cue_range, cue_range_b, dummy_y)
+    ## gam model
+    dummy_cr.mod <- mgcv::gam(dummy_y ~ ti(cue_range, cue_range_b, 
+                                           k = c(3,3)), 
+                              data = dummy_df)
+    ## assign parameters
+    dummy_cr.mod$coefficients <- parameters_cr
+    
+    # exponential transformation to limit conversion rate to between 0 and 1
+    cr_fun <- function(cue_1, cue_2){
+      exp(-exp(mgcv::predict.gam(dummy_cr.mod, 
+                                        newdata = data.frame("cue_range" = cue_1,
+                                                             "cue_range_b" = cue_2))))
+    }
+    
+  }
   
   #-----------------------------------------#
   #-----------------------------------------#
@@ -283,7 +307,7 @@ test <- function(
         #### for cue 1 day ago
         if(t>alpha+delay && cue != "t"){
           cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]] #### add first cue to second cue
-          if(dual_cue == TRUE){cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]}
+          if(cue_b != "none"){cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]}
         }
       }
     }
@@ -294,28 +318,33 @@ test <- function(
     if(t>alpha+delay){
       if(log_cue == "log10"){
         cue_lag1_log <- log10(abs(cue_lag1)+5e-324) # log the lagged cue
-        
         ## heaviside transformation
         cue_lag1_p <- heaviside_trans(cue_lag1_log, max(cue_range)) 
-        } 
+      } 
       ## IMPORTANT: none of the cue lags should be naturally negative. adding this prevents
       ## stiff "dipping" of cue from producing NAs. 
       if(log_cue == "none"){
         cue_lag1_p <- heaviside_trans(cue_lag1, max(cue_range))
-        } # keep it the same
+      } # keep it the same
+      
+      if(cue_b == "none"){cr <- cr_fun(cue_lag1_p)}
       
       ## if second cue is used
       if(cue_b != "none"){
-        if(log_cue_b == "log10"){cue_lag1_b_p <- log10(cue_lag1_b)}
-        if(log_cue_b == "none"){cue_lag1_b_p <- cue_lag1_b}
-        
-        # write cr
-        cr <- cr_fun(cue_lag1_p, cue_lag1_b_p)
-      } else{
-        cr <- cr_fun(cue_lag1_p) # single cue cr
+        if(log_cue_b == "log10"){
+          cue_lag1_log_b <- log10(abs(cue_lag1_b)+5e-324) # log the lagged cue
+          ## heaviside transformation
+          cue_lag1_p_b <- heaviside_trans(cue_lag1_log_b, max(cue_range_b)) 
+        } 
+        if(log_cue_b == "none"){
+          cue_lag1_p_b <- heaviside_trans(cue_lag1_b, max(cue_range_b))
+        } 
+        # get cr fnction
+        cr <- cr_fun(cue_lag1_p, cue_lag1_p_b)
       }
     }
-    
+  
+
     #----------------#
     # Drug actions
     #----------------#
