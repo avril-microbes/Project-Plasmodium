@@ -1027,14 +1027,71 @@ dual_cue_opt <- function(df){
 
 
 # run everything
-need to rerun 1st one due to better fit ness scores from previous runs
+need to rerun 1st one due to better fitness scores from previous runs
 ```{r}
 dual_cue.ls <- split(dual_cue.df2, seq(nrow(dual_cue.df2)))
 lapply(dual_cue.ls[3:40], dual_cue_opt)
+```
 
-gosolnp(fun = chabaudi_si_clean, 
-        LB = rep(-100,5),
-        UB = rep(100,5),
+
+#-----------------------------------------#
+# re-run dual cue opt
+#-----------------------------------------#
+a lot of the dual cue optimization produced lower fitness than the single cues alone. Could be due to either bad starting point or bad cue range. Here, I will decrease the cue steps 
+
+# determining parameter bounds
+```{r}
+# list of values to expand bounds on
+bounds <- c(-10000, -5000, -1000, -100, -10, -1, 1, 100, 1000, 5000, 10000)
+bounds.df <- expand.grid(par = bounds, index = seq(1,5,1))
+
+# cycle to get all combinations of 5 parameters with these substituted in
+par.ls <- lapply(split(bounds.df, seq(nrow(bounds.df))), function(x){
+  # default pardameter list with 5x0.5
+  par <- rep(0.5, 5)
+  #A substitute in the bounds
+  par[[x$index]] <- x$par
+  return(data.frame(
+    par1 = par[[1]],
+    par2 = par[[2]],
+    par3 = par[[3]],
+    par4 = par[[4]],
+    par5 = par[[5]],
+    id = paste0(x$index, "_", x$par)))
+})
+
+par.df <- do.call(rbind, par.ls)
+
+
+# make graphs
+source(here("functions/par_to_hm.R"))
+```
+
+```{r}
+dual_cue_opt2 <- function(df){
+  # process cues
+  cue <- df$cue
+  cue_b <- df$cue_b
+  
+  # process log
+  log <- ifelse(str_detect("log", df$log), "log10", "none")
+  log_b <- ifelse(str_detect("log", df$log_b), "log10", "none")
+  
+  # process cue_range. cannot use by to ensure that both cue ranges are of the same length
+  cue_range <- seq(df$low, df$high, length.out = 500)
+  cue_range_b <- seq(df$low_b, df$high_b, length.out = 500)
+  
+  # optimization
+  ## initiate cluster
+  cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  
+  ## generate random starting points and pick the starting point that has the highest fitness
+  
+  
+  # start optimization LFBGS with inital value of 0.5x5
+  res <- optimParallel(
+    par = rep(0.5, 5),
+    fn = chabaudi_si_clean, 
     control = list(trace = 6, fnscale = -1),
     immunity = "tsukushi",
     parameters = parameters_tsukushi,
@@ -1045,8 +1102,71 @@ gosolnp(fun = chabaudi_si_clean,
     cue_range_b = cue_range_b,
     log_cue = log,
     log_cue_b = log_b,
-    solver = "vode", cluster = cl, rseed = 137)
+    solver = "vode")
+
+  
+
+  # close cluster
+  stopCluster(cl)
+  
+  # get model output
+  fitness <- res$value ## fitness difference between mutant and residence
+  par <- res$par ## optimized parameters of mutant
+  
+  # produce output
+  output <- cbind.data.frame(id = df$Var1, id_b = df$Var2, 
+                             label = df$label, label_b = df$label_b,
+                             fitness = fitness,
+                             par1 = par[1], par2 = par[2], par3 = par[3], par4 = par[4], par5 = par[5])
+  
+  write.csv(output, here(paste0("data/dual_cue_opt/", df$Var1, "_", df$Var2, ".csv")))
+  return(output)
+  
+}
 ```
+
+```{r}
+foreach(i= 1:100, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
+  
+  # source function
+  source(here("functions/chabaudi_si_clean.R"))
+    
+  # parameters 
+  parameters_tsukushi <- c(R1 = 8.89*10^6, # slightly higher
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+  
+  # generate random par, bounds for parameters based on previous determined bounds
+  par1 <- runif(1, -1, 1)
+  par2 <- runif(1, -100, 100)
+  par3 <- runif(1, -1000, 1000)
+  par4 <- runif(1, -5000, 5000)
+  par5 <- runif(1, -5000, 5000)
+  
+  par_rand <- c(par1, par2, par3, par4)
+  
+  
+  
+}
+```
+
 
 
 
