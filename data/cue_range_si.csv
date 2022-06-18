@@ -1,11 +1,11 @@
-﻿cue,log,low,high,by,id
-I,none,0,6.00E+06,1200,I_none
-I,log,0,6.77815125,0.00135563,I_log
-Ig,none,0,6.00E+06,1200,Ig_none
-Ig,log,0,6.77815125,0.00135563,Ig_log
-I+Ig,none,0,6.00E+06,1200,I+Ig_none
-I+Ig,log,0,6.77815125,0.00135563,I+Ig_log
-R,none,1.00E+06,1.00E+07,1800,R_none
-R,log,6,7,2.00E-04,R_log
-G,none,0,60000,12,G_none
-G,log,0,4.77815125,0.00095563,G_log
+﻿cue,log,low,high,by,id,label
+I,none,0,6.00E+06,1200,I_none,I
+I,log,0,6.77815125,0.00135563,I_log,I log
+Ig,none,0,6.00E+06,1200,Ig_none,Ig
+Ig,log,0,6.77815125,0.00135563,Ig_log,Ig log
+I+Ig,none,0,6.00E+06,1200,I+Ig_none,I+Ig
+I+Ig,log,0,6.77815125,0.00135563,I+Ig_log,I+Ig log
+R,none,1.00E+06,1.00E+07,1800,R_none,R
+R,log,6,7,2.00E-04,R_log,R log
+G,none,0,60000,12,G_none,G
+G,log,0,4.77815125,0.00095563,G_log,G log

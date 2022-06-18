@@ -87,1141 +87,7 @@ cr_grid <- expand.grid(cue_range, cue_range_b)
 
 ```
 
-# testing 2 versions of dual cue. Te full tensor product interaction or ti only product interaction with no main term effect 
 
-```{r}
-ti_fun <-  function(
-  parameters_cr, # input parameters for conversion rate reaction norm
-  parameters, # sets of values for parameters in the mosel
-  immunity, # immunity selection. Tsukushi's model, saturating immunity, or no immunity possible
-  time_range, # time that simulation is ran for
-  cue, # cue that parasite use to change conversion rate
-  log_cue = "none", # whether to log10 transform cue
-  cue_range, # range that cue is active against
-  solver = "lsoda", # solver used for numerical integration. "vode" is often faster
-  delay = 0, # the time at which merozoite is injected into the host
-  drug = "none", # whether drug action is simulated. 
-  drug_dose = 0, # drug dosage in mg/kg
-  drug_admin = 0, # day at which drug is administered
-  cue_b = "none", # if second cue is incorporated
-  cue_range_b = "none", # if second cue is used, the range of cue that parasite use to adjust conversion rate to
-  log_cue_b = "none",  # whether to log10 transform cue_b
-  dyn = FALSE, # whether the function should return simulation dynamics rather than fitness
-  neg = FALSE# set to TRUE if using minimization function
-){
-  
-  #----------------------#
-  # Force argument
-  #----------------------#
-  force(parameters_cr)
-  force(parameters)
-  force(immunity)
-  force(time_range)
-  force(cue)
-  force(log_cue)
-  force(cue_range)
-  force(solver)
-  force(delay)
-  force(drug)
-  force(drug_dose)
-  force(drug_admin)
-  force(cue_b)
-  force(cue_range_b)
-  force(log_cue_b)
-  force(dyn)
-  
-  #----------------------#
-  # Quality checks
-  #----------------------#
-  ## If dual cue, ensure length is correct
-  #if (cue_b != "none" && length(parameters_cr) != 5) {
-  #  stop("Must have 5 conversion rate parameters for dual cue!")
-  #}
-  
-  ## Ensure immunity input is correct
-  if (immunity != "ni" && immunity != "i" && immunity != "tsukushi"){
-    stop("Immunity must be either 'ni', 'i', 'kochin,' or 'tsukushi'")
-  }
-  
-  ## Double checking cues
-  ### Ensure that time_range is used as cue_range when t is used
-  if(cue == "t" && !isTRUE(all.equal(cue_range, time_range))){
-    stop("Time is chosen as cue. Cue_range must equal to time_range")
-  }
-  
-  if(cue_b == "t" && !isTRUE(all.equal(cue_range_b, time_range))){
-    stop("Time is chosen as cue)b. Cue_range_b must equal to time_range")
-  }
-  
-  ## Ensure that cue transformation is entered correctly
-  if(log_cue != "none" && log_cue != "log10"){
-    stop("log_cue must be either 'none' or 'log10'")
-  }
-  
-  if(log_cue_b != "none" && log_cue_b != "log10"){
-    stop("log_cue_b must be either 'none' or 'log10'")
-  }
-  
-  ## Checking drug administration conditions
-  if(drug > 0 && drug_admin < 0){
-    stop("Drug administration date must be above 0!")
-  }
-  
-  #----------------------#
-  # Define initial conditions
-  #----------------------#
-  ## when no immunity or saturating immunity
-  if(immunity == "ni" || immunity == "i"){
-    state <- c(R = parameters[["R1"]], # density of RBC
-               M = 0, # density of asexually-committed merozoite
-               Mg = 0, # density of sexually-committed merozoite
-               ID = 0, # overall death rate of iRBC
-               I = 0, # asexual iRBC density
-               Ig = 0, # sexual iRBC density
-               G = 0, # gametocyte density
-               cr_t = 0) # conversion rate
-  }
-  
-  ## when using Tsukushi's model of immunity
-  if(immunity == "tsukushi"){
-    state <- c(R = parameters[["R1"]],
-               M = 0,
-               Mg = 0,
-               ID = 0,
-               I = 0,
-               Ig = 0,
-               G = 0,
-               N = 0, # general RBC removal
-               W = 0, # targeted RBC removal
-               cr_t = 0) 
-  }
-  
-  #----------------------#
-  # Describe initial population structure
-  # of injected malaria
-  #----------------------#
-  ## function that takes initial merozoite emergence density (I0), shape parameter
-  ## of beta function (sp), and time point (t)
-  pulseBeta_fun <- function(I0, sp, t){ 
-    res = vector(length = length(t))
-    res = I0*(dbeta(t, sp, sp))
-    return(res)
-  }
-  
-  #----------------------#
-  # define Heaviside transformation
-  #----------------------#
-  # function that transforms anything that above specificed max value to max. 
-  # if value cue_range is below max, does not change the value.
-  heaviside_trans <- function(cue_range, max){
-    res <- crone::heaviside(cue_range)*(cue_range)+(crone::heaviside(cue_range-max)*(max-cue_range))
-    return(res)
-  }
-  
-  #----------------------#
-  # Define conversion rate function
-  #----------------------#
-  ## Single cue conversion rate
-  if(cue_b == "none"){
-    ### Define dummy data of conversion rate
-    dummy_y.vals <- rep(0, length(cue_range)) 
-    dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
-    
-    ### fit basic cubic spline with no internal knots. 
-    dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3))
-    dummy_cr.mod$data <- dummy_cr.data
-    
-    ### assign coefficient to be optimized to the dummy conversion rate function
-    dummy_cr.mod$coefficients <- parameters_cr
-    
-    ### double exponentiation conversion rate to get it between 0 and 1
-    cr_fit <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
-    
-    ### fit spline function to predicted conversion rate. This increases processing speed
-    cr_fun <- splinefun(cbind(cue_range, cr_fit))
-  }
-  
-  ## Dual cue conversion rate
-  ### note that we are using gam with tensor product smoothing k = c(3,3)
-  if(cue_b != "none"){
-    ## create all combinations of 2 cues
-    cr_grid <- expand.grid(cue_range, cue_range_b)
-    ## rename
-    names(cr_grid) <- c("cue_range", "cue_range_b")
-    ## create dummy y
-    dummy_y <- runif(length(cue_range_b), 0, 1)
-    ## put together df
-    dummy_df <- data.frame(cue_range, cue_range_b, dummy_y)
-    ## gam model
-    dummy_cr.mod <- mgcv::gam(dummy_y ~ ti(cue_range, cue_range_b, 
-                                           k = c(3,3)), 
-                              data = dummy_df)
-    ## assign parameters
-    dummy_cr.mod$coefficients <- parameters_cr
-    
-    # exponential transformation to limit conversion rate to between 0 and 1
-    cr_fun <- function(cue_1, cue_2){
-      res <- exp(-exp(mgcv::predict.gam(dummy_cr.mod, 
-                                        newdata = data.frame("cue_range" = cue_1,
-                                                             "cue_range_b" = cue_2))))
-      return(res)
-    }
-  }
-  
-  #-----------------------------------------#
-  #-----------------------------------------#
-  # Define dynamics of single infection model
-  #-----------------------------------------#
-  #-----------------------------------------#
-  
-  chabaudi_si_dyn <- function(t, state, parameters){
-    
-    #----------------------#
-    # Redefine parameters for cleaner code
-    #----------------------#
-    ## Rename parameters for cleaner code. With.list not used to speed up computation
-    if(immunity == "tsukushi"){
-      R1 <- parameters["R1"] # maximum RBC density at homeostasis
-      rho <- parameters["rho"] # proportion of RBC deviation from R1 restored/day
-      psin <- parameters["psin"] # activation strength for general RBC removal
-      psiw <- parameters["psiw"] # activation strength for targeted RBC removal
-      phin <- parameters["phin"] # half life for general RBC removal
-      phiw <- parameters["phiw"] # half life for targeted RBC removal
-      iota <- parameters["iota"] # iaximum iRBC detection limit (higher = lower immunity activations)
-    }
-    
-    mu <- parameters["mu"] # death rate/day of RBC and iRBC
-    p <- parameters["p"] # probability of invasion success upon merzoite-RBC contact
-    alpha <- parameters["alpha"] # length of asexual development period of iRBC (I)
-    alphag <- parameters["alphag"] # length of sexual developement period of iRBC (Ig)
-    beta <- parameters["beta"] # number of merozoite produced per iRBC
-    mum <- parameters["mum"] # merozoite death rate/day
-    mug <- parameters["mug"] # gametocyte death rate/day
-    I0 <- parameters["I0"] # initial dosage of iRBC injected
-    sp <- parameters["sp"] # shape parameters for initial malaria population structure. 1 for non-synchronous, 100 for high synchrony
-    
-    if(immunity == "i"){
-      a <- parameters["a"] # maximum rate of iRBC removal/day with saturating immunity
-      b <- parameters["b"] # iRBC density needed to achieve half maximum iRBC removal rate
-    }
-    
-    if(immunity != "tsukushi"){lambda <- parameters["lambda"]} # maximum RBC replenishment rate
-    
-    if(drug_dose > 0){mud <- parameters["mud"]} # if drug action is included, add drug induced death rate
-    if(drug_dose == 0){mud <- 0} # if no drug is administered, no drug-induced mortality
-    
-    #----------------------#
-    # Redefine states for cleaner code
-    #----------------------#
-    R <- state["R"]
-    I <- state["I"]
-    Ig <- state["Ig"]
-    ID <- state["ID"]
-    S <- state["S"]
-    M <- state["M"]
-    G <- state["G"]
-    Mg <- state["Mg"]
-    cr_t <- state["cr_t"]
-    if(immunity == "tsukushi"){
-      N <- state["N"]
-      W <- state["W"]
-    }
-    
-    #-----Defining Pulse beta function based on current time-----#
-    pulseBeta <- pulseBeta_fun(I0, sp, t-delay)
-    
-    #----------------------#
-    # Define lag terms
-    #----------------------#
-    ## lag1 = value 1 day ago
-    if(t>alpha+delay){
-      lag1 = deSolve::lagvalue(t-alpha)
-      
-    } 
-    
-    ## lag2 = value 2 days ago
-    if(t>alphag+delay){
-      lag2 = deSolve::lagvalue(t-alphag)
-    } 
-    
-    #----------------------#
-    # Define cue value
-    #----------------------#
-    ##------get present cue------##
-    ### convert cue to time if time-based conversion rate strategy is used
-    if(cue == "t"){
-      cue_state <- t
-    }
-    
-    ### get cue_state if it is state-based
-    if(cue != "t"){
-      cue_state <- state[cue]
-      if(cue_b != "none"){cue_state_b <- state[cue_b]}
-    }
-    
-    ##------get lagged cue values------##
-    ### if cue is not time-based... get index at which cue is based on
-    #### if multiple cues are given, multiple indexes are returned
-    if(cue != "t") {
-      lag.i <- match(unlist(stringr::str_split(cue, "\\+|\\-|\\*|\\/")), names(state))
-      if(cue_b != "none"){lag.i_b <- match(unlist(stringr::str_split(cue_b, "\\+|\\-|\\*|\\/")), names(state))}
-    }
-    
-    ### For simple cues (if it does not contain special characters)
-    if(stringr::str_detect(cue, "\\+|\\-|\\*|\\/", negate = TRUE)){
-      #### if cue is time-based
-      if(t>alpha+delay && cue == "t"){ ##### lag 1 day ago
-        cue_lag1 <- t-alpha} 
-      
-      if(t>alphag+delay && cue == "t") { ##### lag 2 days ago
-        cue_lag2 <- t-alphag
-      } 
-      
-      #### if cue is state-based
-      if(t>alpha+delay && cue != "t"){ ##### lag 1 day ago
-        cue_lag1 <- lag1[lag.i]
-        ##### get second cue if second cue is given
-        if(cue_b != "none"){cue_lag1_b <- lag1[lag.i_b]}
-      }
-      
-      if(t>alphag+delay && cue != "t") { ##### lag 2 days ago
-        cue_lag2 <- lag2[lag.i]
-        if(cue_b != "none"){cue_lag2_b <- lag2[lag.i_b]}
-      } ### for complex cues that involve additions
-    } else{
-      if(stringr::str_detect(cue, "\\+")){ 
-        #### for cue 1 day ago
-        if(t>alpha+delay && cue != "t"){
-          cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]] #### add first cue to second cue
-          if(cue_b != "none"){cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]}
-        }
-      }
-    }
-    
-    #------------------#
-    # Process cue values
-    #------------------#
-    if(t>alpha+delay){
-      if(log_cue == "log10"){
-        cue_lag1_log <- log10(abs(cue_lag1)+5e-324) # log the lagged cue
-        
-        ## heaviside transformation
-        cue_lag1_p <- heaviside_trans(cue_lag1_log, max(cue_range)) 
-      } 
-      ## IMPORTANT: none of the cue lags should be naturally negative. adding this prevents
-      ## stiff "dipping" of cue from producing NAs. 
-      if(log_cue == "none"){
-        cue_lag1_p <- heaviside_trans(cue_lag1, max(cue_range))
-      } # keep it the same
-      
-      ## if second cue is used
-      if(cue_b != "none"){
-        if(log_cue_b == "log10"){
-          cue_lag1_log_b <- log10(abs(cue_lag1_b)+5e-324) # log the lagged cue
-          ## heaviside transformation
-          cue_lag1_p_b <- heaviside_trans(cue_lag1_log_b, max(cue_range_b)) 
-        } 
-        if(log_cue_b == "none"){
-          cue_lag1_p_b <- heaviside_trans(cue_lag1_b, max(cue_range_b))
-        } 
-      }
-    }
-      
-      # get fr function
-      if(cue_b == "none"){cr <- cr_fun(cue_lag1_p)}
-      if(cue_b != "none"){cr <- cr_fun(cue_lag1_p, cue_lag1_p_b)}
-    
-    #----------------#
-    # Drug actions
-    #----------------#
-    # later
-    
-    #----------------#
-    # Survival functions
-    #----------------#
-    # before first iRBC maturation, survival function of iRBC
-    if(t<=alpha+delay ){
-      S <- exp(-ID) ## survival function of asexual iRBC. ID = cumulative hazard rate in 1 day
-      Sg <- 0 ## survival function of sexual iRBC. No sexual iRBC before alpha so set to 0
-    } 
-    
-    # between first asexual iRBC burst but before first sexual iRBC burst
-    if(t>alpha+delay && t<=alpha+alphag+delay){
-      S <- exp(-ID + lag1[4]) # need to account for previous cumulation of cumulative hazard
-      Sg <- exp(-ID)} # does not appear in our equation until first infected RBC burst, which is delay+alpha+alphag
-    
-    # after first sexual iRBC burst
-    if(t>alpha+alphag+delay){
-      S <- exp(-ID + lag1[4])
-      Sg <- exp(-ID + lag2[4]) # sexual iRBC must survive for longer (2 days), hence lag2
-    }
-    
-    #-----------------#
-    # Model with lag terms (lose of iRBC that has matured and burst)
-    # makes the code cleaner looking
-    #-----------------#
-    ## Define K, maximum RBC density
-    if(immunity != "tsukushi"){K <- lambda*R1/(lambda-mu*R1)}
-    
-    # asexual merozoite
-    dM_nolag <- (-mum*M)-(p*R*M)
-    # sexual merozoite
-    dMg_nolag <- (-mum*Mg)-(p*R*Mg)
-    # gametocyte
-    dG_nolag <- -mug*G
-    
-    # If Tsukushi's model of immunity is used, use the following
-    if(immunity == "tsukushi"){
-      ## define N and W transformed, 2 variables that might go to negative and give NAN in optimization process. 
-      ## do heaviside transformation that maintains N/W at 0.999 if N/W>=1 and N/W at 0 if N/W <0. 
-      N_trans <- ((crone::heaviside(N)*N)+crone::heaviside(N-0.999)*(0.999-N))
-      W_trans <- ((crone::heaviside(W)*W)+crone::heaviside(W-0.999)*(0.999-W))
-      
-      ## RBC density
-      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N_trans))*R-(p*R*M)-(p*R*Mg)
-      ## asexual iRBC 
-      dI_nolag <- (p*R*M)-(mu*I)-((-log(1-N_trans)-log(1-W_trans))*I)
-      ## sexual iRBC 
-      dIg_nolag <- (p*R*Mg)-(mu*Ig)-((-log(1-N_trans)-log(1-W_trans))*Ig)
-      ## indiscriminant RBC removal
-      dN <- psin*((I+Ig)/iota)*(1-N_trans)-(N_trans/phin) 
-      ## targeted iRBC removal
-      dW <- psiw*((I+Ig)/iota)*(1-W_trans)-(W_trans/phiw)
-      ## hazard function of iRBC
-      dID <- mu-log(1-N_trans)-log(1-W_trans)
-    }
-    
-    # if no immunity is used
-    if(immunity == "ni"){
-      # RBC density
-      dR <- lambda*(1-(R/K))-(mu*R)-(p*R*M)-(p*R*Mg)
-      dI_nolag <- (p*R*M)-(mu*I)
-      dIg_nolag <- (p*R*Mg)-(mu*Ig)
-      dID <- mu
-    }
-    
-    # if saturating immunity is used
-    if(immunity == "i") {
-      # RBC density
-      dR <- lambda*(1-(R/K))-(mu*R)-(p*R*M)-(p*R*Mg)
-      dI_nolag <- (p*R*M)-(mu*I)-((a*I)/(b+I))
-      dIg_nolag <- (p*R*Mg)-(mu*Ig)
-      dID <- mu+(a/(b+I))
-    }
-    
-    #--------------#
-    # Infection dynamics in the first cohort of 
-    # injected parasite
-    #--------------#
-    # Before delay, no iRBC is produced!
-    if(t<delay){
-      dI <- 0
-    }
-    
-    # before all first cohort of asexual iRBC bursts (before day 1)
-    if(t<=alpha+delay){
-      dI <- dI_nolag-(pulseBeta*S) # some initial asexual iRBC burst due to maturation
-      dM <- dM_nolag+(beta*pulseBeta*S) # asexual merozoites are produced when asexual iRBC burst
-      dMg <- 0 # should have no Mg before day 1
-      dIg <- 0 #first wave starts on day alpha
-      dG <- 0 # first wave starts on day alpha+alphag
-    }
-    
-    # the period after first production of sexual iRBC but before they burst
-    if(t<=alpha+alphag+delay && t>alpha+delay){
-      dG <- 0 # no gametocyte production
-      dIg <- dIg_nolag # no sexual iRBC death from previous cycle
-    }
-    
-    # after all first cohort of asexual iRBC burst (after day 1)
-    if(t>alpha+delay){
-      dI <- dI_nolag-(p*lag1[1]*lag1[2]*S) # bursting of iRBC produced alpha days ago
-      dM <- dM_nolag+(beta*(1-cr)*p*lag1[1]*lag1[2]*S) # production of asexual merozoite from asexual iRBC burst
-      dMg <- dMg_nolag+(beta*cr*p*lag1[1]*lag1[2]*S) # production of sexual merozoite from asexual iRBC burst
-    }
-    
-    # after the first gametocyte production
-    if(t>alpha+alphag+delay){
-      dG <- dG_nolag+(p*lag2[1]*lag2[3]*Sg) # production of gametocyte from sexual iRBC produced alphag days ago
-      dIg <- dIg_nolag-(p*lag2[1]*lag2[3]*Sg) # loss of sexual iRBC
-    }
-    
-    # track cr
-    if(t<=alpha+delay){dcr_t <- 0}
-    if(t>alpha+delay){dcr_t <- cr}
-    
-    
-    #----------------------#
-    # Return the states
-    #----------------------#
-    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM, dMg, dID, dI, dIg, dG, dcr_t)))}
-    if (immunity == "tsukushi") {return(list(c(dR, dM, dMg, dID, dI, dIg, dG, dN, dW, dcr_t)))}
-  } 
-  
-  #---------------------------------------------------------#
-  #---------------------------------------------------------#
-  #-------------------End of dynamics function--------------#
-  #---------------------------------------------------------#
-  #---------------------------------------------------------#
-  
-  #----------------------#
-  # Create injection event
-  # needed for delayed infection
-  #----------------------#
-  delay_injection <- data.frame(var = "I",
-                                time = delay,
-                                value = parameters["I0"],
-                                method = "add")
-  
-  
-  #-------------------------#
-  # Run single-infection model
-  #------------------------#
-  chabaudi_si.df <- as.data.frame(deSolve::dede(y = state,
-                                                times = time_range,
-                                                func = chabaudi_si_dyn,
-                                                p = parameters,
-                                                method = solver,
-                                                events = list(data = delay_injection),
-                                                control=list(mxhist = 1e7)))
-  
-  #-------------------# 
-  # Calculate fitness for optimization
-  #-------------------# 
-  # Get Gametocyte density time series data
-  gam <- chabaudi_si.df$G
-  gam[gam<0] <- 0 ## Assign negative gametocyte density to 0. can arise due to stiffness of function
-  
-  
-  
-  # Get timeseries interval
-  int <- chabaudi_si.df$time[2]
-  
-  # Define the fitness parameter values
-  aval <- -12.69
-  bval <- 3.6
-  dens <- log10(gam) 
-  
-  # Calculate the transmission potential at each time point
-  tau.ls <- (exp(aval+(bval*dens)))/(1+exp(aval+(bval*dens)))
-  
-  # Get approximation of cumulative transmission potential
-  tau.sum <- sum(tau.ls*int, na.rm = TRUE)
-  
-  # return cumulative transmission potential. Used for optimization
-  if(dyn == FALSE && neg == FALSE){return(tau.sum)} ## 
-  if(dyn == FALSE && neg == TRUE){
-    tau.sumneg <- tau.sum*-1
-    return(tau.sumneg)
-  } ## if using minimization algorthm, set neg to TRUE to get maximize
-  #----------------------------#
-  #----------------------------#
-  #-Simulate infection dynamics#
-  #-If dyn = TRUE--------------#
-  #----------------------------#
-  #----------------------------#
-  
-  if(dyn == TRUE) {
-    
-    #---------------#
-    # Calculate cumulative transmission potential
-    #--------------#
-    tau_cum.ls <- cumsum(tau.ls*int)
-    
-    # cbind results
-    chabaudi_si.df$tau <- tau.ls
-    chabaudi_si.df$tau_cum <- tau_cum.ls
-    
-    #-------------#
-    # calculate cr
-    #-------------#
-    # time based cue
-    if(cue == "t"){
-      cr.ls <- cr_fun(time_range)
-      chabaudi_si.df$cr <- cr.ls
-    }
-    
-    # state-based cue
-    if(cue != "t"){
-      chabaudi_si.df <- chabaudi_si.df %>% 
-        dplyr::mutate(cr = (cr_t - dplyr::lag(cr_t))*1000)
-    }
-    
-    # make df long for ease of plotting
-    chabaudi_si.df2 <- chabaudi_si.df %>% tidyr::gather(key = "variable", value = "value", -time)
-    
-    # return
-    return(chabaudi_si.df2)
-  }
-}
-```
-
-```{r}
-te_fun <-  function(
-  parameters_cr, # input parameters for conversion rate reaction norm
-  parameters, # sets of values for parameters in the mosel
-  immunity, # immunity selection. Tsukushi's model, saturating immunity, or no immunity possible
-  time_range, # time that simulation is ran for
-  cue, # cue that parasite use to change conversion rate
-  log_cue = "none", # whether to log10 transform cue
-  cue_range, # range that cue is active against
-  solver = "lsoda", # solver used for numerical integration. "vode" is often faster
-  delay = 0, # the time at which merozoite is injected into the host
-  drug = "none", # whether drug action is simulated. 
-  drug_dose = 0, # drug dosage in mg/kg
-  drug_admin = 0, # day at which drug is administered
-  cue_b = "none", # if second cue is incorporated
-  cue_range_b = "none", # if second cue is used, the range of cue that parasite use to adjust conversion rate to
-  log_cue_b = "none",  # whether to log10 transform cue_b
-  dyn = FALSE, # whether the function should return simulation dynamics rather than fitness
-  neg = FALSE# set to TRUE if using minimization function
-){
-  
-  #----------------------#
-  # Force argument
-  #----------------------#
-  force(parameters_cr)
-  force(parameters)
-  force(immunity)
-  force(time_range)
-  force(cue)
-  force(log_cue)
-  force(cue_range)
-  force(solver)
-  force(delay)
-  force(drug)
-  force(drug_dose)
-  force(drug_admin)
-  force(cue_b)
-  force(cue_range_b)
-  force(log_cue_b)
-  force(dyn)
-  
-  #----------------------#
-  # Quality checks
-  #----------------------#
-  ## If dual cue, ensure length is correct
-  #if (cue_b != "none" && length(parameters_cr) != 5) {
-  #  stop("Must have 5 conversion rate parameters for dual cue!")
-  #}
-  
-  ## Ensure immunity input is correct
-  if (immunity != "ni" && immunity != "i" && immunity != "tsukushi"){
-    stop("Immunity must be either 'ni', 'i', 'kochin,' or 'tsukushi'")
-  }
-  
-  ## Double checking cues
-  ### Ensure that time_range is used as cue_range when t is used
-  if(cue == "t" && !isTRUE(all.equal(cue_range, time_range))){
-    stop("Time is chosen as cue. Cue_range must equal to time_range")
-  }
-  
-  if(cue_b == "t" && !isTRUE(all.equal(cue_range_b, time_range))){
-    stop("Time is chosen as cue)b. Cue_range_b must equal to time_range")
-  }
-  
-  ## Ensure that cue transformation is entered correctly
-  if(log_cue != "none" && log_cue != "log10"){
-    stop("log_cue must be either 'none' or 'log10'")
-  }
-  
-  if(log_cue_b != "none" && log_cue_b != "log10"){
-    stop("log_cue_b must be either 'none' or 'log10'")
-  }
-  
-  ## Checking drug administration conditions
-  if(drug > 0 && drug_admin < 0){
-    stop("Drug administration date must be above 0!")
-  }
-  
-  #----------------------#
-  # Define initial conditions
-  #----------------------#
-  ## when no immunity or saturating immunity
-  if(immunity == "ni" || immunity == "i"){
-    state <- c(R = parameters[["R1"]], # density of RBC
-               M = 0, # density of asexually-committed merozoite
-               Mg = 0, # density of sexually-committed merozoite
-               ID = 0, # overall death rate of iRBC
-               I = 0, # asexual iRBC density
-               Ig = 0, # sexual iRBC density
-               G = 0, # gametocyte density
-               cr_t = 0) # conversion rate
-  }
-  
-  ## when using Tsukushi's model of immunity
-  if(immunity == "tsukushi"){
-    state <- c(R = parameters[["R1"]],
-               M = 0,
-               Mg = 0,
-               ID = 0,
-               I = 0,
-               Ig = 0,
-               G = 0,
-               N = 0, # general RBC removal
-               W = 0, # targeted RBC removal
-               cr_t = 0) 
-  }
-  
-  #----------------------#
-  # Describe initial population structure
-  # of injected malaria
-  #----------------------#
-  ## function that takes initial merozoite emergence density (I0), shape parameter
-  ## of beta function (sp), and time point (t)
-  pulseBeta_fun <- function(I0, sp, t){ 
-    res = vector(length = length(t))
-    res = I0*(dbeta(t, sp, sp))
-    return(res)
-  }
-  
-  #----------------------#
-  # define Heaviside transformation
-  #----------------------#
-  # function that transforms anything that above specificed max value to max. 
-  # if value cue_range is below max, does not change the value.
-  heaviside_trans <- function(cue_range, max){
-    res <- crone::heaviside(cue_range)*(cue_range)+(crone::heaviside(cue_range-max)*(max-cue_range))
-    return(res)
-  }
-  
-  #----------------------#
-  # Define conversion rate function
-  #----------------------#
-  ## Single cue conversion rate
-  if(cue_b == "none"){
-    ### Define dummy data of conversion rate
-    dummy_y.vals <- rep(0, length(cue_range)) 
-    dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
-    
-    ### fit basic cubic spline with no internal knots. 
-    dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3))
-    dummy_cr.mod$data <- dummy_cr.data
-    
-    ### assign coefficient to be optimized to the dummy conversion rate function
-    dummy_cr.mod$coefficients <- parameters_cr
-    
-    ### double exponentiation conversion rate to get it between 0 and 1
-    cr_fit <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
-    
-    ### fit spline function to predicted conversion rate. This increases processing speed
-    cr_fun <- splinefun(cbind(cue_range, cr_fit))
-  }
-  
-  ## Dual cue conversion rate
-  ### note that we are using gam with tensor product smoothing k = c(3,3)
-  if(cue_b != "none"){
-    ## create all combinations of 2 cues
-    cr_grid <- expand.grid(cue_range, cue_range_b)
-    ## rename
-    names(cr_grid) <- c("cue_range", "cue_range_b")
-    ## create dummy y
-    dummy_y <- runif(length(cue_range_b), 0, 1)
-    ## put together df
-    dummy_df <- data.frame(cue_range, cue_range_b, dummy_y)
-    ## gam model
-    dummy_cr.mod <- mgcv::gam(dummy_y ~ te(cue_range, cue_range_b, 
-                                           k = c(3,3)), 
-                              data = dummy_df)
-    ## assign parameters
-    dummy_cr.mod$coefficients <- parameters_cr
-    
-    # exponential transformation to limit conversion rate to between 0 and 1
-    cr_fun <- function(cue_1, cue_2){
-      res <- exp(-exp(mgcv::predict.gam(dummy_cr.mod, 
-                                        newdata = data.frame("cue_range" = cue_1,
-                                                             "cue_range_b" = cue_2))))
-      return(res)
-    }
-  }
-  
-  #-----------------------------------------#
-  #-----------------------------------------#
-  # Define dynamics of single infection model
-  #-----------------------------------------#
-  #-----------------------------------------#
-  
-  chabaudi_si_dyn <- function(t, state, parameters){
-    
-    #----------------------#
-    # Redefine parameters for cleaner code
-    #----------------------#
-    ## Rename parameters for cleaner code. With.list not used to speed up computation
-    if(immunity == "tsukushi"){
-      R1 <- parameters["R1"] # maximum RBC density at homeostasis
-      rho <- parameters["rho"] # proportion of RBC deviation from R1 restored/day
-      psin <- parameters["psin"] # activation strength for general RBC removal
-      psiw <- parameters["psiw"] # activation strength for targeted RBC removal
-      phin <- parameters["phin"] # half life for general RBC removal
-      phiw <- parameters["phiw"] # half life for targeted RBC removal
-      iota <- parameters["iota"] # iaximum iRBC detection limit (higher = lower immunity activations)
-    }
-    
-    mu <- parameters["mu"] # death rate/day of RBC and iRBC
-    p <- parameters["p"] # probability of invasion success upon merzoite-RBC contact
-    alpha <- parameters["alpha"] # length of asexual development period of iRBC (I)
-    alphag <- parameters["alphag"] # length of sexual developement period of iRBC (Ig)
-    beta <- parameters["beta"] # number of merozoite produced per iRBC
-    mum <- parameters["mum"] # merozoite death rate/day
-    mug <- parameters["mug"] # gametocyte death rate/day
-    I0 <- parameters["I0"] # initial dosage of iRBC injected
-    sp <- parameters["sp"] # shape parameters for initial malaria population structure. 1 for non-synchronous, 100 for high synchrony
-    
-    if(immunity == "i"){
-      a <- parameters["a"] # maximum rate of iRBC removal/day with saturating immunity
-      b <- parameters["b"] # iRBC density needed to achieve half maximum iRBC removal rate
-    }
-    
-    if(immunity != "tsukushi"){lambda <- parameters["lambda"]} # maximum RBC replenishment rate
-    
-    if(drug_dose > 0){mud <- parameters["mud"]} # if drug action is included, add drug induced death rate
-    if(drug_dose == 0){mud <- 0} # if no drug is administered, no drug-induced mortality
-    
-    #----------------------#
-    # Redefine states for cleaner code
-    #----------------------#
-    R <- state["R"]
-    I <- state["I"]
-    Ig <- state["Ig"]
-    ID <- state["ID"]
-    S <- state["S"]
-    M <- state["M"]
-    G <- state["G"]
-    Mg <- state["Mg"]
-    cr_t <- state["cr_t"]
-    if(immunity == "tsukushi"){
-      N <- state["N"]
-      W <- state["W"]
-    }
-    
-    #-----Defining Pulse beta function based on current time-----#
-    pulseBeta <- pulseBeta_fun(I0, sp, t-delay)
-    
-    #----------------------#
-    # Define lag terms
-    #----------------------#
-    ## lag1 = value 1 day ago
-    if(t>alpha+delay){
-      lag1 = deSolve::lagvalue(t-alpha)
-      
-    } 
-    
-    ## lag2 = value 2 days ago
-    if(t>alphag+delay){
-      lag2 = deSolve::lagvalue(t-alphag)
-    } 
-    
-    #----------------------#
-    # Define cue value
-    #----------------------#
-    ##------get present cue------##
-    ### convert cue to time if time-based conversion rate strategy is used
-    if(cue == "t"){
-      cue_state <- t
-    }
-    
-    ### get cue_state if it is state-based
-    if(cue != "t"){
-      cue_state <- state[cue]
-      if(cue_b != "none"){cue_state_b <- state[cue_b]}
-    }
-    
-    ##------get lagged cue values------##
-    ### if cue is not time-based... get index at which cue is based on
-    #### if multiple cues are given, multiple indexes are returned
-    if(cue != "t") {
-      lag.i <- match(unlist(stringr::str_split(cue, "\\+|\\-|\\*|\\/")), names(state))
-      if(cue_b != "none"){lag.i_b <- match(unlist(stringr::str_split(cue_b, "\\+|\\-|\\*|\\/")), names(state))}
-    }
-    
-    ### For simple cues (if it does not contain special characters)
-    if(stringr::str_detect(cue, "\\+|\\-|\\*|\\/", negate = TRUE)){
-      #### if cue is time-based
-      if(t>alpha+delay && cue == "t"){ ##### lag 1 day ago
-        cue_lag1 <- t-alpha} 
-      
-      if(t>alphag+delay && cue == "t") { ##### lag 2 days ago
-        cue_lag2 <- t-alphag
-      } 
-      
-      #### if cue is state-based
-      if(t>alpha+delay && cue != "t"){ ##### lag 1 day ago
-        cue_lag1 <- lag1[lag.i]
-        ##### get second cue if second cue is given
-        if(cue_b != "none"){cue_lag1_b <- lag1[lag.i_b]}
-      }
-      
-      if(t>alphag+delay && cue != "t") { ##### lag 2 days ago
-        cue_lag2 <- lag2[lag.i]
-        if(cue_b != "none"){cue_lag2_b <- lag2[lag.i_b]}
-      } ### for complex cues that involve additions
-    } else{
-      if(stringr::str_detect(cue, "\\+")){ 
-        #### for cue 1 day ago
-        if(t>alpha+delay && cue != "t"){
-          cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]] #### add first cue to second cue
-          if(cue_b != "none"){cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]}
-        }
-      }
-    }
-    
-    #------------------#
-    # Process cue values
-    #------------------#
-    if(t>alpha+delay){
-      if(log_cue == "log10"){
-        cue_lag1_log <- log10(abs(cue_lag1)+5e-324) # log the lagged cue
-        
-        ## heaviside transformation
-        cue_lag1_p <- heaviside_trans(cue_lag1_log, max(cue_range)) 
-      } 
-      ## IMPORTANT: none of the cue lags should be naturally negative. adding this prevents
-      ## stiff "dipping" of cue from producing NAs. 
-      if(log_cue == "none"){
-        cue_lag1_p <- heaviside_trans(cue_lag1, max(cue_range))
-      } # keep it the same
-      
-      ## if second cue is used
-      if(cue_b != "none"){
-        if(log_cue_b == "log10"){
-          cue_lag1_log_b <- log10(abs(cue_lag1_b)+5e-324) # log the lagged cue
-          ## heaviside transformation
-          cue_lag1_p_b <- heaviside_trans(cue_lag1_log_b, max(cue_range_b)) 
-        } 
-        if(log_cue_b == "none"){
-          cue_lag1_p_b <- heaviside_trans(cue_lag1_b, max(cue_range_b))
-        } 
-      }
-    }
-      
-      # get fr function
-      if(cue_b == "none"){cr <- cr_fun(cue_lag1_p)}
-      if(cue_b != "none"){cr <- cr_fun(cue_lag1_p, cue_lag1_p_b)}
-    
-    #----------------#
-    # Drug actions
-    #----------------#
-    # later
-    
-    #----------------#
-    # Survival functions
-    #----------------#
-    # before first iRBC maturation, survival function of iRBC
-    if(t<=alpha+delay ){
-      S <- exp(-ID) ## survival function of asexual iRBC. ID = cumulative hazard rate in 1 day
-      Sg <- 0 ## survival function of sexual iRBC. No sexual iRBC before alpha so set to 0
-    } 
-    
-    # between first asexual iRBC burst but before first sexual iRBC burst
-    if(t>alpha+delay && t<=alpha+alphag+delay){
-      S <- exp(-ID + lag1[4]) # need to account for previous cumulation of cumulative hazard
-      Sg <- exp(-ID)} # does not appear in our equation until first infected RBC burst, which is delay+alpha+alphag
-    
-    # after first sexual iRBC burst
-    if(t>alpha+alphag+delay){
-      S <- exp(-ID + lag1[4])
-      Sg <- exp(-ID + lag2[4]) # sexual iRBC must survive for longer (2 days), hence lag2
-    }
-    
-    #-----------------#
-    # Model with lag terms (lose of iRBC that has matured and burst)
-    # makes the code cleaner looking
-    #-----------------#
-    ## Define K, maximum RBC density
-    if(immunity != "tsukushi"){K <- lambda*R1/(lambda-mu*R1)}
-    
-    # asexual merozoite
-    dM_nolag <- (-mum*M)-(p*R*M)
-    # sexual merozoite
-    dMg_nolag <- (-mum*Mg)-(p*R*Mg)
-    # gametocyte
-    dG_nolag <- -mug*G
-    
-    # If Tsukushi's model of immunity is used, use the following
-    if(immunity == "tsukushi"){
-      ## define N and W transformed, 2 variables that might go to negative and give NAN in optimization process. 
-      ## do heaviside transformation that maintains N/W at 0.999 if N/W>=1 and N/W at 0 if N/W <0. 
-      N_trans <- ((crone::heaviside(N)*N)+crone::heaviside(N-0.999)*(0.999-N))
-      W_trans <- ((crone::heaviside(W)*W)+crone::heaviside(W-0.999)*(0.999-W))
-      
-      ## RBC density
-      dR <- R1*mu+rho*(R1-R)-(mu-log(1-N_trans))*R-(p*R*M)-(p*R*Mg)
-      ## asexual iRBC 
-      dI_nolag <- (p*R*M)-(mu*I)-((-log(1-N_trans)-log(1-W_trans))*I)
-      ## sexual iRBC 
-      dIg_nolag <- (p*R*Mg)-(mu*Ig)-((-log(1-N_trans)-log(1-W_trans))*Ig)
-      ## indiscriminant RBC removal
-      dN <- psin*((I+Ig)/iota)*(1-N_trans)-(N_trans/phin) 
-      ## targeted iRBC removal
-      dW <- psiw*((I+Ig)/iota)*(1-W_trans)-(W_trans/phiw)
-      ## hazard function of iRBC
-      dID <- mu-log(1-N_trans)-log(1-W_trans)
-    }
-    
-    # if no immunity is used
-    if(immunity == "ni"){
-      # RBC density
-      dR <- lambda*(1-(R/K))-(mu*R)-(p*R*M)-(p*R*Mg)
-      dI_nolag <- (p*R*M)-(mu*I)
-      dIg_nolag <- (p*R*Mg)-(mu*Ig)
-      dID <- mu
-    }
-    
-    # if saturating immunity is used
-    if(immunity == "i") {
-      # RBC density
-      dR <- lambda*(1-(R/K))-(mu*R)-(p*R*M)-(p*R*Mg)
-      dI_nolag <- (p*R*M)-(mu*I)-((a*I)/(b+I))
-      dIg_nolag <- (p*R*Mg)-(mu*Ig)
-      dID <- mu+(a/(b+I))
-    }
-    
-    #--------------#
-    # Infection dynamics in the first cohort of 
-    # injected parasite
-    #--------------#
-    # Before delay, no iRBC is produced!
-    if(t<delay){
-      dI <- 0
-    }
-    
-    # before all first cohort of asexual iRBC bursts (before day 1)
-    if(t<=alpha+delay){
-      dI <- dI_nolag-(pulseBeta*S) # some initial asexual iRBC burst due to maturation
-      dM <- dM_nolag+(beta*pulseBeta*S) # asexual merozoites are produced when asexual iRBC burst
-      dMg <- 0 # should have no Mg before day 1
-      dIg <- 0 #first wave starts on day alpha
-      dG <- 0 # first wave starts on day alpha+alphag
-    }
-    
-    # the period after first production of sexual iRBC but before they burst
-    if(t<=alpha+alphag+delay && t>alpha+delay){
-      dG <- 0 # no gametocyte production
-      dIg <- dIg_nolag # no sexual iRBC death from previous cycle
-    }
-    
-    # after all first cohort of asexual iRBC burst (after day 1)
-    if(t>alpha+delay){
-      dI <- dI_nolag-(p*lag1[1]*lag1[2]*S) # bursting of iRBC produced alpha days ago
-      dM <- dM_nolag+(beta*(1-cr)*p*lag1[1]*lag1[2]*S) # production of asexual merozoite from asexual iRBC burst
-      dMg <- dMg_nolag+(beta*cr*p*lag1[1]*lag1[2]*S) # production of sexual merozoite from asexual iRBC burst
-    }
-    
-    # after the first gametocyte production
-    if(t>alpha+alphag+delay){
-      dG <- dG_nolag+(p*lag2[1]*lag2[3]*Sg) # production of gametocyte from sexual iRBC produced alphag days ago
-      dIg <- dIg_nolag-(p*lag2[1]*lag2[3]*Sg) # loss of sexual iRBC
-    }
-    
-    # track cr
-    if(t<=alpha+delay){dcr_t <- 0}
-    if(t>alpha+delay){dcr_t <- cr}
-    
-    
-    #----------------------#
-    # Return the states
-    #----------------------#
-    if (immunity == "ni" || immunity == "i") {return(list(c(dR, dM, dMg, dID, dI, dIg, dG, dcr_t)))}
-    if (immunity == "tsukushi") {return(list(c(dR, dM, dMg, dID, dI, dIg, dG, dN, dW, dcr_t)))}
-  } 
-  
-  #---------------------------------------------------------#
-  #---------------------------------------------------------#
-  #-------------------End of dynamics function--------------#
-  #---------------------------------------------------------#
-  #---------------------------------------------------------#
-  
-  #----------------------#
-  # Create injection event
-  # needed for delayed infection
-  #----------------------#
-  delay_injection <- data.frame(var = "I",
-                                time = delay,
-                                value = parameters["I0"],
-                                method = "add")
-  
-  
-  #-------------------------#
-  # Run single-infection model
-  #------------------------#
-  chabaudi_si.df <- as.data.frame(deSolve::dede(y = state,
-                                                times = time_range,
-                                                func = chabaudi_si_dyn,
-                                                p = parameters,
-                                                method = solver,
-                                                events = list(data = delay_injection),
-                                                control=list(mxhist = 1e7)))
-  
-  #-------------------# 
-  # Calculate fitness for optimization
-  #-------------------# 
-  # Get Gametocyte density time series data
-  gam <- chabaudi_si.df$G
-  gam[gam<0] <- 0 ## Assign negative gametocyte density to 0. can arise due to stiffness of function
-  
-  
-  
-  # Get timeseries interval
-  int <- chabaudi_si.df$time[2]
-  
-  # Define the fitness parameter values
-  aval <- -12.69
-  bval <- 3.6
-  dens <- log10(gam) 
-  
-  # Calculate the transmission potential at each time point
-  tau.ls <- (exp(aval+(bval*dens)))/(1+exp(aval+(bval*dens)))
-  
-  # Get approximation of cumulative transmission potential
-  tau.sum <- sum(tau.ls*int, na.rm = TRUE)
-  
-  # return cumulative transmission potential. Used for optimization
-  if(dyn == FALSE && neg == FALSE){return(tau.sum)} ## 
-  if(dyn == FALSE && neg == TRUE){
-    tau.sumneg <- tau.sum*-1
-    return(tau.sumneg)
-  } ## if using minimization algorthm, set neg to TRUE to get maximize
-  #----------------------------#
-  #----------------------------#
-  #-Simulate infection dynamics#
-  #-If dyn = TRUE--------------#
-  #----------------------------#
-  #----------------------------#
-  
-  if(dyn == TRUE) {
-    
-    #---------------#
-    # Calculate cumulative transmission potential
-    #--------------#
-    tau_cum.ls <- cumsum(tau.ls*int)
-    
-    # cbind results
-    chabaudi_si.df$tau <- tau.ls
-    chabaudi_si.df$tau_cum <- tau_cum.ls
-    
-    #-------------#
-    # calculate cr
-    #-------------#
-    # time based cue
-    if(cue == "t"){
-      cr.ls <- cr_fun(time_range)
-      chabaudi_si.df$cr <- cr.ls
-    }
-    
-    # state-based cue
-    if(cue != "t"){
-      chabaudi_si.df <- chabaudi_si.df %>% 
-        dplyr::mutate(cr = (cr_t - dplyr::lag(cr_t))*1000)
-    }
-    
-    # make df long for ease of plotting
-    chabaudi_si.df2 <- chabaudi_si.df %>% tidyr::gather(key = "variable", value = "value", -time)
-    
-    # return
-    return(chabaudi_si.df2)
-  }
-}
-```
 
 # cutting down computational time
 ```{r}
@@ -1402,6 +268,1151 @@ chabaudi_si_clean(parameters_cr = rep(0.5, 4),
        log_cue = "none",
        )
 ```
+
+#--------------------------------------------------#
+# remaking of co-infection reaction norm
+#--------------------------------------------------#
+```{r}
+source(here("functions/chabaudi_ci_clean.R"))
+source(here("functions/par_to_df.R"))
+```
+
+# function for getting conversion rate reaction norm and dynamics
+```{r}
+get_ci_dyn <- function(df){
+  
+  # get heavisde transformation
+  heaviside_trans <- function(cue_range, max){
+    crone::heaviside(cue_range)*(cue_range)+(crone::heaviside(cue_range-max)*(max-cue_range))
+}
+  
+  # read in df info
+  cue_1 <- ifelse(stringr::str_detect(df$cue, "-i"), 
+                  gsub("*-i", "1", df$cue),
+                  df$cue)
+  
+  cue_2 <- ifelse(stringr::str_detect(df$cue, "-i"), 
+                  gsub("*-i", "2", df$cue),
+                  df$cue)
+  
+  log <- ifelse(stringr::str_detect(df$log, "log"),
+                "log10", "none")
+  
+  # get parameter
+  par <- c(df$var1, df$var2, df$var3, df$var4)
+  cue_range <- seq(df$low, df$high, by = df$by)
+  label <- df$label
+  
+  # get dynamics
+  dyn <- chabaudi_ci_clean(parameters_cr_1 = par,
+                  parameters_cr_2 = par,
+                  immunity = "tsukushi",
+                  parameters = parameters_tsukushi,
+                  cue_1 = cue_1,
+                  cue_2 = cue_2,
+                  cue_range_1 = cue_range,
+                  cue_range_2 = cue_range,
+                  log_cue_1 = log,
+                  log_cue_2 = log,
+                  solver = "vode",
+                  time_range = seq(0, 30, 0.001),
+                  dyn = T)
+  
+    dyn2 <- data.frame(dyn, label = rep(label, nrow(dyn)))
+
+  # get reaction norm
+  rn <- par_to_df(par = par, cue_range = cue_range)
+
+  # get rug
+  ## if + in cue, need to filter out those variables and add together
+  if(stringr::str_detect(cue_1, "\\+")){
+    cue_split <- stringr::str_split(string = cue_1, pattern = "\\+", simplify = T)
+    ## get the two cues 
+    cue_temp_1 <- cue_split[[1]]
+    cue_temp_2 <- cue_split[[2]]
+    
+    ## filter dyn
+    rug <- dyn2 %>% 
+      filter(variable == cue_temp_1 | variable == cue_temp_2) %>% 
+      dplyr::group_by(time) %>% 
+      dplyr::mutate(sum = sum(value)) %>% 
+      select(time, value = sum, label)
+  }
+  
+  ## if sum
+  if(cue_1 == "sum"){
+    ## filter dyn
+    rug <- dyn2 %>% 
+      filter(variable == "I1" | variable == "I2" | variable == "Ig1" | variable == "Ig2") %>% 
+      dplyr::group_by(time) %>% 
+      dplyr::mutate(sum = sum(value)) %>% 
+      select(time, value = sum, label)
+  }
+  
+  # for simplified cue
+  if(stringr::str_detect(cue_1, "\\+", negate = T) && cue_1 != "sum"){
+    rug <- dyn2 %>% 
+      dplyr::filter(variable == cue_1) %>% 
+      dplyr::select(time, value, label)}
+  
+  # for logged, backtransform cue range of reaction norm 
+  rn2 <- rn
+  
+  if(stringr::str_detect(log, "log")){rn2$cue_range <- 10^(rn2$cue_range)}
+
+  # append label to reaction norm, dyn, and rug
+  rn2 <- data.frame(rn2, label = rep(label, nrow(rn)))
+
+  return(list(dyn2, rn2, rug))
+}
+```
+
+# read in co_infection opt
+```{r}
+ci_opt.df <- read.csv(here("data/ci_opt.csv"))
+cue_range_ci <- read.csv(here("data/cue_range_ci.csv"))
+
+# join with cue range
+ci_opt.df <- ci_opt.df %>% left_join(select(cue_range_ci, id, low, high, by), by = c("id" = "id"))
+
+# split
+ci_opt.ls <- split(ci_opt.df, seq(nrow(ci_opt.df)))
+
+# loop
+ci_opt.dyn <- lapply(ci_opt.ls, get_ci_dyn)
+
+# bind together dynamics
+dyn.ls <- lapply(ci_opt.dyn, function(x)x[[1]])
+ci_dyn.df <- do.call(rbind, dyn.ls)
+write_parquet(ci_dyn.df, here("data/ci_dyn/ci_dyn.parquet"))
+
+rn.ls <- lapply(ci_opt.dyn, function(x)x[[2]])
+ci_rn.df <- do.call(rbind, rn.ls)
+write_parquet(ci_rn.df, here("data/ci_dyn/ci_rn.parquet"))
+
+rug.ls <- lapply(ci_opt.dyn, function(x)x[[3]])
+ci_rug.df <- do.call(rbind, rug.ls)
+write_parquet(ci_rug.df , here("data/ci_dyn/ci_rug.parquet"))
+```
+
+
+
+# get in single infection reaction norm to match
+```{r}
+si_opt.df <- read.csv(here("data/si_opt.csv"))
+cue_range_si <- read.csv(here("data/cue_range_si.csv"))
+
+si_opt.df <- si_opt.df %>% left_join(select(cue_range_si, id, low, high, by, label), by = "id")
+
+# function to get single infection reaction norm
+get_si_rn <- function(df){
+  par <- c(df$var1, df$var2, df$var3, df$var4)
+  cue_range <- seq(df$low, df$high, by = df$by)
+  
+  rn <- par_to_df(par = par, cue_range = cue_range)
+  
+  # for logged, backtransform cue range of reaction norm 
+  rn2 <- rn
+  if(stringr::str_detect(df$log, "log")){rn2$cue_range <- 10^(rn2$cue_range)}
+
+  # append label to reaction norm, dyn, and rug
+  rn2 <- data.frame(rn2, id = df$id, label = rep(df$label, nrow(rn)))
+  
+  return(rn2)
+}
+# rn function and bind together
+si_opt.ls <- split(si_opt.df, seq(nrow(si_opt.df)))
+si_opt.rn <- lapply(si_opt.ls, get_si_rn)
+si_opt.rn2 <- do.call(rbind, si_opt.rn)
+
+```
+
+# get single infeciton rug
+```{r}
+si_dyn <- read_parquet(here("data/si_dyn/si_dyn_30.parquet"))
+
+# join to get label
+si_dyn.df <- left_join(si_dyn, si_opt.df, by = "id")
+
+# process get rug
+get_rug <- function(df){
+  cue <- unique(df$cue)
+  
+   if(stringr::str_detect(cue, "\\+")){
+    cue_split <- stringr::str_split(string = cue, pattern = "\\+", simplify = T)
+    ## get the two cues 
+    cue_temp_1 <- cue_split[[1]]
+    cue_temp_2 <- cue_split[[2]]
+    ## filter dyn
+    rug <- df %>% 
+      filter(variable == cue_temp_1 | variable == cue_temp_2) %>% 
+      dplyr::group_by(time) %>% 
+      dplyr::mutate(sum = sum(value)) %>% 
+      select(time, value = sum, label)
+  }
+  
+  # for simplified cue
+  if(stringr::str_detect(cue, "\\+", negate = T)){
+    rug <- df %>% 
+      dplyr::filter(variable == cue) %>% 
+      dplyr::select(time, value, label)}
+  
+  return(rug)
+}
+
+# split based on individual labels
+si_dyn.ls <- si_dyn.df %>% group_split(id)
+
+# run function to get rug
+si_rug <- mclapply(si_dyn.ls, get_rug)
+
+si_rug.df <- do.call(rbind, si_rug)
+```
+
+
+# process reaction norm data to limit reaction norm to around the infection space
+```{r}
+# get si_label with ci cue range
+si_ci_rug.df <- ci_rug.df %>% 
+  mutate(label_si = case_when(
+    label %in% c("I", "I1+I2") ~ "I",
+    label %in% c("I log","I1+I2 log") ~ "I log",
+    label %in% c("Ig", "Ig1+Ig2") ~ "Ig",
+    label %in% c("Ig log") ~ "Ig log",
+    label %in% c("sum", "I+Ig") ~ "I+Ig",
+    label %in% c("sum log", "I+Ig log") ~ "I+Ig log",
+    label == "R" ~ "R",
+    label == "R log" ~ "R log",
+    label %in% c("G", "G1+G2") ~ "G",
+    label == "G log" ~ "G log"
+  )) 
+
+# get limit for si_rug
+si_rug_lim.df <- si_rug.df %>% 
+  group_by(label)%>% 
+  summarise(min = min(value, na.rm = T)*0.9,
+         max = max(value, na.rm = T)*1.1) %>% 
+  select(label_si = label, min_si = min, max_si = max)
+
+
+# filter to restriction conversion rate reaction norm range to cue ranges that appear in rug
+## change to Inf/-inf to NA. Note that I am first joining with si rug lim to check which limit is larger, We will go with the cue range that has the largest span
+ci_rug_lim.df <- si_ci_rug.df %>% 
+  group_by(label) %>% 
+  mutate(min = min(value, na.rm = T)*0.9,
+         max = max(value, na.rm = T)*1.1) %>% 
+  distinct(label, .keep_all = T) %>% 
+  select(label, label_si, min, max)
+
+rug_lim.final <- ci_rug_lim.df %>% left_join(si_rug_lim.df, by = "label_si") %>% 
+  mutate(final_min = min(min, min_si),
+         final_max = max(max, max_si))
+
+# filter ci_rn by limit
+ci_rn_lim.df <- ci_rn.df %>% 
+  left_join(rug_lim.final) %>% 
+  group_by(label) %>% 
+  filter(cue_range <= final_max & cue_range >= final_min)
+
+ci_rn_lim.df %>% filter(label == "G log") %>% ggplot() + geom_line(aes(x = cue_range, y = cr))
+```
+
+# match single infection rn with coinfection 
+```{r}
+# get ci label to si rug and filter by limit
+si_opt.rn3 <- select(si_opt.rn2, cue_range, cr, label_si = label) %>% 
+  left_join(distinct(select(si_ci_rug.df, label, label_si), label, .keep_all = T), by = "label_si") %>% 
+  left_join(rug_lim.final) %>% 
+  group_by(label) %>% 
+  filter(cue_range <= final_max & cue_range >= final_min) %>% 
+  select(cue_range, cr, label, label_si)
+
+si_opt.rn3
+# get ci label to si rug
+si_rug.df2 <- select(si_rug.df, value, label_si = label) %>% 
+  left_join(distinct(select(si_ci_rug.df, label, label_si), label, .keep_all = T), by = "label_si")
+```
+
+# plot reaction norm
+```{r}
+# reorder the cues and get proper labels
+ez_label <- cbind.data.frame(
+  id_ci = c("I-i_none", "I-i_log",
+            "I1+I2_none", "I1+I2_log",
+            "Ig-i_none", "Ig-i_log",
+            "I-i+Ig-i_none", "I-i+Ig-i_log",
+            "sum_none", "sum_log",
+            "G-i_none", "G-i_log",
+            "G1+G2_none", "Ig1+Ig2_none",
+            "R_none", "R_log"),
+  id_si = c("I_none", "I_log",
+            "I_none", "I_log",
+            "Ig_none", "Ig_log",
+            "I+Ig_none", "I+Ig_log",
+            "I+Ig_none", "I+Ig_log",
+            "G_none", "G_log",
+            "G_none", "Ig_none",
+            "R_none", "R_log"),
+  label_ci = c("I", "I log",
+            "I1+I2", "I1+I2 log",
+            "Ig", "Ig log",
+            "I+Ig", "I+Ig log",
+            "sum", "sum log",
+            "G", "G log",
+            "G1+G2", "Ig1+Ig2",
+            "R", "R log"),
+  label_si = c("I", "I log",
+               "I", "I log",
+               "Ig", "Ig log",
+               "I+Ig", "I+Ig log",
+               "I+Ig", "I+Ig log",
+               "G", "G log",
+               "G", "Ig",
+               "R", "R log"),
+  ez_label = c("Asexual iRBC", "Asexual iRBC log10",
+               "Total asexual iRBC", "Total asexual\niRBC log10",
+               "Sexual iRBC", "Sexual iRBC log10",
+               "Asexual&sexual iRBC", "Asexual&sexual\niRBC log10",
+               "Total iRBC", "Total iRBC log10",
+               "Gametocyte", "Gametocyte log10",
+               "Total gametocyte", "Total sexual iRBC",
+               "RBC", "RBC log10"),
+  ez_label_si = c("Asexual iRBC", "Asexual iRBC log10",
+               "Asexual iRBC", "Asexual iRBC log10",
+               "Sexual iRBC", "Sexual iRBC log10",
+               "Asexual&sexual iRBC", "Asexual&sexual\niRBC log10",
+               "Asexual&sexual iRBC", "Asexual&sexual\niRBC log10",
+               "Gametocyte", "Gametocyte log10",
+               "Gametocyte", "Sexual iRBC",
+               "RBC", "RBC log10")
+)
+
+write.csv(ez_label, here("data/ez_label.csv"))
+
+# join with ezlabel
+ci_rn_lim.df <- ci_rn_lim.df %>% left_join(ez_label)
+si_opt.rn3 <- si_opt.rn3 %>% left_join(ez_label)
+ci_rug.df <- ci_rug.df %>% left_join(ez_label)
+si_rug.df2 <- si_rug.df2 %>% left_join(ez_label)
+
+# redo order of cues
+ci_rn_lim.df$label <- factor(ci_rn_lim.df$label, 
+                              levels = c("I", "I log",
+                                         "I1+I2", "I1+I2 log",
+                                         "Ig", "Ig log",
+                                         "I+Ig", "I+Ig log",
+                                         "sum", "sum log",
+                                         "G", "G log",
+                                         "G1+G2", "Ig1+Ig2",
+                                         "R", "R log")) 
+
+si_opt.rn3$label <- factor(si_opt.rn3$label, 
+                              levels = c("I", "I log",
+                                         "I1+I2", "I1+I2 log",
+                                         "Ig", "Ig log",
+                                         "I+Ig", "I+Ig log",
+                                         "sum", "sum log",
+                                         "G", "G log",
+                                         "G1+G2", "Ig1+Ig2",
+                                         "R", "R log"))
+
+ci_rug.df$label <- factor(ci_rug.df$label, 
+                              levels = c("I", "I log",
+                                         "I1+I2", "I1+I2 log",
+                                         "Ig", "Ig log",
+                                         "I+Ig", "I+Ig log",
+                                         "sum", "sum log",
+                                         "G", "G log",
+                                         "G1+G2", "Ig1+Ig2",
+                                         "R", "R log"))
+
+si_rug.df2$label <- factor(si_rug.df2$label, 
+                              levels = c("I", "I log",
+                                         "I1+I2", "I1+I2 log",
+                                         "Ig", "Ig log",
+                                         "I+Ig", "I+Ig log",
+                                         "sum", "sum log",
+                                         "G", "G log",
+                                         "G1+G2", "Ig1+Ig2",
+                                         "R", "R log"))
+
+# plot
+opt_cue_pl.A <- ggplot() +
+  geom_line(data = ci_rn_lim.df, aes(x = cue_range, y = cr, color = "Co-infection")) +
+  geom_line(data = si_opt.rn3, aes(x = cue_range, y = cr, color = "Single infection"), linetype = "dashed") +
+  geom_rug(data = ci_rug.df, aes(x = value), color = "#4575b4", sides = "t") +
+  geom_rug(data = si_rug.df2, aes(x = value), color = "#fc8d59", sides = "b") +
+  facet_wrap(~ez_label, scales = "free_x", ncol = 2) +
+  theme_bw() +
+  labs(y = "Conversion rate", x = "Cue range", color = "Infection") +
+  scale_x_continuous(labels = function(x) format(x, scientific = T),
+                     guide = guide_axis(check.overlap = TRUE)) + 
+                    theme(axis.text.x = element_text(size = 7))  +
+  scale_color_manual(values=c( "#4575b4", "#fc8d59"))
+
+ggsave(here("figures/report21/reaction_norm.png"), width = 7, height = 10)
+
+```
+
+#-----------------------------------------#
+# plot maximum fitness accumulation for both si and ci
+#-----------------------------------------#
+
+```{r}
+ez_label <- read.csv(here("data/ez_label.csv"))
+```
+
+# process single infection data
+```{r}
+# import in si maximum transmission potential
+si_dyn.df <- read_parquet(here("data/si_dyn/si_dyn_30.parquet"))
+
+# get maximum tau_cum for 30 days
+si_max_tau <- si_dyn.df %>% 
+  filter(variable == "tau_cum") %>% 
+  group_by(id) %>% 
+  summarise(fitness_si = max(value))
+```
+
+# process co-infection data
+```{r}
+# import in co-infeciton data, 30 days simulation
+ci_dyn.df <- read_parquet(here("data/ci_dyn/ci_dyn.parquet"))
+
+# get maximum tau_cum. Note multiplied by 2 to get total fitness for both strains, given that both are sadiptng the same strategy, we consider them the same genotye
+ci_max_tau <- ci_dyn.df %>% 
+  filter(variable == "tau_cum1") %>% 
+  group_by(label) %>% 
+  summarise(fitness_ci = max(value, na.rm = T))
+```
+
+# get label and join together 2 dataframes
+```{r}
+si_ci_max_tau <- ci_max_tau %>% 
+  left_join(ez_label, by = c("label" = "label_ci")) %>% 
+  left_join(si_max_tau, by = c("id_si" = "id"))
+```
+
+# plot
+```{r}
+opt_cue_pl.B <- ggplot() +
+  geom_point(data = si_ci_max_tau, aes(x = fitness_si, y = fitness_ci, color = ez_label_si, shape = ez_label_si), size = 2.5) +
+  ggrepel::geom_label_repel(data = si_ci_max_tau, aes(label = ez_label, x = fitness_si, y = fitness_ci),
+                            fill = "white",xlim = c(-Inf, Inf), ylim = c(NA, NA)) +
+  labs(x = "Optimal single-infection fitness", y = "Optimal Co-infection fitness (per strain)",
+       color = "Single infection cue", shape = "Single infection cue") +
+  scale_shape_manual(values = 15:24) +
+  lims(x = c(8.5, 12.5)) +
+  geom_vline(xintercept = 10.5, linetype = "dashed", alpha = 0.5) + # si good cue cutoff
+  geom_hline(yintercept = 2.25, linetype = "dashed", alpha = 0.5) + # ci good cue cutoff
+  theme_bw() +
+  coord_cartesian(clip = "off") +
+  theme(plot.margin=margin(r=0))
+
+ggsave(here("figures/report21/si_ci_fitness.png"), height = 5)
+```
+#---------------------------------------#
+# time series conversion rate (line form)
+#---------------------------------------#
+
+# single infection
+```{r}
+cr_si <- si_dyn.df %>% 
+  filter(variable == "cr")
+
+# good cue bad cue
+si_cue_dv <- si_max_tau %>% 
+  mutate(classification = case_when(
+    fitness_si > 10.5 ~ "High-performing",
+    fitness_si <= 10.5 ~ "Poor-performing"
+  ))
+
+# join with classificaiton
+cr_si.df <- cr_si %>% left_join(si_cue_dv) %>% left_join(ez_label, by = c("id" = "id_si"))
+
+# split into top erforming and poor-performing cues
+cr_si.high <- cr_si.df %>% filter(classification == "High-performing")
+cr_si.poor <- cr_si.df %>% filter(classification == "Poor-performing")
+
+# plot
+cr_si_pl.pre <- ggplot() +
+  geom_line(data = cr_si.poor, aes(x= time, y = value, group = id), color = "dark grey") +
+  labs(color = "Single infection\nhigh-performing cues", x = "Time (days)", y = "Conversion rate") +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
+  guides(shape = FALSE)
+
+cr_si_pl <- cr_si_pl.pre +
+  geom_line(data = cr_si.high, aes(x= time, y = value, group = ez_label_si, color = ez_label_si), size = 1) +
+  scale_color_manual(values=c( "#4575b4", "#fc8d59", "#fdcb44", "#91bfdb"))
+
+```
+
+# co-infection
+```{r}
+# get relevent variables
+cr_ci <- ci_dyn.df %>% 
+  filter(variable == "cr_1")
+
+# good cue bad cue
+ci_cue_dv <- ci_max_tau %>% 
+  mutate(classification = case_when(
+    fitness_ci > 2.25 ~ "High-performing",
+    fitness_ci <= 2.25 ~ "Poor-performing"
+  ))
+
+si_cue_dv
+
+# join with classificaiton
+cr_ci.df <- cr_ci %>% left_join(ci_cue_dv )%>% left_join(ez_label, by = c("label" = "label_ci"))
+
+# split into top erforming and poor-performing cues
+cr_ci.high <- cr_ci.df %>% filter(classification == "High-performing")
+cr_ci.poor <- cr_ci.df %>% filter(classification == "Poor-performing")
+
+# plot
+cr_ci_pl.pre <- ggplot() +
+  geom_line(data = cr_ci.poor, aes(x= time, y = value, group = label), color = "dark grey", alpha = 0.5) +
+  labs(color = "Co-infection\nhigh-performing cues", x = "Time (day)", y = "Conversion rate") +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
+  guides(shape = FALSE)
+
+cr_ci_pl <- cr_ci_pl.pre +
+  geom_line(data = cr_ci.high, aes(x= time, y = value, group = ez_label, color = ez_label), size = 1) +
+  scale_color_manual(values=c( "#4575b4", "#fc8d59", "#fdcb44", "#91bfdb"))
+```
+
+# arrange together
+```{r}
+cr_pl <- ggarrange(cr_si_pl, cr_ci_pl, align = "hv", ncol = 1)
+```
+
+#---------------------------------------#
+# Time series conversion rate (heatmap)
+#---------------------------------------#
+note that the order of cues is sorted by descending 30-days fitness.
+# single infection
+```{r}
+cr_hm_si.pl1 <- ggplot() +
+  geom_tile(data = cr_si.poor, aes(x = time, y = forcats::fct_reorder(ez_label_si, fitness_si), fill = value)) +
+  labs(x = "Time (days)", y = "Low performing\nsingle infection cues", fill = "Conversion rate") +
+  scale_fill_viridis_c(limits = c(0, 1)) +
+  xlim(1, 30) +
+  theme_bw()
+
+cr_hm_si.pl2 <- ggplot() +
+  geom_tile(data = cr_si.high, aes(x = time, y = forcats::fct_reorder(ez_label_si, fitness_si), fill = value)) +
+  labs(x = "", y = "High performing\nsingle infection cues", fill = "Conversion rate") +
+  scale_fill_viridis_c(limits = c(0, 1)) +
+  xlim(1, 30) +
+  theme_bw()
+```
+
+# co-infection
+```{r}
+cr_hm_ci.pl1 <- ggplot() +
+  geom_tile(data = cr_ci.poor, aes(x = time, y = forcats::fct_reorder(ez_label, fitness_ci), fill = value)) +
+  labs(x = "Time (days)", y = "Low performing\nco-infection infection cues", fill = "Conversion rate") +
+  scale_fill_viridis_c(limits = c(0, 1)) +
+  xlim(1, 30) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+cr_hm_ci.pl2 <- ggplot() +
+  geom_tile(data = cr_ci.high, aes(x = time, forcats::fct_reorder(ez_label, fitness_ci), fill = value)) +
+  labs(x = "", y = "High performing\nco-infection cues", fill = "Conversion rate") +
+  scale_fill_viridis_c(limits = c(0, 1)) +
+  xlim(1, 30) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+
+cr_hm.pl <- ggarrange(cr_hm_si.pl2, cr_hm_ci.pl2, cr_hm_si.pl1, cr_hm_ci.pl1, align = "hv", ncol = 2, nrow = 2, common.legend = T)
+
+ggsave(here("figures/report21/conversion_rate_heatmap.png"), height = 5.5, width = 12)
+```
+
+
+#---------------------------------------#
+# disase curve
+#---------------------------------------#
+note we are using the same 30 days infection dynamics from before
+
+# for single infection
+note that we are dividing the cues into good and bad based on arbitrary cut off at 10.5
+```{r}
+# get relevent variables
+dc_si <- si_dyn.df %>% 
+  filter(variable == "I" | variable == "Ig" | variable == "R")
+
+# morph into skinny format
+dc_si.df <- tidyr::pivot_wider(dc_si, names_from = variable, values_from = value, id_cols = c(time, id)) %>% 
+  mutate(total = I+Ig)
+
+# join with classificaiton
+dc_si.df2 <- dc_si.df %>% left_join(si_cue_dv)
+
+# split into top erforming and poor-performing cues
+dc_si.high <- dc_si.df2 %>% filter(classification == "High-performing")
+dc_si.poor <- dc_si.df2 %>% filter(classification == "Poor-performing")
+
+# join high performing with label
+dc_si.high2 <- dc_si.high %>% left_join(ez_label %>% distinct(label_si, .keep_all = T), by = c("id" = "id_si"))
+
+# plot
+disease_curve_pl.pre <- ggplot() +
+  geom_path(data = dc_si.poor, aes(x= total, y = R, group = id), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  labs(color = "Single infection\nhigh-performing cues", x = "Asexual&sexual iRBC per \u03bcL", y = "RBC per \u03bcL") +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
+  guides(shape = FALSE)
+
+disease_curve_pl.1 <- disease_curve_pl.pre +
+  geom_point(data = dc_si.high2 %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = ez_label, shape = ez_label), size = 2) +
+  geom_path(data = dc_si.high2, aes(x= total, y = R, group = ez_label, color = ez_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  scale_color_manual(values=c( "#4575b4", "#fc8d59", "#fdcb44", "#91bfdb"))  +
+  theme(legend.position = c(0.85, 0.8),
+        legend.title = element_text(size = 6.5), 
+        legend.text = element_text(size = 6.5)) +
+  guides(color = guide_legend(override.aes = list(size = 0.1)))
+```
+
+# co-infection
+```{r}
+# get relevent variables
+dc_ci <- ci_dyn.df %>% 
+  filter(variable == "I1" | variable == "Ig1" | variable == "R")
+
+# morph into skinny format
+dc_ci.df <- tidyr::pivot_wider(dc_ci, names_from = variable, values_from = value, id_cols = c(time, label)) %>% 
+  mutate(total = I1+Ig1)
+
+# good cue bad cue
+ci_cue_dv <- ci_max_tau %>% 
+  mutate(classification = case_when(
+    fitness_ci > 4.5 ~ "High-performing",
+    fitness_ci <= 4.5 ~ "Poor-performing"
+  ))
+
+# join with classificaiton
+dc_ci.df2 <- dc_ci.df %>% left_join(ci_cue_dv)
+
+# split into top erforming and poor-performing cues
+dc_ci.high <- dc_ci.df2 %>% filter(classification == "High-performing")
+dc_ci.poor <- dc_ci.df2 %>% filter(classification == "Poor-performing")
+
+# join high performing with label
+dc_ci.high2 <- dc_ci.high %>% left_join(ez_label, by = c("label" = "label_ci"))
+
+# plot
+disease_curve_pl.pre2 <- ggplot() +
+  geom_path(data = dc_ci.poor, aes(x= total, y = R, group = label), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  labs(color = "Co-infection\nhigh-performing cues", x = "Asexual&sexual iRBC per \u03bcL (per strain)", y = "RBC per \u03bcL") +
+  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
+  guides(shape = FALSE)
+
+disease_curve_pl.2 <- disease_curve_pl.pre2 +
+  geom_point(data = dc_ci.high2 %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = ez_label, shape = ez_label), size = 2) +
+  geom_path(data = dc_ci.high2, aes(x= total, y = R, group = ez_label, color = ez_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  scale_color_manual(values=c( "#4575b4", "#fc8d59", "#fdcb44", "#91bfdb")) +
+  theme(legend.position = c(0.8, 0.8),
+        legend.title = element_text(size = 7), 
+        legend.text = element_text(size = 7)) +
+  guides(color = guide_legend(override.aes = list(size = 0.1)))
+```
+
+ # plot both single and co-infeciton disease curve together
+```{r}
+disease_curve_pl <- ggarrange(disease_curve_pl.1, disease_curve_pl.2, align = "hv")
+ggsave(here("figures/report21/disease_curve.png"), width = 12, height = 5)
+```
+
+
+
+#-----------------------#
+Arranging opt_cue figure
+#-----------------------#
+```{r}
+opt_cue_pl.BC <- ggarrange(opt_cue_pl.B, cr_hm.pl, labels = c("B", "C"), ncol = 1, heights = c(0.75, 1))
+ggarrange(opt_cue_pl.A, opt_cue_pl.BC, labels = c("A", ""), ncol = 2, widths = c(0.75, 1))
+
+ggsave(here("figures/report21/opt_cue_final.png"), width = 14, height = 9.5)
+```
+
+
+
+#---------------------------------#
+# remaking heatmaps
+#---------------------------------#
+#----------------------------------#
+# static heatmap
+#----------------------------------#
+# processing data
+```{r}
+# import in dataset
+static.df <- read.csv(here("data/ci_static.csv"))
+ez_label <- read.csv(here("data/ez_label.csv"))
+
+# join with labelling
+static.df2 <- static.df %>% 
+  left_join(select(ez_label, id_ci, label_ci_1 = label_ci), by = c("id_1" = "id_ci")) %>% 
+  left_join(select(ez_label, id_ci, label_ci_2 = label_ci), by = c("id_2" = "id_ci")) %>% 
+  mutate(fitness_diff = fitness_1 - fitness_2) %>% 
+  select(label_ci_1, label_ci_2, fitness_diff)
+
+# get reverse order, which is simply invovles switching the cues around the multiplying the fitness by negative 1
+static.df3 <- static.df2
+names(static.df3) <- c("label_ci_2", "label_ci_1", "fitness_diff")
+static.df3$fitness_diff <- static.df2$fitness_diff * -1
+
+# join
+static.df4 <- rbind(static.df2, static.df3)
+
+# get mean
+static.mean <- static.df4 %>% 
+  group_by(label_ci_1) %>% 
+  summarize(mean_fitness = mean(fitness_diff, na.rm = T))
+```
+
+# get heatmap
+```{r}
+# heatmap
+static.pl1 <- ggplot(data = static.df4, aes(x = label_ci_2, y = label_ci_1, fill = fitness_diff))+
+  geom_tile(color = "black") +
+  scale_fill_gradient2(low = "#fc8d59", high = "#4575b4", mid = "white", 
+   midpoint = 0, space = "Lab", lim = c(-0.92, 0.92), name="Fitness\ndifference") +
+  theme_minimal() +  
+  theme(legend.position = "left",
+  axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+  axis.ticks = element_blank(),
+  plot.margin=margin(r = 0)) + 
+  labs(x = "Strain 2 cue", y = "Strain 1 cue") +
+  coord_fixed()
+
+# mean 
+static.pl2 <- ggplot() +
+  geom_bar(data =  static.mean, aes(y = label_ci_1, x = mean_fitness), stat = "identity") +
+  labs(y = "", x = "Mean fitness\ndifference") +
+  theme_bw() +
+  theme(plot.margin = margin(l = 0),
+       panel.grid.major = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+    axis.text.y=element_blank(),
+    axis.ticks.y=element_blank())
+
+static.pl <- ggarrange(static.pl1, static.pl2, align = "hv", widths = c(1, 0.2))
+ggsave(here("figures/report21/static_heatmap.png"), width = 10)
+```
+
+#-------------------------#
+# ci invasion matrix
+#-------------------------#
+```{r}
+# import and process ci-invasion data
+invade.ls <- list.files(here("data/ci_invasion/"), pattern = "*.csv", full.names = T)
+
+invade.ls2 <- lapply(invade.ls, read.csv)
+invade.df <- do.call(rbind, invade.ls2)
+#write.csv(invade.df, row.names = F, here("data/ci_invasion.csv"))
+invade.df <- read.csv(here("data/ci_invasion.csv"))
+```
+
+# sanity check. all invasion combination hsould have a fitness higher than static competition
+```{r}
+sc_static.df <- static.df %>% 
+  mutate(fitness_static = fitness_1 - fitness_2) %>% 
+  select(id_1, id_2, fitness_static)
+
+# get reverse
+sc_static.df2 <- sc_static.df
+sc_static.df2$fitness_static <- sc_static.df$fitness_static*-1
+names(sc_static.df2) <- c("id_2", "id_1", "fitness_static")
+
+# combine
+sc_static.df3 <- rbind(sc_static.df, sc_static.df2)
+
+# left join. none of these are huge and invasion runs for 20 days whereas static competition runs for 30 days. looks good
+invade.df %>% 
+  left_join(sc_static.df3, by = c("mut_id"= "id_1", "res_id" = "id_2")) %>% 
+  mutate(invade_static = fitness - fitness_static) %>% 
+  filter(invade_static < 0)
+```
+
+# process data for invasion matrix
+```{r}
+invade.mat <- invade.df %>% 
+  group_by(V1 = pmin(mut_id, res_id), V2 = pmax(mut_id, res_id)) %>% # group by cue competition, irregardless of order
+  mutate(id_alt = paste0(V1, V2),
+         invade = case_when(
+           fitness > 0 ~ "invade",
+           fitness < 0 ~ "not invade"
+         )) %>% 
+  group_by(id_alt) %>% 
+  mutate(
+    mut_is_V1 = case_when(
+    mut_id == V1 ~ "V1_invade",
+    mut_id != V1 ~ "V1_invaded")) %>% 
+  arrange(id_alt) %>% 
+  select(fitness, V1, V2, id_alt, invade, mut_is_V1) %>% 
+  tidyr::pivot_wider(names_from = mut_is_V1, values_from = fitness) %>% 
+  group_by(id_alt) %>% 
+  mutate(V1_invade2 = gsub("NA", "", paste0(V1_invade, collapse = "")),
+         V1_invaded2 = gsub("NA", "", paste0(V1_invaded, collapse = ""))) %>% 
+  distinct(id_alt, .keep_all = T) %>% 
+  mutate(
+    category = case_when(
+    V1_invade2 > 0 & V1_invaded2 > 0 ~ "Mutual invasion",
+    V1_invade2 > 0 & V1_invaded2 < 0 ~ "Only strain 1 invasion",
+    V1_invade2 < 0 & V1_invaded2 > 0 ~ "Only strain 2 invasion",
+    V1_invade2 < 0 & V1_invaded2 < 0 ~ "Mutual non-invasion"
+  )) %>% 
+  select(V1, V2, invasion = category)
+
+# for plotting, need to get all same cue vs same cue, which we will set to NA
+invade.NA <- cbind.data.frame(`V1` = unique(invade.mat$V1),
+      `V2` = unique(invade.mat$V1),
+      invasion = NA)
+
+invade.mat2 <- rbind(invade.mat, invade.NA)
+
+# get label
+invade.mat3 <- invade.mat2 %>% 
+  left_join(select(ez_label, id_ci, V1_label = label_ci), by = c("V1" = "id_ci")) %>% 
+  left_join(select(ez_label, id_ci, V2_label = label_ci), by = c("V2" = "id_ci"))
+
+# reorder so that ggplot do not mess up
+library(gtools)
+
+levels <- mixedsort(unique(c(invade.mat3$V1_label, invade.mat3$V2_label)))
+
+invade.mat4 <- rbind(invade.mat3, 
+                        invade.mat3 %>% 
+                          rename(V2_label = V1_label, V1_label = V2_label) %>% 
+                          select(V1_label, V2_label, invasion)) %>%
+  mutate(across(ends_with("label"),
+                ~factor(.x, levels = levels))) %>%
+  filter(as.integer(V1_label) < as.integer(V2_label)) %>%
+  mutate(V2_label = forcats::fct_rev(V2_label))
+
+# plot
+invasion.pl1 <- ggplot(data = invade.mat4, aes(x = V2_label, y = V1_label, fill = invasion)) +
+  geom_tile(color = "black") +
+  theme_minimal() +  
+  theme(legend.position = "right",
+  axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+  axis.ticks = element_blank(),
+  plot.margin=margin(r = 0)) + 
+  labs(fill = "Invasion", x = "Strain 2 cue", y = "Strain 1 cue") +
+  #scale_x_discrete(limits = rev) +
+  scale_y_discrete(limits = rev) +
+  scale_fill_manual(values = c("Only strain 1 invasion" = "#4575b4",
+                               "Only strain 2 invasion" = "#fc8d59",
+                               "Mutual invasion" = "#fee090")) +
+  theme(legend.position = "none")
+```
+
+# create summary bar chart
+```{r}
+# create a stacked barchart for summary
+## filter out na
+invade.matalt <- invade.mat3 %>% na.exclude()
+
+# get frquency from both sides. Note when grouping for V2, from the perspective of cue 2, scenarrio when strain 2 invade = strain 1 invade
+invade.matalt1 <- invade.matalt %>% group_by(V1_label, invasion) %>% 
+  summarize(frequency_1 = n())
+
+invade.matalt2 <- invade.matalt %>%
+  mutate(invasion_alt = case_when(
+    invasion == "Only strain 1 invasion" ~ "Only strain 2 invasion",
+    invasion == "Only strain 2 invasion" ~ "Only strain 1 invasion",
+    invasion == "Mutual invasion" ~ "Mutual invasion",
+    invasion == "Mutual non-invasion" ~ "Mutual non-invasion"
+  )) %>% 
+  group_by(V2_label, invasion_alt) %>% 
+  summarize(frequency_2 = n())     
+
+# full join and sum. has confirmed all of them add up to 14 
+invade.matalt3 <- full_join(invade.matalt1, invade.matalt2, by = c("V1_label" = "V2_label", "invasion" = "invasion_alt"))
+
+invade.matalt3[is.na(invade.matalt3)] <- 0
+invade.matalt4 <- invade.matalt3 %>% 
+  mutate(freq = frequency_1 + frequency_2) %>% 
+  mutate(temp = case_when(
+    invasion == "Only strain 1 invasion" ~ freq
+  )) %>% 
+  group_by(V1_label) %>% 
+  mutate(invade_1_freq = max(temp, na.rm = T))
+  
+invasion.pl2 <- ggplot() +
+  geom_bar(data = invade.matalt4, aes(x = freq, y = reorder(V1_label, invade_1_freq), fill = forcats::fct_rev(factor(invasion, levels = c("Only strain 1 invasion", "Only strain 2 invasion", "Mutual invasion", "Mutual non-invasion")))), stat = "identity") +
+  labs(x = "Frequency", fill = "Invasion", y = "Strain 1 cue") +
+  theme_bw()  +
+  scale_fill_manual(values = c("Only strain 1 invasion" = "#4575b4",
+                               "Only strain 2 invasion" = "#fc8d59",
+                               "Mutual invasion" = "#fee090")) +
+  theme(text = element_text(size = 15))
+```
+
+# plot togehter
+```{r}
+invasion.pl <- ggarrange(invasion.pl1, invasion.pl2, align = "h", common.legend = T, widths = c(2, 1))
+ggsave(here("figures/report21/invasion_heatmap.png"))
+```
+
+
+#-------------------------------------#
+# Effect of various cue perception
+#-------------------------------------#
+
+#-------------------------------#
+# static
+#-------------------------------#
+# logging
+```{r}
+# get non-logged pairings
+static_nolog <- static.df2 %>% 
+  mutate(cue_1 = trimws(gsub("\\ .*", "", label_ci_1)),
+         log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none")) %>% 
+  filter(log_1 == "none")
+
+
+static_log <- static.df2 %>% 
+  mutate(cue_1 = trimws(gsub("\\ .*", "", label_ci_1)),
+         log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none")) %>% 
+  filter(log_1 == "log")
+
+static_log.df <- left_join(
+  select(static_nolog, cue_1, label_ci_2, log_1, None = fitness_diff),
+  select(static_log, cue_1, label_ci_2, log_1, Log = fitness_diff),
+  by = c("cue_1", "label_ci_2")) %>% 
+  filter(!is.na(None) & !is.na(Log)) %>% 
+  mutate(classification = ifelse(Log > None, "Logged better", "Not logged better"))
+```
+
+# combined
+```{r}
+static_nocomb <- static.df2 %>% 
+  mutate(cue_1 = ifelse(
+    str_detect(label_ci_1, "sum"), "I+Ig",
+    trimws(gsub("+1.*|\\ log", "", label_ci_1))
+  ),
+  log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none"),
+    comb_1 = case_when(
+    str_detect(label_ci_1, "1+|sum") ~ "comb",
+    str_detect(label_ci_1, "1+|sum", negate = T) ~ "none" 
+  )) %>% 
+  filter(comb_1 == "none")
+
+static_comb <- static.df2 %>% 
+  mutate(cue_1 = ifelse(
+    str_detect(label_ci_1, "sum"), "I+Ig",
+    trimws(gsub("+1.*|\\ log", "", label_ci_1))
+  ),
+  log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none"),
+    comb_1 = case_when(
+    str_detect(label_ci_1, "1+|sum") ~ "comb",
+    str_detect(label_ci_1, "1+|sum", negate = T) ~ "none" 
+  )) %>% 
+  filter(comb_1 == "comb")
+  
+static_comb.df <- left_join(
+  select(static_nocomb, cue_1, label_ci_2, log_1, Self = fitness_diff),
+  select(static_comb, cue_1, label_ci_2, log_1, Total = fitness_diff),
+  by = c("cue_1", "log_1", "label_ci_2")) %>% 
+  filter(!is.na(Total) & !is.na(Self)) %>% 
+  mutate(classification = ifelse(Total > Self, "Total better", "Self better"))
+```
+
+# plot
+```{r}
+static_log.pl <- ggpaired(static_log.df, cond1 = "None", cond2 = "Log", line.color = "classification", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect") +
+  scale_color_manual(values = c("Not logged better" = "#fc8d59", "Logged better" = "#4575b4"))
+
+static_comb.pl <- ggpaired(static_comb.df, cond1 = "Total", cond2 = "Self", line.color = "classification", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect") +
+  scale_color_manual(values = c("Total better" = "#fc8d59", "Self better" = "#4575b4"))
+
+static_cue.pl <- ggarrange(static_log.pl, static_comb.pl, ncol = 2, align = "h")
+ggsave(here("figures/report21/static_cue.png"), width = 7.5, height = 4)
+```
+
+#--------------------------------#
+# invasion
+#--------------------------------#
+```{r}
+# join invade df with label because I am lazy
+invade.df2 <- invade.df %>% 
+  left_join(select(ez_label, id_ci, label_ci_1 = label_ci), by = c("mut_id" = "id_ci"))
+```
+
+# log
+```{r}
+# get non-logged pairings
+invade_nolog <- invade.df2 %>% 
+  mutate(cue_1 = trimws(gsub("\\ .*", "", label_ci_1)),
+         log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none")) %>% 
+  filter(log_1 == "none")
+
+
+invade_log <- invade.df2 %>% 
+  mutate(cue_1 = trimws(gsub("\\ .*", "", label_ci_1)),
+         log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none")) %>% 
+  filter(log_1 == "log")
+
+invade_log.df <- left_join(
+  select(invade_nolog, cue_1, res_id, log_1, None = fitness),
+  select(invade_log, cue_1, res_id, log_1, Log = fitness),
+  by = c("cue_1", "res_id")) %>% 
+  filter(!is.na(None) & !is.na(Log)) %>% 
+  mutate(classification = ifelse(Log > None, "Logged better", "Not logged better"))
+```
+
+# combined
+```{r}
+invade_nocomb <- invade.df2 %>% 
+  mutate(cue_1 = ifelse(
+    str_detect(label_ci_1, "sum"), "I+Ig",
+    trimws(gsub("+1.*|\\ log", "", label_ci_1))
+  ),
+  log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none"),
+    comb_1 = case_when(
+    str_detect(label_ci_1, "1+|sum") ~ "comb",
+    str_detect(label_ci_1, "1+|sum", negate = T) ~ "none" 
+  )) %>% 
+  filter(comb_1 == "none")
+
+invade_comb <- invade.df2 %>% 
+  mutate(cue_1 = ifelse(
+    str_detect(label_ci_1, "sum"), "I+Ig",
+    trimws(gsub("+1.*|\\ log", "", label_ci_1))
+  ),
+  log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none"),
+    comb_1 = case_when(
+    str_detect(label_ci_1, "1+|sum") ~ "comb",
+    str_detect(label_ci_1, "1+|sum", negate = T) ~ "none" 
+  )) %>% 
+  filter(comb_1 == "comb")
+  
+invade_comb.df <- left_join(
+  select(invade_nocomb, cue_1, res_id, log_1, Self = fitness),
+  select(invade_comb, cue_1, res_id, log_1, Total = fitness),
+  by = c("cue_1", "log_1", "res_id")) %>% 
+  filter(!is.na(Total) & !is.na(Self)) %>% 
+  mutate(classification = ifelse(Total > Self, "Total better", "Self better"))
+```
+
+# plot. nevermind just assemble in illustrator
+```{r}
+invade_log.pl <- ggpaired(invade_log.df, cond1 = "None", cond2 = "Log", line.color = "classification", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect") +
+  scale_color_manual(values = c("Not logged better" = "#fc8d59", "Logged better" = "#4575b4"))
+
+invade_comb.pl <- ggpaired(invade_comb.df, cond1 = "Total", cond2 = "Self", line.color = "classification", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect") +
+  scale_color_manual(values = c("Total better" = "#fc8d59", "Self better" = "#4575b4"))
+
+invade_cue.pl <- ggarrange(invade_log.pl, invade_comb.pl, align = "h", ncol = 2)
+ggsave(here("figures/report21/invade_cue.png"), width = 7.5, height = 4)
+```
+
+
+#--------------------------------#
+# arrange co-infection figure
+#--------------------------------#
+```{r}
+ggarrange(static.pl, static_cue.pl, invasion.pl, invade_cue.pl, widths = c(1.5, 1), align = "hv", labels = c("A", "", "B", ""))
+
+ggsave(here("figures/report21/coinfection_final.png"), width = 15, height = 12)
+```
+
+#-----------------------------------#
+# organization dual cue optimization data
+#------------------------------------#
+```{r}
+dual_cue.ls <- list.files(here("data/dual_cue_opt/"), pattern  = "*.csv", full.names = T)
+
+dual_cue.ls2 <- lapply(dual_cue.ls, read.csv)
+
+dual_cue.df <- do.call(rbind, dual_cue.ls2)
+
+# filter out those that did not optimize properly
+dual_cue.df2 <- dual_cue.df %>% filter(fitness > 1)
+```
+
+# check if fitness of the dual cue is better than individual. 17 out of 25 comparisons have lower fitness lol when optimized via dual cue. Not sure what could remedy this. Smaller cue steps?
+
+# dual cue improved the fitness of the following combination. note many of these comparisons are made when time steps are different. Need to modify optimization so that time scale is the same. We should also be comparing fitness at 30 days when full resolution is achieved. 
+1) G_log and I_log
+2) G_none, I_log
+3) Ig_log and I_log
+4) Ig_none, I_log
+5) R_log, I_log
+6) R_none, I_log
+7) R_none, Ig_none
+
+I_log is a reaccuring theme here.
+```{r}
+dual_cue.df2 %>% 
+  left_join(select(si_opt.df, id, fitness_si = fitness_20), by = c("id" = "id")) %>% 
+  left_join(select(si_opt.df, id, fitness_si_b = fitness_20), by = c("id_b" = "id")) %>% 
+  mutate(fitness_diff = fitness - fitness_si,
+         fitness_diff_b = fitness - fitness_si_b) %>% 
+  filter(fitness_diff > 0 & fitness_diff_b > 0)
+```
+
+
+# plotting out some interesting heatmaps
+```{r}
+source(here("functions/par_to_hm.R"))
+
+# G log and I log
+par_to_hm(par = c(-0.535568221,	-2.5019109,	5.3812132,	1.8928449,	0.23451243),
+          cue_range = seq(0,	4.77815125, length.out = 500),
+          cue_range_b = seq(0,	6.77815125,	length.out = 500),
+          plot = T)
+
+
+# Ig_log and I_log
+par_to_hm(par = c(-0.253533013,	-3.1078035,	7.8203134,	0.3603524,	-3.51389462),
+          cue_range = seq(0,	6.77815125, length.out = 500),
+          cue_range_b = seq(0,	6.77815125,length.out = 500),
+          plot = T)
+
+# R_log, I_log
+par_to_hm(par = c(5.249264033	,8.9174937,	-52.6281549	,-21.1288712,	-13.05080084),
+          cue_range = seq(6,	7,	length.out = 500),
+          cue_range_b = seq(0,	6.77815125,length.out = 500),
+          plot = T)
+
+```
+
+
+
+
 
 
 

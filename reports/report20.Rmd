@@ -23,6 +23,7 @@ library(arrow)
 library(stringr)
 library(parallel)
 library(ggpubr)
+library(Rsolnp)
 ```
 
 # load functions
@@ -980,19 +981,18 @@ dual_cue_opt <- function(df){
   log <- ifelse(str_detect("log", df$log), "log10", "none")
   log_b <- ifelse(str_detect("log", df$log_b), "log10", "none")
   
-  # process cue_range
-  cue_range <- seq(df$low, df$high, by = df$by)
-  cue_range_b <- seq(df$low_b, df$high_b, by = df$by_b)
+  # process cue_range. cannot use by to ensure that both cue ranges are of the same length
+  cue_range <- seq(df$low, df$high, length.out = 500)
+  cue_range_b <- seq(df$low_b, df$high_b, length.out = 500)
   
   # optimization
   cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
   
-  # start optimization LFBGS
+  # start optimization LFBGS with inital value of 0.5x5
   res <- optimParallel(
     par = rep(0.5, 5),
     fn = chabaudi_si_clean, 
     control = list(trace = 6, fnscale = -1),
-    parameters_cr = rep(0.5, 4),
     immunity = "tsukushi",
     parameters = parameters_tsukushi,
     time_range = seq(0, 20, 0.01),
@@ -1003,7 +1003,9 @@ dual_cue_opt <- function(df){
     log_cue = log,
     log_cue_b = log_b,
     solver = "vode")
+
   
+
   # close cluster
   stopCluster(cl)
   
@@ -1012,18 +1014,38 @@ dual_cue_opt <- function(df){
   par <- res$par ## optimized parameters of mutant
   
   # produce output
-  output <- cbind.data.frame(id = df$id, id_b = df$id_b, 
+  output <- cbind.data.frame(id = df$Var1, id_b = df$Var2, 
+                             label = df$label, label_b = df$label_b,
                              fitness = fitness,
-                             par1 = par[1], par2 = par[2], par3 = par[3], par4 = par[4])
+                             par1 = par[1], par2 = par[2], par3 = par[3], par4 = par[4], par5 = par[5])
   
-  write.csv(output, here(paste0("data/dual_cue_opt/", df$id, "_", df$id_b, ".csv")))
+  write.csv(output, here(paste0("data/dual_cue_opt/", df$Var1, "_", df$Var2, ".csv")))
   return(output)
   
 }
 ```
 
+
+# run everything
+need to rerun 1st one due to better fit ness scores from previous runs
 ```{r}
-df <- dual_cue.df2[1,]
+dual_cue.ls <- split(dual_cue.df2, seq(nrow(dual_cue.df2)))
+lapply(dual_cue.ls[3:40], dual_cue_opt)
+
+gosolnp(fun = chabaudi_si_clean, 
+        LB = rep(-100,5),
+        UB = rep(100,5),
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, 0.01),
+    cue = cue,
+    cue_b = cue_b,
+    cue_range = cue_range,
+    cue_range_b = cue_range_b,
+    log_cue = log,
+    log_cue_b = log_b,
+    solver = "vode", cluster = cl, rseed = 137)
 ```
 
 
