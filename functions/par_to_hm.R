@@ -1,6 +1,6 @@
 # function to convert coefficients into a heatmap
 
-par_to_hm <- function(par, cue_range, cue_range_b, plot = FALSE){
+par_to_hm <- function(par, cue_range, cue_range_b, plot = FALSE, dyn= F){
   
   # get cr grid
   cr_grid <- expand.grid(cue_range, cue_range_b)
@@ -28,6 +28,7 @@ par_to_hm <- function(par, cue_range, cue_range_b, plot = FALSE){
   
   cr_res2 <- cbind(cr_grid, cr = cr_res)
   
+  # plot
   if(isTRUE(plot)){
     plot <- ggplot2::ggplot() +
       geom_raster(data = cr_res2, aes(x = cue_range, y = cue_range_b, fill = cr)) +

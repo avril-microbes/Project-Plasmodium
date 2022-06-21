@@ -16,3 +16,9 @@ data/.DS_Store
 data/.DS_Store
 data/si_ci_diff/.DS_Store
 reports/report21.RData
+<<<<<<< Updated upstream
+=======
+reports/report21.RData
+*.RData
+.DS_Store
+>>>>>>> Stashed changes

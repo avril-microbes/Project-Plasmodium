@@ -559,7 +559,7 @@ chabaudi_si_clean <- function(
     # state-based cue
     if(cue != "t"){
       chabaudi_si.df <- chabaudi_si.df %>% 
-        dplyr::mutate(cr = (cr_t - dplyr::lag(cr_t))*1000)
+        dplyr::mutate(cr = (cr_t - dplyr::lag(cr_t))*(1/time_range[2]))
     }
     
     # make df long for ease of plotting
