@@ -1390,25 +1390,97 @@ dual_cue.df2 %>%
 source(here("functions/par_to_hm.R"))
 
 # G log and I log
-par_to_hm(par = c(-0.535568221,	-2.5019109,	5.3812132,	1.8928449,	0.23451243),
+test_hm <- par_to_hm(par = c(-0.535568221,	-2.5019109,	5.3812132,	1.8928449,	0.23451243),
           cue_range = seq(0,	4.77815125, length.out = 500),
           cue_range_b = seq(0,	6.77815125,	length.out = 500),
           plot = T)
 
 
 # Ig_log and I_log
-par_to_hm(par = c(-0.253533013,	-3.1078035,	7.8203134,	0.3603524,	-3.51389462),
+test_hm <- par_to_hm(par = c(-0.253533013,	-3.1078035,	7.8203134,	0.3603524,	-3.51389462),
           cue_range = seq(0,	6.77815125, length.out = 500),
           cue_range_b = seq(0,	6.77815125,length.out = 500),
           plot = T)
 
 # R_log, I_log
-par_to_hm(par = c(5.249264033	,8.9174937,	-52.6281549	,-21.1288712,	-13.05080084),
+test_hm <- par_to_hm(par = c(5.249264033	,8.9174937,	-52.6281549	,-21.1288712,	-13.05080084),
           cue_range = seq(6,	7,	length.out = 500),
           cue_range_b = seq(0,	6.77815125,length.out = 500),
           plot = T)
-
 ```
+
+# get trajectory of R_log and I_log
+```{r}
+source(here("functions/chabaudi_si_clean.R"))
+test <- chabaudi_si_clean(
+  parameters_cr = c(-0.535568221,	-2.5019109,	5.3812132,	1.8928449,	0.23451243),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 30, 0.01),
+    cue = "G",
+    cue_b = "I",
+    cue_range = seq(0,	4.77815125, length.out = 500),
+    cue_range_b = seq(0,	6.77815125,length.out = 500),
+    log_cue = "log10",
+    log_cue_b = "log10",
+    solver = "vode",
+  dyn = T
+)
+
+test2 <- chabaudi_si_clean(
+  parameters_cr = c(5.463558,	2.383948,	-17.757281,	4.571835),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 30, 0.01),
+    cue = "I",
+    cue_range = seq(0,	6.77815125,length.out = 5000),
+    log_cue = "log10",
+    solver = "vode",
+  dyn = T
+)
+
+test3 <- test %>% filter(variable == "G" | variable == "I") %>% 
+  tidyr::pivot_wider(names_from = "variable", values_from = "value") %>% 
+  mutate(log_G = log10(G), log_I = log10(I)) %>% 
+  mutate(log_G = case_when(
+    log_G > 0 ~ log_G,
+    log_G < 0 ~ 0
+  ),
+  log_I = case_when(
+    log_I > 0 ~ log_I,
+    log_I < 0 ~ 0
+  ))
+
+ggplot() +
+  geom_raster(data = test_hm, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  scale_fill_viridis_c() +
+  geom_path(data = test3, aes(x = log_G, y = log_I), color = "white", arrow = arrow( angle = 30, length = unit(0.1, "inches"))) +
+  geom_point(data = test3 %>% filter(row_number() %% 100 == 1), aes(x = log_G, y = log_I), color = "white") +
+  xlim(0.95*min(hablar::s(test3$log_G), na.rm = T), 1.05* max(hablar::s(test3$log_G), na.rm = T)) +
+  ylim(0.95*min(hablar::s(test3$log_I), na.rm = T),1.05* max(hablar::s(test3$log_I), na.rm = T)) +
+  labs(x = "Gametocyte logged", y = "Asexual iRBC logged", fill = "Conversion rate")
+
+ggsave(here("figures/report21/example_hm_rn.png"))
+
+
+ggplot() +
+  geom_line(data = test %>% filter(variable == "cr"), aes(x = time, y = value, color = "G+I")) +
+  geom_line(data = test2 %>% filter(variable == "cr"), aes(x = time, y = value, color = "I")) +
+  labs(x = "Time", y = "Conversion rate", color = "Cue") +
+  theme_bw() 
+ggsave(here("figures/report21/example_hm_cr.png"))
+
+ggplot() +
+  geom_line(data = test %>% filter(variable == "G"), aes(x = time, y = value, color = "G+I_G")) +
+  geom_line(data = test %>%
+              filter(variable == "I") %>% 
+              mutate(value_alt = value/ 10), aes(x = time, y = value_alt, color = "G+I_I")) +
+  geom_line(data = test2 %>% filter(variable == "G"), aes(x = time, y = value, color = "I_G")) +
+  geom_line(data = test2 %>% filter(variable == "I"), aes(x = time, y = value/10, color = "I_I")) +
+    theme_bw()
+ggsave(here("figures/report21/example_hm_dyn.png"))
+```
+
 
 
 
