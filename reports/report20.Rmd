@@ -1040,9 +1040,11 @@ lapply(dual_cue.ls[3:40], dual_cue_opt)
 a lot of the dual cue optimization produced lower fitness than the single cues alone. Could be due to either bad starting point or bad cue range. Here, I will decrease the cue steps 
 
 # determining parameter bounds
+par1: -1 to 1
+par2-5: -500 to 500
 ```{r}
 # list of values to expand bounds on
-bounds <- c(-10000, -5000, -1000, -100, -10, -1, 1, 100, 1000, 5000, 10000)
+bounds <- c(-50000, -10000, -5000, -1000, -500, -100, -10, -1, 1, 100, 1000, 500, 5000, 10000, 50000)
 bounds.df <- expand.grid(par = bounds, index = seq(1,5,1))
 
 # cycle to get all combinations of 5 parameters with these substituted in
@@ -1065,10 +1067,56 @@ par.df <- do.call(rbind, par.ls)
 
 # make graphs
 source(here("functions/par_to_hm.R"))
+
+# get heatmap dataframe for all par
+par_res.ls <- mclapply(par.ls,
+                     function(x){
+                       res <- par_to_hm(par = c(x$par1, x$par2, x$par3, x$par4, x$par5),
+                                 cue_range = seq(1, 100, 1),
+                                 cue_range_b = seq(1, 100, 1))
+                       res2 <- cbind(id = x$id, res)
+                       return(res2)
+                     }
+)
+par_res.df <- do.call(rbind, par_res.ls)
+
+# divide into 5 parameters
+par_res.df1 <- par_res.df %>% filter(str_detect(id, "1_"))
+par_res.df2 <- par_res.df %>% filter(str_detect(id, "2_"))
+par_res.df3 <- par_res.df %>% filter(str_detect(id, "3_"))
+par_res.df4 <- par_res.df %>% filter(str_detect(id, "4_"))
+par_res.df5 <- par_res.df %>% filter(str_detect(id, "5_"))
+
+# par 1. -1 and 1 is sufficient
+ggplot() +
+  geom_raster(data = par_res.df1, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+# par2. -500 and 500 is sufficient
+ggplot() +
+  geom_raster(data = par_res.df2, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+# par 3 -500 and 500 is sufficient
+ggplot() +
+  geom_raster(data = par_res.df3, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+# par 4 -500 and 500 is sufficient
+ggplot() +
+  geom_raster(data = par_res.df4, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+# par 5. -500 and 500 is sufficient
+ggplot() +
+  geom_raster(data = par_res.df5, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
 ```
 
+# new function with starting point chooser. 
 ```{r}
-dual_cue_opt2 <- function(df){
+dual_cue_opt2 <- function(df, n = 100){
   # process cues
   cue <- df$cue
   cue_b <- df$cue_b
@@ -1086,47 +1134,7 @@ dual_cue_opt2 <- function(df){
   cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
   
   ## generate random starting points and pick the starting point that has the highest fitness
-  
-  
-  # start optimization LFBGS with inital value of 0.5x5
-  res <- optimParallel(
-    par = rep(0.5, 5),
-    fn = chabaudi_si_clean, 
-    control = list(trace = 6, fnscale = -1),
-    immunity = "tsukushi",
-    parameters = parameters_tsukushi,
-    time_range = seq(0, 20, 0.01),
-    cue = cue,
-    cue_b = cue_b,
-    cue_range = cue_range,
-    cue_range_b = cue_range_b,
-    log_cue = log,
-    log_cue_b = log_b,
-    solver = "vode")
-
-  
-
-  # close cluster
-  stopCluster(cl)
-  
-  # get model output
-  fitness <- res$value ## fitness difference between mutant and residence
-  par <- res$par ## optimized parameters of mutant
-  
-  # produce output
-  output <- cbind.data.frame(id = df$Var1, id_b = df$Var2, 
-                             label = df$label, label_b = df$label_b,
-                             fitness = fitness,
-                             par1 = par[1], par2 = par[2], par3 = par[3], par4 = par[4], par5 = par[5])
-  
-  write.csv(output, here(paste0("data/dual_cue_opt/", df$Var1, "_", df$Var2, ".csv")))
-  return(output)
-  
-}
-```
-
-```{r}
-foreach(i= 1:100, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
+  start <- foreach(i= 1:n, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
   
   # source function
   source(here("functions/chabaudi_si_clean.R"))
@@ -1155,17 +1163,79 @@ foreach(i= 1:100, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "s
   
   # generate random par, bounds for parameters based on previous determined bounds
   par1 <- runif(1, -1, 1)
-  par2 <- runif(1, -100, 100)
-  par3 <- runif(1, -1000, 1000)
-  par4 <- runif(1, -5000, 5000)
-  par5 <- runif(1, -5000, 5000)
+  par2 <- runif(1, -500, 500)
+  par3 <- runif(1, -500, 500)
+  par4 <- runif(1, -500, 500)
+  par5 <- runif(1, -500, 500)
   
-  par_rand <- c(par1, par2, par3, par4)
+  par_rand <- c(par1, par2, par3, par4, par5)
   
+  fitness <- chabaudi_si_clean(
+    parameters_cr = par_rand,
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, 0.01),
+    cue = cue,
+    cue_b = cue_b,
+    cue_range = cue_range,
+    cue_range_b = cue_range_b,
+    log_cue = log,
+    log_cue_b = log_b,
+    solver = "vode")
   
+  return(data.frame(fitness = fitness, 
+                    par1 = par_rand[[1]],
+                    par2 = par_rand[[2]],
+                    par3 = par_rand[[3]],
+                    par4 = par_rand[[4]],
+                    par5 = par_rand[[5]])
+         )
+}
+start.df <- do.call(rbind, start)
+
+# get starting poiint that give us highest fitness
+max_start.df <- start.df %>% filter(fitness == max(start.df$fitness))
+  
+  # start optimization LFBGS with inital value of 0.5x5
+  res <- optimParallel(
+    par = c(max_start.df$par1, max_start.df$par2, max_start.df$par3, max_start.df$par4, max_start.df$par5),
+    fn = chabaudi_si_clean, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, 0.01),
+    cue = cue,
+    cue_b = cue_b,
+    cue_range = cue_range,
+    cue_range_b = cue_range_b,
+    log_cue = log,
+    log_cue_b = log_b,
+    solver = "vode")
+
+  # close cluster
+  stopCluster(cl)
+  
+  # get model output
+  fitness <- res$value ## fitness difference between mutant and residence
+  par <- res$par ## optimized parameters of mutant
+  
+  # produce output
+  output <- cbind.data.frame(id = df$Var1, id_b = df$Var2, 
+                             label = df$label, label_b = df$label_b,
+                             fitness = fitness,
+                             par1 = par[1], par2 = par[2], par3 = par[3], par4 = par[4], par5 = par[5])
+  
+  write.csv(output, here(paste0("data/dual_cue_opt2/", df$Var1, "_", df$Var2, ".csv")))
+  return(output)
   
 }
 ```
+
+```{r}
+lapply(dual_cue.ls, dual_cue_opt2)
+```
+
+
 
 
 
