@@ -1,6 +1,7 @@
 # function to convert coefficients into a heatmap
+# note using te full interactions that take 9 coefficients
 
-par_to_hm <- function(par, cue_range, cue_range_b, plot = FALSE){
+par_to_hm_te <- function(par, cue_range, cue_range_b, plot = FALSE){
   
   # get cr grid
   cr_grid <- expand.grid(cue_range, cue_range_b)
@@ -15,7 +16,7 @@ par_to_hm <- function(par, cue_range, cue_range_b, plot = FALSE){
   dummy_df <- data.frame(cue_range, cue_range_b, dummy_y)
   
   ## gam model
-  dummy_cr.mod <- mgcv::gam(dummy_y ~ ti(cue_range, cue_range_b, 
+  dummy_cr.mod <- mgcv::gam(dummy_y ~ te(cue_range, cue_range_b, 
                                          k = c(3,3)), 
                             data = dummy_df)
   

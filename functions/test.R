@@ -1,7 +1,8 @@
 #-----------------------#
 # Newest iteration of single infection model of Plasmodium chabaudi
 # Avril Wang
-# Last edited 2022-03-05
+# Last edited 2022-06-12
+# dual cue cable
 #-----------------------#
 
 test <- function(
@@ -167,7 +168,7 @@ test <- function(
     ## put together df
     dummy_df <- data.frame(cue_range, cue_range_b, dummy_y)
     ## gam model
-    dummy_cr.mod <- mgcv::gam(dummy_y ~ ti(cue_range, cue_range_b, 
+    dummy_cr.mod <- mgcv::gam(dummy_y ~ te(cue_range, cue_range_b, 
                                            k = c(3,3)), 
                               data = dummy_df)
     ## assign parameters
@@ -176,8 +177,8 @@ test <- function(
     # exponential transformation to limit conversion rate to between 0 and 1
     cr_fun <- function(cue_1, cue_2){
       exp(-exp(mgcv::predict.gam(dummy_cr.mod, 
-                                        newdata = data.frame("cue_range" = cue_1,
-                                                             "cue_range_b" = cue_2))))
+                                 newdata = data.frame("cue_range" = cue_1,
+                                                      "cue_range_b" = cue_2))))
     }
     
   }
@@ -343,8 +344,8 @@ test <- function(
         cr <- cr_fun(cue_lag1_p, cue_lag1_p_b)
       }
     }
-  
-
+    
+    
     #----------------#
     # Drug actions
     #----------------#
@@ -558,7 +559,7 @@ test <- function(
     # state-based cue
     if(cue != "t"){
       chabaudi_si.df <- chabaudi_si.df %>% 
-        dplyr::mutate(cr = (cr_t - dplyr::lag(cr_t))*1000)
+        dplyr::mutate(cr = (cr_t - dplyr::lag(cr_t))*(1/time_range[2]))
     }
     
     # make df long for ease of plotting

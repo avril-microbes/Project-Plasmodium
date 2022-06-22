@@ -1,0 +1,276 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Dual cue troubleshooting
+This week, I will attempt to troubleshoot dual cue optimization to minimize the difference in fitness between dual cue and single cue. Logically, dual cue should achieve roughly the same fitness or higher that is comparable to single cue (if one cue is uninformative). However, previous attempt using ti interactions only led to the majority of dual cue having lower optimized fitness compared to single cue.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(here)
+library(deSolve)
+library(crone)
+library(optimParallel)
+library(doParallel)
+library(doRNG)
+library(arrow)
+library(stringr)
+library(parallel)
+library(ggpubr)
+library(psoptim)
+library(Rmpi)
+
+source(here("functions/chabaudi_si_clean.R"))
+
+# importing in test function that contains full main effect interation
+source(here("functions/test.R"))
+```
+
+#------------------------------------------#
+# testing out te effect
+#------------------------------------------#
+# get dual cue df
+```{r}
+si_opt.csv <- read.csv(here("data/si_opt.csv"))
+
+#W get all unique combinations but eliminating all combinations that uses the same cue
+dual_cue.df <- expand.grid(si_opt.csv$id, si_opt.csv$id) %>% 
+  filter(Var1 != Var2) %>% 
+  left_join(select(si_opt.csv, cue1 = cue, id), by = c("Var1" = "id")) %>% 
+  left_join(select(si_opt.csv, cue2 = cue, id), by = c("Var2" = "id")) %>% 
+  filter(cue1 != cue2) %>% 
+  mutate(temp = paste(pmin(Var1, Var2), pmax(Var1, Var2))) %>% 
+  distinct(temp, .keep_all = T) # get rid of the same cue combination but just in different orders
+
+
+# get cue range (500 divisons)
+cue_range_alt <- read.csv(here("data/cue_range_si_alt.csv"))
+dual_cue.df2 <- dual_cue.df %>% 
+  left_join(cue_range_alt, by = c("Var1" = "id")) %>% 
+  left_join(select(cue_range_alt, cue_b = cue, log_b = log, low_b = low, high_b = high, by_b = by, id_b = id, label_b = label), by = c("Var2" = "id_b"))
+```
+
+# optimization function with test
+```{r}
+te_test <- function(df){
+  # process cues
+  cue <- df$cue
+  cue_b <- df$cue_b
+  
+  # process log
+  log <- ifelse(str_detect("log", df$log), "log10", "none")
+  log_b <- ifelse(str_detect("log", df$log_b), "log10", "none")
+  
+  # process cue_range. cannot use by to ensure that both cue ranges are of the same length
+  cue_range <- seq(df$low, df$high, length.out = 500)
+  cue_range_b <- seq(df$low_b, df$high_b, length.out = 500)
+  
+  # optimization
+  cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  
+  # start optimization LFBGS with inital value of 0.5x5
+  res <- optimParallel(
+    par = rep(0.5, 9),
+    fn = test, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, 0.01),
+    cue = cue,
+    cue_b = cue_b,
+    cue_range = cue_range,
+    cue_range_b = cue_range_b,
+    log_cue = log,
+    log_cue_b = log_b,
+    solver = "vode")
+
+  
+
+  # close cluster
+  stopCluster(cl)
+  
+  # get model output
+  fitness <- res$value ## fitness difference between mutant and residence
+  par <- res$par ## optimized parameters of mutant
+  
+  # produce output
+  output <- cbind.data.frame(id = df$Var1, id_b = df$Var2, 
+                             label = df$label, label_b = df$label_b,
+                             fitness = fitness,
+                             par1 = par[1], par2 = par[2], par3 = par[3], par4 = par[4], par5 = par[5])
+  
+  write.csv(output, here(paste0("data/test/", df$Var1, "_", df$Var2, ".csv")))
+  return(output)
+  
+}
+```
+
+# check first set using L-BFGS optimization very minimum improvement lol. optimizer does not move very far
+```{r}
+te_test(dual_cue.df2[1,])
+```
+
+# trying partical swarming
+```{r}
+ppso_test <- function(df){
+  # process cues
+  cue <- df$cue
+  cue_b <- df$cue_b
+  
+  # process log
+  log <- ifelse(str_detect("log", df$log), "log10", "none")
+  log_b <- ifelse(str_detect("log", df$log_b), "log10", "none")
+  
+  # process cue_range. cannot use by to ensure that both cue ranges are of the same length
+  cue_range <- seq(df$low, df$high, length.out = 500)
+  cue_range_b <- seq(df$low_b, df$high_b, length.out = 500)
+  
+  # start optimization LFBGS with inital value of 0.5x5
+  res <- ppso::optim_dds(
+    max_number_function_calls=1000,
+    objective_function = test, 
+    number_of_parameters = 9,
+    initial_estimates = rep(0.5, 5),
+    parameter_bounds = cbind(c(-1, rep(-500, 4)), c(1, rep(500, 4))),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, 0.01),
+    cue = cue,
+    cue_b = cue_b,
+    cue_range = cue_range,
+    cue_range_b = cue_range_b,
+    log_cue = log,
+    log_cue_b = log_b,
+    solver = "vode",
+    neg = T)
+  
+  # get model output
+  fitness <- res$value ## fitness difference between mutant and residence
+  par <- res$par ## optimized parameters of mutant
+  
+  # produce output
+  output <- cbind.data.frame(id = df$Var1, id_b = df$Var2, 
+                             label = df$label, label_b = df$label_b,
+                             fitness = fitness,
+                             par1 = par[1], par2 = par[2], par3 = par[3], par4 = par[4], par5 = par[5])
+  
+  write.csv(output, here(paste0("data/test/", df$Var1, "_", df$Var2, ".csv")))
+  return(output)
+  
+}
+```
+
+# dds with 500 max iterations (te full interations) gives highest fitness of 7.63. Not bad but also not great! 
+
+# Here, let's try out just ti and see whether that improves stuff. Doing ppso with 1000 max iterations. pretty band at 2.28
+```{r}
+ppso_test(dual_cue.df2[1,])
+```
+
+
+# bound determination for te
+
+```{r}
+# list of values to expand bounds on
+bounds <- c(-50000, -10000, -5000, -1000, -500, -100, -10, -1, 1, 100, 1000, 500, 5000, 10000, 50000)
+bounds.df <- expand.grid(par = bounds, index = seq(1,9,1))
+
+# cycle to get all combinations of 5 parameters with these substituted in
+par.ls <- lapply(split(bounds.df, seq(nrow(bounds.df))), function(x){
+  # default pardameter list with 5x0.5
+  par <- rep(0.5, 9)
+  #A substitute in the bounds
+  par[[x$index]] <- x$par
+  return(data.frame(
+    par1 = par[[1]],
+    par2 = par[[2]],
+    par3 = par[[3]],
+    par4 = par[[4]],
+    par5 = par[[5]],
+    par6 = par[[6]],
+    par7 = par[[7]],
+    par8 = par[[8]],
+    par9 = par[[9]],
+    id = paste0(x$index, "_", x$par)))
+})
+
+par.df <- do.call(rbind, par.ls)
+
+
+# make graphs
+source(here("functions/par_to_hm_te.R"))
+
+# get heatmap dataframe for all par
+par_res.ls <- mclapply(par.ls,
+                     function(x){
+                       res <- par_to_hm_te(par = c(x$par1, x$par2, x$par3, x$par4, x$par5, x$par6, x$par7, x$par8, x$par9),
+                                 cue_range = seq(1, 100, 1),
+                                 cue_range_b = seq(1, 100, 1))
+                       res2 <- cbind(id = x$id, res)
+                       return(res2)
+                     }
+)
+par_res.df <- do.call(rbind, par_res.ls)
+
+# divide into 5 parameters
+par_res.df1 <- par_res.df %>% filter(str_detect(id, "1_"))
+par_res.df2 <- par_res.df %>% filter(str_detect(id, "2_"))
+par_res.df3 <- par_res.df %>% filter(str_detect(id, "3_"))
+par_res.df4 <- par_res.df %>% filter(str_detect(id, "4_"))
+par_res.df5 <- par_res.df %>% filter(str_detect(id, "5_"))
+par_res.df6 <- par_res.df %>% filter(str_detect(id, "6_"))
+par_res.df7 <- par_res.df %>% filter(str_detect(id, "7_"))
+par_res.df8 <- par_res.df %>% filter(str_detect(id, "8_"))
+par_res.df9 <- par_res.df %>% filter(str_detect(id, "9_"))
+
+# par 1. -1 and 1 is sufficient
+ggplot() +
+  geom_raster(data = par_res.df1, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+# par2. -500 and 500 is sufficient
+ggplot() +
+  geom_raster(data = par_res.df2, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+# par 3 -500 and 500 is sufficient
+ggplot() +
+  geom_raster(data = par_res.df3, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+# par 4 -500 and 500 is sufficient
+ggplot() +
+  geom_raster(data = par_res.df4, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+# par 5. -500 and 500 is sufficient
+ggplot() +
+  geom_raster(data = par_res.df5, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+ggplot() +
+  geom_raster(data = par_res.df6, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+ggplot() +
+  geom_raster(data = par_res.df7, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+ggplot() +
+  geom_raster(data = par_res.df8, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+ggplot() +
+  geom_raster(data = par_res.df9, aes(x = cue_range, y = cue_range_b, fill = cr)) +
+  facet_wrap(~id)
+
+```
+
+
+
+
+
+
+
