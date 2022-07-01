@@ -1,7 +1,7 @@
 #-----------------------#
 # Newest iteration of single infection model of Plasmodium chabaudi
 # Avril Wang
-# Last edited 2022-06-12
+# Last edited 2022-06-22 
 # dual cue cable
 #-----------------------#
 
@@ -22,7 +22,8 @@ test <- function(
   cue_range_b = "none", # if second cue is used, the range of cue that parasite use to adjust conversion rate to
   log_cue_b = "none",  # whether to log10 transform cue_b
   dyn = FALSE, # whether the function should return simulation dynamics rather than fitness
-  neg = FALSE # set to TRUE if using minimization function
+  neg = FALSE, # set to TRUE if using minimization function
+  gam = "te" # set the gam model for dual cue. te = tensor interactions + main effect. ti = tensor interactions only
 ){
   
   #----------------------#
@@ -44,6 +45,8 @@ test <- function(
   force(cue_range_b)
   force(log_cue_b)
   force(dyn)
+  force(neg)
+  force(gam)
   
   #----------------------#
   # Quality checks
@@ -80,6 +83,11 @@ test <- function(
   ## Checking drug administration conditions
   if(drug > 0 && drug_admin < 0){
     stop("Drug administration date must be above 0!")
+  }
+  
+  ## check ga model
+  if(gam != "te" & gam != "ti"){
+    stop("Gam model must be either te or ti")
   }
   
   #----------------------#
@@ -168,9 +176,17 @@ test <- function(
     ## put together df
     dummy_df <- data.frame(cue_range, cue_range_b, dummy_y)
     ## gam model
-    dummy_cr.mod <- mgcv::gam(dummy_y ~ te(cue_range, cue_range_b, 
-                                           k = c(3,3)), 
-                              data = dummy_df)
+    if(gam == "te"){ # note that te include tensor full interactions and main effects. Need 9 coefficients
+      dummy_cr.mod <- mgcv::gam(dummy_y ~ te(cue_range, cue_range_b, 
+                                             k = c(3,3)), 
+                                data = dummy_df)
+    }
+    
+    if(gam == "ti"){ # note that ti includes only tensor interactions and NO main effects. Need 5 coefficeints.
+      dummy_cr.mod <- mgcv::gam(dummy_y ~ ti(cue_range, cue_range_b, 
+                                             k = c(3,3)), 
+                                data = dummy_df)
+    }
     ## assign parameters
     dummy_cr.mod$coefficients <- parameters_cr
     
@@ -307,8 +323,13 @@ test <- function(
       if(stringr::str_detect(cue, "\\+")){ 
         #### for cue 1 day ago
         if(t>alpha+delay && cue != "t"){
-          cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]] #### add first cue to second cue
-          if(cue_b != "none"){cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]}
+          cue_lag1 <- sum(lag1[lag.i[1]], lag1[lag.i[2]], na.rm = T)
+          #cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]] #### add first cue to second cue
+          if(cue_b != "none"){
+            cue_lag1_b <- sum(lag1[lag.i_b[1]], lag1[lag.i_b[2]], na.rm = T)
+            #cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]
+            
+            }
         }
       }
     }
