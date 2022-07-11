@@ -22,11 +22,41 @@ library(ggpubr)
 library(ppso)
 library(Rmpi)
 library(ggrepel)
+library(forcats)
 
 source(here("functions/chabaudi_si_clean.R"))
 
 # importing in test function that contains full main effect interation
 source(here("functions/test.R"))
+```
+
+```{r}
+parameters_tsukushi <- c(R1 = 8.89*(10^6), # slightly higher
+                lambda = 3.7*(10^5),
+                mu = 0.025, 
+                p = 8*(10^-6), # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+
+I_range_none <- seq(0, 6*(10^6), by = (6*(10^6))/500)
+I_range_log <- seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/500)
+G_range_none <- seq(0, 6*(10^4), by = (6*(10^4))/500)
+G_range_log <- seq(0, log10(6*(10^4)), by = (log10(6*(10^4)))/500)
+R_range_log <- seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000)
 ```
 
 #------------------------------------------#
@@ -788,7 +818,7 @@ dual_20_fitness.pl <- ggplot() +
   geom_point(data = dual_si_20.fitness, aes(y = forcats::fct_reorder(dual_label, value), x = si_fitness_max, color= "Best single cue"), size = 2.5, alpha = 0.7) +
   labs(x = "Fitness (20 days)", y = "Dual cue", color = "Cue") +
   scale_color_manual(values=c("#fc8d59", "#4575b4")) +
-  geom_vline(xintercept = 9.787899) +
+  geom_vline(xintercept = 9.883602) +
   theme_bw()
 ```
 #--------------------------------#
@@ -797,8 +827,84 @@ dual_20_fitness.pl <- ggplot() +
 We see that dual cue performed better than single cue. One can argue that the higher amount of coefficients we allow in the model is what accounts for the higher fitness (higher flexibility) in conversion rate shape and form.
 
 Hence, we should perform optimization of high performing single cue model using a high degree of spline flexibility (k = 8 for 9 coefficients).
-```{r}
 
+For many of the cues, increasing number of parameter coefficients to 9 led to an increase in fitness that makes them comparable to the dual cue. However, the exception is R log vs I log where none of the cue can come close to it (except when we optimize with regards to time).
+```{r}
+# get functions that allow higher spline flexibility
+source(here("functions/chabaudi_si_clean_high.R"))
+
+# I+Ig log with higher amount flexibility
+# 9.634148 
+# 1.6063738  6.8276921 11.7133803  4.0752217 -7.9723275 -7.1263479  2.9175874 -0.9805917 -5.6119974
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+I_Ig_high.opt <- optimParallel(
+    par = rep(0.5,9), # start at 0.5x4
+    fn = chabaudi_si_clean_high, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+    cue = "Ig+I",
+    log_cue = "log10",
+    solver = "vode",
+    k = 8)
+stopCluster(cl)
+
+
+# I log
+# 9.517763 
+# 1.296675  3.544034  4.907484  2.174249 -3.238309 -5.181614 -1.645072  1.834302  1.581011
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+I_high.opt <- optimParallel(
+    par = rep(0.5,9), # start at 0.5x4
+    fn = chabaudi_si_clean_high, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+    cue = "I",
+    log_cue = "log10",
+    solver = "vode",
+    k = 8)
+stopCluster(cl)
+
+# Ig log
+# 2.008560 -3.284691 -6.122977 -2.641527  2.254999 -4.656014 -7.612234  2.092484  5.665307
+# 9.693066
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+Ig_high.opt <- optimParallel(
+    par = rep(0.5,9), # start at 0.5x4
+    fn = chabaudi_si_clean_high, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+    cue = "Ig",
+    log_cue = "log10",
+    solver = "vode",
+    k = 8)
+stopCluster(cl)
+
+# G log
+# 1.5255085 -6.1534877 -0.4957473 -1.0672087 -0.9055635 -2.8081859 -5.0503345 -1.5444946 2.6449283
+# 9.631911
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+G_high.opt <- optimParallel(
+    par = rep(0.5,9), # start at 0.5x4
+    fn = chabaudi_si_clean_high, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  seq(0, log10(6*(10^4)), by = (log10(6*(10^4)))/5000),
+    cue = "G",
+    log_cue = "log10",
+    solver = "vode",
+    k = 8)
+stopCluster(cl)
 ```
 
 
@@ -822,7 +928,7 @@ dual.cr <- lapply(dual_dyn.ls2,
 )
 ```
 
-# get perfect dynamic (time series optimization)
+# get perfect dynamic (time as cue optimization)
 ```{r}
 ## perfect dynamic when parasite can sense time
 ## 20 days
@@ -871,9 +977,72 @@ time_30.cr <- optimParallel(
     cue = "t",
     solver = "vode")
 stopCluster(cl)
+
+## using higher spline flexibility. k = 8 to take 9 parameters
+# $par 9.154314  -7.570829 -22.506638   3.382405 -13.453519 -17.011485   3.678181 -12.851895 -26.115158
+# 9.883602
+source(here("functions/chabaudi_si_clean_high.R"))
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+time_high.cr <- optimParallel(
+    par = rep(0.5,9), # start at 0.5x4
+    fn = chabaudi_si_clean_high, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  seq(0, 20, by = 1e-3),
+    cue = "t",
+    solver = "vode")
+stopCluster(cl)
+
+# get time series conversion rate dynamics
+## 20 days
+time_20.cr <- chabaudi_si_clean_high(
+  parameters_cr = c(9.154314,  -7.570829, -22.506638 ,  3.382405 ,-13.453519 ,-17.011485  , 3.678181, -12.851895 ,-26.115158),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(0, 20, by = 1e-3),
+  cue = "t",
+  solver = "vode",
+  dyn = T)
+
+## 30 days
+time_30.cr <- chabaudi_si_clean(
+  parameters_cr = c(1.352203, -5.776961,  2.321642, -3.720546),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 30, by = 1e-3),
+  cue_range =  seq(0, 30, by = 1e-3),
+  cue = "t",
+  solver = "vode",
+  dyn = T)
+
+## process to match
+time_20.cr2 <- time_20.cr %>% filter(variable == "cr") %>% mutate(label_new = "Time") %>% select(-variable)
+
+time_30.cr2 <- time_30.cr %>% filter(variable == "cr") %>% mutate(label_new = "Time") %>% select(-variable)
 ```
 
+# get dynamics of I log with more parameters
+## control for parameter coefficients
+```{r}
+I_high_20.cr <- chabaudi_si_clean_high(
+  parameters_cr = c(1.296675,  3.544034 , 4.907484,  2.174249, -3.238309 ,-5.181614 ,-1.645072 , 1.834302 , 1.581011),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+  cue = "I",
+  log_cue = "log10",
+  solver = "vode",
+  dyn = T)
 
+# process
+I_high_20.cr2 <- I_high_20.cr %>% filter(variable == "cr") %>% mutate(label_new = "I log high") %>% select(-variable)
+```
+
+# get dual cue and single cue dynamics
 ```{r}
 ## keep only top 1 fir each. 
 dual.cr2 <- do.call(rbind, dual.cr)
@@ -893,18 +1062,31 @@ dual_single.cr <- left_join(select(dual.cr3, dual_label, time, dual_cr = value),
 dual_single.cr2 <- tidyr::pivot_longer(dual_single.cr, cols = c("dual_cr", "single_cr")) %>% 
   mutate(label_new = ifelse(name == "dual_cr", dual_label, max_si_label),
          status = ifelse(dual_label == "G log + Ig log", "Best 30 days dual cue", "Best 20 days dual cue")) 
+
+# filter out the 20 days and 30 days
+dual_single_cr.20 <- dual_single.cr2 %>% 
+  filter(status == "Best 20 days dual cue") %>% 
+  select(time, label_new, value) %>% 
+  rbind(time_20.cr2, I_high_20.cr2) %>% 
+  mutate(label_new2 = case_when(
+    label_new == "R log + I log" ~ "RBC logged + asexual iRBC log10",
+    label_new == "I log" ~ "Asexual iRBC log10",
+    label_new == "Time" ~ "Time",
+    label_new == "I log high" ~ "Asexual iRBC log10 flexible"
+  ))
 ```
 
-# plot
+# plot time series conversion rate
 ```{r}
-dual_cue_cr.pl <- ggplot() +
-  geom_raster(data = dual_single.cr2, aes(y = forcats::fct_reorder(label_new, desc(name)), x = time, fill = value)) +
-  facet_wrap(~status, scales="free_y", drop = T, ncol = 1) +
-  viridis::scale_fill_viridis() +
-  labs(x = "Time (days)", y = "Cue", fill = "Conversion rate") +
-  xlim(0, 30) +
-  geom_vline(xintercept = 20, linetype = "dashed", color = "white") +
-  theme_bw()
+# 20 days
+dual_time_cr.pl <- ggplot() +
+  geom_line(data = dual_single_cr.20, aes(color =label_new2, x = time, y = value), size = 1) +
+  labs(x = "Time (days)", y = "Conversion rate", color = "Cue") +
+  xlim(0, 20) +
+  scale_color_manual(values = c("#4575b4", "#91bfdb","#fc8d59","#fdcb44")) +
+  theme_bw() +
+  theme(legend.position="bottom") +
+  guides(color = guide_legend(nrow = 2, byrow = TRUE))
 ```
 
 #--------------------------#
@@ -918,16 +1100,12 @@ R_I.hm <- par_to_hm_te(par = c(4.446192033,	10.97518275,	1.38762817,	23.3059254,
              cue_range = seq(6,	7, length.out = 500),
              cue_range_b = seq(0,	6.77815125, length.out = 500))
 
-G_Ig.hm <- par_to_hm_te(par = c(-1.312294697,	2.094299766,	-1.689864192,	-4.919117113,	-3.484571178,	5.158615538,	1.527106132,	0.558741867,	0.344393572),
-             cue_range = seq(0,	4.77815125, length.out = 500),
-             cue_range_b = seq(0,	6.77815125, length.out = 500))
-
 # get dynamics
 dual.dyn <- lapply(dual_dyn.ls2,
   function(x){
   # rename column
   names(x) <- c("id", "id_b", "label", "label_b", "cue", "cue_b", "time","variable", "value")
-  df <- x %>% filter(variable %in% c("R", "I", "Ig", "G"))
+  df <- x %>% filter(variable %in% c("R", "I"))
   return(df)}
 )
 
@@ -936,22 +1114,419 @@ dual.dyn2 <- do.call(rbind, dual.dyn)
 ## R_I dynamics
 R_I.dyn <- dual.dyn2 %>% 
   filter(label == "R log" & label_b == "I log") %>% 
-  tidyr::pivot_wider(id_cols = time)
+  tidyr::pivot_wider(names_from = variable, values_from = value) %>% 
+  mutate(log_R = log10(R),
+         log_I = log10(I))
   
 # plot
 ## 20 days best cue
-R_I.hm
-ggplot() +
-  geom_raster(data = R_I.hm, aes(x = cue_range, y = cue_range_b, fill = cr)) +
-  theme_bw()
-
-
+ri_hm.pl <- ggplot() +
+  geom_raster(data = R_I.hm, aes(x = cue_range_b, y = cue_range, fill = cr)) +
+  scale_fill_viridis_c() +
+  geom_path(data = R_I.dyn, aes(x = log_I, y = log_R), color = "white", arrow = arrow(angle = 30, length = unit(0.1, "inches"))) +
+  geom_point(data = R_I.dyn %>% filter(row_number() %% 1000 == 1 & time <= 20), aes(x = log_I, y = log_R), color = "white") +
+  xlim(0.99*min(hablar::s(R_I.dyn$log_I), na.rm = T), 1.01* max(hablar::s(R_I.dyn$log_I), na.rm = T)) +
+  ylim(0.99*min(hablar::s(R_I.dyn$log_R), na.rm = T),1.01* max(hablar::s(R_I.dyn$log_R), na.rm = T)) +
+  labs(y = "RBC log10", x = "Asexual iRBC log10", fill = "Conversion rate") +
+  theme_dark()
 ```
 
 
+#--------- assemble final figure---------#
+```{r}
+cr_hm.pl <- ggarrange(dual_time_cr.pl, ri_hm.pl, ncol = 1, labels = c("B", "C"))
 
- 
- 
+ggarrange(dual_20_fitness.pl, cr_hm.pl, ncol = 2, labels = c("A", ""))
+ggsave(here("figures/report22/dual_cue_final.png"), width = 11, height = 7)
+```
+
+
+#--------------------------------------#
+# Malaria dynamics figure
+#--------------------------------------#
+This figure contains the disease curve and tried to give readers a sense of the consequences of adopting good cues and bad cues. What are the consequences for parasite virulence? What sort of differential response is responsible for parasite dynamics difference (immunity, RBC limitation...)
+
+#------- getting drivers of best cue -----------#
+to get why some cues are better than others, assessing time series conversion rate and dynamics is one thing. To truely see how parasites are doing better, we have to look at how parasites are addressing the threats it is facing. These include 
+1) targetted immunity
+2) indiscriminant immunity
+3) RBC limitation
+
+# Sanity checking all new scripts 
+```{r}
+# RBC is constant
+source(here("functions/chabaudi_si_clean_R.R"))
+## running random dynamic. R should be constant! Everything checks out
+R_sc <- chabaudi_si_clean_R(
+  parameters_cr = rep(0.5, 4),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  R_range_log,
+  cue = "R",
+  log_cue = "log10",
+  solver = "vode",
+  dyn = T)
+
+ggplot() +
+  geom_line(data = R_sc, aes(x = time, y = value)) +
+  facet_wrap(~variable, scales = "free")
+
+# no indiscriminant immunity 
+source(here("functions/chabaudi_si_clean_N.R"))
+N_sc <- chabaudi_si_clean_N(
+  parameters_cr = rep(0.5, 4),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  R_range_log,
+  cue = "R",
+  log_cue = "log10",
+  solver = "vode",
+  dyn = T)
+
+ggplot() +
+  geom_line(data = N_sc, aes(x = time, y = value)) +
+  facet_wrap(~variable, scales = "free")
+
+# no targeted immunity
+source(here("functions/chabaudi_si_clean_W.R"))
+W_sc <- chabaudi_si_clean_W(
+  parameters_cr = rep(0.5, 4),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  R_range_log,
+  cue = "R",
+  log_cue = "log10",
+  solver = "vode",
+  dyn = T)
+
+ggplot() +
+  geom_line(data = W_sc, aes(x = time, y = value)) +
+  facet_wrap(~variable, scales = "free")
+
+
+# no targeted and indiscriminant immunity
+source(here("functions/chabaudi_si_clean_NW.R"))
+NW_sc <- chabaudi_si_clean_NW(
+  parameters_cr = rep(0.5, 4),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  R_range_log,
+  cue = "R",
+  log_cue = "log10",
+  solver = "vode",
+  dyn = T)
+
+ggplot() +
+  geom_line(data = W_sc, aes(x = time, y = value, color = "W")) +
+  geom_line(data = NW_sc, aes(x = time, y = value, color = "NW")) +
+  facet_wrap(~variable, scales = "free")
+```
+
+#---------- single infection -----------#
+Note: all calculations done for 20 days optimization
+
+# single infection function
+```{r}
+partition_si <- function(df){
+  # source all functions
+  source(here("functions/chabaudi_si_clean.R"))
+  source(here("functions/chabaudi_si_clean_R.R"))
+  source(here("functions/chabaudi_si_clean_N.R"))
+  source(here("functions/chabaudi_si_clean_W.R"))
+  source(here("functions/chabaudi_si_clean_NW.R"))
+  
+  # get parameters
+  parameters_tsukushi <- c(R1 = 8.89*(10^6), # slightly higher
+                lambda = 3.7*(10^5),
+                mu = 0.025, 
+                p = 8*(10^-6), # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+  
+  # get all characteristics
+  cue <- df$cue
+  log <- ifelse(df$log == "log", "log10", "none")
+  par <- c(df$var1, df$var2, df$var3, df$var4)
+  cue_range <- seq(df$low, df$high, by = df$by)
+  id <- df$id
+  
+  # run simulation with default function
+  default <- chabaudi_si_clean(
+  parameters_cr = par,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  cue_range,
+  cue = cue,
+  log_cue = log,
+  solver = "vode")
+  
+  # run simulation with static RBC
+  static_R <- chabaudi_si_clean_R(
+  parameters_cr = par,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  cue_range,
+  cue = cue,
+  log_cue = log,
+  solver = "vode")
+  
+  # run simulation with no indiscriminant immunity (N)
+  no_N <- chabaudi_si_clean_N(
+  parameters_cr = par,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  cue_range,
+  cue = cue,
+  log_cue = log,
+  solver = "vode")
+  
+  # run simulation with no targeted immunity (W)
+  no_W <- chabaudi_si_clean_W(
+  parameters_cr = par,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  cue_range,
+  cue = cue,
+  log_cue = log,
+  solver = "vode")
+  
+  # runs imulation with no indiscriminant and targeted immunity
+  no_NW <- chabaudi_si_clean_NW(
+  parameters_cr = par,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  cue_range,
+  cue = cue,
+  log_cue = log,
+  solver = "vode")
+  
+  # join together all data
+  res <- cbind(id = id,
+               cue = cue,
+               log = log,
+               fitness = as.numeric(default),
+               fitness_R = as.numeric(static_R),
+               fitness_N = as.numeric(no_N),
+               fitness_W = as.numeric(no_W),
+               fitness_NW = as.numeric(no_NW))
+  
+  return(res)
+}
+  
+```
+
+# run single infection function
+```{r}
+# import in optimized df
+si_opt.df <- read.csv(here("data/si_opt.csv"))
+
+# join with cue_range
+cue_range_si.df <- read.csv(here("data/cue_range_si.csv"))
+si_opt.df <- si_opt.df %>% left_join(select(cue_range_si.df, low, high, by, id), "id")
+
+# mclapply loop
+si_opt.ls <- split(si_opt.df, seq(nrow(si_opt.df)))
+partition_si.res <- mclapply(si_opt.ls, partition_si, mc.cores = 5)
+
+# save results
+partition_si.df <- as.data.frame(do.call(rbind, partition_si.res))
+write.csv(partition_si.df, here("data/partition/si_partition.csv"))
+```
+
+# analyze
+Unexpected results. higher cv when we remove these constraints. Some strategies even suffered when we kept RBC constant! Might need to optimize
+```{r}
+partition_si.df2 <- partition_si.df %>% 
+  tidyr::pivot_longer(cols = -c(id, cue, log), names_to = "fitness_status") %>% 
+  mutate(value = as.numeric(value))
+
+partition_si.df2 <- partition_si.df2 %>% left_join(select(partition_si.df, id, fitness), by = "id")
+
+ggplot() +
+  geom_point(data = partition_si.df2, aes(y = fct_reorder(id, fitness), x = value, color = fitness_status)) +
+  theme_bw()
+```
+
+#-------------------------------------#
+# optimization to partition what makes a cue goood
+#-------------------------------------#
+# preliminary testing with the best cue and the worst cue for single infection.
+# previously, we have a difference of 1.4. Now we have a difference of 1. Maybe smaller? So targeted immunity. Overall, this approach is promising
+```{r}
+# 12.063539 
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+Ig_log_W.opt <- optimParallel(
+    par = rep(0.5,4), # start at 0.5x4
+    fn = chabaudi_si_clean_W, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  I_range_log,
+    cue = "Ig",
+    log_cue = "log10",
+    solver = "vode")
+stopCluster(cl)
+
+# 11.059974 
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+R_log_W.opt <- optimParallel(
+    par = rep(0.5,4), # start at 0.5x4
+    fn = chabaudi_si_clean_W, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  R_range_log,
+    cue = "R",
+    log_cue = "log10",
+    solver = "vode")
+stopCluster(cl)
+
+R_log_W.opt$value
+```
+
+# function to run optimization using 3 different functions (staticR, no N, and noW)
+```{r}
+partition_si <- function(df){
+  # source all functions
+  source(here("functions/chabaudi_si_clean.R"))
+  source(here("functions/chabaudi_si_clean_R.R"))
+  source(here("functions/chabaudi_si_clean_N.R"))
+  source(here("functions/chabaudi_si_clean_W.R"))
+  
+  # get parameters
+  parameters_tsukushi <- c(R1 = 8.89*(10^6), # slightly higher
+                lambda = 3.7*(10^5),
+                mu = 0.025, 
+                p = 8*(10^-6), # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+  
+  # get all characteristics
+  cue <- df$cue
+  log <- ifelse(df$log == "log", "log10", "none")
+  cue_range <- seq(df$low, df$high, by = df$by)
+  id <- df$id
+  
+  # run optimization with static RBC
+  cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  static_R <- optimParallel(
+    par = rep(0.5,4), # start at 0.5x4
+    fn = chabaudi_si_clean_R, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  cue_range,
+    cue = cue,
+    log_cue = log,
+    solver = "vode")
+
+  
+  # run optimization with no indiscriminant immunity
+  no_N <- optimParallel(
+    par = rep(0.5,4), # start at 0.5x4
+    fn = chabaudi_si_clean_N, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  cue_range,
+    cue = cue,
+    log_cue = log,
+    solver = "vode")
+  
+  # run simulation with no targeted immunity (W)
+  no_W <- optimParallel(
+    par = rep(0.5,4), # start at 0.5x4
+    fn = chabaudi_si_clean_W, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  cue_range,
+    cue = cue,
+    log_cue = log,
+    solver = "vode")
+  
+  stopCluster(cl)
+  
+  # join together all data
+  res <- cbind(id = id,
+               cue = cue,
+               log = log,
+               fitness_R = static_R$value,
+               fitness_N = no_N$value,
+               fitness_W = no_W$value,
+               var_R1 = static_R$par[[1]],
+               var_R2 = static_R$par[[2]], 
+               var_R3 = static_R$par[[3]],
+               var_R4 = static_R$par[[4]],
+               var_N1 = no_N$par[[1]],
+               var_N2 = no_N$par[[2]], 
+               var_N3 = no_N$par[[3]],
+               var_N4 = no_N$par[[4]],
+               var_W1 = no_W$par[[1]],
+               var_W2 = no_W$par[[2]], 
+               var_W3 = no_W$par[[3]],
+               var_W4 = no_W$par[[4]])
+  
+  write.csv(res, paste0(here("data/partition/si/"), id, "_partition.csv"))
+}
+```
+
+# run function
+```{r}
+# import in optimized df
+si_opt.df <- read.csv(here("data/si_opt.csv"))
+
+# join with cue_range
+cue_range_si.df <- read.csv(here("data/cue_range_si.csv"))
+si_opt.df <- si_opt.df %>% left_join(select(cue_range_si.df, low, high, by, id), "id")
+
+# lapply loop
+si_opt.ls <- split(si_opt.df, seq(nrow(si_opt.df)))
+lapply(si_opt.ls, partition_si)
+
+```
 
 
 
