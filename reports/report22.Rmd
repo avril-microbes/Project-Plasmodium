@@ -1528,6 +1528,140 @@ lapply(si_opt.ls, partition_si)
 
 ```
 
+#-----------------------------------------#
+# partition co-infection
+#-----------------------------------------#
+```{r}
+partition_ci <- function(df){
+  # get info
+  limit <- 0.01
+  time_range <- seq(0, 20, 1e-3)
+  cue_1 <- df$cue_1
+  cue_2 <- df$cue_2
+  log <- ifelse(df$log == "log", "log10", "none")
+  cue_range <- seq(df$low, df$high, by = df$by)
+  
+# perform optimization
+## no R
+  res_R <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+    limit = limit,
+    model = chabaudi_ci_clean_R,
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = time_range,
+    cue_1 = cue_1,
+    cue_2 = cue_2,
+    cue_range_1 = cue_range,
+    cue_range_2 = cue_range,
+    solver = "vode",
+    log_cue_1 = log,
+    log_cue_2 = log)
+  
+  return(list(res_R))
+  
+## no N
+  res_N <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+    limit = limit,
+    model = chabaudi_ci_clean_N,
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = time_range,
+    cue_1 = cue_1,
+    cue_2 = cue_2,
+    cue_range_1 = cue_range,
+    cue_range_2 = cue_range,
+    solver = "vode",
+    log_cue_1 = log,
+    log_cue_2 = log)
+  
+## no W
+  res_W <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+    limit = limit,
+    model = chabaudi_ci_clean_W,
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = time_range,
+    cue_1 = cue_1,
+    cue_2 = cue_2,
+    cue_range_1 = cue_range,
+    cue_range_2 = cue_range,
+    solver = "vode",
+    log_cue_1 = log,
+    log_cue_2 = log)
+  
+  stopCluster(cl)
+  
+  # get results
+  ## get last index
+  index_R <- length(unlist(res_R))/10
+  index_N <- length(unlist(res_N))/10
+  index_W <- length(unlist(res_W))/10
+  
+  ## get actual results from last iteration
+  res_R2 <- unlist(res_R[[1]][[index_R+1]])
+  res_N2 <- unlist(res_N[[1]][[index_N+1]])
+  res_W2 <- unlist(res_W[[1]][[index_W+1]])
+  
+  # reorganize results
+  res_R3 <- cbind(status = "static_R",
+                  var1 = res_R2[2],
+                  var2 = res_R2[3],
+                  var3 = res_R2[4],
+                  var4 = res_R2[5])
+  
+  res_N3 <- cbind(status = "no_N",
+                  var1 = res_N2[2],
+                  var2 = res_N2[3],
+                  var3 = res_N2[4],
+                  var4 = res_N2[5])
+                  
+  res_W3 <- cbind(status = "no_W",
+                  var1 = res_W2[2],
+                  var2 = res_W2[3],
+                  var3 = res_W2[4],
+                  var4 = res_W2[5])
+  
+  # cat results
+  res_final <- rbind(res_R3, res_N3, res_W3)
+  write.csv(res_final, paste0(here("data/partition/ci/"), df$id, "_partition.csv"))
+  
+}
+
+```
+
+# run function
+```{r}
+#import in all functions
+source(here("functions/chabaudi_ci_clean_R.R"))
+source(here("functions/chabaudi_ci_clean_N.R"))
+source(here("functions/chabaudi_ci_clean_W.R"))
+source(here("functions/co_infection_opt_alt.R"))
+
+# import in ci opt
+ci_opt.df <- read.csv(here("data/ci_opt.csv"))
+
+# left join with cue range
+cue_range_ci.df <- read.csv(here("data/cue_range_ci.csv"))
+ci_opt.df <- ci_opt.df %>% left_join(select(cue_range_ci.df, low, high, by, id), "id")
+
+# test
+test <- partition_ci(ci_opt.df[1,])
+length(lapply(test, unlist))
+n <- length(unlist(test))/10
+
+test2 <- unlist(test[[1]][[n+1]])
+test3 <- cbind(status = "no_W",
+                  var1 = test2[2],
+                  var2 = test2[3],
+                  var3 = test2[4],
+                  var4 = test2[5])
+
+ci_opt.df[1,]
+
+paste0(here("data/partition/ci/"), "I-i_none", ".csv")
+```
+
+
 
 
 
