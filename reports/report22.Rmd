@@ -1701,7 +1701,7 @@ partition_dual <- function(df){
   log <- ifelse(df$log == "log", "log10", "none")
   log_b <- ifelse(df$log_b == "log", "log10", "none")
   cue_range <- seq(df$low, df$high, length.out = 500)
-  cue_range_b <- seq(df$low_b, length.out = 500)
+  cue_range_b <- seq(df$low_b, df$high_b, length.out = 500)
   id <- df$id
   id_b <- df$id_b
   
@@ -1801,7 +1801,37 @@ partition_dual <- function(df){
   write.csv(res, paste0(here("data/partition/dual/"), id, "_", id_b, "_partition.csv"))
 }
 ```
+
+# get running df
+```{r}
+si_opt.csv <- read.csv(here("data/si_opt.csv"))
+
+#W get all unique combinations but eliminating all combinations that uses the same cue
+dual_cue.df <- expand.grid(si_opt.csv$id, si_opt.csv$id) %>% 
+  filter(Var1 != Var2) %>% 
+  left_join(select(si_opt.csv, cue1 = cue, id), by = c("Var1" = "id")) %>% 
+  left_join(select(si_opt.csv, cue2 = cue, id), by = c("Var2" = "id")) %>% 
+  filter(cue1 != cue2) %>% 
+  mutate(temp = paste(pmin(Var1, Var2), pmax(Var1, Var2))) %>% 
+  distinct(temp, .keep_all = T) # get rid of the same cue combination but just in different orders
+
+
+# get cue range (500 divisons)
+cue_range_alt <- read.csv(here("data/cue_range_si_alt.csv"))
+dual_cue.df2 <- dual_cue.df %>% 
+  left_join(cue_range_alt, by = c("Var1" = "id")) %>% 
+  left_join(select(cue_range_alt, cue_b = cue, log_b = log, low_b = low, high_b = high, by_b = by, id_b = id, label_b = label), by = c("Var2" = "id_b"))
+
+dual_cue.ls <- split(dual_cue.df2, seq(nrow(dual_cue.df2)))
 ```
+
+ # run function
+```{r}
+
+```
+
+
+
 
 
 
