@@ -1827,7 +1827,7 @@ dual_cue.ls <- split(dual_cue.df2, seq(nrow(dual_cue.df2)))
 
  # run function
 ```{r}
-
+lapply(dual_cue.ls, partition_dual)
 ```
 
 
