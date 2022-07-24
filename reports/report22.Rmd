@@ -1661,12 +1661,147 @@ ci_opt.df[1,]
 paste0(here("data/partition/ci/"), "I-i_none", ".csv")
 ```
 
+#---------------------------#
+# partitioning dual cue
+#---------------------------#
+```{r}
+# function to run optimization using 3 different functions (staticR, no N, and noW)
+partition_dual <- function(df){
+  # source all functions
+  source(here("functions/chabaudi_si_clean.R"))
+  source(here("functions/chabaudi_si_clean_R.R"))
+  source(here("functions/chabaudi_si_clean_N.R"))
+  source(here("functions/chabaudi_si_clean_W.R"))
+  
+  # get parameters
+  parameters_tsukushi <- c(R1 = 8.89*(10^6), # slightly higher
+                lambda = 3.7*(10^5),
+                mu = 0.025, 
+                p = 8*(10^-6), # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+  
+  # get all characteristics
+  cue <- df$cue
+  cue_b <- df$cue_b
+  log <- ifelse(df$log == "log", "log10", "none")
+  log_b <- ifelse(df$log_b == "log", "log10", "none")
+  cue_range <- seq(df$low, df$high, length.out = 500)
+  cue_range_b <- seq(df$low_b, length.out = 500)
+  id <- df$id
+  id_b <- df$id_b
+  
+  # run optimization with static RBC
+  cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  static_R <- optimParallel(
+    par = rep(0.5,9), # start at 0.5x4
+    fn = chabaudi_si_clean_R, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue = cue,
+    cue_b = cue_b,
+    cue_range = cue_range,
+    cue_range_b = cue_range_b,
+    log_cue = log,
+    log_cue_b = log_b,
+    solver = "vode",
+    gam = "te")
 
-
-
-
-
-
+  
+  # run optimization with no indiscriminant immunity
+  no_N <- optimParallel(
+    par = rep(0.5,9), # start at 0.5x4
+    fn = chabaudi_si_clean_N, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue = cue,
+    cue_b = cue_b,
+    cue_range = cue_range,
+    cue_range_b = cue_range_b,
+    log_cue = log,
+    log_cue_b = log_b,
+    solver = "vode",
+    gam = "te")
+  
+  # run simulation with no targeted immunity (W)
+  no_W <- optimParallel(
+    par = rep(0.5,9), # start at 0.5x4
+    fn = chabaudi_si_clean_W, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue = cue,
+    cue_b = cue_b,
+    cue_range = cue_range,
+    cue_range_b = cue_range_b,
+    log_cue = log,
+    log_cue_b = log_b,
+    solver = "vode",
+    gam = "te")
+  
+  stopCluster(cl)
+  
+  # join together all data
+  res <- cbind(id = id,
+               id_b = id_b,
+               cue = cue,
+               cue_b = cue,
+               log = log,
+               log_b = log_b,
+               fitness_R = static_R$value,
+               fitness_N = no_N$value,
+               fitness_W = no_W$value,
+               var_R1 = static_R$par[[1]],
+               var_R2 = static_R$par[[2]], 
+               var_R3 = static_R$par[[3]],
+               var_R4 = static_R$par[[4]],
+               var_R5 = static_R$par[[5]],
+               var_R6 = static_R$par[[6]],
+               var_R7 = static_R$par[[7]],
+               var_R8 = static_R$par[[8]],
+               var_R9 = static_R$par[[9]],
+               var_N1 = no_N$par[[1]],
+               var_N2 = no_N$par[[2]], 
+               var_N3 = no_N$par[[3]],
+               var_N4 = no_N$par[[4]],
+               var_N5 = no_N$par[[5]],
+               var_N6 = no_N$par[[6]],
+               var_N7 = no_N$par[[7]],
+               var_N8 = no_N$par[[8]],
+               var_N9 = no_N$par[[9]],
+               var_W1 = no_W$par[[1]],
+               var_W2 = no_W$par[[2]], 
+               var_W3 = no_W$par[[3]],
+               var_W4 = no_W$par[[4]],
+               var_W5 = no_W$par[[5]],
+               var_W6 = no_W$par[[6]],
+               var_W7 = no_W$par[[7]],
+               var_W8 = no_W$par[[8]],
+               var_W9 = no_W$par[[9]])
+  
+  write.csv(res, paste0(here("data/partition/dual/"), id, "_", id_b, "_partition.csv"))
+}
+```
+```
 
 
 

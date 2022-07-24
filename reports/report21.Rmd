@@ -424,7 +424,7 @@ get_si_rn <- function(df){
 si_opt.ls <- split(si_opt.df, seq(nrow(si_opt.df)))
 si_opt.rn <- lapply(si_opt.ls, get_si_rn)
 si_opt.rn2 <- do.call(rbind, si_opt.rn)
-
+write_parquet(si_opt.rn2, here("data/si_dyn/si_rn.parquet"))
 ```
 
 # get single infeciton rug
@@ -467,6 +467,7 @@ si_dyn.ls <- si_dyn.df %>% group_split(id)
 si_rug <- mclapply(si_dyn.ls, get_rug)
 
 si_rug.df <- do.call(rbind, si_rug)
+write_parquet(si_rug.df, here("data/si_dyn/si_rug.parquet"))
 ```
 
 
@@ -936,7 +937,6 @@ ggarrange(opt_cue_pl.A, opt_cue_pl.BC, labels = c("A", ""), ncol = 2, widths = c
 
 ggsave(here("figures/report21/opt_cue_final.png"), width = 14, height = 9.5)
 ```
-
 
 
 #---------------------------------#

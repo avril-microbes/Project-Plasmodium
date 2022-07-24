@@ -1,0 +1,923 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(here)
+library(deSolve)
+library(crone)
+library(optimParallel)
+library(doParallel)
+library(doRNG)
+library(arrow)
+library(stringr)
+library(parallel)
+library(ggpubr)
+```
+
+Notebook for plotting all of the figures for PloS Biology manuscript submission
+
+Guidelines: taken from https://journals.plos.org/plosbiology/s/figures#loc-figure-file-requirements
+1. format: tiff
+2. max file size: 10 MB
+3. text size: Arial, Times, or Symbol font only in 8-12 point
+2. figure size: Width: 789 – 2250 pixels (at 300 dpi). Height maximum: 2625 pixels (at 300 dpi).
+
+# overall manuscript setup
+1. Fig 1: model schematic
+2. Fig 2. best single and co-infection infection cue [monocue] -------> supplmentary table of parameters and fitness
+3. Fig 3. dual cue optimization [monocue] -------> supplementary table of flexible optimization
+4. Fig 4. heterocue competition [heterocue] 
+5. Fig 5. partitioning single cue success and consequences of bottom+top down regulation [monocue]
+6. Fig 6. consequences of adopting best cue [monocue]
+
+#-----------------------------------#
+best single and co-infection cue
+#-----------------------------------#
+Figure displaying the reaction norms of best single and co-infection.
+
+#------- optimal cue reaction norm -----------#
+# read data
+```{r}
+# single infection dynamics, reaction norms, and rugs
+si_dyn.df <- read_parquet(here("data/si_dyn/si_dyn_30.parquet")) 
+si_rn.df <- read_parquet(here("data/si_dyn/si_rn.parquet"))
+si_rug.df <- read_parquet(here("data/si_dyn/si_rug.parquet"))
+
+# co-infection dynamics, reaction norms, and rugs
+ci_dyn.df <- read_parquet(here("data/ci_dyn/ci_dyn.parquet"))
+ci_rn.df <- read_parquet(here("data/ci_dyn/ci_rn.parquet"))
+ci_rug.df <- read_parquet(here("data/ci_dyn/ci_rug.parquet"))
+```
+
+# process data for reaction norm
+```{r}
+# import labelling scheme
+ez_label <- read.csv(here("data/ez_label.csv"))
+
+# get si_label with ci cue range
+si_ci_rug.df <- ci_rug.df %>% 
+  mutate(label_si = case_when(
+    label %in% c("I", "I1+I2") ~ "I",
+    label %in% c("I log","I1+I2 log") ~ "I log",
+    label %in% c("Ig", "Ig1+Ig2") ~ "Ig",
+    label %in% c("Ig log") ~ "Ig log",
+    label %in% c("sum", "I+Ig") ~ "I+Ig",
+    label %in% c("sum log", "I+Ig log") ~ "I+Ig log",
+    label == "R" ~ "R",
+    label == "R log" ~ "R log",
+    label %in% c("G", "G1+G2") ~ "G",
+    label == "G log" ~ "G log"
+  )) 
+
+# get limit for si_rug
+si_rug_lim.df <- si_rug.df %>% 
+  filter(time <= 20) %>%
+  group_by(label)%>% 
+  summarise(min = min(value, na.rm = T)*0.9,
+         max = max(value, na.rm = T)*1.1) %>% 
+  select(label_si = label, min_si = min, max_si = max)
+
+# filter to restriction conversion rate reaction norm range to cue ranges that appear in rug
+## change to Inf/-inf to NA. Note that I am first joining with si rug lim to check which limit is larger, We will go with the cue range that has the largest span
+ci_rug_lim.df <- si_ci_rug.df %>% 
+  group_by(label) %>% 
+  mutate(min = min(value, na.rm = T)*0.9,
+         max = max(value, na.rm = T)*1.1) %>% 
+  distinct(label, .keep_all = T) %>% 
+  select(label, label_si, min, max)
+
+rug_lim.final <- ci_rug_lim.df %>% left_join(si_rug_lim.df, by = "label_si") %>% 
+  mutate(final_min = min(min, min_si),
+         final_max = max(max, max_si))
+
+# get second rug_lim.final for single infection
+rug_lim.final2 <- rug_lim.final %>% 
+  group_by(label_si) %>% 
+  mutate(final_min = min(final_min, na.rm = T),
+         final_max = max(final_max, na.rm = T))
+
+# filter ci_rn by limit
+ci_rn.df2 <- ci_rn.df %>% 
+  left_join(rug_lim.final, by  = "label") %>% 
+  group_by(label) %>% 
+  filter(cue_range <= final_max & cue_range >= final_min)
+```
+
+# match single infection rn with coinfection 
+```{r}
+# get ci label to si rug and filter by limit
+si_rn.df2 <- left_join(si_rn.df, select(ez_label, label_si, label_ci), by = c("label" = "label_si")) %>% 
+  left_join(rug_lim.final, by  = c("label_ci" = "label")) %>% 
+  group_by(label_ci) %>% 
+  filter(cue_range <= final_max & cue_range >= final_min) %>% 
+  select(cue_range, cr, label_ci, label_si)
+
+# get ci label to si rug
+si_rug.df2 <- select(si_rug.df, value, label_si = label) 
+```
+
+
+# plot reaction norm
+```{r}
+# join with ezlabel
+ci_rn.df3 <- ci_rn.df2 %>% left_join(ez_label, by = c("label" = "label_ci"))
+si_rn.df3 <- si_rn.df2 %>% left_join(ez_label, by = "label_ci")
+ci_rug.df3 <- ci_rug.df %>% left_join(ez_label, by = c("label" = "label_ci"))
+si_rug.df3 <- si_rug.df2 %>% left_join(ez_label, by = "label_si")
+
+# redo order of cues
+ci_rn.df3$label <- factor(ci_rn.df3$label, 
+                              levels = c("I", "I log",
+                                         "I1+I2", "I1+I2 log",
+                                         "Ig", "Ig log",
+                                         "I+Ig", "I+Ig log",
+                                         "sum", "sum log",
+                                         "G", "G log",
+                                         "G1+G2", "Ig1+Ig2",
+                                         "R", "R log")) 
+
+si_rn.df3$label_ci <- factor(si_rn.df3$label_ci, 
+                              levels = c("I", "I log",
+                                         "I1+I2", "I1+I2 log",
+                                         "Ig", "Ig log",
+                                         "I+Ig", "I+Ig log",
+                                         "sum", "sum log",
+                                         "G", "G log",
+                                         "G1+G2", "Ig1+Ig2",
+                                         "R", "R log"))
+
+ci_rug.df3$label <- factor(ci_rug.df3$label, 
+                              levels = c("I", "I log",
+                                         "I1+I2", "I1+I2 log",
+                                         "Ig", "Ig log",
+                                         "I+Ig", "I+Ig log",
+                                         "sum", "sum log",
+                                         "G", "G log",
+                                         "G1+G2", "Ig1+Ig2",
+                                         "R", "R log"))
+
+si_rug.df3$label_ci <- factor(si_rug.df3$label_ci, 
+                              levels = c("I", "I log",
+                                         "I1+I2", "I1+I2 log",
+                                         "Ig", "Ig log",
+                                         "I+Ig", "I+Ig log",
+                                         "sum", "sum log",
+                                         "G", "G log",
+                                         "G1+G2", "Ig1+Ig2",
+                                         "R", "R log"))
+
+# plot
+opt_cue_pl.A <- ggplot() +
+  geom_line(data = ci_rn.df3, aes(x = cue_range, y = cr, color = "Co-infection")) +
+  geom_line(data = si_rn.df3, aes(x = cue_range, y = cr, color = "Single infection"), linetype = "dashed") +
+  geom_rug(data = ci_rug.df3, aes(x = value), color = "#4575b4", sides = "t") +
+  geom_rug(data = si_rug.df3, aes(x = value), color = "#fc8d59", sides = "b") +
+  facet_wrap(~ez_label, scales = "free_x", ncol = 2) +
+  theme_bw() +
+  labs(y = "Conversion rate", x = "Cue range", color = "Infection") +
+  scale_x_continuous(labels = function(x) format(x, scientific = T),
+                     guide = guide_axis(check.overlap = TRUE)) + 
+                    theme(axis.text.x = element_text(size = 7))  +
+  scale_color_manual(values=c( "#4575b4", "#fc8d59"))
+
+ggsave(here("figures/plos-bio/reaction_norm.png"), width = 7, height = 10)
+```
+
+#---------- plot best fitness --------------#
+# import in data
+```{r}
+# single infection dynamics
+si_dyn.df <- read_parquet(here("data/si_dyn/si_dyn_30.parquet")) 
+
+# co-infection dynamics
+ci_dyn.df <- read_parquet(here("data/ci_dyn/ci_dyn.parquet"))
+
+ez_label <- read.csv(here("data/ez_label.csv"))
+```
+
+# process for final 20 days fitness
+```{r}
+# get single infection maximum tau_cum for 20 days
+si_fitness.df <- si_dyn.df %>% 
+  filter(variable == "tau_cum" & time == 20)
+
+# get co-infection maximum tau_cum for 20 days
+ci_fitness.df <- ci_dyn.df %>% 
+  filter(variable == "tau_cum1" & time == 20)
+
+# join together two dataframes and add labels
+si_ci_fitness.df <- select(ci_fitness.df, fitness_ci = value, label_ci = label) %>% 
+  left_join(ez_label, by = "label_ci") %>% 
+  left_join(select(si_fitness.df, fitness_si = value, id_si = id), by = "id_si")
+```
+
+# plot
+```{r}
+opt_cue_pl.B <- ggplot() +
+  geom_point(data = si_ci_fitness.df, aes(x = fitness_si, y = fitness_ci, color = ez_label_si, shape = ez_label_si), size = 2.5) +
+  ggrepel::geom_label_repel(data = si_ci_fitness.df, aes(label = ez_label, x = fitness_si, y = fitness_ci),
+                            fill = "white",xlim = c(-Inf, Inf), ylim = c(NA, NA)) +
+  labs(x = "Optimal single-infection fitness", y = "Optimal Co-infection fitness (per strain)",
+       color = "Single infection cue", shape = "Single infection cue") +
+  scale_shape_manual(values = 15:24) +
+  lims(x = c(8, 10.5)) +
+  geom_vline(xintercept = 9.2, linetype = "dashed", alpha = 0.5) + # si good cue cutoff
+  geom_hline(yintercept = 2.25, linetype = "dashed", alpha = 0.5) + # ci good cue cutoff
+  theme_bw() +
+  coord_cartesian(clip = "off") +
+  theme(plot.margin=margin(r=0))
+```
+
+#-------------- timeseries conversion rate -----------------#
+# process info for single infection
+```{r}
+# get fintess
+si_cr.df <- si_dyn.df %>% 
+  filter(time <= 20 & variable == "cr")
+
+# good cue bad cue
+si_cue.dv <- si_fitness.df %>% 
+  mutate(classification = case_when(
+    value > 9.2 ~ "High-performing",
+    value <= 9.2 ~ "Poor-performing"
+  ))
+
+# join with classificaiton
+si_cr.df2 <- si_cr.df %>% 
+  left_join(select(si_cue.dv, id, classification, fitness_si = value), by = "id") %>% 
+  left_join(ez_label, by = c("id" = "id_si"))
+
+# split into top erforming and poor-performing cues
+si_cr.high <- si_cr.df2 %>% filter(classification == "High-performing")
+si_cr.poor <- si_cr.df2 %>% filter(classification == "Poor-performing")
+si_cue.dv
+```
+
+# plot single infection conversion rate heatmap
+```{r}
+# plot poor performing
+si_cr.pl1 <- ggplot() +
+  geom_tile(data = si_cr.poor, aes(x = time, y = forcats::fct_reorder(ez_label_si, fitness_si), fill = value)) +
+  labs(x = "Time (days)", y = "Low performing\nsingle infection cues", fill = "Conversion rate") +
+  scale_fill_viridis_c(limits = c(0, 1)) +
+  xlim(1, 20) +
+  theme_bw()
+
+# plot high perfomring
+si_cr.pl2 <- ggplot() +
+  geom_tile(data = si_cr.high, aes(x = time, y = forcats::fct_reorder(ez_label_si, fitness_si), fill = value)) +
+  labs(x = "", y = "High performing\nsingle infection cues", fill = "Conversion rate") +
+  scale_fill_viridis_c(limits = c(0, 1)) +
+  xlim(1, 20) +
+  theme_bw()
+```
+
+# co-infection conversion rate heatmap
+# plot co-infeciton convesion rate heatmap
+```{r}
+# get fintess
+ci_cr.df <- ci_dyn.df %>% 
+  filter(time <= 20 & variable == "cr_1")
+
+# good cue bad cue
+ci_cue.dv <- ci_fitness.df %>% 
+  mutate(classification = case_when(
+    value > 2.25 ~ "High-performing",
+    value <= 2.25 ~ "Poor-performing"
+  ))
+
+# join with classificaiton
+ci_cr.df2 <- ci_cr.df %>% 
+  left_join(select(ci_cue.dv, label, classification, fitness_ci = value), by = "label") %>% 
+  left_join(ez_label, by = c("label" = "label_ci"))
+
+# split into top erforming and poor-performing cues
+ci_cr.high <- ci_cr.df2 %>% filter(classification == "High-performing")
+ci_cr.poor <- ci_cr.df2 %>% filter(classification == "Poor-performing")
+```
+
+# plot
+```{r}
+# plot poor performing
+ci_cr.pl1 <- ggplot() +
+  geom_tile(data = ci_cr.poor, aes(x = time, y = forcats::fct_reorder(ez_label_si, fitness_ci), fill = value)) +
+  labs(x = "Time (days)", y = "Low performing\nco-infection cues", fill = "Conversion rate") +
+  scale_fill_viridis_c(limits = c(0, 1)) +
+  xlim(1, 20) +
+  theme_bw()
+
+# plot high perfomring
+ci_cr.pl2 <- ggplot() +
+  geom_tile(data = ci_cr.high, aes(x = time, y = forcats::fct_reorder(ez_label_si, fitness_ci), fill = value)) +
+  labs(x = "", y = "High performing\nco-infection cues", fill = "Conversion rate") +
+  scale_fill_viridis_c(limits = c(0, 1)) +
+  xlim(1, 20) +
+  theme_bw()
+```
+
+#--------- assemble final figure --------------#
+```{r}
+# assemble the cr plots first
+opt_cue_pl.C <- ggarrange(si_cr.pl2, ci_cr.pl2, si_cr.pl1, ci_cr.pl1, ncol = 2, nrow = 2, common.legend = T, align = "hv")
+
+# assemble panel B and C
+opt_cue_pl.BC <- ggarrange(opt_cue_pl.B, opt_cue_pl.C, ncol = 1, nrow = 2, labels = c("B", "C"), heights = c(0.75, 1))
+
+# assemble final figure
+ggarrange(opt_cue_pl.A, opt_cue_pl.BC, ncol = 2, nrow = 1, labels = c("A", ""), widths = c(0.75, 1))
+
+# save figure
+ggsave(here("figures/plos-bio/opt_cue.tiff"), units = "px", width = 2250, height = 1500, scale = 2, dpi=300, compression = "lzw")
+```
+
+#--------------------------------------------#
+# dual cue optimization figure
+#--------------------------------------------#
+```{r}
+source(here("functions/chabaudi_si_clean_high.R"))
+source(here("functions/chabaudi_si_clean.R"))
+source(here("functions/par_to_hm_te.R"))
+```
+
+#---------- plotting fitness of dual vs single cue opt ---------#
+# import in previous data
+```{r}
+# dual cue fitness
+dual_fitness.df <- read.csv(here("data/dual_cue_opt4/dual_cue_fitness_20.csv"))
+## make label and filter out very low fitness
+dual_fitness.df <- dual_fitness.df %>% 
+  mutate(temp_label = gsub("log", "log10", label),
+         temp_label_b = gsub("log", "log10", label_b),
+         label_final = paste0(temp_label, "+", temp_label_b)) %>% 
+  filter(value > 2)
+
+# get single cue fitness
+si_dyn.df <- read_parquet(here("data/si_dyn/si_dyn_30.parquet")) 
+si_fitness.df <- si_dyn.df %>% 
+  filter(variable == "tau_cum" & time == 20)
+
+# join si and dual cue
+dual_si_fitness.df <- dual_fitness.df %>% 
+  left_join(select(si_fitness.df, id, si_fitness = value), by = "id") %>% 
+  left_join(select(si_fitness.df, id_b = id, si_fitness_b = value), by = "id_b") %>% 
+  mutate(si_fitness_max = ifelse(si_fitness > si_fitness_b, si_fitness, si_fitness_b),
+         dual_label = gsub("log", "log10", paste(label, "+", label_b)))
+```
+
+# plot
+```{r}
+dual_si_fitness.pl <- ggplot() +
+  geom_point(data = dual_si_fitness.df, aes(y = forcats::fct_reorder(dual_label, value), x = value, color = "Dual cue"), size = 2.5, alpha = 0.7) +
+  geom_point(data = dual_si_fitness.df, aes(y = forcats::fct_reorder(dual_label, value), x = si_fitness_max, color= "Best single cue"), size = 2.5, alpha = 0.7) +
+  labs(x = "Fitness", y = "Dual cue", color = "Cue") +
+  scale_color_manual(values=c("#fc8d59", "#4575b4")) +
+  geom_vline(xintercept = 9.883602) +
+  geom_text(aes(x=9.883602, label="\nMaximum fitness", y = "G + R log10"), angle=90) +
+  theme_bw()
+```
+
+
+#----------- time series conversion rate -------------#
+# dynamics simulation of high parameter cues (these serve as reference points)
+```{r}
+# best dual cue combo
+dual.cr <- chabaudi_si_clean(
+  parameters_cr = c(4.446192033,	10.97518275,	1.38762817,	23.3059254,	-3.452052371,	-18.0070692,	39.66614226,	-3.545193141,	18.78350799),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(6, 7, by = 1/500),
+  cue_range_b = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/500),
+  cue = "R",
+  cue_b = "I",
+  log_cue = "log10",
+  log_cue_b = "log10",
+  solver = "vode",
+  dyn = T
+)
+
+# when time is used as a cue (high parameter)
+time.cr <- chabaudi_si_clean_high(
+  parameters_cr = c(9.154314,  -7.570829, -22.506638 ,  3.382405 ,-13.453519 ,-17.011485  , 3.678181, -12.851895 ,-26.115158),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(0, 20, by = 1e-3),
+  cue = "t",
+  solver = "vode",
+  dyn = T)
+
+# when asexual iRBC is used as a cue (high flexibility)
+I_high.cr <- chabaudi_si_clean_high(
+  parameters_cr = c(1.296675,  3.544034 , 4.907484,  2.174249, -3.238309 ,-5.181614 ,-1.645072 , 1.834302 , 1.581011),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+  cue = "I",
+  log_cue = "log10",
+  solver = "vode",
+  dyn = T)
+
+# when asexual iRBC is used as a cue (normal flexibility)
+I.cr <- chabaudi_si_clean(
+  parameters_cr = c(5.463558,	2.383948,	-17.757281,	4.571835),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+  cue = "I",
+  log_cue = "log10",
+  solver = "vode",
+  dyn = T)
+
+# process 
+I_high.cr2 <- I_high.cr %>% filter(variable == "cr") %>% mutate(label_new = "I log10 flexible") %>% select(-variable)
+
+I.cr2 <- I.cr %>% filter(variable == "cr") %>% mutate(label_new = "I log10") %>% select(-variable)
+
+time_high.cr2 <- time.cr %>% filter(variable == "cr") %>% mutate(label_new = "Time flexible") %>% select(-variable)
+
+dual.cr2 <- dual.cr %>% filter(variable == "cr") %>% mutate(label_new = "R log10 + I log10") %>% select(-variable)
+
+# combine
+dual_cr.df <- rbind(I_high.cr2, I.cr2, time_high.cr2, dual.cr2)
+```
+
+# plot
+```{r}
+dual_cr.pl <- ggplot() +
+  geom_line(data = dual_cr.df, aes(color = label_new, x = time, y = value), size = 1) +
+  geom_point(data = dual_cr.df %>% filter(time%%1 == 0), aes(color = label_new, x = time, y = value, shape = label_new), size = 2) +
+  labs(x = "Time (days)", y = "Conversion rate", color = "Cue", shape = "Cue") +
+  xlim(0, 20) +
+  scale_color_manual(values = c("#4575b4", "#91bfdb","#fc8d59","#fdcb44")) +
+  theme_bw() +
+  theme(legend.position="bottom") +
+  guides(color = guide_legend(nrow = 2, byrow = TRUE))
+```
+
+#------------ reaction norm heatmap of R log10 + I log10 ------------#
+# process data
+```{r}
+# make heatmap df
+R_I.hm <- par_to_hm_te(par = c(4.446192033,	10.97518275,	1.38762817,	23.3059254,	-3.452052371,	-18.0070692,	39.66614226,	-3.545193141,	18.78350799),
+             cue_range = seq(6,	7, length.out = 500),
+             cue_range_b = seq(0,	6.77815125, length.out = 500))
+
+# process dynamics
+R_I.dyn <- dual.cr %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value) %>% 
+  mutate(log_R = log10(R),
+         log_I = log10(I))
+```
+
+# plot
+```{r}
+dual_rn.pl <- ggplot() +
+  geom_raster(data = R_I.hm, aes(x = cue_range_b, y = cue_range, fill = cr)) +
+  scale_fill_viridis_c() +
+  geom_path(data = R_I.dyn, aes(x = log_I, y = log_R), color = "white", arrow = arrow(angle = 30, length = unit(0.1, "inches"))) +
+  geom_point(data = R_I.dyn %>% filter(row_number() %% 1000 == 1 & time <= 20), aes(x = log_I, y = log_R), color = "white") +
+  xlim(0.99*min(hablar::s(R_I.dyn$log_I), na.rm = T), 1.01* max(hablar::s(R_I.dyn$log_I), na.rm = T)) +
+  ylim(0.99*min(hablar::s(R_I.dyn$log_R), na.rm = T),1.01* max(hablar::s(R_I.dyn$log_R), na.rm = T)) +
+  labs(y = "RBC log10", x = "Asexual iRBC log10", fill = "Conversion rate") +
+  theme_dark()
+```
+
+
+#-------- assemble final figure -------------#
+```{r}
+# assemble panel B and C
+dual_pl.BC <- ggarrange(dual_cr.pl, dual_rn.pl, align = "v", ncol = 1, labels = c("B", "C"))
+
+# assemble panel A
+dual.pl <- ggarrange(dual_si_fitness.pl, dual_pl.BC, ncol = 2, labels = c("A", ""), widths = c(1, 0.75))
+ggsave(here("figures/plos-bio/dual_cue.tiff"), units = "px", width = 2250, height = 1400, scale = 1.5, dpi=300, compression = "lzw")
+```
+
+#-------------------------------------------#
+# heterocue adoption 
+#-------------------------------------------#
+
+#------- static competition ---------------#
+# calculate fitness difference for 20 days
+```{r}
+# get dynamics
+static.ls <- list.files(path = here("data/ci_static/"), pattern = "*.parquet", full.names = T)
+static.ls <- lapply(static.ls, read_parquet)
+
+# get fitness at day 20 (optimized for 20 days)
+static_fitness.ls <- mclapply(static.ls, function(x){
+  x %>% filter(time == 20 & variable %in% c("tau_cum1", "tau_cum2"))
+})
+static_fitness.df <- do.call(rbind, static_fitness.ls)
+
+static_fitness.df <- tidyr::pivot_wider(static_fitness.df, names_from = "variable", id_cols = c("id_1", "id_2")) %>% 
+  group_by(id_1, id_2) %>% 
+  mutate(fitness_difference = tau_cum1-tau_cum2)
+write.csv(static_fitness.df, here("data/ci_static.csv"))
+```
+
+# import and process data
+```{r}
+# import in dataset
+static.df <- read.csv(here("data/ci_static.csv"))
+ez_label <- read.csv(here("data/ez_label.csv"))
+
+# join with labelling
+static.df2 <- static.df %>% 
+  left_join(select(ez_label, id_ci, label_ci_1 = label_ci), by = c("id_1" = "id_ci")) %>% 
+  left_join(select(ez_label, id_ci, label_ci_2 = label_ci), by = c("id_2" = "id_ci")) %>% 
+  select(label_ci_1, label_ci_2, fitness_difference) %>% 
+  mutate(label_ci_1 = gsub("log", "log10", label_ci_1),
+         label_ci_2 = gsub("log", "log10", label_ci_2))
+
+# get reverse order, which is simply invovles switching the cues around the multiplying the fitness by negative 1
+static.df3 <- static.df2
+names(static.df3) <- c("label_ci_2", "label_ci_1", "fitness_difference")
+static.df3$fitness_difference <- static.df2$fitness_difference * -1
+
+# join
+static.df4 <- rbind(static.df2, static.df3)
+# get mean
+static.mean <- static.df4 %>% 
+  group_by(label_ci_1) %>% 
+  summarize(mean_fitness = mean(fitness_difference, na.rm = T))
+```
+
+# plot
+```{r}
+# heatmap
+static.pl1 <- ggplot(data = static.df4, aes(x = label_ci_2, y = label_ci_1, fill = fitness_difference))+
+  geom_tile(color = "black") +
+  scale_fill_gradient2(low = "#fc8d59", high = "#4575b4", mid = "white", 
+   midpoint = 0, space = "Lab", lim = c(-0.95, 0.95), name="Fitness\ndifference") +
+  theme_minimal() +  
+  theme(legend.position = "left",
+  axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+  axis.ticks = element_blank(),
+  plot.margin=margin(r = 0)) + 
+  labs(x = "Strain 2 cue", y = "Strain 1 cue") +
+  coord_fixed()
+
+# mean 
+static.pl2 <- ggplot() +
+  geom_bar(data =  static.mean, aes(y = label_ci_1, x = mean_fitness), stat = "identity") +
+  labs(y = "", x = "Mean fitness\ndifference") +
+  theme_bw() +
+  theme(plot.margin = margin(l = 0),
+       panel.grid.major = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+    axis.text.y=element_blank(),
+    axis.ticks.y=element_blank())
+
+static.pl <- ggarrange(static.pl1, static.pl2, align = "hv", widths = c(1, 0.2))
+ggsave(here("figures/plos-bio/static_heatmap.tiff"), width = 10, height = 6)
+```
+
+#------ invasion matrix --------------------#
+# import in data (already 20 days )
+```{r}
+invade.df <- read.csv(here("data/ci_invasion.csv"))
+```
+
+
+# process data for invasion matrix
+```{r}
+invade.mat <- invade.df %>% 
+  group_by(V1 = pmin(mut_id, res_id), V2 = pmax(mut_id, res_id)) %>% # group by cue competition, irregardless of order
+  mutate(id_alt = paste0(V1, V2),
+         invade = case_when(
+           fitness > 0 ~ "invade",
+           fitness < 0 ~ "not invade"
+         )) %>% 
+  group_by(id_alt) %>% 
+  mutate(
+    mut_is_V1 = case_when(
+    mut_id == V1 ~ "V1_invade",
+    mut_id != V1 ~ "V1_invaded")) %>% 
+  arrange(id_alt) %>% 
+  select(fitness, V1, V2, id_alt, invade, mut_is_V1) %>% 
+  tidyr::pivot_wider(names_from = mut_is_V1, values_from = fitness) %>% 
+  group_by(id_alt) %>% 
+  mutate(V1_invade2 = gsub("NA", "", paste0(V1_invade, collapse = "")),
+         V1_invaded2 = gsub("NA", "", paste0(V1_invaded, collapse = ""))) %>% 
+  distinct(id_alt, .keep_all = T) %>% 
+  mutate(
+    category = case_when(
+    V1_invade2 > 0 & V1_invaded2 > 0 ~ "Mutual invasion",
+    V1_invade2 > 0 & V1_invaded2 < 0 ~ "Only strain 1 invasion",
+    V1_invade2 < 0 & V1_invaded2 > 0 ~ "Only strain 2 invasion",
+    V1_invade2 < 0 & V1_invaded2 < 0 ~ "Mutual non-invasion"
+  )) %>% 
+  select(V1, V2, invasion = category)
+
+# for plotting, need to get all same cue vs same cue, which we will set to NA
+invade.NA <- cbind.data.frame(`V1` = unique(invade.mat$V1),
+      `V2` = unique(invade.mat$V1),
+      invasion = NA)
+
+invade.mat2 <- rbind(invade.mat, invade.NA)
+
+# get label
+invade.mat3 <- invade.mat2 %>% 
+  left_join(select(ez_label, id_ci, V1_label = label_ci), by = c("V1" = "id_ci")) %>% 
+  left_join(select(ez_label, id_ci, V2_label = label_ci), by = c("V2" = "id_ci")) %>% mutate(V1_label = gsub("log", "log10", V1_label),
+                                      V2_label = gsub("log", "log10", V2_label))
+
+# reorder so that ggplot do not mess up
+library(gtools)
+
+levels <- mixedsort(unique(c(invade.mat3$V1_label, invade.mat3$V2_label)))
+
+invade.mat4 <- rbind(invade.mat3, 
+                        invade.mat3 %>% 
+                          rename(V2_label = V1_label, V1_label = V2_label) %>% 
+                          select(V1_label, V2_label, invasion)) %>%
+  mutate(across(ends_with("label"),
+                ~factor(.x, levels = levels))) %>%
+  filter(as.integer(V1_label) < as.integer(V2_label)) %>%
+  mutate(V2_label = forcats::fct_rev(V2_label))
+```
+
+# plot invasion matrix
+```{r}
+# plot
+invasion.pl1 <- ggplot(data = invade.mat4, aes(x = V2_label, y = V1_label, fill = invasion)) +
+  geom_tile(color = "black") +
+  theme_minimal() +  
+  theme(legend.position = "right",
+  axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  panel.grid.major = element_blank(),
+  panel.border = element_blank(),
+  panel.background = element_blank(),
+  text = element_text(size = 15),
+  axis.ticks = element_blank(),
+  plot.margin=margin(r = 0)) + 
+  labs(fill = "Invasion", x = "Strain 2 cue", y = "Strain 1 cue") +
+  #scale_x_discrete(limits = rev) +
+  scale_y_discrete(limits = rev) +
+  scale_fill_manual(values = c("Only strain 1 invasion" = "#4575b4",
+                               "Only strain 2 invasion" = "#fc8d59",
+                               "Mutual invasion" = "#fee090")) +
+  theme(legend.position = "none")
+```
+
+# create summary bar chart
+```{r}
+# create a stacked barchart for summary
+## filter out na
+invade.matalt <- invade.mat3 %>% na.exclude()
+
+# get frquency from both sides. Note when grouping for V2, from the perspective of cue 2, scenarrio when strain 2 invade = strain 1 invade
+invade.matalt1 <- invade.matalt %>% group_by(V1_label, invasion) %>% 
+  summarize(frequency_1 = n())
+
+invade.matalt2 <- invade.matalt %>%
+  mutate(invasion_alt = case_when(
+    invasion == "Only strain 1 invasion" ~ "Only strain 2 invasion",
+    invasion == "Only strain 2 invasion" ~ "Only strain 1 invasion",
+    invasion == "Mutual invasion" ~ "Mutual invasion",
+    invasion == "Mutual non-invasion" ~ "Mutual non-invasion"
+  )) %>% 
+  group_by(V2_label, invasion_alt) %>% 
+  summarize(frequency_2 = n())     
+
+# full join and sum. has confirmed all of them add up to 14 
+invade.matalt3 <- full_join(invade.matalt1, invade.matalt2, by = c("V1_label" = "V2_label", "invasion" = "invasion_alt"))
+
+invade.matalt3[is.na(invade.matalt3)] <- 0
+invade.matalt4 <- invade.matalt3 %>% 
+  mutate(freq = frequency_1 + frequency_2) %>% 
+  mutate(temp = case_when(
+    invasion == "Only strain 1 invasion" ~ freq
+  )) %>% 
+  group_by(V1_label) %>% 
+  mutate(invade_1_freq = max(temp, na.rm = T))
+  
+invasion.pl2 <- ggplot() +
+  geom_bar(data = invade.matalt4, aes(x = freq, y = reorder(V1_label, invade_1_freq), fill = forcats::fct_rev(factor(invasion, levels = c("Only strain 1 invasion", "Only strain 2 invasion", "Mutual invasion", "Mutual non-invasion")))), stat = "identity") +
+  labs(x = "Frequency", fill = "Invasion", y = "Strain 1 cue") +
+  theme_bw()  +
+  scale_fill_manual(values = c("Only strain 1 invasion" = "#4575b4",
+                               "Only strain 2 invasion" = "#fc8d59",
+                               "Mutual invasion" = "#fee090")) +
+  theme(text = element_text(size = 15))
+```
+
+# plot together
+```{r}
+invasion.pl <- ggarrange(invasion.pl1, invasion.pl2, align = "h", common.legend = T, widths = c(2, 1))
+ggsave(here("figures/plos-bio/invasion_heatmap.tiff"), width = 10, height = 6)
+```
+
+#------ effect cue perception -------#
+
+# static
+## logging
+```{r}
+# get non-logged pairings
+static_nolog <- static.df2 %>% 
+  mutate(cue_1 = trimws(gsub("\\ .*", "", label_ci_1)),
+         log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none")) %>% 
+  filter(log_1 == "none")
+
+
+static_log <- static.df2 %>% 
+  mutate(cue_1 = trimws(gsub("\\ .*", "", label_ci_1)),
+         log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none")) %>% 
+  filter(log_1 == "log")
+
+static_log.df <- left_join(
+  select(static_nolog, cue_1, label_ci_2, log_1, None = fitness_difference),
+  select(static_log, cue_1, label_ci_2, log_1, Log = fitness_difference),
+  by = c("cue_1", "label_ci_2")) %>% 
+  filter(!is.na(None) & !is.na(Log)) %>% 
+  mutate(classification = ifelse(Log > None, "Logged better", "Not logged better"))
+```
+
+# combined
+```{r}
+static_nocomb <- static.df2 %>% 
+  mutate(cue_1 = ifelse(
+    str_detect(label_ci_1, "sum"), "I+Ig",
+    trimws(gsub("+1.*|\\ log", "", label_ci_1))
+  ),
+  log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none"),
+    comb_1 = case_when(
+    str_detect(label_ci_1, "1+|sum") ~ "comb",
+    str_detect(label_ci_1, "1+|sum", negate = T) ~ "none" 
+  )) %>% 
+  filter(comb_1 == "none")
+
+static_comb <- static.df2 %>% 
+  mutate(cue_1 = ifelse(
+    str_detect(label_ci_1, "sum"), "I+Ig",
+    trimws(gsub("+1.*|\\ log", "", label_ci_1))
+  ),
+  log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none"),
+    comb_1 = case_when(
+    str_detect(label_ci_1, "1+|sum") ~ "comb",
+    str_detect(label_ci_1, "1+|sum", negate = T) ~ "none" 
+  )) %>% 
+  filter(comb_1 == "comb")
+  
+static_comb.df <- left_join(
+  select(static_nocomb, cue_1, label_ci_2, log_1, Self = fitness_difference),
+  select(static_comb, cue_1, label_ci_2, log_1, Total = fitness_difference),
+  by = c("cue_1", "log_1", "label_ci_2")) %>% 
+  filter(!is.na(Total) & !is.na(Self)) %>% 
+  mutate(classification = ifelse(Total > Self, "Total better", "Self better"))
+```
+
+# plot
+```{r}
+static_log.pl <- ggpaired(static_log.df, cond1 = "None", cond2 = "Log", line.color = "classification", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect") +
+  scale_color_manual(values = c("Not logged better" = "#fc8d59", "Logged better" = "#4575b4"))
+
+static_comb.pl <- ggpaired(static_comb.df, cond1 = "Total", cond2 = "Self", line.color = "classification", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect") +
+  scale_color_manual(values = c("Total better" = "#fc8d59", "Self better" = "#4575b4"))
+
+static_cue.pl <- ggarrange(static_log.pl, static_comb.pl, ncol = 2, align = "h")
+ggsave(here("figures/plos-bio/static_cue_perception.tiff"), width = 7.5, height = 4)
+```
+
+# invasion
+## proces data
+```{r}
+# join invade df with label because I am lazy
+invade.df2 <- invade.df %>% 
+  left_join(select(ez_label, id_ci, label_ci_1 = label_ci), by = c("mut_id" = "id_ci"))
+```
+
+# log
+```{r}
+# get non-logged pairings
+invade_nolog <- invade.df2 %>% 
+  mutate(cue_1 = trimws(gsub("\\ .*", "", label_ci_1)),
+         log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none")) %>% 
+  filter(log_1 == "none")
+
+
+invade_log <- invade.df2 %>% 
+  mutate(cue_1 = trimws(gsub("\\ .*", "", label_ci_1)),
+         log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none")) %>% 
+  filter(log_1 == "log")
+
+invade_log.df <- left_join(
+  select(invade_nolog, cue_1, res_id, log_1, None = fitness),
+  select(invade_log, cue_1, res_id, log_1, Log = fitness),
+  by = c("cue_1", "res_id")) %>% 
+  filter(!is.na(None) & !is.na(Log)) %>% 
+  mutate(classification = ifelse(Log > None, "Logged better", "Not logged better"))
+```
+
+# combined
+```{r}
+invade_nocomb <- invade.df2 %>% 
+  mutate(cue_1 = ifelse(
+    str_detect(label_ci_1, "sum"), "I+Ig",
+    trimws(gsub("+1.*|\\ log", "", label_ci_1))
+  ),
+  log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none"),
+    comb_1 = case_when(
+    str_detect(label_ci_1, "1+|sum") ~ "comb",
+    str_detect(label_ci_1, "1+|sum", negate = T) ~ "none" 
+  )) %>% 
+  filter(comb_1 == "none")
+
+invade_comb <- invade.df2 %>% 
+  mutate(cue_1 = ifelse(
+    str_detect(label_ci_1, "sum"), "I+Ig",
+    trimws(gsub("+1.*|\\ log", "", label_ci_1))
+  ),
+  log_1 = case_when(
+           str_detect(label_ci_1, "log") ~ "log",
+           str_detect(label_ci_1, "log", negate = T) ~ "none"),
+    comb_1 = case_when(
+    str_detect(label_ci_1, "1+|sum") ~ "comb",
+    str_detect(label_ci_1, "1+|sum", negate = T) ~ "none" 
+  )) %>% 
+  filter(comb_1 == "comb")
+  
+invade_comb.df <- left_join(
+  select(invade_nocomb, cue_1, res_id, log_1, Self = fitness),
+  select(invade_comb, cue_1, res_id, log_1, Total = fitness),
+  by = c("cue_1", "log_1", "res_id")) %>% 
+  filter(!is.na(Total) & !is.na(Self)) %>% 
+  mutate(classification = ifelse(Total > Self, "Total better", "Self better"))
+```
+
+# plot
+```{r}
+invade_log.pl <- ggpaired(invade_log.df, cond1 = "None", cond2 = "Log", line.color = "classification", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect") +
+  scale_color_manual(values = c("Not logged better" = "#fc8d59", "Logged better" = "#4575b4"))
+
+invade_comb.pl <- ggpaired(invade_comb.df, cond1 = "Total", cond2 = "Self", line.color = "classification", alpha = 0.5) +
+  labs(x = "Cue perception", y = "Fitness difference", color = "Effect") +
+  scale_color_manual(values = c("Total better" = "#fc8d59", "Self better" = "#4575b4"))
+
+invade_cue.pl <- ggarrange(invade_log.pl, invade_comb.pl, align = "h", ncol = 2)
+ggsave(here("figures/plos-bio/invasion_cue_perception.tiff"), width = 7.5, height = 4)
+```
+
+#-------------------------------------------#
+# Partitioning best cue
+#-------------------------------------------#
+#------- single infection -----------#
+```{r}
+
+```
+
+#------- dual cue ------------------#
+```{r}
+
+```
+
+
+#-------------------------------------------#
+Best cue adoption consequences
+#-------------------------------------------#
+# get data for disease curves
+```{r}
+# single infection dynamics
+si_dyn.df <- read_parquet(here("data/si_dyn/si_dyn_30.parquet")) 
+
+# co-infection dynamics
+ci_dyn.df <- read_parquet(here("data/ci_dyn/ci_dyn.parquet"))
+
+# dual cue dynamics
+dual_dyn.df <- read_parquet(here("data/dual_cue_dyn/dual_cue_dyn.parquet"))
+```
+
+
+
+
+
