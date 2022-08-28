@@ -1,21 +1,21 @@
-"","id_ci","id_si","label_ci","label_si","ez_label","ez_label_si"
-"1","I-i_none","I_none","I","I","Asexual iRBC","Asexual iRBC"
-"2","I-i_log","I_log","I log","I log","Asexual iRBC log10","Asexual iRBC log10"
-"3","I1+I2_none","I_none","I1+I2","I","Total asexual iRBC","Asexual iRBC"
-"4","I1+I2_log","I_log","I1+I2 log","I log","Total asexual
-iRBC log10","Asexual iRBC log10"
-"5","Ig-i_none","Ig_none","Ig","Ig","Sexual iRBC","Sexual iRBC"
-"6","Ig-i_log","Ig_log","Ig log","Ig log","Sexual iRBC log10","Sexual iRBC log10"
-"7","I-i+Ig-i_none","I+Ig_none","I+Ig","I+Ig","Asexual&sexual iRBC","Asexual&sexual iRBC"
-"8","I-i+Ig-i_log","I+Ig_log","I+Ig log","I+Ig log","Asexual&sexual
+,id_ci,id_si,label_ci,label_si,ez_label,ez_label_si
+1,I-i_none,I_none,I,I,Asexual iRBC,Asexual iRBC
+2,I-i_log,I_log,I log,I log,Asexual iRBC log10,Asexual iRBC log10
+3,I1+I2_none,I_none,I1+I2,I,Total asexual iRBC,Asexual iRBC
+4,I1+I2_log,I_log,I1+I2 log,I log,"Total asexual
+iRBC log10",Asexual iRBC log10
+5,Ig-i_none,Ig_none,Ig,Ig,Sexual iRBC,Sexual iRBC
+6,Ig-i_log,Ig_log,Ig log,Ig log,Sexual iRBC log10,Sexual iRBC log10
+7,I-i+Ig-i_none,I+Ig_none,I+Ig,I+Ig,Asexual&sexual iRBC,Asexual&sexual iRBC
+8,I-i+Ig-i_log,I+Ig_log,I+Ig log,I+Ig log,"Asexual&sexual
 iRBC log10","Asexual&sexual
 iRBC log10"
-"9","sum_none","I+Ig_none","sum","I+Ig","Total iRBC","Asexual&sexual iRBC"
-"10","sum_log","I+Ig_log","sum log","I+Ig log","Total iRBC log10","Asexual&sexual
+9,sum_none,I+Ig_none,sum,I+Ig,Total iRBC,Asexual&sexual iRBC
+10,sum_log,I+Ig_log,sum log,I+Ig log,Total iRBC log10,"Asexual&sexual
 iRBC log10"
-"11","G-i_none","G_none","G","G","Gametocyte","Gametocyte"
-"12","G-i_log","G_log","G log","G log","Gametocyte log10","Gametocyte log10"
-"13","G1+G2_none","G_none","G1+G2","G","Total gametocyte","Gametocyte"
-"14","Ig1+Ig2_none","Ig_none","Ig1+Ig2","Ig","Total sexual iRBC","Sexual iRBC"
-"15","R_none","R_none","R","R","RBC","RBC"
-"16","R_log","R_log","R log","R log","RBC log10","RBC log10"
+11,G-i_none,G_none,G,G,Gametocyte,Gametocyte
+12,G-i_log,G_log,G log,G log,Gametocyte log10,Gametocyte log10
+13,G1+G2_none,G_none,G1+G2,G,Total gametocyte,Gametocyte
+14,Ig1+Ig2_none,Ig_none,Ig1+Ig2,Ig,Total sexual iRBC,Sexual iRBC
+15,R_none,R_none,R,R,RBC,RBC
+16,R_log,R_log,R log,R log,RBC log10,RBC log10
