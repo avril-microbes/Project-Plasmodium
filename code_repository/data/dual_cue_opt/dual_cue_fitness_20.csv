@@ -1,0 +1,33 @@
+"","id","id_b","label","label_b","cue","cue_b","time","variable","value"
+"1","G_log","I_log","G log","I log","G","I",20,"tau_cum",9.66396506025918
+"2","G_log","I_none","G log","I","G","I",20,"tau_cum",9.52287090979977
+"3","G_log","I+Ig_log","G log","I+Ig log","G","I+Ig",20,"tau_cum",7.63567107383216e-05
+"4","G_log","I+Ig_none","G log","I+Ig","G","I+Ig",20,"tau_cum",2.05027439904634e-05
+"5","G_log","Ig_log","G log","Ig log","G","Ig",20,"tau_cum",9.65491584862844
+"6","G_log","Ig_none","G log","Ig","G","Ig",20,"tau_cum",9.54575764067275
+"7","G_log","R_log","G log","R log","G","R",20,"tau_cum",9.51483709036688
+"8","G_log","R_none","G log","R","G","R",20,"tau_cum",9.64054383212556
+"9","G_none","I_log","G","I log","G","I",20,"tau_cum",9.60666285712878
+"10","G_none","I_none","G","I","G","I",20,"tau_cum",8.56499715853232
+"11","G_none","I+Ig_log","G","I+Ig log","G","I+Ig",20,"tau_cum",6.99860302680372e-05
+"12","G_none","I+Ig_none","G","I+Ig","G","I+Ig",20,"tau_cum",2.0502582017569e-05
+"13","G_none","Ig_log","G","Ig log","G","Ig",20,"tau_cum",9.6339239408018
+"14","G_none","Ig_none","G","Ig","G","Ig",20,"tau_cum",8.42649885378314
+"15","G_none","R_log","G","R log","G","R",20,"tau_cum",8.44772325190129
+"16","G_none","R_none","G","R","G","R",20,"tau_cum",8.481091426615
+"17","Ig_log","I_log","Ig log","I log","Ig","I",20,"tau_cum",9.62330437957804
+"18","Ig_log","I_none","Ig log","I","Ig","I",20,"tau_cum",9.60673119293751
+"19","Ig_none","I_log","Ig","I log","Ig","I",20,"tau_cum",9.65039554382595
+"20","Ig_none","I_none","Ig","I","Ig","I",20,"tau_cum",8.415925283746
+"21","R_log","I_log","R log","I log","R","I",20,"tau_cum",9.8517354273958
+"22","R_log","I_none","R log","I","R","I",20,"tau_cum",8.37108011205565
+"23","R_log","I+Ig_log","R log","I+Ig log","R","I+Ig",20,"tau_cum",5.43587226006989e-05
+"24","R_log","I+Ig_none","R log","I+Ig","R","I+Ig",20,"tau_cum",2.05032890307196e-05
+"25","R_log","Ig_log","R log","Ig log","R","Ig",20,"tau_cum",9.60448772990188
+"26","R_log","Ig_none","R log","Ig","R","Ig",20,"tau_cum",8.53748587665527
+"27","R_none","I_log","R","I log","R","I",20,"tau_cum",9.63760882662044
+"28","R_none","I_none","R","I","R","I",20,"tau_cum",8.39167633394579
+"29","R_none","I+Ig_log","R","I+Ig log","R","I+Ig",20,"tau_cum",7.86400629217694e-05
+"30","R_none","I+Ig_none","R","I+Ig","R","I+Ig",20,"tau_cum",2.05019086735534e-05
+"31","R_none","Ig_log","R","Ig log","R","Ig",20,"tau_cum",9.693211525846
+"32","R_none","Ig_none","R","Ig","R","Ig",20,"tau_cum",8.56370587940307

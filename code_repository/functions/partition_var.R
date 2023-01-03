@@ -1,0 +1,201 @@
+partition_var <- function(par, cue, cue_range, log, rand_var, rand_mean, rand_sd, seed){
+  # run 5 iterations each with 1000
+  cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  registerDoParallel(cl)
+  registerDoRNG(seed)
+  mc_res <- foreach(i= 1:1000, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
+    
+    # source function
+    source(here("functions/chabaudi_si_clean.R"))
+    
+    # get parameter values that are stochastic
+    rand <- rand_mean*exp(rnorm(n = 1, mean = 0, sd = rand_sd)) # proportion of RBC recovered
+    
+    # get different parameter set, each incorporating only 1 random variable
+    if(rand_var == "rho"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                                    lambda = 3.7*10^5,
+                                    mu = 0.025, 
+                                    p = 8*10^-6, # doubled form original
+                                    alpha = 1, 
+                                    alphag = 2, 
+                                    beta = 5.721, 
+                                    mum = 48, 
+                                    mug = 4, 
+                                    I0 = 43.85965, 
+                                    Ig0 = 0, 
+                                    a = 150, 
+                                    b = 100, 
+                                    sp = 1,
+                                    psin = 16.69234,
+                                    psiw = 0.8431785,
+                                    phin = 0.03520591, 
+                                    phiw = 550.842,
+                                    iota = 2.18*(10^6),
+                                    rho = rand)
+    }
+    
+    if(rand_var == "beta"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                                    lambda = 3.7*10^5,
+                                    mu = 0.025, 
+                                    p = 8*10^-6, # doubled form original
+                                    alpha = 1, 
+                                    alphag = 2, 
+                                    beta = rand, 
+                                    mum = 48, 
+                                    mug = 4, 
+                                    I0 = 43.85965, 
+                                    Ig0 = 0, 
+                                    a = 150, 
+                                    b = 100, 
+                                    sp = 1,
+                                    psin = 16.69234,
+                                    psiw = 0.8431785,
+                                    phin = 0.03520591, 
+                                    phiw = 550.842,
+                                    iota = 2.18*(10^6),
+                                    rho = 0.2627156)
+    }
+    
+    if(rand_var == "psin"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                                    lambda = 3.7*10^5,
+                                    mu = 0.025, 
+                                    p = 8*10^-6, # doubled form original
+                                    alpha = 1, 
+                                    alphag = 2, 
+                                    beta = 5.721, 
+                                    mum = 48, 
+                                    mug = 4, 
+                                    I0 = 43.85965, 
+                                    Ig0 = 0, 
+                                    a = 150, 
+                                    b = 100, 
+                                    sp = 1,
+                                    psin = rand,
+                                    psiw = 0.8431785,
+                                    phin = 0.03520591, 
+                                    phiw = 550.842,
+                                    iota = 2.18*(10^6),
+                                    rho = 0.2627156)
+    }
+    
+    if(rand_var == "psiw"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                                    lambda = 3.7*10^5,
+                                    mu = 0.025, 
+                                    p = 8*10^-6, # doubled form original
+                                    alpha = 1, 
+                                    alphag = 2, 
+                                    beta = 5.721, 
+                                    mum = 48, 
+                                    mug = 4, 
+                                    I0 = 43.85965, 
+                                    Ig0 = 0, 
+                                    a = 150, 
+                                    b = 100, 
+                                    sp = 1,
+                                    psin = 16.69234,
+                                    psiw = rand,
+                                    phin = 0.03520591, 
+                                    phiw = 550.842,
+                                    iota = 2.18*(10^6),
+                                    rho = 0.2627156)
+    }
+    
+    if(rand_var == "phin"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                                    lambda = 3.7*10^5,
+                                    mu = 0.025, 
+                                    p = 8*10^-6, # doubled form original
+                                    alpha = 1, 
+                                    alphag = 2, 
+                                    beta = 5.721, 
+                                    mum = 48, 
+                                    mug = 4, 
+                                    I0 = 43.85965, 
+                                    Ig0 = 0, 
+                                    a = 150, 
+                                    b = 100, 
+                                    sp = 1,
+                                    psin = 16.69234,
+                                    psiw = 0.8431785,
+                                    phin = rand, 
+                                    phiw = 550.842,
+                                    iota = 2.18*(10^6),
+                                    rho = 0.2627156)
+    }
+    
+    if(rand_var == "phiw"){
+      parameters_tsukushi_rand <- c(R1 = 8.89*10^6, # slightly higher
+                                    lambda = 3.7*10^5,
+                                    mu = 0.025, 
+                                    p = 8*10^-6, # doubled form original
+                                    alpha = 1, 
+                                    alphag = 2, 
+                                    beta = 5.721, 
+                                    mum = 48, 
+                                    mug = 4, 
+                                    I0 = 43.85965, 
+                                    Ig0 = 0, 
+                                    a = 150, 
+                                    b = 100, 
+                                    sp = 1,
+                                    psin = 16.69234,
+                                    psiw = 0.8431785,
+                                    phin = 0.03520591, 
+                                    phiw = rand,
+                                    iota = 2.18*(10^6),
+                                    rho = 0.2627156)
+    }
+    
+    time_range <- seq(0, 20, by = 1e-3)
+    
+    # run dynamics
+    chabaudi_si_clean(
+      parameters_cr = par, 
+      parameters = parameters_tsukushi_rand, 
+      immunity = "tsukushi",
+      time_range = time_range, 
+      cue = cue, 
+      cue_range = cue_range, 
+      log_cue = log,
+      solver = "vode",
+      dyn = TRUE)
+    
+  }
+  
+  stopCluster(cl)
+  
+  # process data
+  fitness.ls <- mclapply(mc_res, function(x){
+    fitness <- x %>% 
+      dplyr::filter(variable == "tau_cum") %>% 
+      dplyr::summarise(max_fitness = max(value))
+    
+    return(fitness)
+  })
+  
+  ## get fitness.df
+  fitness.df <- do.call(rbind, fitness.ls)
+  ## bind fitness.df with cue, log, and variable being randomized
+  
+  # get cue vs dynamics
+  ## produce wide df for plotting cue vs cr graph
+  df_wide.ls <- mclapply(mc_res, function(x){
+    ## convert to wide
+    wide <- tidyr::pivot_wider(x, names_from = variable, values_from = value, id_cols = c(time))
+    ## get every 10th row
+    wide_filtered <- wide %>% dplyr::filter(row_number() %% 10 == 1)
+    return(wide_filtered)
+  })
+  
+  # get wide list
+  df_wide.df <- dplyr::bind_rows(df_wide.ls, .id = "id")
+  ## bind with cue, log and variable being randomized
+  df_wide.df <- cbind(df_wide.df, cue = cue, log = log, rand_var = rand_var)
+  
+  # return output
+  return(list(fitness.df, df_wide.df))
+}

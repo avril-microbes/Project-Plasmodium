@@ -27,7 +27,7 @@ emph_2018 <- readxl::read_xls(here("experimental_data/Huijben_2018_EMPH.xls"), s
 ## (2010 published in Evolution)
 evo_2010 <- readxl::read_xls(here("experimental_data/Huijben_2010_evolution.xls"), sheet = 1)
 
-# import in https://onlinelibrary.wiley.com/doi/10.1111/j.1420-9101.2011.02369.x
+# import in https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1003578#:~:text=The%20philosophy%20is%20that%20aggressive,longer%20feel%20sick%20%5B13%5D.
 ## (2013 in PLoS pathogen)
 plos_2013_1 <- readxl::read_xlsx(here("experimental_data/Huijben_2013_PLoS.xlsx"), sheet = 2)
 
