@@ -29,7 +29,7 @@ library(parallel)
 ```
 
 ### Load scripts
-```{r}
+```{r warning=FALSE}
 # for single infections
 source(here("functions/opt_local.R"))
 source(here("functions/chabaudi_si_clean.R"))
@@ -498,6 +498,152 @@ dual_cue.ls <- split(dual_cue.df2, seq(nrow(dual_cue.df2)))
 
 # run optimization
 lapply(dual_cue.ls, dual_cue_opt)
+```
+
+# Phase-mapping of laboratory mice infection
+### Importing in data downloaded from Dryad
+```{r}
+# import in https://academic.oup.com/emph/article/2018/1/127/5045871?login=true
+## (2018 published in EMPH)
+emph_2018 <- readxl::read_xls(here("experimental_data/Huijben_2018_EMPH.xls"), sheet = 1)
+
+# import in https://onlinelibrary.wiley.com/doi/10.1111/j.1558-5646.2010.01068.x
+## (2010 published in Evolution)
+evo_2010 <- readxl::read_xls(here("experimental_data/Huijben_2010_evolution.xls"), sheet = 1)
+
+# import in https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1003578#:~:text=The%20philosophy%20is%20that%20aggressive,longer%20feel%20sick%20%5B13%5D.
+## (2013 in PLoS pathogen)
+plos_2013_1 <- readxl::read_xlsx(here("experimental_data/Huijben_2013_PLoS.xlsx"), sheet = 2)
+
+plos_2013_2 <- readxl::read_xlsx(here("experimental_data/Huijben_2013_PLoS.xlsx"), sheet = 3)
+
+# import in https://onlinelibrary.wiley.com/doi/10.1111/j.1420-9101.2011.02369.x
+## (2011 in Journal of Evolutionary Biology)
+eseb_2011 <- readxl::read_xls(here("experimental_data/Huijben_2011_eseb.xls"), sheet = 1)
+
+# PRIVATE database!! This will not  be available! import in https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3939351/
+## (2011 in Journal of American naturalist)
+amna_2011 <- readxl::read_xls(here("experimental_data/Pollitt_2011_naturalist.xls"), sheet = 1)
+```
+
+### clean data for single infection
+```{r}
+## for EMPH 2018 study, include only infection series without drugs were R-inoculum is administered by itself, which includes 6, 7, 8, 9, 10. Box 6 has a starting inoculum number of 10^6, which is most similar to other studies. Filtering between day 3-21 because those are the days where we have single day data.
+emph_2018_ss.df <- emph_2018 %>% 
+  filter(Box %in% seq(6, 10) &
+         dplyr::between(Day, 3, 21)) %>% 
+  mutate(dose = case_when(
+    Box == 6 ~ 10^6,
+    Box == 7 ~ 10^5,
+    Box == 8 ~ 10^3,
+    Box == 9 | Box == 10 ~ 10^1
+  )) %>% 
+  mutate(strain = "As6p",
+         study = "emph2018",
+         study_strain = paste0(strain, study),
+         id = paste0(study, strain, Box, Mouse, 1),
+         RBC = RBC * (10^6)) %>%
+  select(day = Day,
+         mouse = Mouse, 
+         RBC, 
+         asex = Rasex,
+         gam = Rgam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+## for 2011 eseb, only day 3-17 data are analyzed because those are the days where gametocyte data are available
+eseb_2011_ss.df <- eseb_2011 %>% 
+  filter(Clones == "R" & between(Day, 3, 17) &
+           Drugs == "N") %>% 
+  mutate(dose = 10^6,
+         strain = "As8p",
+         study = "eseb2011",
+         study_strain = paste0(strain, study),
+         RBC = RBC*(10^6),
+         id = paste0(study, strain, Box, Mouse, 2)) %>% 
+  select(day = Day,
+         mouse = Mouse,
+         RBC,
+         asex = R.asex,
+         gam = R.gam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+## for evolution_2010, single infection data for both resistant and susceptible clones are available without drug treatment
+evolution_2010_ss.df <- evo_2010 %>% 
+  filter(Clone == "R" | Clone == "S") %>%
+  filter(between(Day, 3, 21) &
+           Drugs == "nodrugs") %>% 
+  mutate(asex = R.asex + S.asex,
+         gam = R.gam + S.gam,
+         dose = 10^6,
+         RBC = RBC*(10^6),
+         study = "evol2011",
+         strain = ifelse(Clone == "R", "As12", "AJ51"),
+         study_strain = paste0(strain, "_", study),
+         id = paste0(study, strain, Box, Mouse, 3)) %>% 
+  select(day = Day,
+         mouse = Mouse,
+         RBC,
+         asex,
+         gam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+## for amnat 2011, get single infection data. Filter out any mice that have missing data. Set negative asexual data ot 0
+amna_2011_ss.df <-  amna_2011 %>% 
+  filter(treat %in% c("AJ", "AS", "ER", "CR", "CW", "DK")) %>% 
+  mutate(asex = tot.para - tot.gcyte,
+         gam = tot.gcyte,
+         dose = 10^6,
+         study = "amna_2011",
+         RBC = rbc/(10^6),
+         study_strain = paste0(treat, "_", study),
+         id = paste0(study, treat, div, mouse, 4)) %>% 
+  mutate(asex = ifelse(asex < 0, 0, asex)) # sometimes total parasite is less than gametocyte so need to correct for this
+
+### check for NA by groups
+amna_na.id <- amna_2011_ss.df %>% 
+  filter_at(vars(asex, gam, RBC), all_vars(is.na(.))) %>% 
+  distinct(id) %>% 
+  select(id)
+
+amna_2011_ss.df2 <- amna_2011_ss.df %>% 
+  filter(!(id %in% amna_na.id$id)) %>% 
+  select(day,
+         mouse,
+         RBC,
+         asex,
+         gam,
+         dose,
+         strain = treat,
+         study,
+         study_strain,
+         id)
+
+# rbind
+exp_ss.df <- rbind(emph_2018_ss.df, eseb_2011_ss.df, evolution_2010_ss.df, amna_2011_ss.df2)
+
+# correct RBC to actual density (in unit of RBC/uL)
+exp_ss_dose.df <- exp_ss.df %>% filter(dose == 10^6) 
+
+# add logged parameters
+exp_ss_dose.df <- exp_ss_dose.df %>% 
+  mutate(log10_asex = log10(asex+1),
+         log10_RBC = log10(RBC+1),
+         log10_gam = log10(gam+1))
+
+# get dataset with only resistance strain
+exp_ss_R.df <- exp_ss_dose.df %>% filter(strain != "AJ51")
 ```
 
 # Co-infection competition

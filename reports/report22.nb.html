@@ -247,34 +247,6 @@ source(here(&quot;functions/test.R&quot;))</code></pre>
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGFyYW1ldGVyc190c3VrdXNoaSA8LSBjKFIxID0gOC44OSooMTBeNiksICMgc2xpZ2h0bHkgaGlnaGVyXG4gICAgICAgICAgICAgICAgbGFtYmRhID0gMy43KigxMF41KSxcbiAgICAgICAgICAgICAgICBtdSA9IDAuMDI1LCBcbiAgICAgICAgICAgICAgICBwID0gOCooMTBeLTYpLCAjIGRvdWJsZWQgZm9ybSBvcmlnaW5hbFxuICAgICAgICAgICAgICAgIGFscGhhID0gMSwgXG4gICAgICAgICAgICAgICAgYWxwaGFnID0gMiwgXG4gICAgICAgICAgICAgICAgYmV0YSA9IDUuNzIxLCBcbiAgICAgICAgICAgICAgICBtdW0gPSA0OCwgXG4gICAgICAgICAgICAgICAgbXVnID0gNCwgXG4gICAgICAgICAgICAgICAgSTAgPSA0My44NTk2NSwgXG4gICAgICAgICAgICAgICAgSWcwID0gMCwgXG4gICAgICAgICAgICAgICAgYSA9IDE1MCwgXG4gICAgICAgICAgICAgICAgYiA9IDEwMCwgXG4gICAgICAgICAgICAgICAgc3AgPSAxLFxuICAgICAgICAgICAgICAgIHBzaW4gPSAxNi42OTIzNCxcbiAgICAgICAgICAgICAgICBwc2l3ID0gMC44NDMxNzg1LFxuICAgICAgICAgICAgICAgIHBoaW4gPSAwLjAzNTIwNTkxLCBcbiAgICAgICAgICAgICAgICBwaGl3ID0gNTUwLjg0MixcbiAgICAgICAgICAgICAgICBpb3RhID0gMi4xOCooMTBeNiksXG4gICAgICAgICAgICAgICAgcmhvID0gMC4yNjI3MTU2KVxuXG5JX3JhbmdlX25vbmUgPC0gc2VxKDAsIDYqKDEwXjYpLCBieSA9ICg2KigxMF42KSkvNTAwKVxuSV9yYW5nZV9sb2cgPC0gc2VxKDAsIGxvZzEwKDYqKDEwXjYpKSwgYnkgPSAobG9nMTAoNiooMTBeNikpKS81MDApXG5HX3JhbmdlX25vbmUgPC0gc2VxKDAsIDYqKDEwXjQpLCBieSA9ICg2KigxMF40KSkvNTAwKVxuR19yYW5nZV9sb2cgPC0gc2VxKDAsIGxvZzEwKDYqKDEwXjQpKSwgYnkgPSAobG9nMTAoNiooMTBeNCkpKS81MDApXG5SX3JhbmdlX2xvZyA8LSBzZXEobG9nMTAoMTBeNiksIGxvZzEwKDEwXjcpLCBieSA9IChsb2cxMCgxMF43KS1sb2cxMCgxMF42KSkvNTAwMClcbmBgYCJ9 -->
-<pre class="r"><code>parameters_tsukushi &lt;- c(R1 = 8.89*(10^6), # slightly higher
-                lambda = 3.7*(10^5),
-                mu = 0.025, 
-                p = 8*(10^-6), # doubled form original
-                alpha = 1, 
-                alphag = 2, 
-                beta = 5.721, 
-                mum = 48, 
-                mug = 4, 
-                I0 = 43.85965, 
-                Ig0 = 0, 
-                a = 150, 
-                b = 100, 
-                sp = 1,
-                psin = 16.69234,
-                psiw = 0.8431785,
-                phin = 0.03520591, 
-                phiw = 550.842,
-                iota = 2.18*(10^6),
-                rho = 0.2627156)
-
-I_range_none &lt;- seq(0, 6*(10^6), by = (6*(10^6))/500)
-I_range_log &lt;- seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/500)
-G_range_none &lt;- seq(0, 6*(10^4), by = (6*(10^4))/500)
-G_range_log &lt;- seq(0, log10(6*(10^4)), by = (log10(6*(10^4)))/500)
-R_range_log &lt;- seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000)</code></pre>
-<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>#——————————————# # testing out te effect #——————————————# # get dual cue df</p>
@@ -1741,6 +1713,108 @@ R_log_W.opt$value</code></pre>
 <h1>function to run optimization using 3 different functions (staticR, no N, and noW)</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGFydGl0aW9uX3NpIDwtIGZ1bmN0aW9uKGRmKXtcbiAgIyBzb3VyY2UgYWxsIGZ1bmN0aW9uc1xuICBzb3VyY2UoaGVyZShcImZ1bmN0aW9ucy9jaGFiYXVkaV9zaV9jbGVhbi5SXCIpKVxuICBzb3VyY2UoaGVyZShcImZ1bmN0aW9ucy9jaGFiYXVkaV9zaV9jbGVhbl9SLlJcIikpXG4gIHNvdXJjZShoZXJlKFwiZnVuY3Rpb25zL2NoYWJhdWRpX3NpX2NsZWFuX04uUlwiKSlcbiAgc291cmNlKGhlcmUoXCJmdW5jdGlvbnMvY2hhYmF1ZGlfc2lfY2xlYW5fVy5SXCIpKVxuICBcbiAgIyBnZXQgcGFyYW1ldGVyc1xuICBwYXJhbWV0ZXJzX3RzdWt1c2hpIDwtIGMoUjEgPSA4Ljg5KigxMF42KSwgIyBzbGlnaHRseSBoaWdoZXJcbiAgICAgICAgICAgICAgICBsYW1iZGEgPSAzLjcqKDEwXjUpLFxuICAgICAgICAgICAgICAgIG11ID0gMC4wMjUsIFxuICAgICAgICAgICAgICAgIHAgPSA4KigxMF4tNiksICMgZG91YmxlZCBmb3JtIG9yaWdpbmFsXG4gICAgICAgICAgICAgICAgYWxwaGEgPSAxLCBcbiAgICAgICAgICAgICAgICBhbHBoYWcgPSAyLCBcbiAgICAgICAgICAgICAgICBiZXRhID0gNS43MjEsIFxuICAgICAgICAgICAgICAgIG11bSA9IDQ4LCBcbiAgICAgICAgICAgICAgICBtdWcgPSA0LCBcbiAgICAgICAgICAgICAgICBJMCA9IDQzLjg1OTY1LCBcbiAgICAgICAgICAgICAgICBJZzAgPSAwLCBcbiAgICAgICAgICAgICAgICBhID0gMTUwLCBcbiAgICAgICAgICAgICAgICBiID0gMTAwLCBcbiAgICAgICAgICAgICAgICBzcCA9IDEsXG4gICAgICAgICAgICAgICAgcHNpbiA9IDE2LjY5MjM0LFxuICAgICAgICAgICAgICAgIHBzaXcgPSAwLjg0MzE3ODUsXG4gICAgICAgICAgICAgICAgcGhpbiA9IDAuMDM1MjA1OTEsIFxuICAgICAgICAgICAgICAgIHBoaXcgPSA1NTAuODQyLFxuICAgICAgICAgICAgICAgIGlvdGEgPSAyLjE4KigxMF42KSxcbiAgICAgICAgICAgICAgICByaG8gPSAwLjI2MjcxNTYpXG4gIFxuICAjIGdldCBhbGwgY2hhcmFjdGVyaXN0aWNzXG4gIGN1ZSA8LSBkZiRjdWVcbiAgbG9nIDwtIGlmZWxzZShkZiRsb2cgPT0gXCJsb2dcIiwgXCJsb2cxMFwiLCBcIm5vbmVcIilcbiAgY3VlX3JhbmdlIDwtIHNlcShkZiRsb3csIGRmJGhpZ2gsIGJ5ID0gZGYkYnkpXG4gIGlkIDwtIGRmJGlkXG4gIFxuICAjIHJ1biBvcHRpbWl6YXRpb24gd2l0aCBzdGF0aWMgUkJDXG4gIGNsIDwtIG1ha2VDbHVzdGVyKGRldGVjdENvcmVzKCkpOyBzZXREZWZhdWx0Q2x1c3RlcihjbCA9IGNsKVxuICBzdGF0aWNfUiA8LSBvcHRpbVBhcmFsbGVsKFxuICAgIHBhciA9IHJlcCgwLjUsNCksICMgc3RhcnQgYXQgMC41eDRcbiAgICBmbiA9IGNoYWJhdWRpX3NpX2NsZWFuX1IsIFxuICAgIGNvbnRyb2wgPSBsaXN0KHRyYWNlID0gNiwgZm5zY2FsZSA9IC0xKSxcbiAgICBpbW11bml0eSA9IFwidHN1a3VzaGlcIixcbiAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICB0aW1lX3JhbmdlID0gc2VxKDAsIDIwLCBieSA9IDFlLTMpLFxuICAgIGN1ZV9yYW5nZSA9ICBjdWVfcmFuZ2UsXG4gICAgY3VlID0gY3VlLFxuICAgIGxvZ19jdWUgPSBsb2csXG4gICAgc29sdmVyID0gXCJ2b2RlXCIpXG5cbiAgXG4gICMgcnVuIG9wdGltaXphdGlvbiB3aXRoIG5vIGluZGlzY3JpbWluYW50IGltbXVuaXR5XG4gIG5vX04gPC0gb3B0aW1QYXJhbGxlbChcbiAgICBwYXIgPSByZXAoMC41LDQpLCAjIHN0YXJ0IGF0IDAuNXg0XG4gICAgZm4gPSBjaGFiYXVkaV9zaV9jbGVhbl9OLCBcbiAgICBjb250cm9sID0gbGlzdCh0cmFjZSA9IDYsIGZuc2NhbGUgPSAtMSksXG4gICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgcGFyYW1ldGVycyA9IHBhcmFtZXRlcnNfdHN1a3VzaGksXG4gICAgdGltZV9yYW5nZSA9IHNlcSgwLCAyMCwgYnkgPSAxZS0zKSxcbiAgICBjdWVfcmFuZ2UgPSAgY3VlX3JhbmdlLFxuICAgIGN1ZSA9IGN1ZSxcbiAgICBsb2dfY3VlID0gbG9nLFxuICAgIHNvbHZlciA9IFwidm9kZVwiKVxuICBcbiAgIyBydW4gc2ltdWxhdGlvbiB3aXRoIG5vIHRhcmdldGVkIGltbXVuaXR5IChXKVxuICBub19XIDwtIG9wdGltUGFyYWxsZWwoXG4gICAgcGFyID0gcmVwKDAuNSw0KSwgIyBzdGFydCBhdCAwLjV4NFxuICAgIGZuID0gY2hhYmF1ZGlfc2lfY2xlYW5fVywgXG4gICAgY29udHJvbCA9IGxpc3QodHJhY2UgPSA2LCBmbnNjYWxlID0gLTEpLFxuICAgIGltbXVuaXR5ID0gXCJ0c3VrdXNoaVwiLFxuICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgIHRpbWVfcmFuZ2UgPSBzZXEoMCwgMjAsIGJ5ID0gMWUtMyksXG4gICAgY3VlX3JhbmdlID0gIGN1ZV9yYW5nZSxcbiAgICBjdWUgPSBjdWUsXG4gICAgbG9nX2N1ZSA9IGxvZyxcbiAgICBzb2x2ZXIgPSBcInZvZGVcIilcbiAgXG4gIHN0b3BDbHVzdGVyKGNsKVxuICBcbiAgIyBqb2luIHRvZ2V0aGVyIGFsbCBkYXRhXG4gIHJlcyA8LSBjYmluZChpZCA9IGlkLFxuICAgICAgICAgICAgICAgY3VlID0gY3VlLFxuICAgICAgICAgICAgICAgbG9nID0gbG9nLFxuICAgICAgICAgICAgICAgZml0bmVzc19SID0gc3RhdGljX1IkdmFsdWUsXG4gICAgICAgICAgICAgICBmaXRuZXNzX04gPSBub19OJHZhbHVlLFxuICAgICAgICAgICAgICAgZml0bmVzc19XID0gbm9fVyR2YWx1ZSxcbiAgICAgICAgICAgICAgIHZhcl9SMSA9IHN0YXRpY19SJHBhcltbMV1dLFxuICAgICAgICAgICAgICAgdmFyX1IyID0gc3RhdGljX1IkcGFyW1syXV0sIFxuICAgICAgICAgICAgICAgdmFyX1IzID0gc3RhdGljX1IkcGFyW1szXV0sXG4gICAgICAgICAgICAgICB2YXJfUjQgPSBzdGF0aWNfUiRwYXJbWzRdXSxcbiAgICAgICAgICAgICAgIHZhcl9OMSA9IG5vX04kcGFyW1sxXV0sXG4gICAgICAgICAgICAgICB2YXJfTjIgPSBub19OJHBhcltbMl1dLCBcbiAgICAgICAgICAgICAgIHZhcl9OMyA9IG5vX04kcGFyW1szXV0sXG4gICAgICAgICAgICAgICB2YXJfTjQgPSBub19OJHBhcltbNF1dLFxuICAgICAgICAgICAgICAgdmFyX1cxID0gbm9fVyRwYXJbWzFdXSxcbiAgICAgICAgICAgICAgIHZhcl9XMiA9IG5vX1ckcGFyW1syXV0sIFxuICAgICAgICAgICAgICAgdmFyX1czID0gbm9fVyRwYXJbWzNdXSxcbiAgICAgICAgICAgICAgIHZhcl9XNCA9IG5vX1ckcGFyW1s0XV0pXG4gIFxuICB3cml0ZS5jc3YocmVzLCBwYXN0ZTAoaGVyZShcImRhdGEvcGFydGl0aW9uL3NpL1wiKSwgaWQsIFwiX3BhcnRpdGlvbi5jc3ZcIikpXG59XG5gYGAifQ== -->
+<pre class="r"><code>partition_si &lt;- function(df){
+  # source all functions
+  source(here(&quot;functions/chabaudi_si_clean.R&quot;))
+  source(here(&quot;functions/chabaudi_si_clean_R.R&quot;))
+  source(here(&quot;functions/chabaudi_si_clean_N.R&quot;))
+  source(here(&quot;functions/chabaudi_si_clean_W.R&quot;))
+  
+  # get parameters
+  parameters_tsukushi &lt;- c(R1 = 8.89*(10^6), # slightly higher
+                lambda = 3.7*(10^5),
+                mu = 0.025, 
+                p = 8*(10^-6), # doubled form original
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+  
+  # get all characteristics
+  cue &lt;- df$cue
+  log &lt;- ifelse(df$log == &quot;log&quot;, &quot;log10&quot;, &quot;none&quot;)
+  cue_range &lt;- seq(df$low, df$high, by = df$by)
+  id &lt;- df$id
+  
+  # run optimization with static RBC
+  cl &lt;- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  static_R &lt;- optimParallel(
+    par = rep(0.5,4), # start at 0.5x4
+    fn = chabaudi_si_clean_R, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = &quot;tsukushi&quot;,
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  cue_range,
+    cue = cue,
+    log_cue = log,
+    solver = &quot;vode&quot;)
+
+  
+  # run optimization with no indiscriminant immunity
+  no_N &lt;- optimParallel(
+    par = rep(0.5,4), # start at 0.5x4
+    fn = chabaudi_si_clean_N, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = &quot;tsukushi&quot;,
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  cue_range,
+    cue = cue,
+    log_cue = log,
+    solver = &quot;vode&quot;)
+  
+  # run simulation with no targeted immunity (W)
+  no_W &lt;- optimParallel(
+    par = rep(0.5,4), # start at 0.5x4
+    fn = chabaudi_si_clean_W, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = &quot;tsukushi&quot;,
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  cue_range,
+    cue = cue,
+    log_cue = log,
+    solver = &quot;vode&quot;)
+  
+  stopCluster(cl)
+  
+  # join together all data
+  res &lt;- cbind(id = id,
+               cue = cue,
+               log = log,
+               fitness_R = static_R$value,
+               fitness_N = no_N$value,
+               fitness_W = no_W$value,
+               var_R1 = static_R$par[[1]],
+               var_R2 = static_R$par[[2]], 
+               var_R3 = static_R$par[[3]],
+               var_R4 = static_R$par[[4]],
+               var_N1 = no_N$par[[1]],
+               var_N2 = no_N$par[[2]], 
+               var_N3 = no_N$par[[3]],
+               var_N4 = no_N$par[[4]],
+               var_W1 = no_W$par[[1]],
+               var_W2 = no_W$par[[2]], 
+               var_W3 = no_W$par[[3]],
+               var_W4 = no_W$par[[4]])
+  
+  write.csv(res, paste0(here(&quot;data/partition/si/&quot;), id, &quot;_partition.csv&quot;))
+}</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -1748,6 +1822,19 @@ R_log_W.opt$value</code></pre>
 <h1>run function</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBpbXBvcnQgaW4gb3B0aW1pemVkIGRmXG5zaV9vcHQuZGYgPC0gcmVhZC5jc3YoaGVyZShcImRhdGEvc2lfb3B0LmNzdlwiKSlcblxuIyBqb2luIHdpdGggY3VlX3JhbmdlXG5jdWVfcmFuZ2Vfc2kuZGYgPC0gcmVhZC5jc3YoaGVyZShcImRhdGEvY3VlX3JhbmdlX3NpLmNzdlwiKSlcbnNpX29wdC5kZiA8LSBzaV9vcHQuZGYgJT4lIGxlZnRfam9pbihzZWxlY3QoY3VlX3JhbmdlX3NpLmRmLCBsb3csIGhpZ2gsIGJ5LCBpZCksIFwiaWRcIilcblxuIyBsYXBwbHkgbG9vcFxuc2lfb3B0LmxzIDwtIHNwbGl0KHNpX29wdC5kZiwgc2VxKG5yb3coc2lfb3B0LmRmKSkpXG5sYXBwbHkoc2lfb3B0LmxzLCBwYXJ0aXRpb25fc2kpXG5cbmBgYCJ9 -->
+<pre class="r"><code># import in optimized df
+si_opt.df &lt;- read.csv(here(&quot;data/si_opt.csv&quot;))
+
+# join with cue_range
+cue_range_si.df &lt;- read.csv(here(&quot;data/cue_range_si.csv&quot;))
+si_opt.df &lt;- si_opt.df %&gt;% left_join(select(cue_range_si.df, low, high, by, id), &quot;id&quot;)
+
+# lapply loop
+si_opt.ls &lt;- split(si_opt.df, seq(nrow(si_opt.df)))
+lapply(si_opt.ls, partition_si)
+</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>#—————————————–# # partition co-infection #—————————————–#</p>
