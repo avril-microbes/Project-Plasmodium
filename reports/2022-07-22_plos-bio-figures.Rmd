@@ -694,6 +694,13 @@ R_I.dyn <- dual.cr %>%
   tidyr::pivot_wider(names_from = variable, values_from = value) %>% 
   mutate(log_R = log10(R),
          log_I = log10(I))
+
+# examine sexual iRBC as well
+R_Ig.dyn <- dual.cr %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value) %>% 
+  mutate(log_R = log10(R),
+         log_Ig = log10(Ig))
+max(R_Ig.dyn$Ig) 
 ```
 
 # plot
@@ -706,6 +713,15 @@ dual_rn.pl <- ggplot() +
   xlim(0.99*min(hablar::s(R_I.dyn$log_I), na.rm = T), 1.01* max(hablar::s(R_I.dyn$log_I), na.rm = T)) +
   ylim(0.99*min(hablar::s(R_I.dyn$log_R), na.rm = T),1.01* max(hablar::s(R_I.dyn$log_R), na.rm = T)) +
   labs(y = "RBC log10", x = "Asexual iRBC log10", fill = "Conversion rate") +
+  theme_dark()
+
+# just testing for sexual iRBC vs RBC
+ggplot() +
+  geom_path(data = R_Ig.dyn, aes(x = Ig, y = log_R), color = "white", arrow = arrow(angle = 30, length = unit(0.1, "inches"))) +
+  geom_point(data = R_Ig.dyn %>% filter(row_number() %% 1000 == 1 & time <= 20), aes(x = Ig, y = log_R), color = "white") +
+  scale_x_continuous(trans = "log10") +
+  xlim(0, 200000) +
+  labs(y = "RBC log10", x = "Sexual iRBC log10", fill = "Conversion rate") +
   theme_dark()
 ```
 
