@@ -38,12 +38,14 @@ Figure displaying the reaction norms of best single and co-infection.
 # single infection dynamics, reaction norms, and rugs
 si_dyn.df <- read_parquet(here("data/si_dyn/si_dyn_30.parquet")) 
 si_rn.df <- read_parquet(here("data/si_dyn/si_rn.parquet"))
-si_rug.df <- read_parquet(here("data/si_dyn/si_rug.parquet"))
+si_rug.df <- read_parquet(here("data/si_dyn/si_rug.parquet")) %>% 
+  distinct(value, label, .keep_all = T)
 
 # co-infection dynamics, reaction norms, and rugs
 ci_dyn.df <- read_parquet(here("data/ci_dyn/ci_dyn.parquet"))
 ci_rn.df <- read_parquet(here("data/ci_dyn/ci_rn.parquet"))
-ci_rug.df <- read_parquet(here("data/ci_dyn/ci_rug.parquet"))
+ci_rug.df <- read_parquet(here("data/ci_dyn/ci_rug.parquet")) %>% 
+  distinct(value, label, .keep_all = T)
 ```
 
 # process data for reaction norm
@@ -97,7 +99,9 @@ rug_lim.final2 <- rug_lim.final %>%
 ci_rn.df2 <- ci_rn.df %>% 
   left_join(rug_lim.final, by  = "label") %>% 
   group_by(label) %>% 
-  filter(cue_range <= final_max & cue_range >= final_min)
+  filter(cue_range <= final_max & cue_range >= final_min) %>% 
+  arrange(cue_range, .by_group = T) %>% 
+  filter(row_number() %% 10 == 0) 
 ```
 
 # match single infection rn with coinfection 
@@ -107,10 +111,12 @@ si_rn.df2 <- left_join(si_rn.df, select(ez_label, label_si, label_ci), by = c("l
   left_join(rug_lim.final, by  = c("label_ci" = "label")) %>% 
   group_by(label_ci) %>% 
   filter(cue_range <= final_max & cue_range >= final_min) %>% 
+  arrange(cue_range, .by_group = T) %>% 
+  filter(row_number() %% 10 == 0) %>% 
   select(cue_range, cr, label_ci, label_si)
 
-# get ci label to si rug
-si_rug.df2 <- select(si_rug.df, value, label_si = label) 
+# get ci label to si rug, we will keep one unique value per label
+si_rug.df2 <- select(si_rug.df, value, label_si = label) %>% distinct(value, label_si)
 ```
 
 # plot reaction norm
@@ -165,7 +171,7 @@ si_rug.df3$ez_label <- factor(si_rug.df3$ez_label,
                                          "Total gametocyte", "Total sexual iRBC",
                                          "RBC", "RBC log10"))
 # plot
-opt_cue_pl.B <- ggplot() +
+ggplot() +
   geom_line(data = ci_rn.df3, aes(x = cue_range, y = cr, color = "Co-infection")) +
   geom_point(data = ci_rn.df3 %>% 
     group_by(label) %>% 
@@ -185,12 +191,16 @@ opt_cue_pl.B <- ggplot() +
   scale_x_continuous(labels = function(x) format(x, scientific = T),
                      guide = guide_axis(check.overlap = TRUE)) + 
                     theme(axis.text.x = element_text(size = 7),
-                          legend.position = "bottom")  +
+                          legend.position = "right")  +
   scale_color_manual(values=c( "#4575b4", "#fc8d59")) +
   theme(strip.text.x = element_text(margin = margin(b = 0.5, t = 0.5)))
+
+ggsave(units = "px", dpi = 300, width = 2000, height = 2500, filename = here("figures/plos-bio/reaction_norm.tiff"), bg = "white", scale = 1.1)
 ```
 
-#---------- plot best fitness x vs y plot --------------#
+#=========================================#
+Plotting single and co-infection fitness scatter plot
+#=========================================#
 # import in data
 ```{r}
 # single infection dynamics
@@ -215,29 +225,141 @@ ci_fitness.df <- ci_dyn.df %>%
 # join together two dataframes and add labels
 si_ci_fitness.df <- select(ci_fitness.df, fitness_ci = value, label_ci = label) %>% 
   left_join(ez_label, by = "label_ci") %>% 
-  left_join(select(si_fitness.df, fitness_si = value, id_si = id), by = "id_si")
+  left_join(select(si_fitness.df, fitness_si = value, id_si = id), by = "id_si") %>% 
+  select(ez_label_si, ez_label, fitness_si, fitness_ci) %>% 
+  rbind(data.frame( # add time
+    ez_label_si = "Time", 
+    ez_label = "Time",
+    fitness_si =  9.787899,
+    fitness_ci  = 2.311841
+  ))
+
+si_ci_fitness.df
 ```
 
-# plot
+# plot scatter point of single infection vs co-infection
 ```{r}
-opt_cue_pl.A <- ggplot() +
+si_ci_fitness.pl <- ggplot() +
   geom_point(data = si_ci_fitness.df, aes(x = fitness_si, y = fitness_ci, color = ez_label_si, shape = ez_label_si), size = 3.5) +
   ggrepel::geom_label_repel(data = si_ci_fitness.df, aes(label = ez_label, x = fitness_si, y = fitness_ci),
                             fill = "white",xlim = c(-Inf, Inf), ylim = c(NA, NA)) +
   labs(x = "Maximum single infection fitness", y = "Maximum Co-infection fitness (per strain)",
        color = "Single infection cue", shape = "Single infection cue") +
-  scale_shape_manual(values = 15:24) +
-  lims(x = c(8, 10.5)) +
-  geom_vline(xintercept = 9.2, linetype = "dashed", alpha = 0.5) + # si good cue cutoff
-  geom_hline(yintercept = 2.25, linetype = "dashed", alpha = 0.5) + # ci good cue cutoff
-  theme_bw() +
-  coord_cartesian(clip = "off")
+  scale_shape_manual(values = 15:25) +
+  lims(x = c(8, 10.3)) +
+  theme_bw()
+```
+#=========================================================#
+# time series conversion rate for single and co-infection
+#=========================================================#
+#---------get "ideal" single infection and co-infection dynamics---------#
+This is when stuff are optimized based on time
+```{r}
+source(here("functions/chabaudi_si_clean.R"))
+source(here("functions/chabaudi_ci_clean.R"))
+
+# single infection dynamic with time as cue. Optimized using local optimizer. Note that the time variable in dual cue is slightly different with higher flexibility. While that increases the fitness value by ~0.1, the overall conversion rate dynamic does not change that much
+si_t.df <- chabaudi_si_clean(
+  parameters_cr = c(4.55386, -13.0056, 4.15466, -11.9424),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(0, 20, by = 1e-3),
+  cue = "t",
+  solver = "vode",
+  dyn = T)
+
+# co-infection dynamic with time as cue
+ci_t.df <- chabaudi_ci_clean(parameters_cr_1 = c(26.16425,	-71.07799,	53.34121,	-166.25693),
+                            parameters_cr_2 = c(26.16425,	-71.07799,	53.34121,	-166.25693),
+                            immunity = "tsukushi",
+                            parameters = parameters_tsukushi,
+                            time_range = time_range, 
+                            cue_1 =  "t",
+                            cue_2= "t",
+                            cue_range_1 = time_range, # cue range of strain 1
+                            cue_range_2 = time_range, # cue range of strain 2
+                            log_cue_1 = "none", # whether to log transform cue 1
+                            log_cue_2 = "none", # whether to log transform cue 2
+                            solver = "vode", # solver for numerical integration. Vode often gives faster runs
+                              dyn = T)
+
+# get only conversion rate and make same format as si_cr.df2/ci_cr.df2
+si_t.df %>% filter(time == 20 & variable == "tau_cum") ## fitness value of time as cue in single infection
+si_t.cr <- si_t.df %>% 
+  filter(variable == "cr") %>% 
+  mutate(ez_label_si = "Time", 
+         fitness_si =9.787899) %>% 
+  select(time, value, fitness_si, ez_label_si)
+
+
+## get fitness value of co-infection time
+ci_t.df %>% filter(time == 20 & variable == "tau_cum1") ## FITNESS VALUE OF TIME AS CUE IN CO-INFECTION
+ci_t.cr <- ci_t.df %>% 
+  filter(variable == "cr_1") %>% 
+  mutate(ez_label = "Time", 
+         fitness_ci = 2.311841) %>%
+  select(time, value, fitness_ci, ez_label)
+
 ```
 
-# plot reaction norm and fitness value together
+#--------- single infection conversion rate heat map--------------#
+# process info for single infection
 ```{r}
-ggarrange(opt_cue_pl.A, opt_cue_pl.B, widths = c(0.6, 0.4), align = "h", labels = c("A", "B"))
-ggsave(units = "px", dpi = 300, width = 2000, height = 1300, filename = here("figures/plos-bio/rn_fitness.tiff"), bg = "white", scale = 2.1)
+# get conversion rate dynamics
+si_cr.df <- si_dyn.df %>% 
+  filter(time <= 20 & variable == "cr")
+
+
+# join with classificaiton
+si_cr.df2 <- si_cr.df %>% 
+  left_join(select(si_fitness.df, id, fitness_si = value), by = "id") %>% 
+  left_join(ez_label, by = c("id" = "id_si")) %>% 
+  select(time, value, fitness_si, ez_label_si) %>% 
+  rbind(si_t.cr) # join with dataframe containing ideal dynamics
+
+# plot
+si_cr.pl <- ggplot(data = si_cr.df2, aes(x = time, y = forcats::fct_reorder(ez_label_si, fitness_si))) +
+  geom_raster(aes(fill = value)) +
+  labs(x = "Time (days)", y = "Single infection cues", fill = "Conversion rate") +
+  scale_fill_viridis_c(limits = c(0, 1)) +
+  xlim(1, 20) +
+  theme_bw()
+```
+
+# -----------------co-infection conversion rate heatmap-----------#
+# plot co-infeciton convesion rate heatmap
+```{r}
+# get conversion rate dynamics
+ci_cr.df <- ci_dyn.df %>% 
+  filter(time <= 20 & variable == "cr_1")
+
+# join with classificaiton
+ci_cr.df2 <- ci_cr.df %>% 
+  left_join(select(ci_fitness.df, label, fitness_ci = value), by = "label") %>% 
+  left_join(ez_label, by = c("label" = "label_ci")) %>% 
+  select(time, value, fitness_ci, ez_label) %>% 
+  rbind(ci_t.cr) # bind time
+
+# plot
+ci_cr.pl <- ggplot() +
+  geom_raster(data = ci_cr.df2, aes(x = time, y = forcats::fct_reorder(ez_label, fitness_ci), fill = value), alpha = 1) +
+  labs(x = "Time (days)", y = "Co-infection cues", fill = "Conversion rate") +
+  scale_fill_viridis_c(limits = c(0, 1)) +
+  xlim(1, 20) +
+  theme_bw()
+```
+
+#--------- assemble final figure --------------#
+```{r}
+# combine conversion rate dynamic of single infection and co-infection
+cr.pl <- ggarrange(si_cr.pl, ci_cr.pl, labels = c("B", "C"), ncol = 2, common.legend = T, align = "h")
+
+# combine with fitness scatterplot
+ggarrange(si_ci_fitness.pl, cr.pl, ncol = 1, labels = c("A", ""), align = "hv")
+
+# save
+ggsave(units = "px", dpi = 300, width = 2000, height = 2000, filename = here("figures/plos-bio/fitness_cr-dyn.tiff"), bg = "white", scale = 1.35)
 ```
 
 #===========================================================#
@@ -453,106 +575,7 @@ ggarrange(mc_a, mc_partition, heights = c(0.4, 0.6), ncol = 1, labels = c("A", "
 ggsave(units = "px", dpi = 300, width = 1000, height = 2000, filename = here("figures/plos-bio/MC.tiff"), bg = "white", scale = 1.8)
 ```
 
-#=========================================================#
-# time series conversion rate for single and co-infection
-#=========================================================#
-#--------- single infection conversion rate heat map--------------#
-# process info for single infection
-```{r}
-# get fintess
-si_cr.df <- si_dyn.df %>% 
-  filter(time <= 20 & variable == "cr")
 
-# good cue bad cue
-si_cue.dv <- si_fitness.df %>% 
-  mutate(classification = case_when(
-    value > 9.2 ~ "Good performing",
-    value <= 9.2 ~ "Poor performing"
-  ))
-
-# join with classificaiton
-si_cr.df2 <- si_cr.df %>% 
-  left_join(select(si_cue.dv, id, classification, fitness_si = value), by = "id") %>% 
-  left_join(ez_label, by = c("id" = "id_si"))
-
-# split into top erforming and poor-performing cues
-si_cr.high <- si_cr.df2 %>% filter(classification == "Good performing")
-si_cr.poor <- si_cr.df2 %>% filter(classification == "Poor performing")
-
-si_cue.dv
-```
-
-# plot single infection conversion rate heatmap
-```{r}
-# plot poor performing
-si_cr.pl1 <- ggplot() +
-  geom_raster(data = si_cr.poor, aes(x = time, y = forcats::fct_reorder(ez_label_si, fitness_si), fill = value)) +
-  labs(x = "Time (days)", y = "Poor performing\nsingle infection cues", fill = "Conversion rate") +
-  scale_fill_viridis_c(limits = c(0, 1)) +
-  xlim(1, 20) +
-  theme_bw()
-
-# plot high perfomring
-si_cr.pl2 <- ggplot() +
-  geom_raster(data = si_cr.high, aes(x = time, y = forcats::fct_reorder(ez_label_si, fitness_si), fill = value)) +
-  labs(x = "", y = "Good performing\nsingle infection cues", fill = "Conversion rate") +
-  scale_fill_viridis_c(limits = c(0, 1)) +
-  xlim(1, 20) +
-  theme_bw()
-```
-
-# -----------------co-infection conversion rate heatmap-----------#
-# plot co-infeciton convesion rate heatmap
-```{r}
-# get fitess
-ci_cr.df <- ci_dyn.df %>% 
-  filter(time <= 20 & variable == "cr_1")
-
-# good cue bad cue
-ci_cue.dv <- ci_fitness.df %>% 
-  mutate(classification = case_when(
-    value > 2.25 ~ "Good performing",
-    value <= 2.25 ~ "Poor performing"
-  ))
-
-# join with classificaiton
-ci_cr.df2 <- ci_cr.df %>% 
-  left_join(select(ci_cue.dv, label, classification, fitness_ci = value), by = "label") %>% 
-  left_join(ez_label, by = c("label" = "label_ci"))
-
-# split into top erforming and poor-performing cues
-ci_cr.high <- ci_cr.df2 %>% filter(classification == "Good performing")
-ci_cr.poor <- ci_cr.df2 %>% filter(classification == "Poor performing")
-```
-
-
-# plot
-```{r}
-# plot poor performing
-ci_cr.pl1 <- ggplot() +
-  geom_raster(data = ci_cr.poor, aes(x = time, y = forcats::fct_reorder(ez_label, fitness_ci), fill = value), alpha = 1) +
-  labs(x = "Time (days)", y = "Poor performing\nco-infection cues", fill = "Conversion rate") +
-  scale_fill_viridis_c(limits = c(0, 1)) +
-  xlim(1, 20) +
-  theme_bw()
-
-# plot high perfomring
-ci_cr.pl2 <- ggplot() +
-  geom_raster(data = ci_cr.high, aes(x = time, y = forcats::fct_reorder(ez_label, fitness_ci), fill = value), alpha = 1) +
-  labs(x = "", y = "Good performing\nco-infection cues", fill = "Conversion rate") +
-  scale_fill_viridis_c(limits = c(0, 1)) +
-  xlim(1, 20) +
-  theme_bw()
-```
-
-#--------- assemble final figure --------------#
-```{r}
-si_cr.pl <- ggarrange(si_cr.pl2, si_cr.pl1, common.legend = T, ncol = 1, nrow = 2)
-ci_cr.pl <- ggarrange(ci_cr.pl2, ci_cr.pl1, common.legend = T, ncol = 1, nrow = 2)
-
-ggarrange(si_cr.pl, ci_cr.pl, labels = c("A", "B"), ncol = 2, common.legend = T)
-ggsave(units = "px", dpi = 300, width = 2000, height = 1000, filename = here("figures/plos-bio/time_cr.tiff"), bg = "white", scale = 1.7)
-```
 
 #--------------------------------------------#
 # dual cue optimization figure
@@ -760,6 +783,55 @@ dual_pl.BC <- ggarrange(dual_cr.pl, dual_rn.pl, align = "v", ncol = 1, labels = 
 # assemble panel A
 ggarrange(dual_si_fitness.pl, dual_pl.BC, ncol = 2, labels = c("A", ""), widths = c(1, 0.75))
 ggsave(here("figures/plos-bio/dual_cue.tiff"), units = "px", width = 2250, height = 1400, scale = 1.5, dpi=300,  bg = "white")
+```
+#============================================#
+# get dual cue disease map (simulated)
+#============================================#
+I am going to take the optimal dynamic (R log10 + I log10) and plot all possible disease curves and see if any follow the hysteresis curve. See below for real life disease curve.
+```{r}
+# get list of interested variables for plotting. drop cr, fitness, and death probability, immunity
+dual_var.ls <- unique(dual.cr$variable)[!unique(dual.cr$variable) %in% c("tau", "tau_cum", "cr", "cr_t", "ID", "N", "W")]
+
+# create all possible variable combinations. 28 variable combination (8*8 with 8 same redundant and half of that) is expected
+dual_var.comb <- tidyr::expand_grid(x = dual_var.ls,
+                      y = dual_var.ls) %>% 
+  filter(x != y) %>% 
+  mutate(tmp = paste0(pmin(x, y), pmax(x, y))) %>% # eliminate same variable but different order
+  slice_head(n = 1, by = tmp) %>% 
+  select(-tmp)
+
+ez_label
+
+# filter out intermediate data points in dynamic so we could have faster plotting. Also make wider for plotting
+dual_var.comb
+
+dual_cr.f <- dual.cr %>% 
+  group_by(variable) %>% 
+  mutate(label = 
+           case_when(
+             variable == "R" ~ "RBC",
+             varia
+           ))
+  arrange(time, .by_group = T) %>% 
+  filter(row_number() %% 100 == 1) %>% 
+  tidyr::pivot_wider(names_from = variable, id_cols = c(time))
+
+# make path plot
+purrr::map2(.x = dual_var.comb$x, 
+     .y = dual_var.comb$y,
+      ~{ggplot() +
+          geom_path(data = dual_cr.f, aes_string(x = .y, y = .x, color = "cr"),
+                    arrow = arrow(length = unit(c(rep(0, nrow(dual_cr.f) - 2), 0.25), "inches")),
+                    size = 1.5) +
+          geom_point(data = dual_cr.f %>% filter(row_number() %% 10 ==1), 
+                     aes_string(x = .y, y = .x, color = "cr"), size = 3) +
+          scale_color_viridis_c() +
+          theme_bw()
+        }
+          )
+
+ 
+
 ```
 
 

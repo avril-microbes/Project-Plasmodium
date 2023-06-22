@@ -31,34 +31,34 @@ library(parallel)
 ### Load scripts
 ```{r warning=FALSE}
 # for single infections
-source(here("functions/opt_local.R"))
-source(here("functions/chabaudi_si_clean.R"))
-source(here("functions/validate_si.R"))
+source(here("code_repository/functions/opt_local.R"))
+source(here("code_repository/functions/chabaudi_si_clean.R"))
+source(here("code_repository/functions/validate_si.R"))
 
 # for co-infections
-source(here("functions/co_infection_opt_alt.R"))
-source(here("functions/co_infection_opt_do.R"))
-source(here("functions/chabaudi_ci_clean.R"))
-source(here("functions/validate_ci.R"))
+source(here("code_repository/functions/co_infection_opt_alt.R"))
+source(here("code_repository/functions/co_infection_opt_do.R"))
+source(here("code_repository/functions/chabaudi_ci_clean.R"))
+source(here("code_repository/functions/validate_ci.R"))
 
 # for dual cue
-source(here("functions/dual_cue_opt.R"))
+source(here("code_repository/functions/dual_cue_opt.R"))
 
 # for static competition
-source(here("functions/ci_comp_static.R"))
+source(here("code_repository/functions/ci_comp_static.R"))
 
 # for invasive competition
-source(here("functions/ci_invasion_analysis.R"))
+source(here("code_repository/functions/ci_invasion_analysis.R"))
 
 # for partitioning analysis
-source(here("functions/partition_si.R"))
+source(here("code_repository/functions/partition_si.R"))
 
 # for semi-stochastic single infection model
-source(here("functions/mc_run.R")) ## 1000 MC simulations of single infection model where all 6 parameters vary
-source(here("functions/mc_five.R")) ## wrapper around mc_run to simulate 5000 MC simulations. Avoid memory overload
-source(here("function/partition_var.R")) ## performs 1000 MC simulations of the single infection model where only one specified parameter vary
-source(here("function/mc_five2.R")) ## wrapper around partition_var to perform 5000 simulations
-source(here("functions/get_par_MC.R")) ## wrapper around mc_five2 to execute all 6 iterations of 5000 simulations where only one parameter vary
+source(here("code_repository/functions/mc_run.R")) ## 1000 MC simulations of single infection model where all 6 parameters vary
+source(here("code_repository/functions/mc_five.R")) ## wrapper around mc_run to simulate 5000 MC simulations. Avoid memory overload
+source(here("code_repository/functions/partition_var.R")) ## performs 1000 MC simulations of the single infection model where only one specified parameter vary
+source(here("code_repository/functions/mc_five2.R")) ## wrapper around partition_var to perform 5000 simulations
+source(here("code_repository/functions/get_par_MC.R")) ## wrapper around mc_five2 to execute all 6 iterations of 5000 simulations where only one parameter vary
 ```
 
 ### Load parameters
@@ -103,6 +103,12 @@ The purpose of numerical optimization is to identify the basis-spline coefficien
 
 ### Model optimization
 ```{r}
+# Time (ideal case)
+t_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "t",
+                            log = "none",
+                            cue_range = time_range)
+
 # I 
 I_loc.op <- opt_local(par = rep(0.5, 4),
                             cue = "I",
@@ -204,6 +210,21 @@ For co-infection optimization, the optimization process do not always converge (
 
 ### Model optimization
 ```{r}
+# time
+ci_opt_t <- co_infection_opt_do(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "t",
+                             cue_2 = "t",
+                             cue_range_1 = time_range,
+                             cue_range_2 = time_range,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+
 # I (kin-disrimination)
 ci_opt_I_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
                              limit = limit,
