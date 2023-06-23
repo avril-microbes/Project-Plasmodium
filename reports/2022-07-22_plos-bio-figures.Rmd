@@ -16,6 +16,7 @@ library(arrow)
 library(stringr)
 library(parallel)
 library(ggpubr)
+library(scales)
 ```
 
 Notebook for plotting all of the figures for PloS Biology manuscript submission
@@ -294,13 +295,15 @@ si_t.cr <- si_t.df %>%
 
 
 ## get fitness value of co-infection time
-ci_t.df %>% filter(time == 20 & variable == "tau_cum1") ## FITNESS VALUE OF TIME AS CUE IN CO-INFECTION
+ci_t.df %>% filter(variable == "tau_cum1") %>% summarize(max = max(value, na.rm = T))
 ci_t.cr <- ci_t.df %>% 
   filter(variable == "cr_1") %>% 
   mutate(ez_label = "Time", 
          fitness_ci = 2.311841) %>%
   select(time, value, fitness_ci, ez_label)
 
+ci_t.df %>% filter(variable == "I1") %>% ggplot(aes(x = time, y = value)) + geom_line()
+ci_t.df %>% filter(variable == "tau_cum1") 
 ```
 
 #--------- single infection conversion rate heat map--------------#
@@ -784,15 +787,72 @@ dual_pl.BC <- ggarrange(dual_cr.pl, dual_rn.pl, align = "v", ncol = 1, labels = 
 ggarrange(dual_si_fitness.pl, dual_pl.BC, ncol = 2, labels = c("A", ""), widths = c(1, 0.75))
 ggsave(here("figures/plos-bio/dual_cue.tiff"), units = "px", width = 2250, height = 1400, scale = 1.5, dpi=300,  bg = "white")
 ```
+
+
+#============================================#
+# dynamics of dual cue simulation (all combinations)
+#============================================#
+# conversion rate
+```{r}
+# import in dual cue dynamics
+dual_dyn.df <- read_parquet(here("data/dual_cue_dyn/dual_cue_dyn.parquet"))
+
+# keep only cr and make labels for plotting. we are going to omit any cue combinations containing I+Ig due to those not optimizing at all
+dual_cr.df_p <- dual_dyn.df %>% 
+  filter(variable == "cr" & cue != "I+Ig" & cue_b != "I+Ig") %>% 
+  mutate(label_plot = paste(label, "+", label_b)) %>% 
+  group_by(label_plot) %>% 
+  arrange(time, .by_group = T) %>% 
+  filter(row_number() %% 10 == 1) %>%  # cut down on number of rows
+  left_join(select(dual_fitness.df, id, id_b, fitness = value), by = c("id", "id_b")) # get fitness
+
+# plot raster
+ggplot(data = dual_cr.df_p, aes(x = time, y = fct_reorder(label_plot, fitness), fill = value)) +
+  geom_raster() +
+  scale_fill_viridis_c() +
+  xlim(1, 20) +
+  labs(x = "Time (days)", y = "Dual cue combination", fill = "Conversion rate") +
+  theme_bw()
+
+ggsave(here("figures/plos-bio/dual_cue_cr.tiff"), units = "px", width = 2000, height = 1500, dpi=300,  bg = "white")
+```
+
+# cumultative transmission transmission potential
+Proving a point to myself
+```{r}
+dual_tau.df_p <- dual_dyn.df %>% 
+  filter(variable == "tau_cum" & cue != "I+Ig" & cue_b != "I+Ig") %>% 
+  mutate(label_plot = paste(label, "+", label_b)) %>% 
+  group_by(label_plot) %>% 
+  arrange(time, .by_group = T) %>% 
+  filter(row_number() %% 10 == 1) %>%  # cut down on number of rows
+  left_join(select(dual_fitness.df, id, id_b, fitness = value), by = c("id", "id_b")) %>%  # get fitness 
+  filter(fitness > 9.65)
+
+# it seems that R log+I log only inches ahead of other at the very end of the infection, suggesting that terminal investment is at play
+ggplot(data = dual_tau.df_p, aes(x = time, y = value, color = label_plot)) +
+  geom_line() +
+  scale_fill_viridis_c() +
+  xlim(15, 20) +
+  ylim(5,10) +
+  labs(x = "Time (days)", y = "Dual cue combination", fill = "Conversion rate") +
+  theme_bw()
+```
+
+
+
+
 #============================================#
 # get dual cue disease map (simulated)
 #============================================#
 I am going to take the optimal dynamic (R log10 + I log10) and plot all possible disease curves and see if any follow the hysteresis curve. See below for real life disease curve.
-```{r}
-# get list of interested variables for plotting. drop cr, fitness, and death probability, immunity
-dual_var.ls <- unique(dual.cr$variable)[!unique(dual.cr$variable) %in% c("tau", "tau_cum", "cr", "cr_t", "ID", "N", "W")]
 
-# create all possible variable combinations. 28 variable combination (8*8 with 8 same redundant and half of that) is expected
+# process 
+```{r}
+# get list of interested variables for plotting. drop cr, fitness, and death probability, immunity, and merozoites (which is not optimized in dual cue)
+dual_var.ls <- unique(dual.cr$variable)[!unique(dual.cr$variable) %in% c("tau", "tau_cum", "cr", "cr_t", "ID", "N", "W", "M", "Mg")]
+
+# create all possible variable combinations. 6 variable combination (4*4 with 4 same redundant and half of that) is expected
 dual_var.comb <- tidyr::expand_grid(x = dual_var.ls,
                       y = dual_var.ls) %>% 
   filter(x != y) %>% 
@@ -800,38 +860,113 @@ dual_var.comb <- tidyr::expand_grid(x = dual_var.ls,
   slice_head(n = 1, by = tmp) %>% 
   select(-tmp)
 
-ez_label
-
-# filter out intermediate data points in dynamic so we could have faster plotting. Also make wider for plotting
 dual_var.comb
 
+# filter out intermediate data points in dynamic so we could have faster plotting. Also make wider for plotting
+## filtering out all (none cr variable) value below 1 so negative vlues do not overwhelm disease curve. For cr, keep only value below or equal to 1
 dual_cr.f <- dual.cr %>% 
-  group_by(variable) %>% 
-  mutate(label = 
-           case_when(
-             variable == "R" ~ "RBC",
-             varia
-           ))
-  arrange(time, .by_group = T) %>% 
-  filter(row_number() %% 100 == 1) %>% 
-  tidyr::pivot_wider(names_from = variable, id_cols = c(time))
+  filter(variable %in% c(dual_var.ls, "cr") & case_when(variable != "cr" ~ value > 1, T~ value <=1)) %>% 
+  tidyr::pivot_wider(names_from = variable, id_cols = c(time)) %>% 
+  arrange(time) %>% 
+  filter(row_number() %% 100 == 1) 
 
+```
+
+# plot
+```{r}
 # make path plot
-purrr::map2(.x = dual_var.comb$x, 
+## no logged on x and y
+dual_curve.pl <- purrr::map2(.x = dual_var.comb$x, 
      .y = dual_var.comb$y,
       ~{ggplot() +
           geom_path(data = dual_cr.f, aes_string(x = .y, y = .x, color = "cr"),
                     arrow = arrow(length = unit(c(rep(0, nrow(dual_cr.f) - 2), 0.25), "inches")),
-                    size = 1.5) +
+                    size = 1) +
           geom_point(data = dual_cr.f %>% filter(row_number() %% 10 ==1), 
                      aes_string(x = .y, y = .x, color = "cr"), size = 3) +
-          scale_color_viridis_c() +
-          theme_bw()
+          labs(color = "Conversion rate") + # note the labels are reversed because we set x= y and y = x above
+          scale_color_viridis_c(limits = c(0, 1)) +
+          scale_x_continuous(labels = scientific) +
+          scale_y_continuous(labels = scientific) +
+          theme_bw() +
+          theme(plot.margin = unit(rep(0.3,4), "lines"),
+                legend.position = "none")
         }
           )
 
- 
+## logged on x
+dual_curve_xlog.pl <- purrr::map2(
+  .x = dual_var.comb$x, 
+  .y = dual_var.comb$y,
+      ~{ggplot() +
+          geom_path(data = dual_cr.f, aes_string(x = sprintf("log(%s)", .y), y = .x, color = "cr"),
+                    arrow = arrow(length = unit(c(rep(0, nrow(dual_cr.f) - 2), 0.25), "inches")),
+                    size = 1.5) +
+          geom_point(data = dual_cr.f %>% filter(row_number() %% 10 ==1), 
+                     aes_string(x = sprintf("log(%s)", .y), y = .x, color = "cr"), size = 3) +
+          labs(color = "Conversion rate",
+            x = paste0("log10(", .y,")")) + # note the labels are reversed because we set x= y and y = x above
+          scale_color_viridis_c(limits = c(0, 1)) +
+          scale_y_continuous(labels = scientific) +
+          theme_bw() +
+          theme(plot.margin = unit(rep(0.3,4), "lines"),
+                legend.position = "none")
+        }
+          )
 
+## logged on y
+dual_curve_ylog.pl <- purrr::map2(
+  .x = dual_var.comb$x, 
+  .y = dual_var.comb$y,
+      ~{ggplot() +
+          geom_path(data = dual_cr.f, aes_string(x = .y, y = sprintf("log(%s)", .x), color = "cr"),
+                    arrow = arrow(length = unit(c(rep(0, nrow(dual_cr.f) - 2), 0.25), "inches")),
+                    size = 1.5) +
+          geom_point(data = dual_cr.f %>% filter(row_number() %% 10 ==1), 
+                     aes_string(x = .y, y = sprintf("log(%s)", .x), color = "cr"), size = 3) +
+          labs(color = "Conversion rate",
+            y = paste0("log10(", .x,")")) + # note the labels are reversed because we set x= y and y = x above
+          scale_color_viridis_c(limits = c(0, 1)) +
+          scale_x_continuous(labels = scientific) +
+          theme_bw() +
+          theme(plot.margin = unit(rep(0.3,4), "lines"),
+                legend.position = "none")
+        }
+          )
+
+
+# both logged
+dual_curve_log.pl <- purrr::map2(
+  .x = dual_var.comb$x, 
+  .y = dual_var.comb$y,
+      ~{ggplot() +
+          geom_path(data = dual_cr.f, aes_string(x = sprintf("log(%s)", .y), y = sprintf("log(%s)", .x), color = "cr"),
+                    arrow = arrow(length = unit(c(rep(0, nrow(dual_cr.f) - 2), 0.25), "inches")),
+                    size = 1.5) +
+          geom_point(data = dual_cr.f %>% filter(row_number() %% 10 ==1), 
+                     aes_string(x = sprintf("log(%s)", .y), y = sprintf("log(%s)", .x), color = "cr"), size = 3) +
+          labs(color = "Conversion rate",
+               x = paste0("log10(", .y,")"),
+            y = paste0("log10(", .x,")")) + # note the labels are reversed because we set x= y and y = x above
+          scale_color_viridis_c(limits = c(0, 1)) +
+          theme_bw() +
+          theme(plot.margin = unit(rep(0.3,4), "lines"),
+                legend.position = "none")
+        }
+          )
+
+# save all 4 plates
+ggarrange(plotlist = dual_curve.pl, ncol = 2, nrow = 3, align = "hv")
+ggsave(here("figures/plos-bio/dual_curve1.tiff"), units = "px", width = 1000, height = 1000, scale = 1.5, dpi=300,  bg = "white")
+
+ggarrange(plotlist = dual_curve_xlog.pl, ncol = 2, nrow = 3, align = "hv")
+ggsave(here("figures/plos-bio/dual_curve2.tiff"), units = "px", width = 1000, height = 1000, scale = 1.5, dpi=300,  bg = "white")
+
+ggarrange(plotlist = dual_curve_ylog.pl, ncol = 2, nrow = 3, align = "hv")
+ggsave(here("figures/plos-bio/dual_curve3.tiff"), units = "px", width = 1000, height =1000, scale = 1.5, dpi=300,  bg = "white")
+
+ggarrange(plotlist = dual_curve_log.pl, ncol = 2, nrow = 3, align = "hv")
+ggsave(here("figures/plos-bio/dual_curve4.tiff"), units = "px", width = 1000, height = 1000, scale = 1.5, dpi=300,  bg = "white")
 ```
 
 
