@@ -211,9 +211,10 @@ For co-infection optimization, the optimization process do not always converge (
 ### Model optimization
 ```{r}
 # time
-#local optimization gave variable coefficients: 26.16425,	-71.07799,	53.34121,	-166.25693
-# deoptim optimization:  -0.999973,   -99.997053,  -999.322610, -4115.796681. Produced dynamic where all parasites die within the first few days. Not used!
-ci_opt_t <- co_infection_opt_do(parameters_cr = rep(0.5, 4),
+#local optimization (0.5x4) gave variable coefficients: 26.16425,	-71.07799,	53.34121,	-166.25693
+# deoptim optimization (0.5x4):  -0.999973,   -99.997053,  -999.322610, -4115.796681. Produced dynamic where all parasites die within the first few days. Not used!
+# local optimization with c(4.55386, -13.0056, 4.15466, -11.9424): 31.35883  -86.98317   70.37316 -217.06454. Does not make a difference
+ci_opt_t <- co_infection_opt_alt(parameters_cr = c(4.55386, -13.0056, 4.15466, -11.9424),
                              limit = limit,
                              model = chabaudi_ci_clean,
                              immunity = "tsukushi",

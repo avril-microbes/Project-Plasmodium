@@ -47,6 +47,8 @@ ci_dyn.df <- read_parquet(here("data/ci_dyn/ci_dyn.parquet"))
 ci_rn.df <- read_parquet(here("data/ci_dyn/ci_rn.parquet"))
 ci_rug.df <- read_parquet(here("data/ci_dyn/ci_rug.parquet")) %>% 
   distinct(value, label, .keep_all = T)
+
+ci_rug.df
 ```
 
 # process data for reaction norm
@@ -299,11 +301,9 @@ ci_t.df %>% filter(variable == "tau_cum1") %>% summarize(max = max(value, na.rm 
 ci_t.cr <- ci_t.df %>% 
   filter(variable == "cr_1") %>% 
   mutate(ez_label = "Time", 
-         fitness_ci = 2.311841) %>%
-  select(time, value, fitness_ci, ez_label)
-
-ci_t.df %>% filter(variable == "I1") %>% ggplot(aes(x = time, y = value)) + geom_line()
-ci_t.df %>% filter(variable == "tau_cum1") 
+         fitness_ci = 2.311841,
+         label = "Time") %>%
+  select(time, value, fitness_ci, ez_label, label)
 ```
 
 #--------- single infection conversion rate heat map--------------#
@@ -313,19 +313,25 @@ ci_t.df %>% filter(variable == "tau_cum1")
 si_cr.df <- si_dyn.df %>% 
   filter(time <= 20 & variable == "cr")
 
+# get time ranges. We will omit any values where I is below 100. Note for all single infection, it is form  0.55 to 20. Note we are not doing I+Ig because conversion rate is only relevent when asexual iRBC is around to differentiate!
+si_dyn.df %>% 
+  filter(time <= 20 & variable == "I" & value > 100) %>%
+  group_by(id) %>% 
+  summarize(min_time = min(time),
+            max_time = max(time))
 
-# join with classificaiton
+# join fitness and ideal dynamics
 si_cr.df2 <- si_cr.df %>% 
   left_join(select(si_fitness.df, id, fitness_si = value), by = "id") %>% 
   left_join(ez_label, by = c("id" = "id_si")) %>% 
   select(time, value, fitness_si, ez_label_si) %>% 
   rbind(si_t.cr) # join with dataframe containing ideal dynamics
 
-# plot
+# plot. note that we are omitting day 1 conversion rate dynamic because all cr at that stage is 0 (by model default)
 si_cr.pl <- ggplot(data = si_cr.df2, aes(x = time, y = forcats::fct_reorder(ez_label_si, fitness_si))) +
   geom_raster(aes(fill = value)) +
   labs(x = "Time (days)", y = "Single infection cues", fill = "Conversion rate") +
-  scale_fill_viridis_c(limits = c(0, 1)) +
+  viridis::scale_fill_viridis(limits = c(0, 1), oob = scales::squish) +
   xlim(1, 20) +
   theme_bw()
 ```
@@ -337,18 +343,33 @@ si_cr.pl <- ggplot(data = si_cr.df2, aes(x = time, y = forcats::fct_reorder(ez_l
 ci_cr.df <- ci_dyn.df %>% 
   filter(time <= 20 & variable == "cr_1")
 
-# join with classificaiton
+# get time range to include. Same criteria. we need if single strain population declines to less than 100
+## when time is used as a cue: 12.943
+ci_t.df %>%
+  filter(time <= 20 & variable == "I1" & value > 100) %>% 
+  summarize(max_time = max(time))
+## all other dynamics
+ci_cr.time <- ci_dyn.df %>% 
+  filter(time <= 20 & variable == "I1" & value > 100) %>% 
+  group_by(label) %>% 
+  summarize(max_time = max(time)) %>% 
+  rbind(data.frame(label = "Time", max_time = 12.943))
+
+# join with fitness, ideal dynamics and also maximum time range considered
 ci_cr.df2 <- ci_cr.df %>% 
   left_join(select(ci_fitness.df, label, fitness_ci = value), by = "label") %>% 
   left_join(ez_label, by = c("label" = "label_ci")) %>% 
-  select(time, value, fitness_ci, ez_label) %>% 
-  rbind(ci_t.cr) # bind time
+  select(time, value, fitness_ci, ez_label, label) %>% 
+  rbind(ci_t.cr) %>% # bind ideal dynamics
+  left_join(ci_cr.time, by = "label") %>% 
+  filter(time <= max_time) # keep only those that are within time range
 
 # plot
 ci_cr.pl <- ggplot() +
-  geom_raster(data = ci_cr.df2, aes(x = time, y = forcats::fct_reorder(ez_label, fitness_ci), fill = value), alpha = 1) +
+  geom_raster(data = ci_cr.df2, 
+              aes(x = time, y = forcats::fct_reorder(ez_label, fitness_ci), fill = value)) +
   labs(x = "Time (days)", y = "Co-infection cues", fill = "Conversion rate") +
-  scale_fill_viridis_c(limits = c(0, 1)) +
+  viridis::scale_fill_viridis(limits = c(0, 1), oob = scales::squish) +
   xlim(1, 20) +
   theme_bw()
 ```
@@ -466,12 +487,12 @@ ref_fit.df2 <- ref_fit.df %>%
            cue == "R" ~ "RBC"
            ),
          parameter = case_when(
-           rand_var.x == "rho" ~ "ρ",
-           rand_var.x == "phin" ~ "ϕn",
-           rand_var.x == "phiw"~ "ϕw",
-           rand_var.x == "psin" ~ "ψn",
-           rand_var.x == "psiw" ~ "ψw",
-           rand_var.x == "beta" ~ "β"
+           rand_var.x == "rho" ~ "RBC replenishment (ρ)",
+           rand_var.x == "phin" ~ "Half-life indis (ϕn)",
+           rand_var.x == "phiw"~ "Half-life targeted (ϕw)",
+           rand_var.x == "psin" ~ "Activation indis (ψn)",
+           rand_var.x == "psiw" ~ "Activation targeted (ψw)",
+           rand_var.x == "beta" ~ "Burst size (β)"
          ))
 ```
 
@@ -533,22 +554,23 @@ mc_I_Ig.fitness <- read.csv(here("data/MC2/mc_I+Ig_fitness.csv"))
 ```{r}
 # plot fitness vs iteration
 fitness.df <- rbind(
-  cbind(mc_G_log.fitness, id = "Gametocyte\nlog10"),
+  cbind(mc_G_log.fitness, id = "Gametocyte log10"),
   cbind(mc_G.fitness, id = "Gametocyte"),
   cbind(mc_R_log.fitness, id = "RBC log10"),
   cbind(mc_R.fitness, id = "RBC"),
-  cbind(mc_I_log.fitness, id = "Asexual iRBC\nlog10"),
+  cbind(mc_I_log.fitness, id = "Asexual iRBC log10"),
   cbind(mc_I.fitness, id = "Asexual iRBC"),
-  cbind(mc_Ig_log.fitness, id = "Sexual iRBC\nlog10"),
+  cbind(mc_Ig_log.fitness, id = "Sexual iRBC log10"),
   cbind(mc_Ig.fitness, id = "Sexual iRBC"),
-  cbind(mc_I_Ig_log.fitness, id = "Asexual&sexual iRBC\nlog10"),
-  cbind(mc_I_Ig.fitness, id = "Asexual&sexual\niRBC")
+  cbind(mc_I_Ig_log.fitness, id = "Asexual & sexual iRBC log10"),
+  cbind(mc_I_Ig.fitness, id = "Asexual & sexual iRBC")
 )
 
 # quantify variance and mean
 fitness_var.df <- fitness.df %>% 
   dplyr::group_by(id) %>% 
-  dplyr::summarise(median = median(max_fitness)) %>% 
+  dplyr::summarise(median = median(max_fitness),
+                   mean = mean(max_fitness)) %>% 
   dplyr::mutate(id = forcats::fct_reorder(id, median))
 ```
 
@@ -558,26 +580,28 @@ fitness_var.df <- fitness.df %>%
 det.df <- data.frame(fitness_var.df, `Maximum fitness` =  c(8.49777, 9.494991,8.854682,9.573291,8.58856,9.561373,8.23991,8.181604,8.569285,9.618812)) %>% 
   dplyr::mutate(id = forcats::fct_reorder(id, median)) %>% 
   tidyr::pivot_longer(-id) %>% 
-  mutate(classification = ifelse(name == "Maximum.fitness", "Optimal single infection", "Median Monte Carlo"))
+  mutate(classification = case_when(
+    name == "Maximum.fitness" ~"Optimal single infection",
+    name == "median" ~"Median Monte Carlo",
+    name == "mean" ~ "Mean Monte Carlo"))
 
 mc_a <- ggplot() +
-  geom_point(data = det.df, aes(y = id, x = value, shape = classification, color = classification), size = 3) +
+  geom_point(data = det.df, aes(y = id, x = value, shape = classification, color = classification), size = 3, alpha = 0.8) +
   geom_violin(data = fitness.df, aes(y = id, x = max_fitness), fill = "transparent") +
   labs(x = "Fitness", y = "Cue", color = "Fitness", shape = "Fitness") +
   theme_bw() +
   theme(legend.position = "bottom") +
-  scale_color_manual(values=c( "#4575b4", "#fc8d59"))
+  scale_color_manual(values=c("black", "#4575b4", "#fc8d59"))
 ```
 
 #-------------- plot together-----------------------#
 ```{r}
 # arrange the heat map
-ggarrange(mc_a, mc_partition, heights = c(0.4, 0.6), ncol = 1, labels = c("A", "B"))
+ggarrange(mc_a, mc_partition, ncol = 2, nrow = 1, labels = c("A", "B"), align = "h")
 
 # save
-ggsave(units = "px", dpi = 300, width = 1000, height = 2000, filename = here("figures/plos-bio/MC.tiff"), bg = "white", scale = 1.8)
+ggsave(units = "px", dpi = 300, width = 2100, height = 1400, filename = here("figures/plos-bio/MC.tiff"), bg = "white", scale = 1.5)
 ```
-
 
 
 #--------------------------------------------#
