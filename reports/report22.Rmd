@@ -905,6 +905,25 @@ G_high.opt <- optimParallel(
     solver = "vode",
     k = 8)
 stopCluster(cl)
+
+# R log
+# 8.243898 
+# 5.0340348   0.5846168   0.3749648   0.6842673   2.4748107  10.9036034  16.8246316 -24.8690971 1.8007238
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+R_high.opt <- optimParallel(
+    par = rep(0.5,9), # start at 0.5x4
+    fn = chabaudi_si_clean_high, 
+    control = list(trace = 6, fnscale = -1),
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, by = 1e-3),
+    cue_range =  seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+    cue = "R",
+    log_cue = "log10",
+    solver = "vode",
+    k = 8)
+stopCluster(cl)
+R_high.opt
 ```
 
 

@@ -646,8 +646,10 @@ dual_si_fitness.pl <- ggplot() +
   labs(x = "Fitness", y = "Dual cue", color = "Cue", shape = "Cue") +
   scale_color_manual(values=c("#fc8d59", "#4575b4")) +
   geom_vline(xintercept = 9.883602) +
-  geom_text(aes(x=9.883602, label="\nIdeal fitness (df=9)", y = "G + R log10"), angle=90) +
-  theme_bw()
+  geom_text(aes(x=9.883602, label="\nTime-based fitness (df=9)", y = "G + R log10"), angle=90) +
+  xlim(8.35, 10) +
+  theme_bw() +
+  theme(legend.position = "top")
 ```
 
 
@@ -705,17 +707,29 @@ I.cr <- chabaudi_si_clean(
   solver = "vode",
   dyn = T)
 
+# when RBC is used as cue (high flexibility)
+R_high.cr <- chabaudi_si_clean_high(
+  parameters_cr = c(5.0340348 ,  0.5846168 ,  0.3749648 ,  0.6842673  , 2.4748107 , 10.9036034 , 16.8246316, -24.8690971 ,1.8007238),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+  cue = "R",
+  log_cue = "log10",
+  solver = "vode",
+  dyn = T)
+
 # process 
 I_high.cr2 <- I_high.cr %>% filter(variable == "cr") %>% mutate(label_new = "I log10 (df=9)") %>% select(-variable)
 
-I.cr2 <- I.cr %>% filter(variable == "cr") %>% mutate(label_new = "I log10 (df=3)") %>% select(-variable)
+R_high.cr2 <- R_high.cr %>% filter(variable == "cr") %>% mutate(label_new = "R log10 (df=9)") %>% select(-variable)
 
-time_high.cr2 <- time.cr %>% filter(variable == "cr") %>% mutate(label_new = "Ideal (df=9)") %>% select(-variable)
+time_high.cr2 <- time.cr %>% filter(variable == "cr") %>% mutate(label_new = "Time (df=9)") %>% select(-variable)
 
-dual.cr2 <- dual.cr %>% filter(variable == "cr") %>% mutate(label_new = "R log10 + I log10 (df=9)") %>% select(-variable)
+dual.cr2 <- dual.cr %>% filter(variable == "cr") %>% mutate(label_new = "R log10+I log10\n(df=9)") %>% select(-variable)
 
 # combine
-dual_cr.df <- rbind(I_high.cr2, I.cr2, time_high.cr2, dual.cr2)
+dual_cr.df <- rbind(I_high.cr2, R_high.cr2, time_high.cr2, dual.cr2)
 ```
 
 # plot
@@ -727,8 +741,9 @@ dual_cr.pl <- ggplot() +
   xlim(0, 20) +
   scale_color_manual(values = c("#fc8d59","#fdcb44","black", "#4575b4")) +
   theme_bw() +
-  theme(legend.position="bottom") +
-  guides(color = guide_legend(nrow = 2, byrow = TRUE))
+  theme(legend.position="right",
+        plot.margin = margin(t = 40, r = 0, b = 0, l = 0, unit = "pt")) +
+  guides(color = guide_legend(nrow = 4, byrow = TRUE))
 ```
 
 #------------ reaction norm heatmap of R log10 + I log10 ------------#
@@ -762,8 +777,9 @@ dual_rn.pl <- ggplot() +
   geom_point(data = R_I.dyn %>% filter(row_number() %% 1000 == 1 & time <= 20), aes(x = log_I, y = log_R), color = "white") +
   xlim(0.99*min(hablar::s(R_I.dyn$log_I), na.rm = T), 1.01* max(hablar::s(R_I.dyn$log_I), na.rm = T)) +
   ylim(0.99*min(hablar::s(R_I.dyn$log_R), na.rm = T),1.01* max(hablar::s(R_I.dyn$log_R), na.rm = T)) +
-  labs(y = "RBC log10", x = "Asexual iRBC log10", fill = "Conversion rate") +
-  theme_dark()
+  labs(y = "RBC log10", x = "Asexual iRBC log10", fill = "Conversion\nrate") +
+  theme_dark() +
+  theme(legend.position = "right")
 
 # just testing for sexual iRBC vs RBC
 ggplot() +
@@ -808,8 +824,8 @@ ggsave(here("poster/dual_cue.png"), width = 7, height = 4)
 dual_pl.BC <- ggarrange(dual_cr.pl, dual_rn.pl, align = "v", ncol = 1, labels = c("B", "C"))
 
 # assemble panel A
-ggarrange(dual_si_fitness.pl, dual_pl.BC, ncol = 2, labels = c("A", ""), widths = c(1, 0.75))
-ggsave(here("figures/plos-bio/dual_cue.tiff"), units = "px", width = 2250, height = 1400, scale = 1.5, dpi=300,  bg = "white")
+ggarrange(dual_si_fitness.pl, dual_pl.BC, ncol = 2, labels = c("A", ""), widths = c(1,1.1))
+ggsave(here("figures/plos-bio/dual_cue.tiff"), units = "px", width = 2100, height = 1400, scale = 1.3, dpi=300,  bg = "white")
 ```
 
 
@@ -1299,6 +1315,135 @@ static_comb.pl <- ggpaired(static_comb.df, cond1 = "Total", cond2 = "Self", line
 
 ggarrange(static_log.pl, static_comb.pl, ncol = 1, nrow = 2, align = "v")
 ggsave(here("figures/plos-bio/static_competition_b.tiff"), units = "px", width = 1000, height = 2000, scale = 1.2, dpi=300,  bg = "white")
+```
+
+#===========================================#
+static competition dynamics
+#===========================================#
+#-----------G log10------------#
+```{r}
+# import in dynamics that contains G_log
+Glog_static.ls <- list.files(here("data/ci_static"), pattern = ".*_G-i_log.*\\.parquet", full.names = T)
+Glog_static.dyn <- lapply(Glog_static.ls, read_parquet)
+Glog_static.dyn <- do.call(rbind, Glog_static.dyn) 
+Glog_static.dyn2 <- Glog_static.dyn %>% 
+  left_join(select(ez_label, id_ci, label_ci), by = c("id_1" = "id_ci"))
+
+# id_1 represents competitor, id_2 represents G-i log
+unique(Glog_static.dyn$id_1)
+unique(Glog_static.dyn$id_2)
+
+# plotting conversion rate dynamic 
+Glog_cr.pl <- Glog_static.dyn2 %>% 
+  filter(variable == "cr_2") %>% 
+ggplot(aes(x = time, y = label_ci, fill = value)) +
+  geom_raster() +
+  xlim(1, 14) +
+  labs(x = "", y = "Competing cues", fill = "Conversion rate") +
+  scale_fill_viridis_c() +
+  theme_bw() +
+  theme(axis.title.x=element_blank())
+
+# plotting G
+Glog_G.pl <- Glog_static.dyn2 %>% 
+  filter(variable == "G2") %>% 
+  mutate(value = log10(value)) %>% 
+ggplot(aes(x = time, y = label_ci, fill = value)) +
+  geom_raster() +
+  xlim(1, 14) +
+  labs(x = "Time (days)", y = "Competing cues", fill = "Gametocyte (log10)") +
+  scale_fill_viridis_c(option = "C") +
+  theme_bw()+
+  theme(axis.title.x=element_blank())
+
+# plotting I 
+Glog_I.pl <- Glog_static.dyn2 %>% 
+  filter(variable == "I2") %>% 
+ggplot(aes(x = time, y = label_ci, fill = value)) +
+  geom_raster() +
+  xlim(1, 14) +
+  labs(x = "Time (days)", y = "Competing cues", fill = "Asexual iRBC") +
+  scale_fill_viridis_c(option = "A") +
+  theme_bw() +
+  theme(axis.title.x=element_blank())
+
+# plotting tau
+Glog_tau.pl <- Glog_static.dyn2 %>% 
+  filter(variable == "tau2") %>% 
+ggplot(aes(x = time, y = label_ci, fill = value)) +
+  geom_raster() +
+  xlim(1, 14) +
+  labs(x = "Time (days)", y = "Competing cues", fill = "Transmission\npotential") +
+  scale_fill_viridis_c(option = "B") +
+  theme_bw() 
+
+# plot together
+Glog_dyn.pl <- ggarrange(Glog_cr.pl, Glog_I.pl, Glog_G.pl, Glog_tau.pl, ncol = 1, align = "v")
+
+```
+
+#-----------R as cue-----------#
+```{r}
+# import in dynamics that contains R_none
+R_static.ls <- list.files(here("data/ci_static"), pattern = "^R_none.*.parquet", full.names = T)
+R_static.dyn <- lapply(R_static.ls, read_parquet)
+R_static.dyn <- do.call(rbind, R_static.dyn)
+R_static.dyn2 <- R_static.dyn %>% 
+  left_join(select(ez_label, id_ci, label_ci), by = c("id_2" = "id_ci"))
+
+# id_1 is R, id_2 is competitor
+unique(R_static.dyn$id_2)
+
+# plotting conversion rate dynamic 
+R_cr.pl <- R_static.dyn2 %>% 
+  filter(variable == "cr_1") %>% 
+ggplot(aes(x = time, y = label_ci, fill = value)) +
+  geom_raster() +
+  xlim(1, 14) +
+  labs(x = "", y = "Competing cues", fill = "Conversion rate") +
+  scale_fill_viridis_c() +
+  theme_bw() +
+  theme(axis.title.x=element_blank())
+
+# plotting R
+R_R.pl <- R_static.dyn2 %>% 
+  filter(variable == "R") %>% 
+ggplot(aes(x = time, y = label_ci, fill = value)) +
+  geom_raster() +
+  xlim(1, 14) +
+  labs(x = "Time (days)", y = "Competing cues", fill = "RBC") +
+  scale_fill_viridis_c(option = "C") +
+  theme_bw()+
+  theme(axis.title.x=element_blank())
+
+# plotting I 
+R_I.pl <- R_static.dyn2 %>% 
+  filter(variable == "I1") %>% 
+ggplot(aes(x = time, y = label_ci, fill = value)) +
+  geom_raster() +
+  xlim(1, 14) +
+  labs(x = "Time (days)", y = "Competing cues", fill = "Asexual iRBC") +
+  scale_fill_viridis_c(option = "A") +
+  theme_bw() +
+  theme(axis.title.x=element_blank())
+
+# plotting tau
+R_tau.pl <- R_static.dyn2 %>% 
+  filter(variable == "tau1") %>% 
+ggplot(aes(x = time, y = label_ci, fill = value)) +
+  geom_raster() +
+  xlim(1, 14) +
+  labs(x = "Time (days)", y = "Competing cues", fill = "Transmission\npotential") +
+  scale_fill_viridis_c(option = "B") +
+  theme_bw() 
+
+R_dyn.pl <- ggarrange(R_cr.pl, R_I.pl, R_R.pl, R_tau.pl, ncol = 1, align = "v")
+```
+
+# plot together
+```{r}
+ggarrange(Glog_dyn.pl, R_dyn.pl, ncol = 2, labels = c("A", "B"), align = "h")
+ggsave(here("figures/plos-bio/static_dyn.tiff"), units = "px", width = 2200, height = 2000, scale = 1.2, dpi=300,  bg = "white")
 ```
 
 
@@ -2094,31 +2239,78 @@ si_dc.high <- si_dc.high %>% left_join(ez_label %>% distinct(label_si, .keep_all
 #write_parquet(si_dc.poor, here("data/disease_curve/si_dc_poor.parquet"))
 ```
 
+#--------- dual cue --------------------------#
+# process data
+```{r}
+# turn skinny
+dual_dc.df <- dual_dyn.df %>% 
+  mutate(label_alt = paste(label, "+" , label_b)) %>% 
+  select(label_alt, time, variable, value) %>% 
+  filter(variable == "I" | variable == "Ig" | variable == "R") %>% 
+  distinct(label_alt, time, variable, .keep_all = T)
+
+dual_dyn.df
+
+dual_dc.df2 <- dual_dc.df %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, label_alt)) %>%
+  mutate(total = I+Ig)
+
+#write_parquet(dual_dc.df2, here("data/disease_curve/dual_dc.parquet"))
+
+# good dual cue -> list of good performing dual cues that encompass wide variety of cues
+selected_dual_cue <- c("R log + I log", "R + Ig log", "G log + I log", "G log + Ig log", "Ig + I log")
+bad_dual_cue <- c("G + I", "R + Ig", "R log + Ig", "G + R", "G + R log", "G + Ig", "Ig + I", "R + I", "R log + I")
+
+# get classification -> R log10 + I log10 as the only good one
+dual_dc.high <- dual_dc.df2 %>% filter(label_alt %in% selected_dual_cue) %>% 
+  mutate(label_alt = gsub("log", "log10", label_alt))
+dual_dc.poor <- dual_dc.df2 %>% filter(label_alt %in% bad_dual_cue) %>% 
+  mutate(label_alt = gsub("log", "log10", label_alt))
+#write_parquet(dual_dc.high, here("data/disease_curve/dual_dc_high.parquet"))
+#write_parquet(dual_dc.poor, here("data/disease_curve/dual_dc_poor.parquet"))
+
+```
+
+#------- plotting single and dual cue disease map together-------#
 # plot
 ```{r}
+# import single infection data
 si_dc.poor <- read_parquet(here("data/disease_curve/si_dc_poor.parquet"))
 si_dc.high <- read_parquet(here("data/disease_curve/si_dc_high.parquet"))
 
-# plot
+# import dual cue data
+dual_dc.high <- read_parquet(here("data/disease_curve/dual_dc_high.parquet"))
+dual_dc.high2 <- dual_dc.high %>% 
+  filter(label_alt == "R log10 + I log10")
+
+# plot background dynamics
 si_dc.pre <- ggplot() +
   geom_path(data = si_dc.poor, aes(x= total, y = R, group = id), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
   labs(color = "Single infection\ngood performing cues", x = "Asexual & sexual iRBC per µL", y = "RBC per µL") +
   theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
   guides(shape = FALSE)
 
+# plot colored dynamics
+## combine single and dual cue dynamics
+si_dc.high2 <- rbind(select(si_dc.high, ez_label, total, R, time),
+      select(dual_dc.high2, ez_label = label_alt, total, R, time))
+
 si_dc.pl <- si_dc.pre +
-  geom_point(data = si_dc.high %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = ez_label, shape = ez_label), size = 3) +
-  geom_path(data = si_dc.high, aes(x= total, y = R, group = ez_label, color = ez_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  scale_color_manual(values=c( "#4575b4", "#fc8d59", "#fdcb44", "#91bfdb"))  +
+  geom_point(data = si_dc.high2 %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = ez_label, shape = ez_label), size = 3) +
+  geom_path(data = si_dc.high2, aes(x= total, y = R, group = ez_label, color = ez_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb","black", "#fc8d59"))  +
   theme(legend.position = "top") +
+  labs(color = "Cues") +
   guides(color=guide_legend(nrow=2,byrow=TRUE))
 ```
 
 #---------- co-infection monocue -------------#
+Note that we are plotting only single strain to show that on a single strain level, co-infection leads to larger area than single infection!
+# process data
 ```{r}
-# get relevent variables
+# get relevent variables. 
 ci_dc.df <- ci_dyn.df %>% 
-  filter(variable == "I1" | variable == "Ig1" | variable == "R")
+  filter(variable %in% c("I1", "Ig1", "R"))
 
 # morph into skinny format
 ci_dc.df <- tidyr::pivot_wider(ci_dc.df, names_from = variable, values_from = value, id_cols = c(time, label)) %>% 
@@ -2141,8 +2333,8 @@ ci_dc.poor <- ci_dc.df2 %>% filter(classification == "Poor-performing")
 # join high performing with label
 ci_dc.high2 <- ci_dc.high %>% left_join(ez_label, by = c("label" = "label_ci"))
 
-#write_parquet(ci_dc.high2, here("data/disease_curve/ci_dc_high.parquet"))
-#write_parquet(ci_dc.poor, here("data/disease_curve/ci_dc_poor.parquet"))
+write_parquet(ci_dc.high2, here("data/disease_curve/ci_dc_high.parquet"))
+write_parquet(ci_dc.poor, here("data/disease_curve/ci_dc_poor.parquet"))
 ```
 
 # plot
@@ -2153,7 +2345,7 @@ ci_dc.high2 <- read_parquet(here("data/disease_curve/ci_dc_high.parquet"))
 # plot
 ci_dc.pre <- ggplot() +
   geom_path(data = ci_dc.poor, aes(x= total, y = R, group = label), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  labs(color = "Co-infection\ngood performing cues", x = "Asexual & sexual iRBC per µL", y = "RBC per µL") +
+  labs(color = "Cues", x = "Asexual & sexual iRBC per µL (per strain)", y = "RBC per µL") +
   theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
   guides(shape = FALSE)
 
@@ -2162,296 +2354,10 @@ ci_dc.pl <- ci_dc.pre +
   geom_path(data = ci_dc.high2, aes(x= total, y = R, group = ez_label, color = ez_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
   scale_color_manual(values=c( "#4575b4", "#fc8d59", "#fdcb44", "#91bfdb")) +
   theme(legend.position = "top") +
-  guides(color=guide_legend(nrow=2,byrow=TRUE))
+  guides(color=guide_legend(nrow=2,byrow=TRUE)) +
+  scale_x_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1))
 
 ```
-
-#--------- dual cue --------------------------#
-# process data
-```{r}
-# turn skinny
-dual_dc.df <- dual_dyn.df %>% 
-  mutate(label_alt = paste(label, "+" , label_b)) %>% 
-  select(label_alt, time, variable, value) %>% 
-  filter(variable == "I" | variable == "Ig" | variable == "R") %>% 
-  distinct(label_alt, time, variable, .keep_all = T)
-
-dual_dyn.df
-
-dual_dc.df2 <- dual_dc.df %>% 
-  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, label_alt)) %>%
-  mutate(total = I+Ig)
-
-write_parquet(dual_dc.df2, here("data/disease_curve/dual_dc.parquet"))
-
-# good dual cue -> list of good performing dual cues that encompass wide variety of cues
-selected_dual_cue <- c("R log + I log", "R + Ig log", "G log + I log", "G log + Ig log", "Ig + I log")
-bad_dual_cue <- c("G + I", "R + Ig", "R log + Ig", "G + R", "G + R log", "G + Ig", "Ig + I", "R + I", "R log + I")
-
-# get classification -> R log10 + I log10 as the only good one
-dual_dc.high <- dual_dc.df2 %>% filter(label_alt %in% selected_dual_cue) %>% 
-  mutate(label_alt = gsub("log", "log10", label_alt))
-dual_dc.poor <- dual_dc.df2 %>% filter(label_alt %in% bad_dual_cue) %>% 
-  mutate(label_alt = gsub("log", "log10", label_alt))
-#write_parquet(dual_dc.high, here("data/disease_curve/dual_dc_high.parquet"))
-#write_parquet(dual_dc.poor, here("data/disease_curve/dual_dc_poor.parquet"))
-
-```
-
-# plot
-```{r}
-dual_dc.high <- read_parquet(here("data/disease_curve/dual_dc_high.parquet"))
-dual_dc.poor <- read_parquet(here("data/disease_curve/dual_dc_poor.parquet"))
-
-dual_dc.high2 <- dual_dc.high %>% 
-  filter(label_alt == "R log10 + I log10")
-
-# add 
-dual_dc.pre <- ggplot() +
-  geom_path(data = dual_dc.poor, aes(x= total, y = R, group = label_alt), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  labs(color = "High-performing\ndual cues per µL", x = "Asexual & sexual iRBC", y = "RBC per µL") +
-  theme_bw()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
-  guides(shape = FALSE)
-
-
-dual_dc.pl <- dual_dc.pre +
-  geom_point(data = dual_dc.high2 %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, shape = label_alt), color = "#4575b4", size = 3) +
-  geom_path(data = dual_dc.high2, aes(x= total, y = R, group = label_alt), color = "#4575b4", size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  theme(legend.position = "none") +
-  guides(color = guide_legend(override.aes = list(size = 0.1)))
-```
-
-#--------- co-infection static ----------------#
-```{r}
-# import in dynamics data
-static_dyn.ls <- list.files(path = here("data/ci_static/"), pattern = "*.parquet", full.names = T)
-static_dyn.ls <- lapply(static_dyn.ls, read_parquet)
-
-# filter variable and transform
-static_dyn.ls2 <- mclapply(static_dyn.ls, function(x){
-  x %>% 
-    filter(variable == "I1" | variable == "Ig1" | variable == "I2" | variable == "Ig2" | variable == "R") %>% 
-    mutate(id_alt = paste(id_1, id_2)) %>% 
-    tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, id_alt)) %>%
-  mutate(total1 = I1+Ig1, total2 = I2+Ig2)
-})
-
-static_dc.df <- do.call(rbind, static_dyn.ls2)
-static_dc.df <- static_dc.df %>% 
-  mutate(id_1 = gsub(" .*", "", id_alt),
-         id_2 = gsub(".* ", "", id_alt)) %>% 
-  filter(id_1 != id_2)
-#write_parquet(static_dc.df, here("data/disease_curve/static_dc.parquet"))
-```
-
-# further processing
-```{r}
-static_dc.df <- read_parquet(here("data/disease_curve/static_dc.parquet"))
-# get winners and losers
-## import in fitness
-static_fitness.df <- read.csv(here("data/ci_static.csv"))
-## get winner situation
-static_fitness.df2 <- static_fitness.df %>% 
-  filter(id_1 != id_2) %>% 
-  mutate(winning_id = case_when(
-    fitness_difference > 0 ~ id_1,
-    fitness_difference< 0 ~ id_2
-  ),
-  losing_id = case_when(
-    fitness_difference < 0 ~ id_1,
-    fitness_difference> 0 ~ id_2
-  ))
-
-# left join
-static_dc.df2 <- static_dc.df %>% 
-  left_join(select(static_fitness.df2, id_1, id_2, winning_id, losing_id, fitness_difference), by = c("id_1", "id_2"))
-
-# get winner-loser difference in terms of I+Ig also filter out to onyl very strong fitness difference
-static_dc.df3 <- static_dc.df2 %>% 
-  mutate(total_diff = case_when(
-    fitness_difference > 0 ~ total1-total2,
-    fitness_difference< 0 ~ total2-total2
-  ),
-  total_winner = case_when(
-    fitness_difference > 0 ~ total1,
-    fitness_difference< 0 ~ total2
-  ),
-  total_loser = case_when(
-    fitness_difference > 0 ~ total2,
-    fitness_difference< 0 ~ total1
-  )) %>% 
-  filter(abs(fitness_difference) > 0.5)
-```
-
-# plot
-```{r}
-static_dc.pl <- ggplot() +
-  geom_path(data = static_dc.df3, aes(x= total_winner, y = R, group = id_alt, color = "Winner"), alpha = 0.5, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  geom_path(data = static_dc.df3, aes(x= total_loser, y = R, group = id_alt, color = "Loser"),
-          alpha = 0.5,arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  labs(color = "Status", x = "Asexual & sexual iRBC", y = "RBC") +
-  scale_color_manual(values=c("Winner" = "#4575b4","Loser"= "#fc8d59"))  +
-  theme_bw() + 
-  scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1))
-```
-
-
-#---------co-infection invasion ---------------#
-# get invasion dynamic
-```{r}
-# get invasion df
-invasion_fitness.df <- read.csv(here("data/ci_invasion.csv"))
-
-# get cue range
-ci_cue_range <- read.csv(here("data/cue_range_ci.csv"))
-invasion_fitness.df2 <- invasion_fitness.df %>% 
-  left_join(select(ci_cue_range, id, mut_cue = cue, mut_low = low, mut_high = high, mut_by = by), by = c("mut_id"= "id")) %>% 
-  left_join(select(ci_cue_range, id, res_cue = cue, res_low = low, res_high = high, res_by = by), by = c("res_id"= "id"))
-```
-
-# function to get dynamic
-```{r}
-get_invasion_dyn <- function(df){
-  # get cues
-  mut_cue <- df$mut_cue
-  res_cue <- df$res_cue
-  
-  # get info of cues (for co infection)
-  if(stringr::str_detect(mut_cue, "-i")){mut_cue = gsub("*-i", "1", mut_cue)}
-  if(stringr::str_detect(mut_cue, "-i", negate = T)){mut_cue = mut_cue}
-  if(stringr::str_detect(res_cue, "-i")){res_cue = gsub("*-i", "2", res_cue)}
-  if(stringr::str_detect(res_cue, "-i", negate = T)){res_cue = res_cue}
-  
-  # get log
-  mut_log <- ifelse(stringr::str_detect(df$mut_id, "log"), "log10", "none")
-  res_log <- ifelse(stringr::str_detect(df$res_id, "log"), "log10", "none")
-  
-  # get parameters
-  mut_par <- c(df$mut_var1_opt, df$mut_var2_opt, df$mut_var3_opt, df$mut_var4_opt)
-  res_par <- c(df$res_var1, df$res_var2, df$res_var3, df$res_var4)
-  
-  # get cue range
-  mut_cue_range <- seq(df$mut_low, df$mut_high, by = df$mut_by)
-  res_cue_range <- seq(df$res_low, df$res_high, by = df$res_by)
-  
-  # get dynamics of co infection
-  ci_dyn <- chabaudi_ci_clean(
-    parameters_cr_1 = mut_par,
-    parameters_cr_2 = res_par,
-                  immunity = "tsukushi",
-                  parameters = parameters_tsukushi,
-                  cue_1 = mut_cue,
-                  cue_2 = res_cue,
-                  cue_range_1 = mut_cue_range,
-                 cue_range_2 = res_cue_range,
-                log_cue_1 = mut_log,
-                log_cue_2 = res_log,
-                solver = "vode",
-                time_range = seq(0, 30, 0.001),
-    dyn = T)
-  
-  # append label to all df
- ci_dyn2 <- cbind(ci_dyn, mut_id = df$mut_id, res_id = df$res_id)
-  
-  # write
- write_parquet(ci_dyn2, paste0(here("data/ci_invasion_dyn/"), df$mut_id, "-", df$res_id, ".parquet"))
-}
-```
-
-
-# run dynamic funciton
-```{r}
-# get function and parameters
-source(here("functions/chabaudi_ci_clean.R"))
-parameters_tsukushi <- c(R1 = 8.89*(10^6), # slightly higher
-                lambda = 3.7*(10^5),
-                mu = 0.025, 
-                p = 8*(10^-6), # doubled form original
-                alpha = 1, 
-                alphag = 2, 
-                beta = 5.721, 
-                mum = 48, 
-                mug = 4, 
-                I0 = 43.85965, 
-                Ig0 = 0, 
-                a = 150, 
-                b = 100, 
-                sp = 1,
-                psin = 16.69234,
-                psiw = 0.8431785,
-                phin = 0.03520591, 
-                phiw = 550.842,
-                iota = 2.18*(10^6),
-                rho = 0.2627156)
-# split
-invasion.ls <- split(invasion_fitness.df2, seq(nrow(invasion_fitness.df2)))
-
-# run function
-mclapply(invasion.ls, get_invasion_dyn, mc.cores = 4)
-```
-
-
-# process data
-```{r}
-# import in invasion dynamics
-invasion_dyn.ls <- list.files(path = here("data/ci_invasion_dyn"), pattern = "*.parquet", full.names = T)
-invasion_dyn.ls <- lapply(invasion_dyn.ls, read_parquet)
-
-# filter and so on
-invasion_dyn.ls2 <- mclapply(invasion_dyn.ls[167:177], mc.cores = 4, function(x){
-  x2 <- x %>% 
-    filter(variable == "I1" | variable == "Ig1" | variable == "I2" | variable == "Ig2" | variable == "R") %>% 
-    mutate(id_alt = paste(mut_id, res_id)) %>% 
-    select(id_alt, time, variable, value) %>% 
-    tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, id_alt)) %>%
-  mutate(total1 = I1+Ig1, total2 = I2+Ig2)
-  
-  write_parquet(x2, paste0(here("data/disease_curve/ci_invasion/"), unique(x2$id_alt), "_dc.parquet"))
-})
-
-# fetch data
-invasion_dyn.ls2 <- list.files(path = here("data/disease_curve/ci_invasion"), pattern = "*.parquet", full.names = T)
-invasion_dyn.ls2 <- lapply(invasion_dyn.ls2, read_parquet)
-invasion_dc.df <- do.call(rbind, invasion_dyn.ls2)
-invasion_dc.df <- invasion_dc.df %>% 
-  mutate(mut_id = gsub(" .*", "", id_alt),
-         res_id = gsub(".* ", "", id_alt)) %>% 
-  filter(mut_id != res_id)
-#write_parquet(invasion_dc.df, here("data/disease_curve/invasion_dc.parquet"))
-```
-
-# further processing
-```{r}
-invasion_dc.df <- read_parquet(here("data/disease_curve/invasion_dc.parquet"))
-# get winners and losers
-invasion_fitness.df <- read.csv(here("data/ci_invasion.csv"))
-invasion_dc.df2 <- invasion_dc.df %>% 
-  left_join(invasion_fitness.df, by = c("mut_id", "res_id")) %>% 
-  mutate(
-  total_winner = case_when(
-    fitness> 0 ~ total1,
-    fitness< 0 ~ total2
-  ),
-  total_loser = case_when(
-    fitness > 0 ~ total2,
-    fitness < 0 ~ total1
-  )) %>% 
-  filter(abs(fitness) > 0.5)
-```
-
-# plot
-```{r}
-invasion_dc.pl <- ggplot() +
-  geom_path(data = invasion_dc.df2, aes(x= total_winner, y = R, group = id_alt, color = "Winner"), alpha = 0.5, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  geom_path(data = invasion_dc.df2, aes(x= total_loser, y = R, group = id_alt, color = "Loser"),
-          alpha = 0.5,arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  labs(color = "Status", x = "Asexual & sexual iRBC", y = "RBC") +
-  scale_color_manual(values=c("Winner" = "#4575b4","Loser"= "#fc8d59"))  +
-  theme_bw() + 
-  scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) %>% 
-  theme(legend.position = "none")
-```
-
 
 #--------- quantifying disease curve area ------------#
 # function to calculate area between sets of points -> from https://stackoverflow.com/questions/3672260/area-covered-by-a-point-cloud-with-r
@@ -2468,83 +2374,63 @@ return(areapl(cbind(x[i],y[i])))
 # loop to get area: single infection
 ```{r}
 # split df
-si_dc_high.ls <- split(si_dc.high, si_dc.high$ez_label_si)
-si_dc_poor.ls <- split(si_dc.poor, si_dc.poor$id)
+si_dc.ls <- split(si_dc.df, si_dc.df$id)
 
 # get area
-si_dc_high.area <- cbind.data.frame(area = as.numeric(lapply(si_dc_high.ls, cha)), id_alt = names(lapply(si_dc_high.ls, cha)))
-si_dc_poor.area <- cbind.data.frame(area = as.numeric(lapply(si_dc_poor.ls, cha)), id_alt = names(lapply(si_dc_poor.ls, cha)))
-
+si_dc.area <- cbind.data.frame(area = as.numeric(lapply(si_dc.ls, cha)), id_alt = names(lapply(si_dc.ls, cha)))
 
 # join with fitness
-si_fitness.df <- si_fitness.df %>% left_join(ez_label, by = c("id" = "id_si"))
+si_fitness.df2 <- si_fitness.df %>% 
+  select(id, fitness = value) %>% 
+  distinct(id, fitness) %>% 
+  left_join(ez_label, by = c("id" = "id_si"))
 
-si_dc_high.area2 <- si_dc_high.area %>% 
-  left_join(si_fitness.df, by = c("id_alt" = "ez_label_si")) %>% 
-  select(value, area) %>% 
-  mutate(condition = "Single infection")
-
-si_dc_poor.area2 <- si_dc_poor.area %>% 
-  left_join(si_fitness.df, by = c("id_alt" = "id")) %>% 
-  select(value, area) %>% 
-  mutate(condition = "Single infection")
-```
-
-# coinfection
-```{r}
-# split
-ci_dc_high.ls <- split(ci_dc.high2, ci_dc.high2$ez_label)
-ci_dc_poor.ls <- split(ci_dc.poor, ci_dc.poor$label)
-
-# run function to find area
-ci_dc_high.area <- cbind.data.frame(area = as.numeric(lapply(ci_dc_high.ls, cha)), id_alt = names(lapply(ci_dc_high.ls, cha)), value = unique(ci_dc.high2$value))
-
-ci_dc_poor.area <- cbind.data.frame(area = as.numeric(lapply(ci_dc_poor.ls, cha)), id_alt = names(lapply(ci_dc_poor.ls, cha)), value = unique(ci_dc.poor$value))
-
-# edit and join
-ci_dc_high.area2 <-  ci_dc_high.area %>% 
-  select(area, value) %>% 
-  mutate(condition = "Co-infection")
-
-ci_dc_poor.area2 <-  ci_dc_poor.area %>% 
-  select(area, value) %>% 
-  mutate(condition = "Co-infection")
+si_dc.area <- si_dc.area %>% 
+  left_join(si_fitness.df2, by = c("id_alt" = "id"))
 ```
 
 # dual cue
 ```{r}
 # split
 dual.dc <- read_parquet(here("data/disease_curve/dual_dc.parquet"))
-dual_dc.ls <- split(dual.dc, dual.dc$label_alt)
 
 # get area
 dual_dc.area <- cbind.data.frame(area = as.numeric(lapply(dual_dc.ls, cha)), id_alt = names(lapply(dual_dc.ls, cha)))
 
-# bind with fitness
-dual_fitness.df <- dual_fitness.df %>% mutate(id_alt = paste(label, "+", label_b))
-dual_dc.area2 <- dual_dc.area %>% 
-  left_join(dual_fitness.df, by = "id_alt") %>% 
-  select(area, value) %>% 
-  mutate(condition = "Dual-cue") %>% 
-  filter(value > 2)
-dual_dc.area2
+# get R log+I log area: 293632850541
+dual_dc.area %>% filter(id_alt == "R log + I log")
+```
+
+# coinfection
+```{r}
+# split
+ci_dc.ls <- split(ci_dc.df, ci_dc.df$label)
+
+# run function to find area
+ci_dc.area <- cbind.data.frame(area = as.numeric(lapply(ci_dc.ls, cha)), id_alt = names(lapply(ci_dc.ls, cha)))
+
+# join with fitness
+ci_dc.area <- ci_dc.area %>% 
+  left_join(select(ci_fitness.df, label, fitness = value), by = c("id_alt" = "label"))
+ci_dc.area
 ```
 
 #------ get fitted scatter plot for all single infection, co infection, and dual cue --------#
 ```{r}
-# rbind
-si.area <- rbind(si_dc_high.area2, si_dc_poor.area2)
-ci.area <- rbind(ci_dc_high.area2, ci_dc_poor.area2)
-dual.area <- dual_dc.area2
+#  combine single and dual cue
+si_dual.area <- select(si_dc.area, ez_label_si, area, fitness) %>% rbind(data.frame(ez_label_si = "RBC log10 +\nasexual iRBC log10", area = 293632850541, fitness = 9.851735))
+
+si_dual.area$area <- as.numeric(si_dual.area$area)
+si_dual.area$fitness <- as.numeric(si_dual.area$fitness)
 
 # plot
 library("ggpmisc")
 
-si_area.pl <- ggplot(data = si.area, aes(x = area, y = value)) +
+si_area.pl <- ggplot(data = si_dual.area, aes(x = area, y = fitness)) +
   geom_point() +
   stat_poly_line(color = "black") +
   stat_poly_eq() +
-  labs(x = "Area", y = "Fitness", color = "Status") +
+  labs(x = "Area", y = "Fitness") +
   theme_bw()
 
 ci_area.pl <- ggplot(data = ci.area, aes(x = area, y = value)) +
@@ -2554,25 +2440,16 @@ ci_area.pl <- ggplot(data = ci.area, aes(x = area, y = value)) +
   labs(x = "Area", y = "Fitness", color = "Status") +
   theme_bw()
 
-dual_area.pl <- ggplot(data = dual.area, aes(x = area, y = value)) +
-  geom_point() +
-  stat_poly_line(color= "black") +
-  stat_poly_eq() +
-  labs(x = "Area", y = "Fitness", color = "Status") +
-  theme_bw()
 ```
 
 
 #------- plot together with disease curve --------#
 ```{r}
 # single infection
-si_vir.pl <- ggarrange(si_dc.pl, si_area.pl, align = "v", widths = c(1, 0.45))
+si_vir.pl <- ggarrange(si_dc.pl, si_area.pl, align = "v", widths = c(1, 0.5))
 
 # co-infection
-ci_vir.pl <- ggarrange(ci_dc.pl, ci_area.pl, align = "v", widths = c(1, 0.45))
-
-# dual-cue
-dual_vir.pl <- ggarrange(dual_dc.pl, dual_area.pl, align = "v", widths = c(1, 0.45))
+ci_vir.pl <- ggarrange(ci_dc.pl, ci_area.pl, align = "v", widths = c(1, 0.5))
 ```
 
 
@@ -2596,7 +2473,7 @@ static_dc.df4 <- static_dc.df %>%
     fitness_difference > 0 ~ total2,
     fitness_difference< 0 ~ total1
   ))%>% 
-  filter(abs(fitness_difference) > 0.5)
+  filter(abs(fitness_difference) > 0.1)
 
 # split by winner and loser
 static_dc.ls1 <- split(select(static_dc.df4, R, total = total_winner), static_dc.df4$id_alt)
@@ -2610,10 +2487,12 @@ static_loser.area <- cbind.data.frame(area = as.numeric(lapply(static_dc.ls2, ch
 static.area <- cbind(select(static_win.area, Winner = area),
                      select(static_loser.area, Loser = area)) %>% 
   mutate(classification = ifelse(Winner>Loser, "Winner larger area", "Loser larger area"))
+static.area 
 ```
 
 # plot static
 ```{r}
+static.area
 static_area.pl <- ggpaired(static.area, cond1 = "Winner", cond2 = "Loser", line.color = "classification", alpha = 0.2) +
   labs(x = "Status", y = "Area", color = "Comparison\n(Static)") +
   scale_color_manual(values = c("Loser larger area" = "#fc8d59", "Winner larger area" = "#4575b4")) +
@@ -2629,6 +2508,7 @@ static_area.pl <- ggpaired(static.area, cond1 = "Winner", cond2 = "Loser", line.
 invasion_dc.df <- read_parquet(here("data/disease_curve/invasion_dc.parquet"))
 invasion_fitness.df <- read.csv(here("data/ci_invasion.csv"))
 
+# calculate area
 invasion_dc.df4 <- invasion_dc.df %>% 
   left_join(invasion_fitness.df, by = c("mut_id", "res_id")) %>% 
   mutate(
@@ -2640,7 +2520,9 @@ invasion_dc.df4 <- invasion_dc.df %>%
     fitness > 0 ~ total2,
     fitness < 0 ~ total1
   )) %>% 
-  filter(abs(fitness) > 0.5)
+  filter(abs(fitness) > 0.1)
+
+invasion_dc.df4 %>% distinct(id_alt)
 
 # split by winner and loser
 invasion_dc.ls1 <- split(select(invasion_dc.df4, R, total = total_winner), invasion_dc.df4$id_alt)
@@ -2654,6 +2536,7 @@ invasion_loser.area <- cbind.data.frame(area = as.numeric(lapply(invasion_dc.ls2
 invasion.area <- cbind(select(invasion_win.area, Winner = area),
                      select(invasion_loser.area, Loser = area)) %>% 
   mutate(classification = ifelse(Winner>Loser, "Winner larger area", "Loser larger area"))
+invasion.area
 ```
 
 # plot
@@ -2663,18 +2546,20 @@ invasion_area.pl <-ggpaired(invasion.area, cond1 = "Winner", cond2 = "Loser", li
   scale_color_manual(values = c("Loser larger area" = "#fc8d59", "Winner larger area" = "#4575b4")) +
   stat_compare_means(paired = TRUE, hjust = 0) +
   guides(color=guide_legend(nrow=2,byrow=TRUE))
-  
 ```
 
 #------ plot together -------------#
 ```{r}
+# disease curves
+dc.pl <- ggarrange(si_vir.pl, ci_vir.pl, ncol = 1, nrow = 2, align = "v", labels = c("A", "B"))
+
 # pairwise comparison for static and invasive comeptition
-heterocue_comp.pl <- ggarrange(static_area.pl, invasion_area.pl, ncol = 2, nrow = 1, align = "v")
+heterocue_comp.pl <- ggarrange(static_area.pl, invasion_area.pl, ncol = 1, nrow = 2, align = "v", labels = c("C", "D"))
 
 # join inthe other disease curves
-ggarrange(si_vir.pl, ci_vir.pl, dual_vir.pl, heterocue_comp.pl, ncol = 2, nrow = 2, labels = c("A", "B", "C", "D"), heights = c(1, 0.8))
+ggarrange(dc.pl, heterocue_comp.pl, ncol = 2, nrow = 1, widths= c(1, 0.5))
 
-ggsave(here("figures/plos-bio/virulence.tiff"), units = "px", width = 2250, height = 1600, scale = 2, dpi=300, bg = "white")
+ggsave(here("figures/plos-bio/virulence.tiff"), units = "px", width = 2300, height = 2000, scale = 1.5, dpi=300, bg = "white")
 ```
 
 

@@ -427,10 +427,11 @@ G_log_loc.op &lt;- opt_local(par = rep(0.5, 4),
 <h3>Model optimization</h3>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyB0aW1lXG4jbG9jYWwgb3B0aW1pemF0aW9uIGdhdmUgdmFyaWFibGUgY29lZmZpY2llbnRzOiAyNi4xNjQyNSxcdC03MS4wNzc5OSxcdDUzLjM0MTIxLFx0LTE2Ni4yNTY5M1xuIyBkZW9wdGltIG9wdGltaXphdGlvbjogIC0wLjk5OTk3MywgICAtOTkuOTk3MDUzLCAgLTk5OS4zMjI2MTAsIC00MTE1Ljc5NjY4MS4gUHJvZHVjZWQgZHluYW1pYyB3aGVyZSBhbGwgcGFyYXNpdGVzIGRpZSB3aXRoaW4gdGhlIGZpcnN0IGZldyBkYXlzLiBOb3QgdXNlZCFcbmNpX29wdF90IDwtIGNvX2luZmVjdGlvbl9vcHRfYWx0KHBhcmFtZXRlcnNfY3IgPSBjKDQuNTUzODYsIC0xMy4wMDU2LCA0LjE1NDY2LCAtMTEuOTQyNCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbWl0ID0gbGltaXQsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIG1vZGVsID0gY2hhYmF1ZGlfY2lfY2xlYW4sXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGltbXVuaXR5ID0gXCJ0c3VrdXNoaVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGltZV9yYW5nZSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8xID0gXCJ0XCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8yID0gXCJ0XCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8xID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzIgPSB0aW1lX3JhbmdlLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcInZvZGVcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8xID0gXCJub25lXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFwibm9uZVwiKVxuXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyB0aW1lXG4jbG9jYWwgb3B0aW1pemF0aW9uICgwLjV4NCkgZ2F2ZSB2YXJpYWJsZSBjb2VmZmljaWVudHM6IDI2LjE2NDI1LFx0LTcxLjA3Nzk5LFx0NTMuMzQxMjEsXHQtMTY2LjI1NjkzXG4jIGRlb3B0aW0gb3B0aW1pemF0aW9uICgwLjV4NCk6ICAtMC45OTk5NzMsICAgLTk5Ljk5NzA1MywgIC05OTkuMzIyNjEwLCAtNDExNS43OTY2ODEuIFByb2R1Y2VkIGR5bmFtaWMgd2hlcmUgYWxsIHBhcmFzaXRlcyBkaWUgd2l0aGluIHRoZSBmaXJzdCBmZXcgZGF5cy4gTm90IHVzZWQhXG4jIGxvY2FsIG9wdGltaXphdGlvbiB3aXRoIGMoNC41NTM4NiwgLTEzLjAwNTYsIDQuMTU0NjYsIC0xMS45NDI0KTogMzEuMzU4ODMgIC04Ni45ODMxNyAgIDcwLjM3MzE2IC0yMTcuMDY0NTQuIERvZXMgbm90IG1ha2UgYSBkaWZmZXJlbmNlXG5jaV9vcHRfdCA8LSBjb19pbmZlY3Rpb25fb3B0X2FsdChwYXJhbWV0ZXJzX2NyID0gYyg0LjU1Mzg2LCAtMTMuMDA1NiwgNC4xNTQ2NiwgLTExLjk0MjQpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsaW1pdCA9IGxpbWl0LFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBtb2RlbCA9IGNoYWJhdWRpX2NpX2NsZWFuLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBpbW11bml0eSA9IFwidHN1a3VzaGlcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgcGFyYW1ldGVycyA9IHBhcmFtZXRlcnNfdHN1a3VzaGksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHRpbWVfcmFuZ2UgPSB0aW1lX3JhbmdlLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMSA9IFwidFwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFwidFwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8yID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc29sdmVyID0gXCJ2b2RlXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMSA9IFwibm9uZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzIgPSBcIm5vbmVcIilcblxuIyBJIChraW4tZGlzcmltaW5hdGlvbilcbmNpX29wdF9JX25vbmUgPC0gY29faW5mZWN0aW9uX29wdF9hbHQocGFyYW1ldGVyc19jciA9IHJlcCgwLjUsIDQpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsaW1pdCA9IGxpbWl0LFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBtb2RlbCA9IGNoYWJhdWRpX2NpX2NsZWFuLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBpbW11bml0eSA9IFwidHN1a3VzaGlcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgcGFyYW1ldGVycyA9IHBhcmFtZXRlcnNfdHN1a3VzaGksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHRpbWVfcmFuZ2UgPSB0aW1lX3JhbmdlLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMSA9IFwiSTFcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzIgPSBcIkkyXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8xID0gSV9yYW5nZV9ub25lLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMiA9IElfcmFuZ2Vfbm9uZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc29sdmVyID0gXCJ2b2RlXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMSA9IFwibm9uZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzIgPSBcIm5vbmVcIilcblxuIyBJIGxvZyAoa2luIGRpc2NyaW1pbmF0aW9uKVxuY2lfb3B0X0lfbG9nIDwtIGNvX2luZmVjdGlvbl9vcHRfYWx0KHBhcmFtZXRlcnNfY3IgPSByZXAoMC41LCA0KSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbGltaXQgPSBsaW1pdCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcIkkxXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8yID0gXCJJMlwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMSA9IElfcmFuZ2VfbG9nLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMiA9IElfcmFuZ2VfbG9nLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcInZvZGVcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8xID0gXCJsb2cxMFwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzIgPSBcImxvZzEwXCIpXG5cbiMgSSAoY29tYmluZWQpXG5jaV9vcHRfSWNfbm9uZSA8LSBjb19pbmZlY3Rpb25fb3B0X2RvKHBhcmFtZXRlcnNfY3IgPSByZXAoMC41LCA0KSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbGltaXQgPSBsaW1pdCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcIkkxK0kyXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8yID0gXCJJMStJMlwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMSA9IElfcmFuZ2Vfbm9uZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzIgPSBJX3JhbmdlX25vbmUsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNvbHZlciA9IFwidm9kZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzEgPSBcIm5vbmVcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8yID0gXCJub25lXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIG5lZyA9IFQpXG5cbiMgSSBsb2cgKGNvbWJpbmVkKVxuY2lfb3B0X0ljX2xvZyA8LSBjb19pbmZlY3Rpb25fb3B0X2FsdChwYXJhbWV0ZXJzX2NyID0gcmVwKDAuNSwgNCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbWl0ID0gbGltaXQsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIG1vZGVsID0gY2hhYmF1ZGlfY2lfY2xlYW4sXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGltbXVuaXR5ID0gXCJ0c3VrdXNoaVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGltZV9yYW5nZSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8xID0gXCJJMStJMlwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFwiSTErSTJcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzEgPSBJX3JhbmdlX2xvZyxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzIgPSBJX3JhbmdlX2xvZyxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc29sdmVyID0gXCJ2b2RlXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMSA9IFwibG9nMTBcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8yID0gXCJsb2cxMFwiKVxuXG4jIElnIChraW4gZGlzY3JpbWluYXRpb24pXG5jaV9vcHRfSWdfbm9uZSA8LSBjb19pbmZlY3Rpb25fb3B0X2FsdChwYXJhbWV0ZXJzX2NyID0gYyg1OS4wODA5MiwgLTEwMS4yODc1NywgIC0zMC4wNzQ1NiwgIC03Ni43NTI1MiksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbWl0ID0gbGltaXQsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIG1vZGVsID0gY2hhYmF1ZGlfY2lfY2xlYW4sXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGltbXVuaXR5ID0gXCJ0c3VrdXNoaVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGltZV9yYW5nZSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8xID0gXCJJZzFcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzIgPSBcIklnMlwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMSA9IElfcmFuZ2Vfbm9uZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzIgPSBJX3JhbmdlX25vbmUsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNvbHZlciA9IFwidm9kZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzEgPSBcIm5vbmVcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8yID0gXCJub25lXCIpXG5cbiMgSWcgbG9nIChraW4gZGlzY3JpbWluYXRpb24pXG5jaV9vcHRfSWdfbG9nIDwtIGNvX2luZmVjdGlvbl9vcHRfYWx0KHBhcmFtZXRlcnNfY3IgPSByZXAoMC41LCA0KSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbGltaXQgPSBsaW1pdCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcIklnMVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFwiSWcyXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8xID0gSV9yYW5nZV9sb2csXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8yID0gSV9yYW5nZV9sb2csXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNvbHZlciA9IFwidm9kZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzEgPSBcImxvZzEwXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFwibG9nMTBcIilcblxuIyBJZyAoY29tYmluZWQpXG5jaV9vcHRfSWdjX25vbmUgPC0gY29faW5mZWN0aW9uX29wdF9hbHQocGFyYW1ldGVyc19jciA9IGMoNC43MDc3MjIsIC0xODIxLjc0NDYxOSwgICA0MjAuMTExMjMyLCAgICAyNS45MjU5NTkpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsaW1pdCA9IGxpbWl0LFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBtb2RlbCA9IGNoYWJhdWRpX2NpX2NsZWFuLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBpbW11bml0eSA9IFwidHN1a3VzaGlcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgcGFyYW1ldGVycyA9IHBhcmFtZXRlcnNfdHN1a3VzaGksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHRpbWVfcmFuZ2UgPSB0aW1lX3JhbmdlLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMSA9IFwiSWcxK0lnMlwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFwiSWcxK0lnMlwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMSA9IElfcmFuZ2Vfbm9uZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzIgPSBJX3JhbmdlX25vbmUsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNvbHZlciA9IFwidm9kZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzEgPSBcIm5vbmVcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8yID0gXCJub25lXCIpXG5cblxuIyBJK0lnIChraW4gZGlzY3JpbWluYXRpb24pXG5jaV9vcHRfSWdfSV9ub25lIDwtIGNvX2luZmVjdGlvbl9vcHRfYWx0KHBhcmFtZXRlcnNfY3IgPSByZXAoMC41LCA0KSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbGltaXQgPSBsaW1pdCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcIkkxK0lnMVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFwiSTIrSWcyXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8xID0gSV9yYW5nZV9ub25lLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMiA9IElfcmFuZ2Vfbm9uZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc29sdmVyID0gXCJ2b2RlXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMSA9IFwibm9uZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzIgPSBcIm5vbmVcIilcblxuIyBJK0lnIGxvZyAoa2luIGRpc2NyaW1pbmF0aW9uKVxuY2lfb3B0X0lfSWdfbG9nIDwtIGNvX2luZmVjdGlvbl9vcHRfYWx0KHBhcmFtZXRlcnNfY3IgPSByZXAoMC41LCA0KSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbGltaXQgPSBsaW1pdCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcIkkxK0lnMVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFwiSTIrSWcyXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8xID0gSV9yYW5nZV9sb2csXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8yID0gSV9yYW5nZV9sb2csXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNvbHZlciA9IFwidm9kZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzEgPSBcImxvZzEwXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFwibG9nMTBcIilcblxuIyBzdW0gKEkxK0kyK0lnMStJZzIpIFxuY2lfb3B0X3N1bV9ub25lIDwtIGNvX2luZmVjdGlvbl9vcHRfYWx0KHBhcmFtZXRlcnNfY3IgPSByZXAoMC41LCA0KSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbGltaXQgPSBsaW1pdCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcInN1bVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFwic3VtXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8xID0gSV9yYW5nZV9ub25lLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMiA9IElfcmFuZ2Vfbm9uZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc29sdmVyID0gXCJ2b2RlXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMSA9IFwibm9uZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzIgPSBcIm5vbmVcIilcblxuIyBzdW0gbG9nIChJMStJMitJZzErSWcyKSBcbmNpX29wdF9zdW1fbG9nIDwtIGNvX2luZmVjdGlvbl9vcHRfYWx0KHBhcmFtZXRlcnNfY3IgPSByZXAoMC41LCA0KSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbGltaXQgPSBsaW1pdCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcInN1bVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFwic3VtXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8xID0gSV9yYW5nZV9sb2csXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8yID0gSV9yYW5nZV9sb2csXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNvbHZlciA9IFwidm9kZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzEgPSBcImxvZzEwXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFwibG9nMTBcIilcblxuIyBHIChraW4gZGlzY3JpbWluYXRpb24pXG5jaV9vcHRfR19ub25lIDwtIGNvX2luZmVjdGlvbl9vcHRfYWx0KHBhcmFtZXRlcnNfY3IgPSByZXAoMC41LCA0KSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbGltaXQgPSBsaW1pdCxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbW9kZWwgPSBjaGFiYXVkaV9jaV9jbGVhbixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgaW1tdW5pdHkgPSBcInRzdWt1c2hpXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHBhcmFtZXRlcnMgPSBwYXJhbWV0ZXJzX3RzdWt1c2hpLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICB0aW1lX3JhbmdlID0gdGltZV9yYW5nZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlXzEgPSBcIkcxXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8yID0gXCJHMlwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMSA9IEdfcmFuZ2Vfbm9uZSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzIgPSBHX3JhbmdlX25vbmUsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIHNvbHZlciA9IFwidm9kZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBsb2dfY3VlXzEgPSBcIm5vbmVcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8yID0gXCJub25lXCIpXG5cbiMgRyBsb2cgKGtpbiBkaXNjcmltaW5hdGlvbilcbmNpX29wdF9HX2xvZyA8LSBjb19pbmZlY3Rpb25fb3B0X2FsdChwYXJhbWV0ZXJzX2NyID0gcmVwKDAuNSwgNCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbWl0ID0gbGltaXQsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIG1vZGVsID0gY2hhYmF1ZGlfY2lfY2xlYW4sXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGltbXVuaXR5ID0gXCJ0c3VrdXNoaVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGltZV9yYW5nZSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8xID0gXCJHMVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFwiRzJcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzEgPSBHX3JhbmdlX2xvZyxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzIgPSBHX3JhbmdlX2xvZyxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc29sdmVyID0gXCJ2b2RlXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMSA9IFwibG9nMTBcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8yID0gXCJsb2cxMFwiKVxuXG4jIEcgKGNvbWJpbmVkKVxuY2lfb3B0X0djX25vbmUgPC0gY29faW5mZWN0aW9uX29wdF9kbyhwYXJhbWV0ZXJzX2NyID0gcmVwKDAuNSwgNCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbWl0ID0gbGltaXQsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIG1vZGVsID0gY2hhYmF1ZGlfY2lfY2xlYW4sXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGltbXVuaXR5ID0gXCJ0c3VrdXNoaVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGltZV9yYW5nZSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8xID0gXCJHMStHMlwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfMiA9IFwiRzErRzJcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzEgPSBHX3JhbmdlX25vbmUsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8yID0gR19yYW5nZV9ub25lLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcInZvZGVcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8xID0gXCJub25lXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFwibm9uZVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBuZWcgPSBUKVxuXG4jIFJCQ1xuY2lfb3B0X1Jfbm9uZSA8LSBjb19pbmZlY3Rpb25fb3B0X2FsdChwYXJhbWV0ZXJzX2NyID0gcmVwKDAuNSwgNCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbWl0ID0gbGltaXQsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIG1vZGVsID0gY2hhYmF1ZGlfY2lfY2xlYW4sXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGltbXVuaXR5ID0gXCJ0c3VrdXNoaVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGltZV9yYW5nZSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8xID0gXCJSXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8yID0gXCJSXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8xID0gc2VxKCgxMF42KSwgKDEwXjcpLCBieSA9ICgoMTBeNyktKDEwXjYpKS81MDAwKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgY3VlX3JhbmdlXzIgPSBzZXEoKDEwXjYpLCAoMTBeNyksIGJ5ID0gKCgxMF43KS0oMTBeNikpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBzb2x2ZXIgPSBcInZvZGVcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8xID0gXCJub25lXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMiA9IFwibm9uZVwiKVxuXG4jIFJCQyBsb2dcbmNpX29wdF9SX2xvZyA8LSBjb19pbmZlY3Rpb25fb3B0X2FsdChwYXJhbWV0ZXJzX2NyID0gcmVwKDAuNSwgNCksXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxpbWl0ID0gbGltaXQsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIG1vZGVsID0gY2hhYmF1ZGlfY2lfY2xlYW4sXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGltbXVuaXR5ID0gXCJ0c3VrdXNoaVwiLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBwYXJhbWV0ZXJzID0gcGFyYW1ldGVyc190c3VrdXNoaSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgdGltZV9yYW5nZSA9IHRpbWVfcmFuZ2UsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8xID0gXCJSXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV8yID0gXCJSXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGN1ZV9yYW5nZV8xID0gc2VxKGxvZzEwKDEwXjYpLCBsb2cxMCgxMF43KSwgYnkgPSAobG9nMTAoMTBeNyktbG9nMTAoMTBeNikpLzUwMDApLFxuICAgICAgICAgICAgICAgICAgICAgICAgICAgICBjdWVfcmFuZ2VfMiA9IHNlcShsb2cxMCgxMF42KSwgbG9nMTAoMTBeNyksIGJ5ID0gKGxvZzEwKDEwXjcpLWxvZzEwKDEwXjYpKS81MDAwKSxcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgc29sdmVyID0gXCJ2b2RlXCIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgIGxvZ19jdWVfMSA9IFwibG9nMTBcIixcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbG9nX2N1ZV8yID0gXCJsb2cxMFwiKVxuYGBgIn0= -->
 <pre class="r"><code># time
-#local optimization gave variable coefficients: 26.16425,   -71.07799,  53.34121,   -166.25693
-# deoptim optimization:  -0.999973,   -99.997053,  -999.322610, -4115.796681. Produced dynamic where all parasites die within the first few days. Not used!
+#local optimization (0.5x4) gave variable coefficients: 26.16425,   -71.07799,  53.34121,   -166.25693
+# deoptim optimization (0.5x4):  -0.999973,   -99.997053,  -999.322610, -4115.796681. Produced dynamic where all parasites die within the first few days. Not used!
+# local optimization with c(4.55386, -13.0056, 4.15466, -11.9424): 31.35883  -86.98317   70.37316 -217.06454. Does not make a difference
 ci_opt_t &lt;- co_infection_opt_alt(parameters_cr = c(4.55386, -13.0056, 4.15466, -11.9424),
                              limit = limit,
                              model = chabaudi_ci_clean,
@@ -444,1165 +445,250 @@ ci_opt_t &lt;- co_infection_opt_alt(parameters_cr = c(4.55386, -13.0056, 4.15466
                              solver = &quot;vode&quot;,
                              log_cue_1 = &quot;none&quot;,
                              log_cue_2 = &quot;none&quot;)
-</code></pre>
+
+# I (kin-disrimination)
+ci_opt_I_none &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;I1&quot;,
+                             cue_2 = &quot;I2&quot;,
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;none&quot;,
+                             log_cue_2 = &quot;none&quot;)
+
+# I log (kin discrimination)
+ci_opt_I_log &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;I1&quot;,
+                             cue_2 = &quot;I2&quot;,
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;log10&quot;,
+                             log_cue_2 = &quot;log10&quot;)
+
+# I (combined)
+ci_opt_Ic_none &lt;- co_infection_opt_do(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;I1+I2&quot;,
+                             cue_2 = &quot;I1+I2&quot;,
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;none&quot;,
+                             log_cue_2 = &quot;none&quot;,
+                             neg = T)
+
+# I log (combined)
+ci_opt_Ic_log &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;I1+I2&quot;,
+                             cue_2 = &quot;I1+I2&quot;,
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;log10&quot;,
+                             log_cue_2 = &quot;log10&quot;)
+
+# Ig (kin discrimination)
+ci_opt_Ig_none &lt;- co_infection_opt_alt(parameters_cr = c(59.08092, -101.28757,  -30.07456,  -76.75252),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;Ig1&quot;,
+                             cue_2 = &quot;Ig2&quot;,
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;none&quot;,
+                             log_cue_2 = &quot;none&quot;)
+
+# Ig log (kin discrimination)
+ci_opt_Ig_log &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;Ig1&quot;,
+                             cue_2 = &quot;Ig2&quot;,
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;log10&quot;,
+                             log_cue_2 = &quot;log10&quot;)
+
+# Ig (combined)
+ci_opt_Igc_none &lt;- co_infection_opt_alt(parameters_cr = c(4.707722, -1821.744619,   420.111232,    25.925959),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;Ig1+Ig2&quot;,
+                             cue_2 = &quot;Ig1+Ig2&quot;,
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;none&quot;,
+                             log_cue_2 = &quot;none&quot;)
+
+
+# I+Ig (kin discrimination)
+ci_opt_Ig_I_none &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;I1+Ig1&quot;,
+                             cue_2 = &quot;I2+Ig2&quot;,
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;none&quot;,
+                             log_cue_2 = &quot;none&quot;)
+
+# I+Ig log (kin discrimination)
+ci_opt_I_Ig_log &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;I1+Ig1&quot;,
+                             cue_2 = &quot;I2+Ig2&quot;,
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;log10&quot;,
+                             log_cue_2 = &quot;log10&quot;)
+
+# sum (I1+I2+Ig1+Ig2) 
+ci_opt_sum_none &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;sum&quot;,
+                             cue_2 = &quot;sum&quot;,
+                             cue_range_1 = I_range_none,
+                             cue_range_2 = I_range_none,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;none&quot;,
+                             log_cue_2 = &quot;none&quot;)
+
+# sum log (I1+I2+Ig1+Ig2) 
+ci_opt_sum_log &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;sum&quot;,
+                             cue_2 = &quot;sum&quot;,
+                             cue_range_1 = I_range_log,
+                             cue_range_2 = I_range_log,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;log10&quot;,
+                             log_cue_2 = &quot;log10&quot;)
+
+# G (kin discrimination)
+ci_opt_G_none &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;G1&quot;,
+                             cue_2 = &quot;G2&quot;,
+                             cue_range_1 = G_range_none,
+                             cue_range_2 = G_range_none,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;none&quot;,
+                             log_cue_2 = &quot;none&quot;)
+
+# G log (kin discrimination)
+ci_opt_G_log &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;G1&quot;,
+                             cue_2 = &quot;G2&quot;,
+                             cue_range_1 = G_range_log,
+                             cue_range_2 = G_range_log,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;log10&quot;,
+                             log_cue_2 = &quot;log10&quot;)
+
+# G (combined)
+ci_opt_Gc_none &lt;- co_infection_opt_do(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;G1+G2&quot;,
+                             cue_2 = &quot;G1+G2&quot;,
+                             cue_range_1 = G_range_none,
+                             cue_range_2 = G_range_none,
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;none&quot;,
+                             log_cue_2 = &quot;none&quot;,
+                             neg = T)
+
+# RBC
+ci_opt_R_none &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;R&quot;,
+                             cue_2 = &quot;R&quot;,
+                             cue_range_1 = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
+                             cue_range_2 = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;none&quot;,
+                             log_cue_2 = &quot;none&quot;)
+
+# RBC log
+ci_opt_R_log &lt;- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = &quot;tsukushi&quot;,
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = &quot;R&quot;,
+                             cue_2 = &quot;R&quot;,
+                             cue_range_1 = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+                             cue_range_2 = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+                             solver = &quot;vode&quot;,
+                             log_cue_1 = &quot;log10&quot;,
+                             log_cue_2 = &quot;log10&quot;)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiWzFdICAgNC41NTM4NiAtMTMuMDA1NjAgICA0LjE1NDY2IC0xMS45NDI0MFxuWzFdICAgNC41NTM4NiAtMTMuMDA1NjAgICA0LjE1NDY2IC0xMS45NDI0MFxuWzFdIFwic3RhcnRpbmcgaXRlcmF0aW9uIDFcIlxuTiA9IDQsIE0gPSA1IG1hY2hpbmUgcHJlY2lzaW9uID0gMi4yMjA0NWUtMTZcbkwgPSAtaW5mIC1pbmYgLWluZiAtaW5mIFxuWDAgPSA0LjU1Mzg2IC0xMy4wMDU2IDQuMTU0NjYgLTExLjk0MjQgXG5VID0gaW5mIGluZiBpbmYgaW5mIFxuVGhpcyBwcm9ibGVtIGlzIHVuY29uc3RyYWluZWQuXG5BdCBYMCwgMCB2YXJpYWJsZXMgYXJlIGV4YWN0bHkgYXQgdGhlIGJvdW5kc1xuQXQgaXRlcmF0ZSAgICAgMCAgZj0gICAgICAgICAgIC0wICB8cHJvaiBnfD0gICAgICAgIDE4LjAzXG5JdGVyYXRpb24gICAgIDBcblxuLS0tLS0tLS0tLS0tLS0tLSBDQVVDSFkgZW50ZXJlZC0tLS0tLS0tLS0tLS0tLS0tLS1cblxuVGhlcmUgYXJlIDAgIGJyZWFrcG9pbnRzXG5cbkdDUCBmb3VuZCBpbiB0aGlzIHNlZ21lbnRcblBpZWNlICAgICAgMSBmMSwgZjIgYXQgc3RhcnQgcG9pbnQgLTMuOTE3MWUrMDIgIDMuOTE3MWUrMDJcbkRpc3RhbmNlIHRvIHRoZSBzdGF0aW9uYXJ5IHBvaW50ID0gICAxLjAwMDBlKzAwXG5DYXVjaHkgWCA9ICAyMi41ODM0IC01Ljg3MjExIDguMDA2NiAtMTAuOTgyOSBcblxuLS0tLS0tLS0tLS0tLS0tLSBleGl0IENBVUNIWS0tLS0tLS0tLS0tLS0tLS0tLS0tLS1cblxuNCAgdmFyaWFibGVzIGFyZSBmcmVlIGF0IEdDUCBvbiBpdGVyYXRpb24gMVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMVxuWCA9IDUuNDY0ODMgLTEyLjY0NTIgNC4zNDkyOCAtMTEuODkzOSBcbkcgPSA0LjA0OTg2IDEuNTg5OTEgMS4yMjg2MiAwLjQxMDk1OCBcbkl0ZXJhdGlvbiAgICAgMVxuTElORSBTRUFSQ0ggMiB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC41MzMyNDVcblggPSA0Ljk4Njk2IC0xMi44MzMgNC4yMTIzNiAtMTEuOTM4MSBcbkcgPSAxLjkyMjY2IDAuNTk2MjQ2IDAuODkyNjI4IDAuNDc0MDUzIFxuSXRlcmF0aW9uICAgICAyXG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjA1NDgyOTFcblggPSA0Ljk0MjM4IC0xMi44NDQgNC4xODY4MSAtMTEuOTUzNyBcbkcgPSAwLjY1NjIzNSAwLjEwODE1NCAwLjU3MTIzNSAwLjM2OTI1NyBcbkl0ZXJhdGlvbiAgICAgM1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wNTkwODAzXG5YID0gNC45MTQwMSAtMTIuODQwNiA0LjE0NTIzIC0xMS45ODQ1IFxuRyA9IC0wLjQ0NDI0OSAtMC4zMDk0OTYgMC4yODAxNDggMC4yNjczOTIgXG5JdGVyYXRpb24gICAgIDRcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDUxOTYwMVxuWCA9IDQuOTEzNTUgLTEyLjgyNDkgNC4xMDY5NSAtMTIuMDE2IFxuRyA9IC0wLjYzMTYzMSAtMC4zNzExNTYgMC4yMTI2NTggMC4yMzQ0MTkgXG5JdGVyYXRpb24gICAgIDVcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuNTk4MTQzXG5YID0gNC45NTU3MSAtMTIuNjI3NiAzLjY3NDA2IC0xMi4zNzYxIFxuRyA9IC0xLjExMjAyIC0wLjQ0OTE5NiAtMC4xMzYzOTIgMC4wMDgzMDEwNiBcbkl0ZXJhdGlvbiAgICAgNlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4yOTEzMDNcblggPSA1LjAwODY4IC0xMi41MzUyIDMuNDYzNDQgLTEyLjU0NjggXG5HID0gLTAuNDU2MzQ0IC0wLjE1NTYzOSAtMC4wNjM0NTc1IC0wLjAwODg5NDg1IFxuSXRlcmF0aW9uICAgICA3XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjEyMTQ0OFxuWCA9IDUuMDM2NjcgLTEyLjQ5OTMgMy4zNzU0NCAtMTIuNjE3IFxuRyA9IC0wLjA5Njg2NjEgLTAuMDAzMTIwNzEgLTAuMDA0OTE4ODIgLTAuMDAzNzU4MTYgXG5JdGVyYXRpb24gICAgIDhcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDIxOTQ1OVxuWCA9IDUuMDQzNiAtMTIuNDk1MSAzLjM1OTE2IC0xMi42MjkzIFxuRyA9IC0wLjAxMjYyMDIgMC4wMzE3Mjk5IDAuMDEwODk0OCAtMC4wMDAzNzM1MTkgXG5JdGVyYXRpb24gICAgIDlcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDA2NTE5OThcblggPSA1LjA0NjYgLTEyLjQ5NjIgMy4zNTQzNCAtMTIuNjMyMyBcbkcgPSAwLjAxMjkzNzQgMC4wNDIwNDMgMC4wMTU5MTkyIDAuMDAwNTAzMTcyIFxuSXRlcmF0aW9uICAgIDEwXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAyMDUyODdcblggPSA1LjA1NzAxIC0xMi41MDY1IDMuMzQxMjkgLTEyLjYzODMgXG5HID0gMC4wNzM3Mjk3IDAuMDY2NDk5MiAwLjAyODcwODEgMC4wMDM3NjYzOCBcbkl0ZXJhdGlvbiAgICAxMVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wNTQ1OTU0XG5YID0gNS4wODMwNyAtMTIuNTQwMSAzLjMwOTM2IC0xMi42NTEgXG5HID0gMC4xNjMxNzMgMC4xMDIzMTYgMC4wNDUwODUxIDAuMDA3NTYzOTYgXG5JdGVyYXRpb24gICAgMTJcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMTEwMjMzXG5YID0gNS4xMzM2OCAtMTIuNjIwMyAzLjI1NTMgLTEyLjY2NjEgXG5HID0gMC4yNTkzNDggMC4xNDAxNTMgMC4wNjEzNDkxIDAuMDExNzI4MSBcbkl0ZXJhdGlvbiAgICAxM1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4yOTcyOThcblggPSA1LjI2NDc2IC0xMi44NTI2IDMuMTI2NTEgLTEyLjY5MTQgXG5HID0gMC4zNzI1NDIgMC4xODI0ODEgMC4wNzUzMTYzIDAuMDE2NDA2OCBcbkl0ZXJhdGlvbiAgICAxNFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC40NzYwOTZcblggPSA1LjQ2NjAyIC0xMy4yMzU3IDIuOTMwNzMgLTEyLjcyNCBcbkcgPSAwLjMyNTU1MSAwLjE1OTQ4MSAwLjA0Mzk0NTIgMC4wMDkxODggXG5JdGVyYXRpb24gICAgMTVcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMzQxMzgyXG5YID0gNS42MDU4NyAtMTMuNTM5NyAyLjg2Njk4IC0xMi43MDExIFxuRyA9IDAuNDc0MzA4IDAuMjAyNTI3IDAuMDk1MDgwNSAwLjAzOTgxMzEgXG5JdGVyYXRpb24gICAgMTZcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMzgwNTgxXG5YID0gNS43NDYzNSAtMTMuODc0NiAyLjc1MzY2IC0xMi43MTEzIFxuRyA9IC0wLjAwNDM2MDc3IDAuMDAzODg1MTIgLTAuMDMwOTg1NiAwLjAxMDM1ODYgXG5JdGVyYXRpb24gICAgMTdcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMTYxMzhcblggPSA1LjY3NzI4IC0xMy43NTU2IDIuODM1NTMgLTEyLjY5MDggXG5HID0gMC4wMTIzMTgzIDAuMDA5ODQ2MDMgLTAuMDE1NTUzNyAwLjAxNjA2ODEgXG5JdGVyYXRpb24gICAgMThcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDgzOTIwNVxuWCA9IDUuNjQ2MTkgLTEzLjcxNzIgMi45MDEwNyAtMTIuNzA4MSBcbkcgPSAwLjAwNTQyNjgzIDAuMDA2MjIxIC0wLjAwODczMjE3IDAuMDE5NDc0MyBcbkl0ZXJhdGlvbiAgICAxOVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4yODM4NTFcblggPSA1LjYzMDUyIC0xMy43NDk3IDMuMDkzNTMgLTEyLjkxMzYgXG5HID0gMC4xMjMxNDYgMC4wNTI4Mjk3IDAuMDM2MjE0NCAwLjAzMjY2MTMgXG5JdGVyYXRpb24gICAgMjBcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuNzk0MzY1XG5YID0gNS43MTkxMyAtMTQuMDk5NCAzLjQ3NDQ4IC0xMy41MTAxIFxuRyA9IDAuMTcxNDggMC4wNzAyMDI0IDAuMDcxOTMzOSAwLjA0MzU1ODIgXG5JdGVyYXRpb24gICAgMjFcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDIuMTM4NzFcblggPSA2LjE1MTIgLTE1LjM0NTggNC4xODM4MSAtMTUuMDM2NyBcbkcgPSAwLjI1NTg2MSAwLjA5NDQ1NDYgMC4xMjUwMjcgMC4wNjE5ODUyIFxuSXRlcmF0aW9uICAgIDIyXG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjI0NDY4NVxuWCA9IDYuMTcwNDcgLTE1LjQ1NTUgNC4yODg5OSAtMTUuMjI3NSBcbkcgPSAtMC4wMzg3ODg1IC0wLjAyMDQxOSAwLjA1MjM0MzkgMC4wMzc5NjY0IFxuSXRlcmF0aW9uICAgIDIzXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAyLjY0ODU2XG5YID0gNi44MzkyNyAtMTcuMTY2NCA0Ljg3ODA2IC0xNy4wNDIzIFxuRyA9IDAuMDIyMTkzMiAtMC4wMDM0Njc2MiAwLjA3MDc2MjMgMC4wNDI1NTkxIFxuSXRlcmF0aW9uICAgIDI0XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAyLjg1NTQ0XG5YID0gNy42MDE4NSAtMTguOTg4NyA1LjMzNCAtMTkuMDUzMSBcbkcgPSAwLjAxMDUwNDQgMC4wMDEzMTEzMSAwLjAyOTM4MTMgMC4wMTUwNTU5IFxuSXRlcmF0aW9uICAgIDI1XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxLjI5OTdcblggPSA4LjEwOTAxIC0yMC4wNTM1IDUuMTMzMjYgLTE5LjU2MSBcbkcgPSAtMC4xOTUxNTggLTAuMDgzMzM1NyAtMC4wNTE2MzIzIC0wLjAwOTAwNDI4IFxuSXRlcmF0aW9uICAgIDI2XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjU0MTIzNVxuWCA9IDguMTQwNzUgLTIwLjE5MjEgNS4zOTA1NCAtMjAuMDE1NCBcbkcgPSAtMC4wMTE2NzQ4IC0wLjAwODAwNTY1IDAuMDAxMDUxOTUgMC4wMDM0NDQ1NSBcbkl0ZXJhdGlvbiAgICAyN1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wODU4NDI5XG5YID0gOC4xMzUzNiAtMjAuMTg5MyA1LjQzMzI5IC0yMC4wODk2IFxuRyA9IDAuMDEwNzAxNCAwLjAwMjM5MDgzIDAuMDA1OTc5MTMgMC4wMDM1Mzg4OSBcbkl0ZXJhdGlvbiAgICAyOFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wNzcwMDczXG5YID0gOC4xMzQ2OCAtMjAuMTk3NiA1LjQ2NjkzIC0yMC4xNTg0IFxuRyA9IC0wLjAwNTcxNDUgLTAuMDAyODkxOCAwLjAwMDcwNjI3NCAwLjAwMDc4NDc0NiBcbkl0ZXJhdGlvbiAgICAyOVxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wNTg1OTg4XG5YID0gOC4xNTI1MyAtMjAuMjM0MiA1LjQ2OTgxIC0yMC4yMDA0IFxuRyA9IDAuMDA4NjgyMzMgMC4wMDM0MTMzNyAwLjAwMTk1NTczIDAuMDAwNTQwMTEzIFxuSXRlcmF0aW9uICAgIDMwXG5MSU5FIFNFQVJDSCAyIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwMTQ5MjA2XG5YID0gOC4xNTIwNSAtMjAuMjMzMiA1LjQ2OTcxIC0yMC4xOTk0IFxuRyA9IDAuMDA4MTg1MDMgMC4wMDMxNzAxNiAwLjAwMjM1MDA2IDAuMDAwODE0Nzc0IFxuSXRlcmF0aW9uICAgIDMxXG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwNjE2MjI3XG5YID0gOC4xNTI5MSAtMjAuMjM2OSA1LjQ3MTc2IC0yMC4yMDM4IFxuRyA9IC0wLjAwMTA3NTI5IC0wLjAwMDQyNzgyMiAtMC4wMDAzNDMyMzUgMS44OTg5MWUtMDUgXG5JdGVyYXRpb24gICAgMzJcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDExOTEzNFxuWCA9IDguMTUyOTYgLTIwLjIzOSA1LjQ3NzM3IC0yMC4yMTQxIFxuRyA9IC0wLjAwNDM0NTEzIC0wLjAwMTQyMDQ4IC0wLjAwMTA3MTcyIC0wLjAwMDQwNzg1NyBcbkl0ZXJhdGlvbiAgICAzM1xuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMTkwNzM3XG5YID0gOC4xNjAwNyAtMjAuMjU1NyA1LjQ3ODA2IC0yMC4yMTk4IFxuRyA9IDAuMDAwNzI0MTQzIDIuODY3OTllLTA1IDAuMDAwNzU0NTk1IDAuMDAwNTIwNDY0IFxuSXRlcmF0aW9uICAgIDM0XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwNDE2NTRcblggPSA4LjE1ODc2IC0yMC4yNTMgNS40Nzk1MiAtMjAuMjIyMiBcbkcgPSAtMC4wMDAyMDc0MzYgLTMuMzY5ODdlLTA1IDAuMDAwNTMyMDYxIDAuMDAwMjkwMzQzIFxuSXRlcmF0aW9uICAgIDM1XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwNzIzNzAzXG5YID0gOC4xNjAyNCAtMjAuMjU2OCA1LjQ4MTM3IC0yMC4yMjc4IFxuRyA9IC0wLjAwMDE1MDM0NSAtMC4wMDAxNzY5OTEgMC4wMDAyNTg1MzMgMC4wMDAxNTk3MTMgXG5JdGVyYXRpb24gICAgMzZcbkxJTkUgU0VBUkNIIDUgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDkuOTU3MzRlLTA1XG5YID0gOC4xNjAyNCAtMjAuMjU2NyA1LjQ4MTMxIC0yMC4yMjc4IFxuRyA9IC0wLjAwMDE0ODY4MSA2LjQ1MzQ1ZS0wNSAwLjAwMDI0OTU2OSAwLjAwMDI0NjIxNyBcblxuaXRlcmF0aW9ucyAzN1xuZnVuY3Rpb24gZXZhbHVhdGlvbnMgNTNcbnNlZ21lbnRzIGV4cGxvcmVkIGR1cmluZyBDYXVjaHkgc2VhcmNoZXMgMVxuQkZHUyB1cGRhdGVzIHNraXBwZWQgMFxuYWN0aXZlIGJvdW5kcyBhdCBmaW5hbCBnZW5lcmFsaXplZCBDYXVjaHkgcG9pbnQgMFxubm9ybSBvZiB0aGUgZmluYWwgcHJvamVjdGVkIGdyYWRpZW50IDAuMDAwMjQ5NTY5XG5maW5hbCBmdW5jdGlvbiB2YWx1ZSAtNC4yODMxNVxuXG5YID0gOC4xNjAyNCAtMjAuMjU2NyA1LjQ4MTMxIC0yMC4yMjc4IFxuRiA9IC00LjI4MzE1XG5maW5hbCAgdmFsdWUgLTQuMjgzMTUzIFxuY29udmVyZ2VkXG5bWzFdXVxuWzFdIDJcblxuW1syXV1cblsxXSAgIDQuNTUzODYgLTEzLjAwNTYwICAgNC4xNTQ2NiAtMTEuOTQyNDBcblxuW1szXV1cblsxXSAgIDQuNTUzODYgLTEzLjAwNTYwICAgNC4xNTQ2NiAtMTEuOTQyNDBcblxuW1s0XV1cblsxXSA0LjI4MzE1M1xuXG5bMV0gXCJTdHJhaW4gMSBpcyBmaXR0ZXIgdGhhbiBzdHJhaW4gMi5cIlxuWzFdICAgOC4xNjAyMzkgLTIwLjI1Njc0NCAgIDUuNDgxMzEwIC0yMC4yMjc3NzdcblsxXSAgIDguMTYwMjM5IC0yMC4yNTY3NDQgICA1LjQ4MTMxMCAtMjAuMjI3Nzc3XG5bMV0gXCJzdGFydGluZyBpdGVyYXRpb24gMlwiXG5OID0gNCwgTSA9IDUgbWFjaGluZSBwcmVjaXNpb24gPSAyLjIyMDQ1ZS0xNlxuTCA9IC1pbmYgLWluZiAtaW5mIC1pbmYgXG5YMCA9IDguMTYwMjQgLTIwLjI1NjcgNS40ODEzMSAtMjAuMjI3OCBcblUgPSBpbmYgaW5mIGluZiBpbmYgXG5UaGlzIHByb2JsZW0gaXMgdW5jb25zdHJhaW5lZC5cbkF0IFgwLCAwIHZhcmlhYmxlcyBhcmUgZXhhY3RseSBhdCB0aGUgYm91bmRzXG5BdCBpdGVyYXRlICAgICAwICBmPSAgIDQuNDQwOWUtMTYgIHxwcm9qIGd8PSAgICAgICA1LjY4MThcbkl0ZXJhdGlvbiAgICAgMFxuXG4tLS0tLS0tLS0tLS0tLS0tIENBVUNIWSBlbnRlcmVkLS0tLS0tLS0tLS0tLS0tLS0tLVxuXG5UaGVyZSBhcmUgMCAgYnJlYWtwb2ludHNcblxuR0NQIGZvdW5kIGluIHRoaXMgc2VnbWVudFxuUGllY2UgICAgICAxIGYxLCBmMiBhdCBzdGFydCBwb2ludCAtMy45NDYyZSswMSAgMy45NDYyZSswMVxuRGlzdGFuY2UgdG8gdGhlIHN0YXRpb25hcnkgcG9pbnQgPSAgIDEuMDAwMGUrMDBcbkNhdWNoeSBYID0gIDEzLjg0MiAtMTcuODYwOCA2LjY1OTk0IC0yMC4wMDQxIFxuXG4tLS0tLS0tLS0tLS0tLS0tIGV4aXQgQ0FVQ0hZLS0tLS0tLS0tLS0tLS0tLS0tLS0tLVxuXG40ICB2YXJpYWJsZXMgYXJlIGZyZWUgYXQgR0NQIG9uIGl0ZXJhdGlvbiAxXG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjMxOTY1NVxuWCA9IDguNDQ5MzYgLTIwLjEzNDggNS41NDEyOCAtMjAuMjE2NCBcbkcgPSAwLjMwNDU5NiAwLjA1MDY0NjYgMC4yNjc0OTQgMC4xNDg2ODYgXG5JdGVyYXRpb24gICAgIDFcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDIwMTg5N1xuWCA9IDguNDM1MDYgLTIwLjEzNzMgNS41MjkwMSAtMjAuMjIzMiBcbkcgPSAwLjA1MzY0NTMgLTAuMDUxODIzMyAwLjIwMzMgMC4xMzE0NjYgXG5JdGVyYXRpb24gICAgIDJcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDMyNDM0MVxuWCA9IDguNDI0NzQgLTIwLjEzMjYgNS41MDMzMyAtMjAuMjM5NCBcbkcgPSAtMC4xNjgxMDggLTAuMTQxNjM4IDAuMTQ0ODk0IDAuMTE0OTI2IFxuSXRlcmF0aW9uICAgICAzXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjA4MzI5MzZcblggPSA4LjQxNjM5IC0yMC4xMTA4IDUuNDM2NjEgLTIwLjI4MzUgXG5HID0gLTAuNDQ2OTEgLTAuMjUzMTY4IDAuMDY2OTYxMiAwLjA5MTM2NTcgXG5JdGVyYXRpb24gICAgIDRcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMjUyNTVcblggPSA4LjQxNTc0IC0yMC4wMzM1IDUuMjM3MiAtMjAuNDE3OCBcbkcgPSAtMC44NzI4NTggLTAuNDE5OTY4IC0wLjA2NDEyNjQgMC4wNDgwMzM5IFxuSXRlcmF0aW9uICAgICA1XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjU0NzA1XG5YID0gOC40NDUzNyAtMTkuODUyNCA0LjgxMTM3IC0yMC43MDgxIFxuRyA9IC0xLjIwMDIzIC0wLjU0MDY3MiAtMC4xOTM0MDggLTAuMDAxNDc5NCBcbkl0ZXJhdGlvbiAgICAgNlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC45NTMwMjFcblggPSA4LjUzMzAyIC0xOS41MTk3IDQuMDc5ODMgLTIxLjIxMjggXG5HID0gLTEuMDE4MjQgLTAuNDQ5MTM2IC0wLjIxMTA2NyAtMC4wMjU2NTE0IFxuSXRlcmF0aW9uICAgICA3XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjgyODU2N1xuWCA9IDguNjQyOTYgLTE5LjE5NDIgMy40NzMyOCAtMjEuNjYwNyBcbkcgPSAtMC4yMjY0MjYgLTAuMTA4OTU0IC0wLjA1MTcxOTggMC4wMDEwMTI4MiBcbkl0ZXJhdGlvbiAgICAgOFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4yOTQzNTNcblggPSA4LjY3OTQyIC0xOS4wNzkgMy4yNTc2MiAtMjEuODIwNSBcbkcgPSAtMC4wMjIyOTA3IC0wLjAyMDMxMjMgLTAuMDEwOTg5NiAwLjAwNzIyMjI2IFxuSXRlcmF0aW9uICAgICA5XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjA5MTU5NzVcblggPSA4LjY4ODIxIC0xOS4wNDMxIDMuMTkwODEgLTIxLjg3MTEgXG5HID0gMC4wMTMwNTk2IC0wLjAwNDUyMTI1IC0wLjAwNTE3OTIgMC4wMDc1MDMwNCBcbkl0ZXJhdGlvbiAgICAxMFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMzA2OTg5XG5YID0gOC42ODgwOCAtMTkuMDI5OSAzLjE3MDQgLTIxLjg4OTggXG5HID0gMC4wMDQxNTcwMiAtMC4wMDc4ODQ3MyAtMC4wMDg0NDk4MyAwLjAwNjQwMTA2IFxuSXRlcmF0aW9uICAgIDExXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjA2NzU3MTFcblggPSA4LjY4NDIzIC0xOC45OTEyIDMuMTQwNzUgLTIxLjkzNjQgXG5HID0gMC4wMjIzNTc3IDAuMDAwMzg2MTQgLTAuMDA1NzI1NSAwLjAwNjM5OTM3IFxuSXRlcmF0aW9uICAgIDEyXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjEyNjg1M1xuWCA9IDguNjYxMTYgLTE4LjkwOTMgMy4xMTk1NiAtMjIuMDI4MSBcbkcgPSAwLjAyNDQ2ODIgMC4wMDIzNTY2OSAtMC4wMDc4MDYxIDAuMDA0ODA1NTYgXG5JdGVyYXRpb24gICAgMTNcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuNjg0ODU4XG5YID0gOC40Njc3NCAtMTguNDYwOCAzLjM1NzAyIC0yMi40NDUzIFxuRyA9IDAuMjkwOTQ5IDAuMTE2Nzk2IDAuMDU3Mjk1MyAwLjAxODI2MzEgXG5JdGVyYXRpb24gICAgMTRcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMzgzNDlcblggPSA4LjM0MDM4IC0xOC4yMTU4IDMuNDY1NzMgLTIyLjY4ODMgXG5HID0gMC4xODY2NjggMC4wNzQ3NTc4IDAuMDI4NTE5OSAwLjAwOTk4ODIyIFxuSXRlcmF0aW9uICAgIDE1XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxLjg0MjAyXG5YID0gNy42OTY2NSAtMTcuMTAzNiA0LjMwMTI4IC0yMy43MDk4IFxuRyA9IC0wLjA2MzQzNzcgLTAuMDI1NzM5IC0wLjAzMDYyNTQgLTAuMDA2MDA4NjIgXG5JdGVyYXRpb24gICAgMTZcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDEuMzQzMDZcblggPSA3LjIzMDI1IC0xNi4zMTk0IDUuMDA1MTggLTI0LjM5OTYgXG5HID0gLTAuMDk4NTA1MiAtMC4wMzc4NTI1IC0wLjAzMDQ3MzUgLTAuMDA2MDY2NDMgXG5JdGVyYXRpb24gICAgMTdcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMzEwNTExXG5YID0gNy4xNDA0MSAtMTYuMTM5NyA1LjE2NjIxIC0yNC41NzMxIFxuRyA9IDAuMDQ5NDQ0OCAwLjAyNTA3NzcgMC4wMDcxMDMwMyAwLjAwMjM5Mjg5IFxuSXRlcmF0aW9uICAgIDE4XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjExMDAzNlxuWCA9IDcuMTYyMTkgLTE2LjIxMjUgNS4xNjMzNSAtMjQuNDkzNiBcbkcgPSAtMC4wMDE1MTQ2OSAwLjAwMzIwMDMyIC0wLjAwMzgwMjIzIDAuMDAwNDI2NzMyIFxuSXRlcmF0aW9uICAgIDE5XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjE5ODM2MlxuWCA9IDcuMjE1NzIgLTE2LjM0NSA1LjEzNDM5IC0yNC4zNTkxIFxuRyA9IC0wLjAxOTE0MDMgLTAuMDA1MDkyNCAtMC4wMDY1OTQzNSAwLjAwMDQ3NTE1NCBcbkl0ZXJhdGlvbiAgICAyMFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wNjA5OTg3XG5YID0gNy4yMjQ1OSAtMTYuMzgzNyA1LjE2MDA1IC0yNC4zMjA2IFxuRyA9IC0wLjAxMDMwNzMgLTAuMDAxNzM3MDQgLTAuMDAyODYzNDIgMC4wMDE4MjU0NSBcbkl0ZXJhdGlvbiAgICAyMVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMjQyNTIzXG5YID0gNy4yMzMyNiAtMTYuNDAzNCA1LjE2MDQ5IC0yNC4zMDk0IFxuRyA9IDAuMDAxMDI0NDcgMC4wMDI4NjE3MiAwLjAwMDE1MzgxNCAwLjAwMjY1MzkzIFxuSXRlcmF0aW9uICAgIDIyXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAxMjkxMTRcblggPSA3LjIzODYxIC0xNi40MTMyIDUuMTYyODIgLTI0LjMxNTQgXG5HID0gMC4wMTU4NTEyIDAuMDA5MDk4ODMgMC4wMDM4NTYxIDAuMDAzNDY0NDkgXG5JdGVyYXRpb24gICAgMjNcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDM0OTUzNVxuWCA9IDcuMjUzODcgLTE2LjQ0MzggNS4xNTY5MyAtMjQuMzExNyBcbkcgPSAwLjAyNzU4ODIgMC4wMTM3OTIzIDAuMDA2NjIyNTMgMC4wMDQwOTE1NyBcbkl0ZXJhdGlvbiAgICAyNFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wNjI4OTU3XG5YID0gNy4yNzg3MSAtMTYuNTAwNyA1LjE1OTU5IC0yNC4zMjEzIFxuRyA9IDAuMDM4NDE4MSAwLjAxODE2NTEgMC4wMDk0MTUxMSAwLjAwNDkwNTUgXG5JdGVyYXRpb24gICAgMjVcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuNDY3NDA2XG5YID0gNy40NTgyOCAtMTYuOTExIDUuMTgwNDcgLTI0LjQ1MzUgXG5HID0gMC4wOTAxNjYgMC4wMzg1MzY5IDAuMDIyNDM2OCAwLjAwODY3NDI3IFxuSXRlcmF0aW9uICAgIDI2XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjM1NjE5MVxuWCA9IDcuNTgxMDQgLTE3LjIwMiA1LjIxNzI0IC0yNC42MTQgXG5HID0gMC4wOTY4Njk0IDAuMDQwNTEwOCAwLjAyNDIxNSAwLjAwOTQxMDUzIFxuSXRlcmF0aW9uICAgIDI3XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxLjM4MTg3XG5YID0gNy45NzI5NSAtMTguMjA1NiA1LjQ4NjE3IC0yNS40MzY0IFxuRyA9IDAuMDAxMDc3ODYgLTAuMDAxODUzOTEgMC4wMDE4NDIwOSAwLjAwNTUzNzY0IFxuSXRlcmF0aW9uICAgIDI4XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxLjk1NTk0XG5YID0gOC40NDk3NyAtMTkuNDU1MSA1Ljk2NDA2IC0yNi43ODEzIFxuRyA9IC0wLjA2Mjk0NjEgLTAuMDMwNzM1NyAtMC4wMTI0Njg2IDAuMDAzMzM1NDEgXG5JdGVyYXRpb24gICAgMjlcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDQuNTA4NjVcblggPSA5LjQ0NzQ2IC0yMi4wNTU3IDcuMTIxMDQgLTMwLjEzMjYgXG5HID0gLTAuMDYyNTU5NyAtMC4wMzI5NzQxIC0wLjAxMTY5OTcgMC4wMDQ0Mjg5MyBcbkl0ZXJhdGlvbiAgICAzMFxuTElORSBTRUFSQ0ggMiB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4xODg4NjJcblggPSA5LjQ2MTc3IC0yMi4xMTY2IDcuMTgyNDggLTMwLjI5OTkgXG5HID0gLTAuMTIxNTE4IC0wLjA1NzU2ODYgLTAuMDI2NzEzNSAwLjAwMDc3NTE5NSBcbkl0ZXJhdGlvbiAgICAzMVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gOC42NzMzNVxuWCA9IDExLjEzNjIgLTI2LjU4NjYgOS41OTE1OCAtMzcuMTI5MSBcbkcgPSAtMC4xMTQ1NzIgLTAuMDU2MTQ4OSAtMC4wMjQ2ODYgMC4wMDEyNzc0MSBcbkl0ZXJhdGlvbiAgICAzMlxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gOS4xMjUxOFxuWCA9IDExLjIyNCAtMjcuNCAxMi42NjIgLTQ1LjY4MzIgXG5HID0gMC4xMzM0MTkgMC4wNjA2MDU2IDAuMDE2ODA4IDAuMDAwNTc5NTk1IFxuSXRlcmF0aW9uICAgIDMzXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxMy40NzI1XG5YID0gMTMuODY2MSAtMzQuNDgxNyAxNi40MDIxIC01Ni4xODk3IFxuRyA9IDAuMDE5OTEzIDAuMDA4NzQ0NDggLTAuMDA0NjI3NzYgLTAuMDAxOTE1MiBcbkl0ZXJhdGlvbiAgICAzNFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gOS44MTQ0OVxuWCA9IDE1LjU0MDMgLTM5LjA3MTEgMTkuMjY5OSAtNjQuMjA0NCBcbkcgPSAtMC4wMDc1MTY5IC0wLjAwNDAxMzUyIC0wLjAwODExNzggLTAuMDAyMDIxOTEgXG5JdGVyYXRpb24gICAgMzVcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDQuNDk0MVxuWCA9IDE2LjE0NDMgLTQwLjgyMjIgMjAuNjg2NCAtNjguMDQ2MiBcbkcgPSAwLjAwMzE2NjYxIDAuMDAwNzcxMTk1IC0wLjAwNDY2OTQyIC0wLjAwMTQzMDg4IFxuSXRlcmF0aW9uICAgIDM2XG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjE4ODMwN1xuWCA9IDE2LjEzMDQgLTQwLjgxMjIgMjAuNzUyMyAtNjguMjIxNyBcbkcgPSAtMC4wMjI2NDcyIC0wLjAxMDAxMDUgLTAuMDExNDU1OCAtMC4wMDMwNzkxNiBcbkl0ZXJhdGlvbiAgICAzN1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMy4wMDc4MlxuWCA9IDE2LjQ1NTcgLTQxLjgxMTggMjEuNzQzNyAtNzAuODU5NyBcbkcgPSAtMC4wMDAyMTkyNjkgNy45NTIxMWUtMDYgLTAuMDA1NzExODIgLTAuMDAyMTQ1MjkgXG5JdGVyYXRpb24gICAgMzhcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMTI2MDE1XG5YID0gMTYuNDA0OCAtNDEuNzA0NyAyMS43NzQ4IC03MC44ODg4IFxuRyA9IDAuMDA3MDEyMjMgMC4wMDMyNTE0MyAtMC4wMDM5NDE2OSAtMC4wMDE4NDI4IFxuSXRlcmF0aW9uICAgIDM5XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjUxNDM0XG5YID0gMTYuMTkxOSAtNDEuMjUwNSAyMS44NDA2IC03MC43OTYyIFxuRyA9IDAuMDIzMDc1NiAwLjAxMDUxNjIgMC4wMDA2MTUyMjEgLTAuMDAwOTg4MDggXG5JdGVyYXRpb24gICAgNDBcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuNjY3ODM4XG5YID0gMTUuOTc0IC00MC43Nzc1IDIxLjgxNzQgLTcwLjM3ODggXG5HID0gMC4wMjYzNjA4IDAuMDExOTMyNyAwLjAwMzI3MjI2IC0wLjAwMDE2MzI2NyBcbkl0ZXJhdGlvbiAgICA0MVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4zMjEzMzJcblggPSAxNS45MTEyIC00MC42ODk5IDIxLjg0NiAtNzAuMDc3NCBcbkcgPSAwLjAwNjkwMTYgMC4wMDI5MjcyNiAwLjAwMjA3NDk3IDAuMDAwNDI5MDQ4IFxuSXRlcmF0aW9uICAgIDQyXG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjUyNzA0XG5YID0gMTUuODQ4MSAtNDAuNTAxMiAyMS42ODEyIC02OS42MTgxIFxuRyA9IDAuMDE4NjAyMyAwLjAwNzc4MzAyIDAuMDA1MDc0MTMgMC4wMDExOTkwOCBcbkl0ZXJhdGlvbiAgICA0M1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC40NjQyNTdcblggPSAxNS43NzIzIC00MC4yOTA4IDIxLjUzNTUgLTY5LjIzODEgXG5HID0gMC4wMDIzMTI3NyAwLjAwMDk4NDIwNSAwLjAwMDY5NjcwNSAwLjAwMDEwODUyOSBcbkl0ZXJhdGlvbiAgICA0NFxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC43MjM0NzRcblggPSAxNS42NjE1IC0zOS45ODA1IDIxLjMxMzQgLTY4LjYzMzYgXG5HID0gLTAuMDA3MzMxNDEgLTAuMDAzMDYxODUgLTAuMDAyMDI4MzYgLTAuMDAwNTEwMjA4IFxuSXRlcmF0aW9uICAgIDQ1XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAyNDY0NjZcblggPSAxNS42NTgyIC0zOS45NzI3IDIxLjMwOTkgLTY4LjYxMDcgXG5HID0gLTAuMDAzNjg3MzUgLTAuMDAxNDk1OTEgLTAuMDAwOTg5NDY4IC0wLjAwMDI0NjYxIFxuSXRlcmF0aW9uICAgIDQ2XG5MSU5FIFNFQVJDSCAyIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAxNzAzMlxuWCA9IDE1LjY2MDkgLTM5Ljk4MDUgMjEuMzE1NiAtNjguNjI0NSBcbkcgPSAtMC4wMDI3Nzg2MyAtMC4wMDExNjY5NiAtMC4wMDA3NDY3NDMgLTAuMDAwMTg4MjEzIFxuSXRlcmF0aW9uICAgIDQ3XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAxMzMwOTZcblggPSAxNS42NTk3IC0zOS45Nzc0IDIxLjMxMzkgLTY4LjYxMTcgXG5HID0gMC4wMDAxMDc4NiA1LjU0NTk5ZS0wNSAwLjAwMDEwMTI0NCAtMi42MTk2NmUtMDUgXG5JdGVyYXRpb24gICAgNDhcbkxJTkUgU0VBUkNIIDIgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDA2ODU5NzNcblggPSAxNS42NTg4IC0zOS45NzUxIDIxLjMxMjQgLTY4LjYwNTQgXG5HID0gMC4wMDA4MTIwMDggMC4wMDAzMzI3NDkgMC4wMDAyODc1MzEgNS43NzI5NWUtMDUgXG5JdGVyYXRpb24gICAgNDlcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDA0MTkxNTNcblggPSAxNS42NTg0IC0zOS45NzI2IDIxLjMwOTYgLTY4LjYwMzcgXG5HID0gMC4wMDExNzE0NCAwLjAwMDUyMTYwMSAwLjAwMDM0MDEzNyA0LjYwOTg0ZS0wNSBcbkl0ZXJhdGlvbiAgICA1MFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMTA5MDkzXG5YID0gMTUuNjU2OSAtMzkuOTY3NSAyMS4zMDQ1IC02OC41OTU2IFxuRyA9IC0zLjEwODg1ZS0wNSAxLjY4MTJlLTA1IC0zLjU5NDZlLTA1IC00LjI0MTc5ZS0wNSBcbkl0ZXJhdGlvbiAgICA1MVxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMjk1MjExXG5YID0gMTUuNjUyOSAtMzkuOTU4MSAyMS4yOTggLTY4LjU2ODcgXG5HID0gLTAuMDAxNDU3NTcgLTAuMDAwNTc2NjEzIC0wLjAwMDI2MTc1NCAtNy40NjgwMmUtMDUgXG5JdGVyYXRpb24gICAgNTJcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDkwOTk3XG5YID0gMTUuNjQxNCAtMzkuOTIxOCAyMS4yNjY3IC02OC40OTIyIFxuRyA9IDAuMDAxMzkzMDEgMC4wMDA2NDA1MTYgMC4wMDAzMDE4MiAzLjkyMTc5ZS0wNSBcbkl0ZXJhdGlvbiAgICA1M1xuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDIxMzY1NlxuWCA9IDE1LjY0MTYgLTM5LjkyMjkgMjEuMjY3OCAtNjguNDkzNiBcbkcgPSAwLjAwMTAwNTEgMC4wMDA0MzAzNDcgMC4wMDAyNTg2NzIgMi41Mjc0MmUtMDUgXG5JdGVyYXRpb24gICAgNTRcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDA3OTM5NzNcblggPSAxNS42NDA1IC0zOS45MjEyIDIxLjI2NzIgLTY4LjQ4NiBcbkcgPSAtMC4wMDAzNzE3IC0wLjAwMDIwMzUxNCAtNS45NzE3NWUtMDUgLTIuMDIyMDdlLTA1IFxuSXRlcmF0aW9uICAgIDU1XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwNTg3MjhcblggPSAxNS42Mzk3IC0zOS45MTkzIDIxLjI2NTggLTY4LjQ4MDcgXG5HID0gLTAuMDAwNDM0MTI4IC0wLjAwMDIwMDEyMSAtNS42NDM4NmUtMDUgLTEuNTI5MzNlLTA1IFxuSXRlcmF0aW9uICAgIDU2XG5MSU5FIFNFQVJDSCA3IHRpbWVzOyBub3JtIG9mIHN0ZXAgPSA2LjQ1ODI1ZS0wOFxuWCA9IDE1LjYzOTcgLTM5LjkxOTMgMjEuMjY1OCAtNjguNDgwNyBcbkcgPSAtMC4wMDA0MjY5MTIgLTAuMDAwMjM1NTQyIC01LjcxNTg4ZS0wNSAtMS41Mjk1N2UtMDUgXG5cbml0ZXJhdGlvbnMgNTdcbmZ1bmN0aW9uIGV2YWx1YXRpb25zIDgwXG5zZWdtZW50cyBleHBsb3JlZCBkdXJpbmcgQ2F1Y2h5IHNlYXJjaGVzIDFcbkJGR1MgdXBkYXRlcyBza2lwcGVkIDBcbmFjdGl2ZSBib3VuZHMgYXQgZmluYWwgZ2VuZXJhbGl6ZWQgQ2F1Y2h5IHBvaW50IDBcbm5vcm0gb2YgdGhlIGZpbmFsIHByb2plY3RlZCBncmFkaWVudCAwLjAwMDQyNjkxMlxuZmluYWwgZnVuY3Rpb24gdmFsdWUgLTEuMzE4MTdcblxuWCA9IDE1LjYzOTcgLTM5LjkxOTMgMjEuMjY1OCAtNjguNDgwNyBcbkYgPSAtMS4zMTgxN1xuZmluYWwgIHZhbHVlIC0xLjMxODE3NCBcbmNvbnZlcmdlZFxuW1sxXV1cblsxXSAzXG5cbltbMl1dXG5bMV0gICA4LjE2MDIzOSAtMjAuMjU2NzQ0ICAgNS40ODEzMTAgLTIwLjIyNzc3N1xuXG5bWzNdXVxuWzFdICAgOC4xNjAyMzkgLTIwLjI1Njc0NCAgIDUuNDgxMzEwIC0yMC4yMjc3NzdcblxuW1s0XV1cblsxXSAxLjMxODE3NFxuXG5bMV0gXCJTdHJhaW4gMSBpcyBmaXR0ZXIgdGhhbiBzdHJhaW4gMi5cIlxuWzFdICAxNS42Mzk2OSAtMzkuOTE5MjkgIDIxLjI2NTgzIC02OC40ODA2NVxuWzFdICAxNS42Mzk2OSAtMzkuOTE5MjkgIDIxLjI2NTgzIC02OC40ODA2NVxuWzFdIFwic3RhcnRpbmcgaXRlcmF0aW9uIDNcIlxuTiA9IDQsIE0gPSA1IG1hY2hpbmUgcHJlY2lzaW9uID0gMi4yMjA0NWUtMTZcbkwgPSAtaW5mIC1pbmYgLWluZiAtaW5mIFxuWDAgPSAxNS42Mzk3IC0zOS45MTkzIDIxLjI2NTggLTY4LjQ4MDcgXG5VID0gaW5mIGluZiBpbmYgaW5mIFxuVGhpcyBwcm9ibGVtIGlzIHVuY29uc3RyYWluZWQuXG5BdCBYMCwgMCB2YXJpYWJsZXMgYXJlIGV4YWN0bHkgYXQgdGhlIGJvdW5kc1xuQXQgaXRlcmF0ZSAgICAgMCAgZj0gIC00LjQ0MDllLTE2ICB8cHJvaiBnfD0gICAgICAwLjc1NjM0XG5JdGVyYXRpb24gICAgIDBcblxuLS0tLS0tLS0tLS0tLS0tLSBDQVVDSFkgZW50ZXJlZC0tLS0tLS0tLS0tLS0tLS0tLS1cblxuVGhlcmUgYXJlIDAgIGJyZWFrcG9pbnRzXG5cbkdDUCBmb3VuZCBpbiB0aGlzIHNlZ21lbnRcblBpZWNlICAgICAgMSBmMSwgZjIgYXQgc3RhcnQgcG9pbnQgLTcuMDA0MGUtMDEgIDcuMDA0MGUtMDFcbkRpc3RhbmNlIHRvIHRoZSBzdGF0aW9uYXJ5IHBvaW50ID0gICAxLjAwMDBlKzAwXG5DYXVjaHkgWCA9ICAxNi4zOTYgLTM5LjU4MDUgMjEuMzgyMiAtNjguNDc0NCBcblxuLS0tLS0tLS0tLS0tLS0tLSBleGl0IENBVUNIWS0tLS0tLS0tLS0tLS0tLS0tLS0tLS1cblxuNCAgdmFyaWFibGVzIGFyZSBmcmVlIGF0IEdDUCBvbiBpdGVyYXRpb24gMVxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wOTEzOTg2XG5YID0gMTUuNzIyMyAtMzkuODgyMyAyMS4yNzg1IC02OC40OCBcbkcgPSAtMC4xMjA2NjEgLTAuMDY2NzMzNSAwLjAzMDkzNzQgMC4wMjM3MTE3IFxuSXRlcmF0aW9uICAgICAxXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAxOTc1MDlcblggPSAxNS43Mzg2IC0zOS44NzMgMjEuMjczNSAtNjguNDgzNiBcbkcgPSAtMC4wMDE5ODU4NiAtMC4wMTU5MzI3IDAuMDU4NzI1NiAwLjAyOTQwOTcgXG5JdGVyYXRpb24gICAgIDJcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDE0MzI5N1xuWCA9IDE1Ljc0NCAtMzkuODY3NyAyMS4yNjI4IC02OC40ODkzIFxuRyA9IDAuMDI4NjExNCAtMC4wMDI4MDIyNyAwLjA2NTY4MjYgMC4wMzA3ODM0IFxuSXRlcmF0aW9uICAgICAzXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjEyOTk0NlxuWCA9IDE1Ljc3NjMgLTM5LjgyNTEgMjEuMTU3NyAtNjguNTQzOSBcbkcgPSAwLjE3MDMyNyAwLjA1ODI5MjYgMC4wOTY3MTMyIDAuMDM2NTgzMSBcbkl0ZXJhdGlvbiAgICAgNFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4yNzUyMTlcblggPSAxNS44MjUzIC0zOS43NDI3IDIwLjkyODIgLTY4LjY2MTcgXG5HID0gMC4zMTMwNDIgMC4xMjAzNzggMC4xMjU0MDggMC4wNDEyMTQgXG5JdGVyYXRpb24gICAgIDVcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuNzE3MjA2XG5YID0gMTUuOTI2OSAtMzkuNTM4NiAyMC4zMjI0IC02OC45NzA4IFxuRyA9IDAuNDY0ODUyIDAuMTg4MTA2IDAuMTQ4ODYzIDAuMDQyNjkwMSBcbkl0ZXJhdGlvbiAgICAgNlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMS4xNTU0N1xuWCA9IDE2LjA1OTggLTM5LjIyMjUgMTkuMzM4NyAtNjkuNDcwNyBcbkcgPSAwLjQ2ODI1NiAwLjE5MzcxNSAwLjEzMTIwOSAwLjAzNDA3NzYgXG5JdGVyYXRpb24gICAgIDdcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMTcyMzQ1XG5YID0gMTUuOTk5NCAtMzkuMjA3MyAxOS4xOTU4IC02OS41NDQxIFxuRyA9IDAuMDA1MjIyNTQgLTAuMDA1MDA1MDUgMC4wMTYyMjcxIDAuMDA5NjYxMTkgXG5JdGVyYXRpb24gICAgIDhcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDEuMDU3NDRcblggPSAxNi4xMTYxIC0zOC45MTg5IDE4LjI5NSAtNzAuMDAyNCBcbkcgPSAwLjAyMDExOTYgMC4wMDQxNTc1NiAwLjAwNTgyMzUxIDAuMDA0MDI0MDYgXG5JdGVyYXRpb24gICAgIDlcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMjg5NzJcblggPSAxNi4wNzcxIC0zOC43Mzc0IDE4LjE0OTggLTcwLjE3MDkgXG5HID0gMC4wMDQzNjY3NCAtMC4wMDIwMjQ0NyAtMC4wMDA1ODIxNTkgMC4wMDIwMTYzNCBcbkl0ZXJhdGlvbiAgICAxMFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4zODk3NDVcblggPSAxNS45ODY1IC0zOC40NTMgMTguMDQ2IC03MC4zOTkgXG5HID0gLTAuMDEwNTkxNCAtMC4wMDc4MjE3MiAtMC4wMDY2ODAxNCA3LjE5NTg3ZS0wNSBcbkl0ZXJhdGlvbiAgICAxMVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC40NjU4MzRcblggPSAxNS44Mzg3IC0zOC4wOTAyIDE4LjA0NzYgLTcwLjY1MTEgXG5HID0gLTAuMDIwNDIwNiAtMC4wMTE1MTYxIC0wLjAxMDY0MDIgLTAuMDAxMjQwNzMgXG5JdGVyYXRpb24gICAgMTJcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDEuMzgxNVxuWCA9IDE1LjM0OTcgLTM3LjAxNjQgMTguMjY3OSAtNzEuMzM1MSBcbkcgPSAtMC4wMzUwNjI5IC0wLjAxNjcyNzYgLTAuMDE2MzIxNCAtMC4wMDMyNjExNyBcbkl0ZXJhdGlvbiAgICAxM1xuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC41ODYwMDNcblggPSAxNS4xNTkgLTM2LjU1NDEgMTguMzU3IC03MS42MjcyIFxuRyA9IDAuMDM3MzE3IDAuMDE1MTI3MSAtNS43NTM2OGUtMDUgLTAuMDAwNDM0NDA2IFxuSXRlcmF0aW9uICAgIDE0XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAyLjIzMTY1XG5YID0gMTQuMzA4OCAtMzQuODY0MiAxOS4wMDM1IC03Mi42MTkgXG5HID0gLTAuMDA3MTgxOTUgLTAuMDAyOTU2NzkgLTAuMDEwMzI1OSAtMC4wMDI5NDM0NSBcbkl0ZXJhdGlvbiAgICAxNVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMi4xMDM3OFxuWCA9IDEzLjQ3OTMgLTMzLjMzMTEgMTkuODQyMiAtNzMuNDQ1OSBcbkcgPSAtMC4wMzkxNzI1IC0wLjAxNTkxODIgLTAuMDEzOTUzNiAtMC4wMDMzODc0NSBcbkl0ZXJhdGlvbiAgICAxNlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4yNjQxNDlcblggPSAxMy40MzkyIC0zMy4zNjU4IDIwLjA4MzcgLTczLjM1MjkgXG5HID0gLTAuMDE5Mjc1MyAtMC4wMDc1MjAyNSAtMC4wMDY0MzY3OCAtMC4wMDEzMTMyMyBcbkl0ZXJhdGlvbiAgICAxN1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC41NjYxNDZcblggPSAxMy42MTM5IC0zMy44MDQ0IDIwLjExMDggLTczLjA0MTYgXG5HID0gMC4wMDMzODQwOSAwLjAwMTY5NjI1IDAuMDAwNzk1MDQ1IDAuMDAwNjQ3OTU5IFxuSXRlcmF0aW9uICAgIDE4XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjA2ODgxMDhcblggPSAxMy41OTAyIC0zMy43NTExIDIwLjExNzIgLTczLjA3NzUgXG5HID0gLTAuMDAwMzEyMTMyIDAuMDAwMTk4NTgyIC0wLjAwMDE4Mzg0NyAwLjAwMDQwNTAxMSBcbkl0ZXJhdGlvbiAgICAxOVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMzY5NjQ5XG5YID0gMTMuNjAzNiAtMzMuNzc5NyAyMC4xMDgyIC03My4wNjA1IFxuRyA9IC0wLjAwMTM0NDg0IC0wLjAwMDI4ODM2OSAtMC4wMDA0MzA2NzUgMC4wMDAzNjc0NTIgXG5JdGVyYXRpb24gICAgMjBcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDA2NzAwODVcblggPSAxMy42MDY2IC0zMy43ODQxIDIwLjEwNDUgLTczLjA1OSBcbkcgPSA3LjQ5NzE4ZS0wNSAwLjAwMDMyOTQ5NCAtOS44ODQ5ZS0wNSAwLjAwMDQyOTUzOCBcbkl0ZXJhdGlvbiAgICAyMVxuTElORSBTRUFSQ0ggMTQgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDYuMjg1NTllLTExXG5YID0gMTMuNjA2NiAtMzMuNzg0MSAyMC4xMDQ1IC03My4wNTkgXG5HID0gNi44MTI4N2UtMDUgMC4wMDAzMDY5NTIgLTAuMDAwMTA5MTk0IDAuMDAwNDQxMTY0IFxuSXRlcmF0aW9uICAgIDIyXG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwMjM0MDEyXG5YID0gMTMuNjA3MSAtMzMuNzgzOSAyMC4xMDI1IC03My4wNjAxIFxuRyA9IDAuMDAwMzgwNzkgMC4wMDA0NTk2MyAtNy4zNDA5MmUtMDUgMC4wMDA0MjU4NTMgXG5JdGVyYXRpb24gICAgMjNcbiJ9 -->
-<pre><code>[1]   4.55386 -13.00560   4.15466 -11.94240
-[1]   4.55386 -13.00560   4.15466 -11.94240
-[1] &quot;starting iteration 1&quot;
-N = 4, M = 5 machine precision = 2.22045e-16
-L = -inf -inf -inf -inf 
-X0 = 4.55386 -13.0056 4.15466 -11.9424 
-U = inf inf inf inf 
-This problem is unconstrained.
-At X0, 0 variables are exactly at the bounds
-At iterate     0  f=           -0  |proj g|=        18.03
-Iteration     0
-
----------------- CAUCHY entered-------------------
-
-There are 0  breakpoints
-
-GCP found in this segment
-Piece      1 f1, f2 at start point -3.9171e+02  3.9171e+02
-Distance to the stationary point =   1.0000e+00
-Cauchy X =  22.5834 -5.87211 8.0066 -10.9829 
-
----------------- exit CAUCHY----------------------
-
-4  variables are free at GCP on iteration 1
-LINE SEARCH 0 times; norm of step = 1
-X = 5.46483 -12.6452 4.34928 -11.8939 
-G = 4.04986 1.58991 1.22862 0.410958 
-Iteration     1
-LINE SEARCH 2 times; norm of step = 0.533245
-X = 4.98696 -12.833 4.21236 -11.9381 
-G = 1.92266 0.596246 0.892628 0.474053 
-Iteration     2
-LINE SEARCH 1 times; norm of step = 0.0548291
-X = 4.94238 -12.844 4.18681 -11.9537 
-G = 0.656235 0.108154 0.571235 0.369257 
-Iteration     3
-LINE SEARCH 0 times; norm of step = 0.0590803
-X = 4.91401 -12.8406 4.14523 -11.9845 
-G = -0.444249 -0.309496 0.280148 0.267392 
-Iteration     4
-LINE SEARCH 0 times; norm of step = 0.0519601
-X = 4.91355 -12.8249 4.10695 -12.016 
-G = -0.631631 -0.371156 0.212658 0.234419 
-Iteration     5
-LINE SEARCH 0 times; norm of step = 0.598143
-X = 4.95571 -12.6276 3.67406 -12.3761 
-G = -1.11202 -0.449196 -0.136392 0.00830106 
-Iteration     6
-LINE SEARCH 0 times; norm of step = 0.291303
-X = 5.00868 -12.5352 3.46344 -12.5468 
-G = -0.456344 -0.155639 -0.0634575 -0.00889485 
-Iteration     7
-LINE SEARCH 0 times; norm of step = 0.121448
-X = 5.03667 -12.4993 3.37544 -12.617 
-G = -0.0968661 -0.00312071 -0.00491882 -0.00375816 
-Iteration     8
-LINE SEARCH 0 times; norm of step = 0.0219459
-X = 5.0436 -12.4951 3.35916 -12.6293 
-G = -0.0126202 0.0317299 0.0108948 -0.000373519 
-Iteration     9
-LINE SEARCH 0 times; norm of step = 0.00651998
-X = 5.0466 -12.4962 3.35434 -12.6323 
-G = 0.0129374 0.042043 0.0159192 0.000503172 
-Iteration    10
-LINE SEARCH 0 times; norm of step = 0.0205287
-X = 5.05701 -12.5065 3.34129 -12.6383 
-G = 0.0737297 0.0664992 0.0287081 0.00376638 
-Iteration    11
-LINE SEARCH 0 times; norm of step = 0.0545954
-X = 5.08307 -12.5401 3.30936 -12.651 
-G = 0.163173 0.102316 0.0450851 0.00756396 
-Iteration    12
-LINE SEARCH 0 times; norm of step = 0.110233
-X = 5.13368 -12.6203 3.2553 -12.6661 
-G = 0.259348 0.140153 0.0613491 0.0117281 
-Iteration    13
-LINE SEARCH 0 times; norm of step = 0.297298
-X = 5.26476 -12.8526 3.12651 -12.6914 
-G = 0.372542 0.182481 0.0753163 0.0164068 
-Iteration    14
-LINE SEARCH 0 times; norm of step = 0.476096
-X = 5.46602 -13.2357 2.93073 -12.724 
-G = 0.325551 0.159481 0.0439452 0.009188 
-Iteration    15
-LINE SEARCH 1 times; norm of step = 0.341382
-X = 5.60587 -13.5397 2.86698 -12.7011 
-G = 0.474308 0.202527 0.0950805 0.0398131 
-Iteration    16
-LINE SEARCH 0 times; norm of step = 0.380581
-X = 5.74635 -13.8746 2.75366 -12.7113 
-G = -0.00436077 0.00388512 -0.0309856 0.0103586 
-Iteration    17
-LINE SEARCH 0 times; norm of step = 0.16138
-X = 5.67728 -13.7556 2.83553 -12.6908 
-G = 0.0123183 0.00984603 -0.0155537 0.0160681 
-Iteration    18
-LINE SEARCH 0 times; norm of step = 0.0839205
-X = 5.64619 -13.7172 2.90107 -12.7081 
-G = 0.00542683 0.006221 -0.00873217 0.0194743 
-Iteration    19
-LINE SEARCH 0 times; norm of step = 0.283851
-X = 5.63052 -13.7497 3.09353 -12.9136 
-G = 0.123146 0.0528297 0.0362144 0.0326613 
-Iteration    20
-LINE SEARCH 0 times; norm of step = 0.794365
-X = 5.71913 -14.0994 3.47448 -13.5101 
-G = 0.17148 0.0702024 0.0719339 0.0435582 
-Iteration    21
-LINE SEARCH 0 times; norm of step = 2.13871
-X = 6.1512 -15.3458 4.18381 -15.0367 
-G = 0.255861 0.0944546 0.125027 0.0619852 
-Iteration    22
-LINE SEARCH 1 times; norm of step = 0.244685
-X = 6.17047 -15.4555 4.28899 -15.2275 
-G = -0.0387885 -0.020419 0.0523439 0.0379664 
-Iteration    23
-LINE SEARCH 0 times; norm of step = 2.64856
-X = 6.83927 -17.1664 4.87806 -17.0423 
-G = 0.0221932 -0.00346762 0.0707623 0.0425591 
-Iteration    24
-LINE SEARCH 0 times; norm of step = 2.85544
-X = 7.60185 -18.9887 5.334 -19.0531 
-G = 0.0105044 0.00131131 0.0293813 0.0150559 
-Iteration    25
-LINE SEARCH 0 times; norm of step = 1.2997
-X = 8.10901 -20.0535 5.13326 -19.561 
-G = -0.195158 -0.0833357 -0.0516323 -0.00900428 
-Iteration    26
-LINE SEARCH 0 times; norm of step = 0.541235
-X = 8.14075 -20.1921 5.39054 -20.0154 
-G = -0.0116748 -0.00800565 0.00105195 0.00344455 
-Iteration    27
-LINE SEARCH 0 times; norm of step = 0.0858429
-X = 8.13536 -20.1893 5.43329 -20.0896 
-G = 0.0107014 0.00239083 0.00597913 0.00353889 
-Iteration    28
-LINE SEARCH 0 times; norm of step = 0.0770073
-X = 8.13468 -20.1976 5.46693 -20.1584 
-G = -0.0057145 -0.0028918 0.000706274 0.000784746 
-Iteration    29
-LINE SEARCH 1 times; norm of step = 0.0585988
-X = 8.15253 -20.2342 5.46981 -20.2004 
-G = 0.00868233 0.00341337 0.00195573 0.000540113 
-Iteration    30
-LINE SEARCH 2 times; norm of step = 0.00149206
-X = 8.15205 -20.2332 5.46971 -20.1994 
-G = 0.00818503 0.00317016 0.00235006 0.000814774 
-Iteration    31
-LINE SEARCH 1 times; norm of step = 0.00616227
-X = 8.15291 -20.2369 5.47176 -20.2038 
-G = -0.00107529 -0.000427822 -0.000343235 1.89891e-05 
-Iteration    32
-LINE SEARCH 0 times; norm of step = 0.0119134
-X = 8.15296 -20.239 5.47737 -20.2141 
-G = -0.00434513 -0.00142048 -0.00107172 -0.000407857 
-Iteration    33
-LINE SEARCH 1 times; norm of step = 0.0190737
-X = 8.16007 -20.2557 5.47806 -20.2198 
-G = 0.000724143 2.86799e-05 0.000754595 0.000520464 
-Iteration    34
-LINE SEARCH 0 times; norm of step = 0.0041654
-X = 8.15876 -20.253 5.47952 -20.2222 
-G = -0.000207436 -3.36987e-05 0.000532061 0.000290343 
-Iteration    35
-LINE SEARCH 0 times; norm of step = 0.00723703
-X = 8.16024 -20.2568 5.48137 -20.2278 
-G = -0.000150345 -0.000176991 0.000258533 0.000159713 
-Iteration    36
-LINE SEARCH 5 times; norm of step = 9.95734e-05
-X = 8.16024 -20.2567 5.48131 -20.2278 
-G = -0.000148681 6.45345e-05 0.000249569 0.000246217 
-
-iterations 37
-function evaluations 53
-segments explored during Cauchy searches 1
-BFGS updates skipped 0
-active bounds at final generalized Cauchy point 0
-norm of the final projected gradient 0.000249569
-final function value -4.28315
-
-X = 8.16024 -20.2567 5.48131 -20.2278 
-F = -4.28315
-final  value -4.283153 
-converged
-[[1]]
-[1] 2
-
-[[2]]
-[1]   4.55386 -13.00560   4.15466 -11.94240
-
-[[3]]
-[1]   4.55386 -13.00560   4.15466 -11.94240
-
-[[4]]
-[1] 4.283153
-
-[1] &quot;Strain 1 is fitter than strain 2.&quot;
-[1]   8.160239 -20.256744   5.481310 -20.227777
-[1]   8.160239 -20.256744   5.481310 -20.227777
-[1] &quot;starting iteration 2&quot;
-N = 4, M = 5 machine precision = 2.22045e-16
-L = -inf -inf -inf -inf 
-X0 = 8.16024 -20.2567 5.48131 -20.2278 
-U = inf inf inf inf 
-This problem is unconstrained.
-At X0, 0 variables are exactly at the bounds
-At iterate     0  f=   4.4409e-16  |proj g|=       5.6818
-Iteration     0
-
----------------- CAUCHY entered-------------------
-
-There are 0  breakpoints
-
-GCP found in this segment
-Piece      1 f1, f2 at start point -3.9462e+01  3.9462e+01
-Distance to the stationary point =   1.0000e+00
-Cauchy X =  13.842 -17.8608 6.65994 -20.0041 
-
----------------- exit CAUCHY----------------------
-
-4  variables are free at GCP on iteration 1
-LINE SEARCH 1 times; norm of step = 0.319655
-X = 8.44936 -20.1348 5.54128 -20.2164 
-G = 0.304596 0.0506466 0.267494 0.148686 
-Iteration     1
-LINE SEARCH 0 times; norm of step = 0.0201897
-X = 8.43506 -20.1373 5.52901 -20.2232 
-G = 0.0536453 -0.0518233 0.2033 0.131466 
-Iteration     2
-LINE SEARCH 0 times; norm of step = 0.0324341
-X = 8.42474 -20.1326 5.50333 -20.2394 
-G = -0.168108 -0.141638 0.144894 0.114926 
-Iteration     3
-LINE SEARCH 0 times; norm of step = 0.0832936
-X = 8.41639 -20.1108 5.43661 -20.2835 
-G = -0.44691 -0.253168 0.0669612 0.0913657 
-Iteration     4
-LINE SEARCH 0 times; norm of step = 0.25255
-X = 8.41574 -20.0335 5.2372 -20.4178 
-G = -0.872858 -0.419968 -0.0641264 0.0480339 
-Iteration     5
-LINE SEARCH 0 times; norm of step = 0.54705
-X = 8.44537 -19.8524 4.81137 -20.7081 
-G = -1.20023 -0.540672 -0.193408 -0.0014794 
-Iteration     6
-LINE SEARCH 0 times; norm of step = 0.953021
-X = 8.53302 -19.5197 4.07983 -21.2128 
-G = -1.01824 -0.449136 -0.211067 -0.0256514 
-Iteration     7
-LINE SEARCH 0 times; norm of step = 0.828567
-X = 8.64296 -19.1942 3.47328 -21.6607 
-G = -0.226426 -0.108954 -0.0517198 0.00101282 
-Iteration     8
-LINE SEARCH 0 times; norm of step = 0.294353
-X = 8.67942 -19.079 3.25762 -21.8205 
-G = -0.0222907 -0.0203123 -0.0109896 0.00722226 
-Iteration     9
-LINE SEARCH 0 times; norm of step = 0.0915975
-X = 8.68821 -19.0431 3.19081 -21.8711 
-G = 0.0130596 -0.00452125 -0.0051792 0.00750304 
-Iteration    10
-LINE SEARCH 0 times; norm of step = 0.0306989
-X = 8.68808 -19.0299 3.1704 -21.8898 
-G = 0.00415702 -0.00788473 -0.00844983 0.00640106 
-Iteration    11
-LINE SEARCH 0 times; norm of step = 0.0675711
-X = 8.68423 -18.9912 3.14075 -21.9364 
-G = 0.0223577 0.00038614 -0.0057255 0.00639937 
-Iteration    12
-LINE SEARCH 0 times; norm of step = 0.126853
-X = 8.66116 -18.9093 3.11956 -22.0281 
-G = 0.0244682 0.00235669 -0.0078061 0.00480556 
-Iteration    13
-LINE SEARCH 0 times; norm of step = 0.684858
-X = 8.46774 -18.4608 3.35702 -22.4453 
-G = 0.290949 0.116796 0.0572953 0.0182631 
-Iteration    14
-LINE SEARCH 0 times; norm of step = 0.38349
-X = 8.34038 -18.2158 3.46573 -22.6883 
-G = 0.186668 0.0747578 0.0285199 0.00998822 
-Iteration    15
-LINE SEARCH 0 times; norm of step = 1.84202
-X = 7.69665 -17.1036 4.30128 -23.7098 
-G = -0.0634377 -0.025739 -0.0306254 -0.00600862 
-Iteration    16
-LINE SEARCH 0 times; norm of step = 1.34306
-X = 7.23025 -16.3194 5.00518 -24.3996 
-G = -0.0985052 -0.0378525 -0.0304735 -0.00606643 
-Iteration    17
-LINE SEARCH 0 times; norm of step = 0.310511
-X = 7.14041 -16.1397 5.16621 -24.5731 
-G = 0.0494448 0.0250777 0.00710303 0.00239289 
-Iteration    18
-LINE SEARCH 0 times; norm of step = 0.110036
-X = 7.16219 -16.2125 5.16335 -24.4936 
-G = -0.00151469 0.00320032 -0.00380223 0.000426732 
-Iteration    19
-LINE SEARCH 0 times; norm of step = 0.198362
-X = 7.21572 -16.345 5.13439 -24.3591 
-G = -0.0191403 -0.0050924 -0.00659435 0.000475154 
-Iteration    20
-LINE SEARCH 0 times; norm of step = 0.0609987
-X = 7.22459 -16.3837 5.16005 -24.3206 
-G = -0.0103073 -0.00173704 -0.00286342 0.00182545 
-Iteration    21
-LINE SEARCH 0 times; norm of step = 0.0242523
-X = 7.23326 -16.4034 5.16049 -24.3094 
-G = 0.00102447 0.00286172 0.000153814 0.00265393 
-Iteration    22
-LINE SEARCH 0 times; norm of step = 0.0129114
-X = 7.23861 -16.4132 5.16282 -24.3154 
-G = 0.0158512 0.00909883 0.0038561 0.00346449 
-Iteration    23
-LINE SEARCH 0 times; norm of step = 0.0349535
-X = 7.25387 -16.4438 5.15693 -24.3117 
-G = 0.0275882 0.0137923 0.00662253 0.00409157 
-Iteration    24
-LINE SEARCH 0 times; norm of step = 0.0628957
-X = 7.27871 -16.5007 5.15959 -24.3213 
-G = 0.0384181 0.0181651 0.00941511 0.0049055 
-Iteration    25
-LINE SEARCH 0 times; norm of step = 0.467406
-X = 7.45828 -16.911 5.18047 -24.4535 
-G = 0.090166 0.0385369 0.0224368 0.00867427 
-Iteration    26
-LINE SEARCH 0 times; norm of step = 0.356191
-X = 7.58104 -17.202 5.21724 -24.614 
-G = 0.0968694 0.0405108 0.024215 0.00941053 
-Iteration    27
-LINE SEARCH 0 times; norm of step = 1.38187
-X = 7.97295 -18.2056 5.48617 -25.4364 
-G = 0.00107786 -0.00185391 0.00184209 0.00553764 
-Iteration    28
-LINE SEARCH 0 times; norm of step = 1.95594
-X = 8.44977 -19.4551 5.96406 -26.7813 
-G = -0.0629461 -0.0307357 -0.0124686 0.00333541 
-Iteration    29
-LINE SEARCH 0 times; norm of step = 4.50865
-X = 9.44746 -22.0557 7.12104 -30.1326 
-G = -0.0625597 -0.0329741 -0.0116997 0.00442893 
-Iteration    30
-LINE SEARCH 2 times; norm of step = 0.188862
-X = 9.46177 -22.1166 7.18248 -30.2999 
-G = -0.121518 -0.0575686 -0.0267135 0.000775195 
-Iteration    31
-LINE SEARCH 0 times; norm of step = 8.67335
-X = 11.1362 -26.5866 9.59158 -37.1291 
-G = -0.114572 -0.0561489 -0.024686 0.00127741 
-Iteration    32
-LINE SEARCH 1 times; norm of step = 9.12518
-X = 11.224 -27.4 12.662 -45.6832 
-G = 0.133419 0.0606056 0.016808 0.000579595 
-Iteration    33
-LINE SEARCH 0 times; norm of step = 13.4725
-X = 13.8661 -34.4817 16.4021 -56.1897 
-G = 0.019913 0.00874448 -0.00462776 -0.0019152 
-Iteration    34
-LINE SEARCH 0 times; norm of step = 9.81449
-X = 15.5403 -39.0711 19.2699 -64.2044 
-G = -0.0075169 -0.00401352 -0.0081178 -0.00202191 
-Iteration    35
-LINE SEARCH 0 times; norm of step = 4.4941
-X = 16.1443 -40.8222 20.6864 -68.0462 
-G = 0.00316661 0.000771195 -0.00466942 -0.00143088 
-Iteration    36
-LINE SEARCH 1 times; norm of step = 0.188307
-X = 16.1304 -40.8122 20.7523 -68.2217 
-G = -0.0226472 -0.0100105 -0.0114558 -0.00307916 
-Iteration    37
-LINE SEARCH 0 times; norm of step = 3.00782
-X = 16.4557 -41.8118 21.7437 -70.8597 
-G = -0.000219269 7.95211e-06 -0.00571182 -0.00214529 
-Iteration    38
-LINE SEARCH 0 times; norm of step = 0.126015
-X = 16.4048 -41.7047 21.7748 -70.8888 
-G = 0.00701223 0.00325143 -0.00394169 -0.0018428 
-Iteration    39
-LINE SEARCH 0 times; norm of step = 0.51434
-X = 16.1919 -41.2505 21.8406 -70.7962 
-G = 0.0230756 0.0105162 0.000615221 -0.00098808 
-Iteration    40
-LINE SEARCH 0 times; norm of step = 0.667838
-X = 15.974 -40.7775 21.8174 -70.3788 
-G = 0.0263608 0.0119327 0.00327226 -0.000163267 
-Iteration    41
-LINE SEARCH 0 times; norm of step = 0.321332
-X = 15.9112 -40.6899 21.846 -70.0774 
-G = 0.0069016 0.00292726 0.00207497 0.000429048 
-Iteration    42
-LINE SEARCH 1 times; norm of step = 0.52704
-X = 15.8481 -40.5012 21.6812 -69.6181 
-G = 0.0186023 0.00778302 0.00507413 0.00119908 
-Iteration    43
-LINE SEARCH 0 times; norm of step = 0.464257
-X = 15.7723 -40.2908 21.5355 -69.2381 
-G = 0.00231277 0.000984205 0.000696705 0.000108529 
-Iteration    44
-LINE SEARCH 1 times; norm of step = 0.723474
-X = 15.6615 -39.9805 21.3134 -68.6336 
-G = -0.00733141 -0.00306185 -0.00202836 -0.000510208 
-Iteration    45
-LINE SEARCH 0 times; norm of step = 0.0246466
-X = 15.6582 -39.9727 21.3099 -68.6107 
-G = -0.00368735 -0.00149591 -0.000989468 -0.00024661 
-Iteration    46
-LINE SEARCH 2 times; norm of step = 0.017032
-X = 15.6609 -39.9805 21.3156 -68.6245 
-G = -0.00277863 -0.00116696 -0.000746743 -0.000188213 
-Iteration    47
-LINE SEARCH 0 times; norm of step = 0.0133096
-X = 15.6597 -39.9774 21.3139 -68.6117 
-G = 0.00010786 5.54599e-05 0.000101244 -2.61966e-05 
-Iteration    48
-LINE SEARCH 2 times; norm of step = 0.00685973
-X = 15.6588 -39.9751 21.3124 -68.6054 
-G = 0.000812008 0.000332749 0.000287531 5.77295e-05 
-Iteration    49
-LINE SEARCH 0 times; norm of step = 0.00419153
-X = 15.6584 -39.9726 21.3096 -68.6037 
-G = 0.00117144 0.000521601 0.000340137 4.60984e-05 
-Iteration    50
-LINE SEARCH 0 times; norm of step = 0.0109093
-X = 15.6569 -39.9675 21.3045 -68.5956 
-G = -3.10885e-05 1.6812e-05 -3.5946e-05 -4.24179e-05 
-Iteration    51
-LINE SEARCH 1 times; norm of step = 0.0295211
-X = 15.6529 -39.9581 21.298 -68.5687 
-G = -0.00145757 -0.000576613 -0.000261754 -7.46802e-05 
-Iteration    52
-LINE SEARCH 1 times; norm of step = 0.090997
-X = 15.6414 -39.9218 21.2667 -68.4922 
-G = 0.00139301 0.000640516 0.00030182 3.92179e-05 
-Iteration    53
-LINE SEARCH 1 times; norm of step = 0.00213656
-X = 15.6416 -39.9229 21.2678 -68.4936 
-G = 0.0010051 0.000430347 0.000258672 2.52742e-05 
-Iteration    54
-LINE SEARCH 1 times; norm of step = 0.00793973
-X = 15.6405 -39.9212 21.2672 -68.486 
-G = -0.0003717 -0.000203514 -5.97175e-05 -2.02207e-05 
-Iteration    55
-LINE SEARCH 0 times; norm of step = 0.0058728
-X = 15.6397 -39.9193 21.2658 -68.4807 
-G = -0.000434128 -0.000200121 -5.64386e-05 -1.52933e-05 
-Iteration    56
-LINE SEARCH 7 times; norm of step = 6.45825e-08
-X = 15.6397 -39.9193 21.2658 -68.4807 
-G = -0.000426912 -0.000235542 -5.71588e-05 -1.52957e-05 
-
-iterations 57
-function evaluations 80
-segments explored during Cauchy searches 1
-BFGS updates skipped 0
-active bounds at final generalized Cauchy point 0
-norm of the final projected gradient 0.000426912
-final function value -1.31817
-
-X = 15.6397 -39.9193 21.2658 -68.4807 
-F = -1.31817
-final  value -1.318174 
-converged
-[[1]]
-[1] 3
-
-[[2]]
-[1]   8.160239 -20.256744   5.481310 -20.227777
-
-[[3]]
-[1]   8.160239 -20.256744   5.481310 -20.227777
-
-[[4]]
-[1] 1.318174
-
-[1] &quot;Strain 1 is fitter than strain 2.&quot;
-[1]  15.63969 -39.91929  21.26583 -68.48065
-[1]  15.63969 -39.91929  21.26583 -68.48065
-[1] &quot;starting iteration 3&quot;
-N = 4, M = 5 machine precision = 2.22045e-16
-L = -inf -inf -inf -inf 
-X0 = 15.6397 -39.9193 21.2658 -68.4807 
-U = inf inf inf inf 
-This problem is unconstrained.
-At X0, 0 variables are exactly at the bounds
-At iterate     0  f=  -4.4409e-16  |proj g|=      0.75634
-Iteration     0
-
----------------- CAUCHY entered-------------------
-
-There are 0  breakpoints
-
-GCP found in this segment
-Piece      1 f1, f2 at start point -7.0040e-01  7.0040e-01
-Distance to the stationary point =   1.0000e+00
-Cauchy X =  16.396 -39.5805 21.3822 -68.4744 
-
----------------- exit CAUCHY----------------------
-
-4  variables are free at GCP on iteration 1
-LINE SEARCH 1 times; norm of step = 0.0913986
-X = 15.7223 -39.8823 21.2785 -68.48 
-G = -0.120661 -0.0667335 0.0309374 0.0237117 
-Iteration     1
-LINE SEARCH 0 times; norm of step = 0.0197509
-X = 15.7386 -39.873 21.2735 -68.4836 
-G = -0.00198586 -0.0159327 0.0587256 0.0294097 
-Iteration     2
-LINE SEARCH 0 times; norm of step = 0.0143297
-X = 15.744 -39.8677 21.2628 -68.4893 
-G = 0.0286114 -0.00280227 0.0656826 0.0307834 
-Iteration     3
-LINE SEARCH 0 times; norm of step = 0.129946
-X = 15.7763 -39.8251 21.1577 -68.5439 
-G = 0.170327 0.0582926 0.0967132 0.0365831 
-Iteration     4
-LINE SEARCH 0 times; norm of step = 0.275219
-X = 15.8253 -39.7427 20.9282 -68.6617 
-G = 0.313042 0.120378 0.125408 0.041214 
-Iteration     5
-LINE SEARCH 0 times; norm of step = 0.717206
-X = 15.9269 -39.5386 20.3224 -68.9708 
-G = 0.464852 0.188106 0.148863 0.0426901 
-Iteration     6
-LINE SEARCH 0 times; norm of step = 1.15547
-X = 16.0598 -39.2225 19.3387 -69.4707 
-G = 0.468256 0.193715 0.131209 0.0340776 
-Iteration     7
-LINE SEARCH 1 times; norm of step = 0.172345
-X = 15.9994 -39.2073 19.1958 -69.5441 
-G = 0.00522254 -0.00500505 0.0162271 0.00966119 
-Iteration     8
-LINE SEARCH 0 times; norm of step = 1.05744
-X = 16.1161 -38.9189 18.295 -70.0024 
-G = 0.0201196 0.00415756 0.00582351 0.00402406 
-Iteration     9
-LINE SEARCH 0 times; norm of step = 0.28972
-X = 16.0771 -38.7374 18.1498 -70.1709 
-G = 0.00436674 -0.00202447 -0.000582159 0.00201634 
-Iteration    10
-LINE SEARCH 0 times; norm of step = 0.389745
-X = 15.9865 -38.453 18.046 -70.399 
-G = -0.0105914 -0.00782172 -0.00668014 7.19587e-05 
-Iteration    11
-LINE SEARCH 0 times; norm of step = 0.465834
-X = 15.8387 -38.0902 18.0476 -70.6511 
-G = -0.0204206 -0.0115161 -0.0106402 -0.00124073 
-Iteration    12
-LINE SEARCH 0 times; norm of step = 1.3815
-X = 15.3497 -37.0164 18.2679 -71.3351 
-G = -0.0350629 -0.0167276 -0.0163214 -0.00326117 
-Iteration    13
-LINE SEARCH 1 times; norm of step = 0.586003
-X = 15.159 -36.5541 18.357 -71.6272 
-G = 0.037317 0.0151271 -5.75368e-05 -0.000434406 
-Iteration    14
-LINE SEARCH 0 times; norm of step = 2.23165
-X = 14.3088 -34.8642 19.0035 -72.619 
-G = -0.00718195 -0.00295679 -0.0103259 -0.00294345 
-Iteration    15
-LINE SEARCH 0 times; norm of step = 2.10378
-X = 13.4793 -33.3311 19.8422 -73.4459 
-G = -0.0391725 -0.0159182 -0.0139536 -0.00338745 
-Iteration    16
-LINE SEARCH 0 times; norm of step = 0.264149
-X = 13.4392 -33.3658 20.0837 -73.3529 
-G = -0.0192753 -0.00752025 -0.00643678 -0.00131323 
-Iteration    17
-LINE SEARCH 0 times; norm of step = 0.566146
-X = 13.6139 -33.8044 20.1108 -73.0416 
-G = 0.00338409 0.00169625 0.000795045 0.000647959 
-Iteration    18
-LINE SEARCH 0 times; norm of step = 0.0688108
-X = 13.5902 -33.7511 20.1172 -73.0775 
-G = -0.000312132 0.000198582 -0.000183847 0.000405011 
-Iteration    19
-LINE SEARCH 0 times; norm of step = 0.0369649
-X = 13.6036 -33.7797 20.1082 -73.0605 
-G = -0.00134484 -0.000288369 -0.000430675 0.000367452 
-Iteration    20
-LINE SEARCH 1 times; norm of step = 0.00670085
-X = 13.6066 -33.7841 20.1045 -73.059 
-G = 7.49718e-05 0.000329494 -9.8849e-05 0.000429538 
-Iteration    21
-LINE SEARCH 14 times; norm of step = 6.28559e-11
-X = 13.6066 -33.7841 20.1045 -73.059 
-G = 6.81287e-05 0.000306952 -0.000109194 0.000441164 
-Iteration    22
-LINE SEARCH 1 times; norm of step = 0.00234012
-X = 13.6071 -33.7839 20.1025 -73.0601 
-G = 0.00038079 0.00045963 -7.34092e-05 0.000425853 
-Iteration    23</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiV2FybmluZyBpbiBmb3IgKG5hbWUgaW4gdmFybGlzdCkgeyA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMjIgKDwtbG9jYWxob3N0OjExNzkzKVxuV2FybmluZyBpbiBmb3IgKG5hbWUgaW4gdmFybGlzdCkgeyA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMjEgKDwtbG9jYWxob3N0OjExNzkzKVxuV2FybmluZyBpbiBmb3IgKG5hbWUgaW4gdmFybGlzdCkgeyA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMjAgKDwtbG9jYWxob3N0OjExNzkzKVxuV2FybmluZyBpbiBmb3IgKG5hbWUgaW4gdmFybGlzdCkgeyA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMTkgKDwtbG9jYWxob3N0OjExNzkzKVxuV2FybmluZyBpbiBmb3IgKG5hbWUgaW4gdmFybGlzdCkgeyA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMTggKDwtbG9jYWxob3N0OjExNzkzKVxuV2FybmluZyBpbiBmb3IgKG5hbWUgaW4gdmFybGlzdCkgeyA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMTcgKDwtbG9jYWxob3N0OjExNzkzKVxuV2FybmluZyBpbiBmb3IgKG5hbWUgaW4gdmFybGlzdCkgeyA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMTYgKDwtbG9jYWxob3N0OjExNzkzKVxuV2FybmluZyBpbiBmb3IgKG5hbWUgaW4gdmFybGlzdCkgeyA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMTUgKDwtbG9jYWxob3N0OjExNzkzKVxuV2FybmluZyBpbiBmb3IgKG5hbWUgaW4gdmFybGlzdCkgeyA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMTQgKDwtbG9jYWxob3N0OjExNzkzKVxuV2FybmluZyBpbiBmb3IgKG5hbWUgaW4gdmFybGlzdCkgeyA6XG4gIGNsb3NpbmcgdW51c2VkIGNvbm5lY3Rpb24gMTMgKDwtbG9jYWxob3N0OjExNzkzKVxuIn0= -->
-<pre><code>Warning in for (name in varlist) { :
-  closing unused connection 22 (&lt;-localhost:11793)
-Warning in for (name in varlist) { :
-  closing unused connection 21 (&lt;-localhost:11793)
-Warning in for (name in varlist) { :
-  closing unused connection 20 (&lt;-localhost:11793)
-Warning in for (name in varlist) { :
-  closing unused connection 19 (&lt;-localhost:11793)
-Warning in for (name in varlist) { :
-  closing unused connection 18 (&lt;-localhost:11793)
-Warning in for (name in varlist) { :
-  closing unused connection 17 (&lt;-localhost:11793)
-Warning in for (name in varlist) { :
-  closing unused connection 16 (&lt;-localhost:11793)
-Warning in for (name in varlist) { :
-  closing unused connection 15 (&lt;-localhost:11793)
-Warning in for (name in varlist) { :
-  closing unused connection 14 (&lt;-localhost:11793)
-Warning in for (name in varlist) { :
-  closing unused connection 13 (&lt;-localhost:11793)</code></pre>
-<!-- rnb-output-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDc5OTc4NFxuWCA9IDEzLjYwODkgLTMzLjc4NTEgMjAuMDk3NCAtNzMuMDY1OSBcbkcgPSAtMC4wMDA0MTA0ODQgMC4wMDAxMTU5OTIgLTAuMDAwMzgyMTMgMC4wMDAzNTI2NTcgXG5JdGVyYXRpb24gICAgMjRcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDEwNzQ2NFxuWCA9IDEzLjYxMTUgLTMzLjc4OTEgMjAuMDk0MyAtNzMuMDc1IFxuRyA9IC0wLjAwMTgxNyAtMC4wMDA0ODc0NDUgLTAuMDAwNzQ5NTA2IDAuMDAwMjYyNzEgXG5JdGVyYXRpb24gICAgMjVcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDUyODM3N1xuWCA9IDEzLjYyNDcgLTMzLjgxMTMgMjAuMDgzNSAtNzMuMTE5OCBcbkcgPSAtMC4wMDU3NzU1NSAtMC4wMDIxNjM2MyAtMC4wMDE5NjYyOCAtMy4yOTU5N2UtMDUgXG5JdGVyYXRpb24gICAgMjZcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDY0MzY0OVxuWCA9IDEzLjY0MTggLTMzLjg0MTkgMjAuMDc4NCAtNzMuMTczNiBcbkcgPSAtMC4wMDQzNjc1NSAtMC4wMDE1NTE4OSAtMC4wMDE5MTY3MyAtNy42MjMzZS0wNSBcbkl0ZXJhdGlvbiAgICAyN1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4zNTc4OTFcblggPSAxMy43MjcxIC0zNC4wMzkzIDIwLjExNTggLTczLjQ1NzIgXG5HID0gLTAuMDIzNjE5IC0wLjAwOTkwMzk5IC0wLjAwNzAzMTgzIC0wLjAwMTE3MDkgXG5JdGVyYXRpb24gICAgMjhcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMjU1MjU2XG5YID0gMTMuNzkwMiAtMzQuMTgzMiAyMC4xNTczIC03My42NTQgXG5HID0gLTAuMDE1Njc1IC0wLjAwNjQ2NDA1IC0wLjAwNTQ2NjY3IC0wLjAwMDkxODc1NiBcbkl0ZXJhdGlvbiAgICAyOVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMi4yNjQ4NlxuWCA9IDE0LjMzMjEgLTM1LjQ4ODcgMjAuNjE4OSAtNzUuMzYyNCBcbkcgPSAwLjAxNzc2NDMgMC4wMDc2ODg0OSAwLjAwMTAzNjg0IDAuMDAwMjMzNjE5IFxuSXRlcmF0aW9uICAgIDMwXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxLjg5MDU5XG5YID0gMTQuNzY4NSAtMzYuNjAyMyAyMS4wOTQ3IC03Ni43NDcxIFxuRyA9IDAuMDI5MDIwOCAwLjAxMjIxNCAwLjAwMzg2MzU2IDAuMDAwOTQ5MTcgXG5JdGVyYXRpb24gICAgMzFcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDMuODYwOVxuWCA9IDE1LjY0NTEgLTM4Ljg4OTkgMjIuMTIxNyAtNzkuNTQ4OSBcbkcgPSAwLjAyMzIyNTEgMC4wMDg4NTQ4OCAwLjAwMzc5NzMzIDAuMDAxNDk4MSBcbkl0ZXJhdGlvbiAgICAzMlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4xOTU1NDVcblggPSAxNS42NTY5IC0zOC45ODY5IDIyLjI2MDcgLTc5LjY0NTggXG5HID0gMC4wMTQxMTQ5IDAuMDA0NzQwNSAwLjAwMjgzODU0IDAuMDAxNTY4NSBcbkl0ZXJhdGlvbiAgICAzM1xuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4xNjkwNzNcblggPSAxNS42OTA1IC0zOS4wNzQ4IDIyLjI4OTUgLTc5Ljc4MzMgXG5HID0gLTAuMDA0MzMyMTQgLTAuMDAzMjQ3NTkgLTAuMDAxNjk3NjIgMC4wMDA2NTgyODkgXG5JdGVyYXRpb24gICAgMzRcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMjMwMDQxXG5YID0gMTUuNjI3NCAtMzguOTM2NSAyMi4yNjg0IC03OS42MTE5IFxuRyA9IC0wLjAwNjA3NTAzIC0wLjAwMzk5MDg3IC0wLjAwMTczNTE5IDAuMDAwNzEwMDAzIFxuSXRlcmF0aW9uICAgIDM1XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxLjMyOTMyXG5YID0gMTUuODg0MyAtMzkuNjQzNyAyMi42NzMzIC04MC42MzAzIFxuRyA9IC0wLjAxMDY3NDYgLTAuMDA2MjQ0MDMgLTAuMDAyMTIzOSAwLjAwMDg1Nzg4MiBcbkl0ZXJhdGlvbiAgICAzNlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMS4xMDE4MVxuWCA9IDE2LjA1MjIgLTQwLjEzNTMgMjMuMDQwMyAtODEuNTI5OSBcbkcgPSAtMC4wMTA5NDY5IC0wLjAwNjQ4Mjk2IC0wLjAwMTYwMzEgMC4wMDEwOTU0MyBcbkl0ZXJhdGlvbiAgICAzN1xuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gOS40NTI5MVxuWCA9IDE3LjQ5MDggLTQ0LjIwMTcgMjUuOTU3MSAtODkuNDE5NSBcbkcgPSAtMC4wMDY2MDE4OSAtMC4wMDUxMzEwMSAwLjAwMDg2NTk4MSAwLjAwMTk2NzggXG5JdGVyYXRpb24gICAgMzhcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDIxLjQ5MTNcblggPSAyMC4xODEzIC01Mi4xNjEgMzIuNzk5MSAtMTA3Ljk3OSBcbkcgPSAtMC4wMDk0ODU3NSAtMC4wMDYzNjc2MyAwLjAwMTgwODAyIDAuMDAyMjI4NTMgXG5JdGVyYXRpb24gICAgMzlcbkxJTkUgU0VBUkNIIDIgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDI3Mjc1NFxuWCA9IDIwLjE3MjkgLTUyLjEzODcgMzIuODAxNyAtMTA3Ljk2NiBcbkcgPSAwLjAwMjA5MDkxIC0wLjAwMTM0OTQ1IDAuMDA0NTg1NSAwLjAwMjc3NTg1IFxuSXRlcmF0aW9uICAgIDQwXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAyMi40MzY5XG5YID0gMjIuNTkxMSAtNTkuNTMyNSAzOS45Nzk4IC0xMjcuNzUgXG5HID0gLTAuMDE3Mzc2MiAtMC4wMDkwNzkzMiAtMC4wMDAxMjQ5OTkgMC4wMDEzNzU2OCBcbkl0ZXJhdGlvbiAgICA0MVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMTQuOTk4MlxuWCA9IDI0LjA1ODUgLTYzLjk5OCA0NC42MDk4IC0xNDEuMjE5IFxuRyA9IDAuMDEwNzc3NSAwLjAwNDAwODc1IDAuMDAzNzUzMDIgMC4wMDEyMzMwMSBcbkl0ZXJhdGlvbiAgICA0MlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gNi43MTc1NFxuWCA9IDI0LjY0MzQgLTY1LjgzODEgNDYuNjg5MSAtMTQ3LjMwNyBcbkcgPSAwLjAwNjQzNzY2IDAuMDAyNTI0OTMgMC4wMDE0NTI5OSAwLjAwMDM4NDE2IFxuSXRlcmF0aW9uICAgIDQzXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxLjcwMjA4XG5YID0gMjQuNTEyOCAtNjUuNzQwMiA0Ny4zNjAzIC0xNDguODYzIFxuRyA9IDAuMDAzMDAzNjMgMC4wMDEyNjg1OCAwLjAwMTE1MzI1IDAuMDAwMzAzODQgXG5JdGVyYXRpb24gICAgNDRcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDc4NjEwN1xuWCA9IDI0LjUzOTkgLTY1Ljc3NTkgNDcuMzAyMiAtMTQ4LjgzNSBcbkcgPSA3LjMxOTg1ZS0wNSAxLjM2Njk0ZS0wNSA3LjMyNzQ1ZS0wNSAyLjY5MDVlLTA1IFxuSXRlcmF0aW9uICAgIDQ1XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjIyNjAxNFxuWCA9IDI0LjUwOSAtNjUuNjg1OSA0Ny4yMzA1IC0xNDguNjQzIFxuRyA9IDAuMDAwMTEzNjg1IDQuMDMzOThlLTA1IDMuODkxMThlLTA1IDEuMDY1NTllLTA1IFxuSXRlcmF0aW9uICAgIDQ2XG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAyMzE1ODlcblggPSAyNC41MDU4IC02NS42Nzc0IDQ3LjIyMzggLTE0OC42MjMgXG5HID0gLTAuMDAwMzg5MzU3IC0wLjAwMDE4MjM2IC03LjQ0NzAxZS0wNSAtMS4wMDA2NmUtMDUgXG5JdGVyYXRpb24gICAgNDdcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDc0ODk3XG5YID0gMjQuNDk1NyAtNjUuNjQ5MiA0Ny4yMDE1IC0xNDguNTU4IFxuRyA9IC0wLjAwMTIzNjQ5IC0wLjAwMDU0OTkyMiAtMC4wMDAyNjU0MDEgLTQuNTI1MTJlLTA1IFxuSXRlcmF0aW9uICAgIDQ4XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjA0ODIxNTFcblggPSAyNC40ODkxIC02NS42Mjk5IDQ3LjE4NiAtMTQ4LjUxNyBcbkcgPSAtMC4wMDEyMDQ4OCAtMC4wMDA1MzE5OTQgLTAuMDAwMjcwNDY0IC00LjY4MjAxZS0wNSBcbkl0ZXJhdGlvbiAgICA0OVxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMjg2OTE0XG5YID0gMjQuNDgzOCAtNjUuNjE5OCA0Ny4xOTQ5IC0xNDguNTQyIFxuRyA9IC0wLjAwMTAzMTMyIC0wLjAwMDQ0NzgzIC0wLjAwMDI0NDY5NCAtNC45OTI3ZS0wNSBcbkl0ZXJhdGlvbiAgICA1MFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMzUwNDkxXG5YID0gMjQuNDc4OCAtNjUuNjA2IDQ3LjE4NTUgLTE0OC41MTEgXG5HID0gLTMuNzIzMjRlLTA1IC0xLjYzNzY4ZS0wNSAtMi45ODY4M2UtMDYgLTIuMDAxZS0wNiBcbkl0ZXJhdGlvbiAgICA1MVxuTElORSBTRUFSQ0ggMiB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4xNTc0OVxuWCA9IDI0LjQ1ODkgLTY1LjU0ODIgNDcuMTM3OSAtMTQ4LjM3NCBcbkcgPSAwLjAwMDk5MDA1OCAwLjAwMDQyOTkzNyAwLjAwMDI0MjQ2OCA0LjgzMjA2ZS0wNSBcbkl0ZXJhdGlvbiAgICA1MlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMzU4NTcxXG5YID0gMjQuNDY0MiAtNjUuNTYyNyA0Ny4xNDc3IC0xNDguNDA1IFxuRyA9IDAuMDAwMzEwODU3IDAuMDAwMTM1MDcyIDcuMzM0MDVlLTA1IDEuMjkyOGUtMDUgXG5JdGVyYXRpb24gICAgNTNcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDM5NjkyXG5YID0gMjQuNDU5OSAtNjUuNTQ5NyA0Ny4xMzQ3IC0xNDguMzcgXG5HID0gOS45Njk2ZS0wOCA0LjQxODQxZS0wNyAtMS43Mjc3NmUtMDYgLTIuNDQxMjhlLTA2IFxuSXRlcmF0aW9uICAgIDU0XG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjExNjgzOFxuWCA9IDI0LjQ0NzMgLTY1LjUxMSA0Ny4wOTY4IC0xNDguMjY3IFxuRyA9IC0wLjAwMDY5NDUyNSAtMC4wMDAzMDI1MTMgLTAuMDAwMTc0NTU0IC0zLjU4MjQ3ZS0wNSBcbkl0ZXJhdGlvbiAgICA1NVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMTI2Mjg4XG5YID0gMjQuNDQ4MyAtNjUuNTE0NiA0Ny4xMDEzIC0xNDguMjc4IFxuRyA9IC0wLjAwMDQ3NTk2MyAtMC4wMDAyMDg3MzggLTAuMDAwMTIwMDA5IC0yLjgxNjUxZS0wNSBcbkl0ZXJhdGlvbiAgICA1NlxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMTE5MjQ4XG5YID0gMjQuNDQ1NSAtNjUuNTA3OSA0Ny4wOTk4IC0xNDguMjY5IFxuRyA9IDMuODk1MDllLTA1IDEuNDIwNTFlLTA1IDEuNDYxMmUtMDUgMi4zOTQ1NmUtMDYgXG5JdGVyYXRpb24gICAgNTdcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDA5NTMwOTZcblggPSAyNC40NDQzIC02NS41MDQ1IDQ3LjA5NjkgLTE0OC4yNjEgXG5HID0gMS45NzY5ZS0wNSA4LjUyNjMxZS0wNiAxLjAyMTE2ZS0wNSAyLjExNzZlLTA2IFxuSXRlcmF0aW9uICAgIDU4XG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwMTgxMDI3XG5YID0gMjQuNDQ0NSAtNjUuNTA0NSA0Ny4wOTU3IC0xNDguMjU5IFxuRyA9IDguODYxNzhlLTA1IDMuODc0NDVlLTA1IDEuOTc3ODFlLTA1IDIuNTkyMTJlLTA2IFxuSXRlcmF0aW9uICAgIDU5XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwNjMyNzk0XG5YID0gMjQuNDQ0IC02NS41MDI4IDQ3LjA5MzQgLTE0OC4yNTQgXG5HID0gNS4yNDc1NWUtMDYgMS44OTY5MWUtMDYgLTMuNzAwNThlLTA2IC0xLjg4MTY0ZS0wNiBcbkl0ZXJhdGlvbiAgICA2MFxuTElORSBTRUFSQ0ggMyB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMjM3MDAzXG5YID0gMjQuNDQwMyAtNjUuNDkzMyA0Ny4wODc2IC0xNDguMjMzIFxuRyA9IC0wLjAwMDE5NDMgLTguNDk1MDdlLTA1IC0zLjU3NTc2ZS0wNSAtNi4wNTgxZS0wNiBcbkl0ZXJhdGlvbiAgICA2MVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wNDM4MTQyXG5YID0gMjQuNDM0NSAtNjUuNDc3MSA0Ny4wNzUxIC0xNDguMTk1IFxuRyA9IC0wLjAwMDI1ODQ5MiAtMC4wMDAxMTM0MTkgLTQuMTkyMThlLTA1IC01LjQwNzQ3ZS0wNiBcbkl0ZXJhdGlvbiAgICA2MlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wNzU3OTE1XG5YID0gMjQuNDI1MiAtNjUuNDUwMSA0Ny4wNTE4IC0xNDguMTI5IFxuRyA9IC0wLjAwMDE4NjUyOSAtNy45NTgxZS0wNSAtMi40MjA0OWUtMDUgLTEuNTIzMDJlLTA2IFxuSXRlcmF0aW9uICAgIDYzXG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAxMTM1MjNcblggPSAyNC40MjY5IC02NS40NTQ2IDQ3LjA1NDggLTE0OC4xMzkgXG5HID0gLTIuNTQ1NzdlLTA1IC0xLjIxNjA2ZS0wNSA4LjY3NzZlLTA2IDQuNDQ3ZS0wNiBcbkl0ZXJhdGlvbiAgICA2NFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDg4NzI4M1xuWCA9IDI0LjQyNjYgLTY1LjQ1MjUgNDcuMDUxIC0xNDguMTMxIFxuRyA9IDMuNzk3NTRlLTA1IDEuNjAxMzNlLTA1IDEuNTc3NzFlLTA1IDMuODgxOTllLTA2IFxuSXRlcmF0aW9uICAgIDY1XG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAxNzQzOTdcblggPSAyNC40MjUyIC02NS40NDc0IDQ3LjA0NDQgLTE0OC4xMTYgXG5HID0gOS4xMTc5MmUtMDUgMy44OTI3MmUtMDUgMS44NzQyNWUtMDUgMi42MTg3M2UtMDYgXG5JdGVyYXRpb24gICAgNjZcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDE1NzMyNlxuWCA9IDI0LjQyMzcgLTY1LjQ0MjMgNDcuMDM4OSAtMTQ4LjEwMiBcbkcgPSAwLjAwMDE1NTI4NSA2LjgzNjEyZS0wNSAzLjAxMTU3ZS0wNSAzLjUzMzk5ZS0wNiBcbkl0ZXJhdGlvbiAgICA2N1xuTElORSBTRUFSQ0ggMyB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDAyNzcxNFxuWCA9IDI0LjQyMzcgLTY1LjQ0MjIgNDcuMDM4OCAtMTQ4LjEwMiBcbkcgPSAwLjAwMDE1NjI3MiA2Ljc5ODM3ZS0wNSAyLjc3NTc3ZS0wNSAyLjk2NDg4ZS0wNiBcblxuaXRlcmF0aW9ucyA2OFxuZnVuY3Rpb24gZXZhbHVhdGlvbnMgMTA5XG5zZWdtZW50cyBleHBsb3JlZCBkdXJpbmcgQ2F1Y2h5IHNlYXJjaGVzIDFcbkJGR1MgdXBkYXRlcyBza2lwcGVkIDBcbmFjdGl2ZSBib3VuZHMgYXQgZmluYWwgZ2VuZXJhbGl6ZWQgQ2F1Y2h5IHBvaW50IDBcbm5vcm0gb2YgdGhlIGZpbmFsIHByb2plY3RlZCBncmFkaWVudCAwLjAwMDE1NjI3MlxuZmluYWwgZnVuY3Rpb24gdmFsdWUgLTAuMTkzMTczXG5cblggPSAyNC40MjM3IC02NS40NDIyIDQ3LjAzODggLTE0OC4xMDIgXG5GID0gLTAuMTkzMTczXG5maW5hbCAgdmFsdWUgLTAuMTkzMTczIFxuY29udmVyZ2VkXG5bWzFdXVxuWzFdIDRcblxuW1syXV1cblsxXSAgMTUuNjM5NjkgLTM5LjkxOTI5ICAyMS4yNjU4MyAtNjguNDgwNjVcblxuW1szXV1cblsxXSAgMTUuNjM5NjkgLTM5LjkxOTI5ICAyMS4yNjU4MyAtNjguNDgwNjVcblxuW1s0XV1cblsxXSAwLjE5MzE3MzRcblxuWzFdIFwiU3RyYWluIDEgaXMgZml0dGVyIHRoYW4gc3RyYWluIDIuXCJcblsxXSAgIDI0LjQyMzY5ICAtNjUuNDQyMjAgICA0Ny4wMzg4MyAtMTQ4LjEwMTU3XG5bMV0gICAyNC40MjM2OSAgLTY1LjQ0MjIwICAgNDcuMDM4ODMgLTE0OC4xMDE1N1xuWzFdIFwic3RhcnRpbmcgaXRlcmF0aW9uIDRcIlxuTiA9IDQsIE0gPSA1IG1hY2hpbmUgcHJlY2lzaW9uID0gMi4yMjA0NWUtMTZcbkwgPSAtaW5mIC1pbmYgLWluZiAtaW5mIFxuWDAgPSAyNC40MjM3IC02NS40NDIyIDQ3LjAzODggLTE0OC4xMDIgXG5VID0gaW5mIGluZiBpbmYgaW5mIFxuVGhpcyBwcm9ibGVtIGlzIHVuY29uc3RyYWluZWQuXG5BdCBYMCwgMCB2YXJpYWJsZXMgYXJlIGV4YWN0bHkgYXQgdGhlIGJvdW5kc1xuQXQgaXRlcmF0ZSAgICAgMCAgZj0gICAgICAgICAgIC0wICB8cHJvaiBnfD0gICAgICAwLjE0MDY0XG5JdGVyYXRpb24gICAgIDBcblxuLS0tLS0tLS0tLS0tLS0tLSBDQVVDSFkgZW50ZXJlZC0tLS0tLS0tLS0tLS0tLS0tLS1cblxuVGhlcmUgYXJlIDAgIGJyZWFrcG9pbnRzXG5cbkdDUCBmb3VuZCBpbiB0aGlzIHNlZ21lbnRcblBpZWNlICAgICAgMSBmMSwgZjIgYXQgc3RhcnQgcG9pbnQgLTIuNTE3OWUtMDIgIDIuNTE3OWUtMDJcbkRpc3RhbmNlIHRvIHRoZSBzdGF0aW9uYXJ5IHBvaW50ID0gICAxLjAwMDBlKzAwXG5DYXVjaHkgWCA9ICAyNC4yODMgLTY1LjUwMSA0Ni45OTYyIC0xNDguMTEyIFxuXG4tLS0tLS0tLS0tLS0tLS0tIGV4aXQgQ0FVQ0hZLS0tLS0tLS0tLS0tLS0tLS0tLS0tLVxuXG40ICB2YXJpYWJsZXMgYXJlIGZyZWUgYXQgR0NQIG9uIGl0ZXJhdGlvbiAxXG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAzMDcyNThcblggPSAyNC4zOTY1IC02NS40NTM2IDQ3LjAzMDYgLTE0OC4xMDQgXG5HID0gMC4wMTQ1OTg0IDAuMDAzOTkxNjYgMC4wMTM2MTggMC4wMDUzOTYyMSBcbkl0ZXJhdGlvbiAgICAgMVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDQ5MTE0OVxuWCA9IDI0LjM5MzEgLTY1LjQ1NDUgNDcuMDI3MyAtMTQ4LjEwNSBcbkcgPSAtMC4wMDE5NzM4NyAtMC4wMDMyMTgxNCAwLjAwOTgwMjM5IDAuMDA0Njc3NDcgXG5JdGVyYXRpb24gICAgIDJcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDA0ODMyMDhcblggPSAyNC4zOTIyIC02NS40NTM5IDQ3LjAyMyAtMTQ4LjEwNyBcbkcgPSAtMC4wMDgzNjQ0NCAtMC4wMDU5OTY1MyAwLjAwODMwNTM5IDAuMDA0MzkzNzUgXG5JdGVyYXRpb24gICAgIDNcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDMyMzQwMVxuWCA9IDI0LjM5MDggLTY1LjQ0OCA0Ni45OTQyIC0xNDguMTIgXG5HID0gLTAuMDMwNTgyMiAtMC4wMTU2NDUgMC4wMDI5NjQ0MyAwLjAwMzM0MDczIFxuSXRlcmF0aW9uICAgICA0XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjA3MzE3NDJcblggPSAyNC4zOTI4IC02NS40MzIxIDQ2LjkyOTUgLTE0OC4xNSBcbkcgPSAtMC4wNTYxNzE1IC0wLjAyNjcyNzcgLTAuMDAzNDg4MDcgMC4wMDIwMTUxMSBcbkl0ZXJhdGlvbiAgICAgNVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4xOTg0NTZcblggPSAyNC40MDYxIC02NS4zODU0IDQ2Ljc1NTMgLTE0OC4yMzIgXG5HID0gLTAuMDkwNDEyIC0wLjA0MTQ5NzggLTAuMDEyOTI2OSAtNy42NDk2NmUtMDUgXG5JdGVyYXRpb24gICAgIDZcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMzc4Nzg1XG5YID0gMjQuNDQwOSAtNjUuMjkyIDQ2LjQyNDggLTE0OC4zODggXG5HID0gLTAuMTExMSAtMC4wNTAyNDU0IC0wLjAyMDY0OTUgLTAuMDAyMTI1MDkgXG5JdGVyYXRpb24gICAgIDdcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuNTEyODQ3XG5YID0gMjQuNTAyMiAtNjUuMTU3NiA0NS45ODE0IC0xNDguNTk5IFxuRyA9IC0wLjA3NjA1MDYgLTAuMDM0NjE1OSAtMC4wMTY0Nzk4IC0wLjAwMjE0ODI1IFxuSXRlcmF0aW9uICAgICA4XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjIyOTA0MlxuWCA9IDI0LjUzOTkgLTY1LjA5MDkgNDUuNzg3MiAtMTQ4LjY5NCBcbkcgPSAtMC4wMTU1NTYxIC0wLjAwODA1NjUgLTAuMDA0MTgwNSAtMC4wMDAxOTk3NDkgXG5JdGVyYXRpb24gICAgIDlcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDA5NjQ0MzNcblggPSAyNC41NDQxIC02NS4wODYzIDQ1Ljc4MDkgLTE0OC42OTcgXG5HID0gLTAuMDAwNDQ2NDg0IC0wLjAwMTQ1NTQ0IC0wLjAwMDc1NDM4NiAwLjAwMDQyNDc5OSBcbkl0ZXJhdGlvbiAgICAxMFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDY2NTY5XG5YID0gMjQuNTQzNiAtNjUuMDg3NSA0NS43ODY5IC0xNDguNjk1IFxuRyA9IDAuMDAwODIwMDk0IC0wLjAwMDkwNzQ4IC0wLjAwMDQxNzQzOCAwLjAwMDQ5NjkzNiBcbkl0ZXJhdGlvbiAgICAxMVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDQ2NzIzNlxuWCA9IDI0LjU0MjkgLTY1LjA4NzggNDUuNzkxMyAtMTQ4LjY5MyBcbkcgPSAwLjAwMTYxMjE3IC0wLjAwMDU2NTkyNyAtMC4wMDAyMDMzMTUgMC4wMDA1NDMzMjMgXG5JdGVyYXRpb24gICAgMTJcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDE0MTY5MlxuWCA9IDI0LjUzOTYgLTY1LjA4NTkgNDUuODA0NiAtMTQ4LjY5IFxuRyA9IDAuMDA0MDkzNzggMC4wMDA1MDk4MTQgMC4wMDA0NTk1NTIgMC4wMDA2ODUwNzcgXG5JdGVyYXRpb24gICAgMTNcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDI0MTYyNVxuWCA9IDI0LjUzMiAtNjUuMDc3OCA0NS44MjYgLTE0OC42ODkgXG5HID0gMC4wMDcyMzgxNSAwLjAwMTg3MTI4IDAuMDAxMzE5OTUgMC4wMDA4NzIxNjcgXG5JdGVyYXRpb24gICAgMTRcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDU2NTM4M1xuWCA9IDI0LjUxMTEgLTY1LjA0OTEgNDUuODY5OCAtMTQ4LjY5MyBcbkcgPSAwLjAxMjA4MTUgMC4wMDM5Njk4MyAwLjAwMjY4OTIxIDAuMDAxMTc1MTkgXG5JdGVyYXRpb24gICAgMTVcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMTI5MDAyXG5YID0gMjQuNDU5NiAtNjQuOTY3MSA0NS45NTEyIC0xNDguNzE5IFxuRyA9IDAuMDE4NjU4NiAwLjAwNjgyNjkxIDAuMDA0NjE4MiAwLjAwMTYwODE4IFxuSXRlcmF0aW9uICAgIDE2XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjMxMTM2NVxuWCA9IDI0LjMzMjggLTY0Ljc0OTUgNDYuMTEzOSAtMTQ4LjgwMyBcbkcgPSAwLjAyNTQ5MjYgMC4wMDk4MTM2NiAwLjAwNjkxNzQzIDAuMDAyMTU0NzggXG5JdGVyYXRpb24gICAgMTdcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuNjQ5NDM0XG5YID0gMjQuMDcyMyAtNjQuMjYxMSA0Ni4zNzIxIC0xNDkuMDIzIFxuRyA9IDAuMDMzODAxNiAwLjAxMzUzMSAwLjAwOTcxMDE0IDAuMDAyNzgzNTEgXG5JdGVyYXRpb24gICAgMThcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDEuMjIwOVxuWCA9IDIzLjU3NzYgLTYzLjMzMzkgNDYuODE2NCAtMTQ5LjQ1OCBcbkcgPSAwLjAwODY2NDI5IDAuMDAyODAzNzggMC4wMDU0Mzk0NiAwLjAwMjE0ODk3IFxuSXRlcmF0aW9uICAgIDE5XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAxLjU4MzY5XG5YID0gMjIuOTkyIC02Mi4wNjYgNDcuMTMxMiAtMTUwLjEzNSBcbkcgPSAwLjA0NDYwMjUgMC4wMTg5Nzk3IDAuMDEzNDQ5NCAwLjAwMzM5NTg5IFxuSXRlcmF0aW9uICAgIDIwXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjcxNTk0MlxuWCA9IDIyLjc1NDQgLTYxLjQ5MyA0Ny4xMTAzIC0xNTAuNDkyIFxuRyA9IDAuMDE5MDA5NiAwLjAwODEzMTE3IDAuMDA2MjkzODYgMC4wMDE3MjY0NCBcbkl0ZXJhdGlvbiAgICAyMVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC40MDQwMzhcblggPSAyMi42ODI0IC02MS4yMjEzIDQ2LjkyMzYgLTE1MC43MTQgXG5HID0gMC4wMDIwNDM4OCAwLjAwMDk0NzE5OSAwLjAwMDQ1MzczOSAwLjAwMDIyODk3MiBcbkl0ZXJhdGlvbiAgICAyMlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wNjIzMTU5XG5YID0gMjIuNjU5MSAtNjEuMTcxNSA0Ni45MzI3IC0xNTAuNzQyIFxuRyA9IC0wLjAwMDEwMzM2NiAzLjA4MjExZS0wNSAtNS43MjY0N2UtMDUgMC4wMDAxMjIwODcgXG5JdGVyYXRpb24gICAgMjNcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDAxNDcwMzRcblggPSAyMi42NTg3IC02MS4xNzA0IDQ2LjkzMjUgLTE1MC43NDMgXG5HID0gLTUuNzA1MTFlLTA1IDUuMTY2MDNlLTA1IC01LjE5MTIzZS0wNSAwLjAwMDEyMjQwNyBcbkl0ZXJhdGlvbiAgICAyNFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDk0NDEzM1xuWCA9IDIyLjY1NTYgLTYxLjE2MzEgNDYuOTMzNCAtMTUwLjc0OCBcbkcgPSAwLjAwMDEwNTYzNyAwLjAwMDEyNTk5NCAtMi4zNzAwOGUtMDUgMC4wMDAxMjQzMSBcbkl0ZXJhdGlvbiAgICAyNVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDgyMjAyMVxuWCA9IDIyLjY1NSAtNjEuMTU5OSA0Ni45MzA5IC0xNTAuNzU1IFxuRyA9IDYuNjQwNDRlLTA1IDAuMDAwMTEzNzY5IC02LjkyNzAyZS0wNSAwLjAwMDEwODE5OSBcbkl0ZXJhdGlvbiAgICAyNlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMTgzMTEzXG5YID0gMjIuNjU5NiAtNjEuMTY3NSA0Ni45Mjg5IC0xNTAuNzcxIFxuRyA9IDAuMDAwNDk2NTE3IDAuMDAwMzAyNzcgLTIuNDM4NTNlLTA1IDAuMDAwMTA2NDIzIFxuSXRlcmF0aW9uICAgIDI3XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjExMjQ2OVxuWCA9IDIyLjY4MDUgLTYxLjIwOTEgNDYuOTM3MiAtMTUwLjg3MyBcbkcgPSAwLjAwMTk5NDgzIDAuMDAwOTY1NTE2IDAuMDAwMTIxMjAxIDkuNTk0MTNlLTA1IFxuSXRlcmF0aW9uICAgIDI4XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjI2NDMxNFxuWCA9IDIyLjcyMzUgLTYxLjMwNzEgNDYuOTczMyAtMTUxLjExMiBcbkcgPSAtMC4wMDI5MDA1OSAtMC4wMDExNTY0OSAtMC4wMDEzMTU4OSAtMC4wMDAyMzEyNjYgXG5JdGVyYXRpb24gICAgMjlcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuNDA1OTUyXG5YID0gMjIuODE0MyAtNjEuNTIwNiA0Ny4wNTA3IC0xNTEuNDM2IFxuRyA9IDAuMDAyOTE1MDMgMC4wMDEzNjQ0MiAtMC4wMDAyMzAzOCAtNi42NTcwMWUtMDUgXG5JdGVyYXRpb24gICAgMzBcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuOTgzNzY1XG5YID0gMjMuMDM3NyAtNjIuMDcyMSA0Ny4yNyAtMTUyLjE4OCBcbkcgPSAwLjAwNzIzOTg5IDAuMDAzMTg0ODIgMC4wMDA1MTgwODMgNS4zNDQ3NmUtMDUgXG5JdGVyYXRpb24gICAgMzFcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDIuMzg2MDZcblggPSAyMy41Nzk5IC02My40NDUxIDQ3Ljg0OTggLTE1My45NyBcbkcgPSAwLjAwOTE1MTIzIDAuMDAzODI0NjEgMC4wMDA4NjI0MDMgMC4wMDAxNzA3NzcgXG5JdGVyYXRpb24gICAgMzJcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDIuMDU0MzZcblggPSAyMy45NzMgLTY0LjQ3OTcgNDguNDE4OCAtMTU1LjYwNSBcbkcgPSAwLjAxODM3NjMgMC4wMDc3MzMyNiAwLjAwMzA1OTA2IDAuMDAwNjMwNjk4IFxuSXRlcmF0aW9uICAgIDMzXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAzLjIxMTY2XG5YID0gMjQuNTQxNSAtNjYuMDE0MSA0OS4zMzgxIC0xNTguMjExIFxuRyA9IDAuMDE1NDI0IDAuMDA2Mjg4NzEgMC4wMDI1ODk4MSAwLjAwMDYzMzI3MSBcbkl0ZXJhdGlvbiAgICAzNFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gNS43NTcxN1xuWCA9IDI1LjM2MTkgLTY4LjQzNTMgNTEuMjgxNiAtMTYyLjk4OSBcbkcgPSAwLjAzNzc3MDggMC4wMTU3NTU4IDAuMDA5NjEyOTMgMC4wMDIzNTI2NiBcbkl0ZXJhdGlvbiAgICAzNVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMi4xMjgyNlxuWCA9IDI1LjY2NjIgLTY5LjMxOTYgNTEuOTA3NSAtMTY0Ljc5NiBcbkcgPSAtMC4wMTE3Njc1IC0wLjAwNTkwOTkxIC0wLjAwMTcwNzQ0IDAuMDAwMjc4MzggXG5JdGVyYXRpb24gICAgMzZcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDEuMTc0MDJcblggPSAyNS4zNjU5IC02OC41Njc3IDUxLjY0MTIgLTE2My45ODkgXG5HID0gLTAuMDA4NTg3NjkgLTAuMDA0Mzk0MzkgLTAuMDAxMDU2MjggMC4wMDAzMzgxNTUgXG5JdGVyYXRpb24gICAgMzdcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDIuMzY4MTdcblggPSAyNS4xMDI5IC02OC4xMjY3IDUyLjM2MzIgLTE2Ni4xODUgXG5HID0gLTAuMDAxNjkwMjcgLTAuMDAwOTU4NTQ3IC0wLjAwMDQyNjk0NiAwLjAwMDExOTM0IFxuSXRlcmF0aW9uICAgIDM4XG5MSU5FIFNFQVJDSCAxIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSA1LjMxMDI1XG5YID0gMjUuMTUzNSAtNjguODI4NCA1NC4zODMzIC0xNzEuMDQ1IFxuRyA9IDAuMDAwNjMyODMzIDAuMDAwMzAzNzcgMC4wMDE2ODUwNiAwLjAwMDY2ODIwOCBcbkl0ZXJhdGlvbiAgICAzOVxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMTQuNTY2OFxuWCA9IDI2LjM0NjggLTcyLjU4ODggNTguNzgxMiAtMTg0LjM2IFxuRyA9IC0wLjAwNTk5MTAyIC0wLjAwMjEwODI3IC0wLjAwMjM4NzM5IC0wLjAwMDczNDQxNCBcbkl0ZXJhdGlvbiAgICA0MFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMzYuMzM2MlxuWCA9IDMxLjE5MDEgLTg2LjQ2MzIgNjkuOTE5MSAtMjE1LjY3IFxuRyA9IDAuMDQ0MTIyNyAwLjAxOTI2NDEgMC4wMTAyNDgyIDAuMDAxOTE3MjMgXG5JdGVyYXRpb24gICAgNDFcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDQuNjkwNjRcblggPSAzMS44MDM0IC04OC4yNjMgNzEuMzY1NiAtMjE5LjcwNiBcbkcgPSAwLjAwNDYwMTgzIDAuMDAxOTIyMTIgMC4wMDE1MzUyNCAwLjAwMDM5MzE3MiBcbkl0ZXJhdGlvbiAgICA0MlxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMi41Mjk5NFxuWCA9IDMxLjQzNTMgLTg3LjIwNTkgNzAuNTYwMSAtMjE3LjU4NSBcbkcgPSAtNS43OTM3OWUtMDYgLTguNTg3MjJlLTA2IDIuMzY0MTdlLTA1IDkuODY2MzVlLTA2IFxuSXRlcmF0aW9uICAgIDQzXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjYwMTQ1MlxuWCA9IDMxLjM1ODggLTg2Ljk4MzIgNzAuMzczMiAtMjE3LjA2NSBcbkcgPSAtMi40MDcwMmUtMDUgLTUuMzIwMDNlLTA2IC04LjIzNTFlLTA2IC0zLjgwMjAzZS0wNiBcbkl0ZXJhdGlvbiAgICA0NFxuTElORSBTRUFSQ0ggMTcgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDEuNTgzNWUtMTRcblggPSAzMS4zNTg4IC04Ni45ODMyIDcwLjM3MzIgLTIxNy4wNjUgXG5HID0gLTIuNDA3MDJlLTA1IC01LjMyMDAzZS0wNiAtMS4yNzQ1OGUtMDUgLTMuODAyMDNlLTA2IFxuXG5pdGVyYXRpb25zIDQ1XG5mdW5jdGlvbiBldmFsdWF0aW9ucyA2N1xuc2VnbWVudHMgZXhwbG9yZWQgZHVyaW5nIENhdWNoeSBzZWFyY2hlcyAxXG5CRkdTIHVwZGF0ZXMgc2tpcHBlZCAwXG5hY3RpdmUgYm91bmRzIGF0IGZpbmFsIGdlbmVyYWxpemVkIENhdWNoeSBwb2ludCAwXG5ub3JtIG9mIHRoZSBmaW5hbCBwcm9qZWN0ZWQgZ3JhZGllbnQgMi40MDcwMmUtMDVcbmZpbmFsIGZ1bmN0aW9uIHZhbHVlIC0wLjAxOTA4ODhcblxuWCA9IDMxLjM1ODggLTg2Ljk4MzIgNzAuMzczMiAtMjE3LjA2NSBcbkYgPSAtMC4wMTkwODg4XG5XYXJuaW5nOiAgbW9yZSB0aGFuIDEwIGZ1bmN0aW9uIGFuZCBncmFkaWVudCBldmFsdWF0aW9uc1xuICAgaW4gdGhlIGxhc3QgbGluZSBzZWFyY2hcbmZpbmFsICB2YWx1ZSAtMC4wMTkwODkgXG5jb252ZXJnZWRcbltbMV1dXG5bMV0gNVxuXG5bWzJdXVxuWzFdICAgMjQuNDIzNjkgIC02NS40NDIyMCAgIDQ3LjAzODgzIC0xNDguMTAxNTdcblxuW1szXV1cblsxXSAgIDI0LjQyMzY5ICAtNjUuNDQyMjAgICA0Ny4wMzg4MyAtMTQ4LjEwMTU3XG5cbltbNF1dXG5bMV0gMC4wMTkwODg3NVxuXG5bMV0gXCJTdHJhaW4gMSBpcyBmaXR0ZXIgdGhhbiBzdHJhaW4gMi5cIlxuWzFdICAgMzEuMzU4ODMgIC04Ni45ODMxNyAgIDcwLjM3MzE2IC0yMTcuMDY0NTRcblsxXSAgIDMxLjM1ODgzICAtODYuOTgzMTcgICA3MC4zNzMxNiAtMjE3LjA2NDU0XG5bMV0gXCJzdGFydGluZyBpdGVyYXRpb24gNVwiXG5OID0gNCwgTSA9IDUgbWFjaGluZSBwcmVjaXNpb24gPSAyLjIyMDQ1ZS0xNlxuTCA9IC1pbmYgLWluZiAtaW5mIC1pbmYgXG5YMCA9IDMxLjM1ODggLTg2Ljk4MzIgNzAuMzczMiAtMjE3LjA2NSBcblUgPSBpbmYgaW5mIGluZiBpbmYgXG5UaGlzIHByb2JsZW0gaXMgdW5jb25zdHJhaW5lZC5cbkF0IFgwLCAwIHZhcmlhYmxlcyBhcmUgZXhhY3RseSBhdCB0aGUgYm91bmRzXG5BdCBpdGVyYXRlICAgICAwICBmPSAgIDQuNDQwOWUtMTYgIHxwcm9qIGd8PSAgICAgMC4wOTY1OTNcbkl0ZXJhdGlvbiAgICAgMFxuXG4tLS0tLS0tLS0tLS0tLS0tIENBVUNIWSBlbnRlcmVkLS0tLS0tLS0tLS0tLS0tLS0tLVxuXG5UaGVyZSBhcmUgMCAgYnJlYWtwb2ludHNcblxuR0NQIGZvdW5kIGluIHRoaXMgc2VnbWVudFxuUGllY2UgICAgICAxIGYxLCBmMiBhdCBzdGFydCBwb2ludCAtMS4xNTk1ZS0wMiAgMS4xNTk1ZS0wMlxuRGlzdGFuY2UgdG8gdGhlIHN0YXRpb25hcnkgcG9pbnQgPSAgIDEuMDAwMGUrMDBcbkNhdWNoeSBYID0gIDMxLjI2MjIgLTg3LjAyNTMgNzAuMzUxNCAtMjE3LjA2OSBcblxuLS0tLS0tLS0tLS0tLS0tLSBleGl0IENBVUNIWS0tLS0tLS0tLS0tLS0tLS0tLS0tLS1cblxuNCAgdmFyaWFibGVzIGFyZSBmcmVlIGF0IEdDUCBvbiBpdGVyYXRpb24gMVxuTElORSBTRUFSQ0ggMSB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMjQxODA1XG5YID0gMzEuMzM3MSAtODYuOTkyNiA3MC4zNjgzIC0yMTcuMDY1IFxuRyA9IDAuMDEwNzIzNiAwLjAwNDU3NzExIDAuMDAyMzEyNjcgMC4wMDA0NTM2NzUgXG5JdGVyYXRpb24gICAgIDFcbkxJTkUgU0VBUkNIIDAgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDAzMDAzMDdcblggPSAzMS4zMzQ0IC04Ni45OTM4IDcwLjM2NzcgLTIxNy4wNjYgXG5HID0gNi4xNzAwN2UtMDUgLTguMzg1MjJlLTA1IC05LjIzMDE3ZS0wNSAyLjA0NjQyZS0wNSBcbkl0ZXJhdGlvbiAgICAgMlxuTElORSBTRUFSQ0ggMyB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDMwMjI2MVxuWCA9IDMxLjMzMzEgLTg2Ljk5MiA3MC4zNjk3IC0yMTcuMDY2IFxuRyA9IC0wLjAwMDQyNzk3MiAtMC4wMDAyOTkxOTUgLTAuMDAwMTg5NjQ4IDMuODMwNzllLTA2IFxuSXRlcmF0aW9uICAgICAzXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAyMDM4N1xuWCA9IDMxLjMyNDQgLTg2Ljk3OTcgNzAuMzgzMSAtMjE3LjA2OSBcbkcgPSAtMC4wMDE2MDMxMiAtMC4wMDA4MTI0MTkgLTAuMDAwMzg1Njg1IC0xLjg5MzkyZS0wNSBcbkl0ZXJhdGlvbiAgICAgNFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMjkxODMyXG5YID0gMzEuMzEyNCAtODYuOTYxOSA3MC40MDI0IC0yMTcuMDczIFxuRyA9IC0wLjAwMTY4NzkzIC0wLjAwMDg1MDEwOSAtMC4wMDAzMDU2MyAxLjE4MDNlLTA1IFxuSXRlcmF0aW9uICAgICA1XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjA0MDk3NTZcblggPSAzMS4yOTU5IC04Ni45Mjk5IDcwLjQxNjEgLTIxNy4wODcgXG5HID0gLTAuMDAxODQwNCAtMC4wMDA5MTE2OTUgLTAuMDAwMjk5MjQ3IDEuODA1MTNlLTA1IFxuSXRlcmF0aW9uICAgICA2XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjMyMjAyNlxuWCA9IDMxLjE3MDEgLTg2LjY3MjIgNzAuNDk2NyAtMjE3LjIxIFxuRyA9IC0wLjAwMTcyNTI1IC0wLjAwMDgwMzkzIC0wLjAwMDEzNDg4OCA0Ljk1MWUtMDUgXG5JdGVyYXRpb24gICAgIDdcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDAuMDAxMjU4NThcblggPSAzMS4xNzA4IC04Ni42NzMxIDcwLjQ5NjkgLTIxNy4yMDkgXG5HID0gLTAuMDAwMzc2Nzg0IC0wLjAwMDIxNjcwMyAwLjAwMDE3MjE3IDAuMDAwMTA0MTA3IFxuSXRlcmF0aW9uICAgICA4XG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjE0NTI2NFxuWCA9IDMxLjExODEgLTg2LjU1NDMgNzAuNTEyNiAtMjE3LjI3MiBcbkcgPSAwLjAwMDEyMDk4OSAzLjU2NTIxZS0wNSAwLjAwMDIwNzgwNyA4LjUzODUxZS0wNSBcbkl0ZXJhdGlvbiAgICAgOVxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wNzU5NzY5XG5YID0gMzEuMDk0OSAtODYuNDkzMyA3MC41MDM1IC0yMTcuMzEgXG5HID0gLTUuNDE2NDFlLTA1IC0yLjAxMzMxZS0wNSAxLjQxNDE5ZS0wNSAxLjQ3MDQxZS0wNSBcbkl0ZXJhdGlvbiAgICAxMFxuTElORSBTRUFSQ0ggMCB0aW1lczsgbm9ybSBvZiBzdGVwID0gMC4wMDQ4MTc3MVxuWCA9IDMxLjA5NjYgLTg2LjQ5NDkgNzAuNDk5NCAtMjE3LjMxMSBcbkcgPSAtMS4wOTA5OWUtMDUgMi4zNTY1MmUtMDcgLTEuNTA1OTNlLTA2IDcuOTE3NjJlLTA2IFxuSXRlcmF0aW9uICAgIDExXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwNDYzODcyXG5YID0gMzEuMDk4NSAtODYuNDk4NyA3MC40OTggLTIxNy4zMSBcbkcgPSAtMS40NDM4MWUtMDYgNC40Mzk2N2UtMDYgLTcuMjc5NTRlLTA2IDUuODU1MzdlLTA2IFxuSXRlcmF0aW9uICAgIDEyXG5MSU5FIFNFQVJDSCAwIHRpbWVzOyBub3JtIG9mIHN0ZXAgPSAwLjAwNjg5MzkxXG5YID0gMzEuMTAxMyAtODYuNTA0NyA3MC40OTcxIC0yMTcuMzA4IFxuRyA9IDcuNDE4OThlLTA2IDYuOTA5MmUtMDYgLTMuMjY1MTRlLTA2IDguMTM5N2UtMDYgXG5JdGVyYXRpb24gICAgMTNcbkxJTkUgU0VBUkNIIDEgdGltZXM7IG5vcm0gb2Ygc3RlcCA9IDkuMDc1MjZlLTA1XG5YID0gMzEuMTAxMyAtODYuNTA0OCA3MC40OTcgLTIxNy4zMDggXG5HID0gLTEuOTY0MzhlLTA1IC01LjAzNTg4ZS0wNiAtOS41NjcxMWUtMDYgNi42MjQ3NGUtMDYgXG5cbml0ZXJhdGlvbnMgMTRcbmZ1bmN0aW9uIGV2YWx1YXRpb25zIDIxXG5zZWdtZW50cyBleHBsb3JlZCBkdXJpbmcgQ2F1Y2h5IHNlYXJjaGVzIDFcbkJGR1MgdXBkYXRlcyBza2lwcGVkIDBcbmFjdGl2ZSBib3VuZHMgYXQgZmluYWwgZ2VuZXJhbGl6ZWQgQ2F1Y2h5IHBvaW50IDBcbm5vcm0gb2YgdGhlIGZpbmFsIHByb2plY3RlZCBncmFkaWVudCAxLjk2NDM4ZS0wNVxuZmluYWwgZnVuY3Rpb24gdmFsdWUgLTAuMDAxNTAwMDRcblxuWCA9IDMxLjEwMTMgLTg2LjUwNDggNzAuNDk3IC0yMTcuMzA4IFxuRiA9IC0wLjAwMTUwMDA0XG5maW5hbCAgdmFsdWUgLTAuMDAxNTAwIFxuY29udmVyZ2VkXG5bWzFdXVxuWzFdIDZcblxuW1syXV1cblsxXSAgIDMxLjM1ODgzICAtODYuOTgzMTcgICA3MC4zNzMxNiAtMjE3LjA2NDU0XG5cbltbM11dXG5bMV0gICAzMS4zNTg4MyAgLTg2Ljk4MzE3ICAgNzAuMzczMTYgLTIxNy4wNjQ1NFxuXG5bWzRdXVxuWzFdIDAuMDAxNTAwMDRcblxuWzFdIFwiU3RyYWluIDEgZGlmZmVyZW5jZSBpcyBtaW51dGUuXCJcbiJ9 -->
-<pre><code>LINE SEARCH 1 times; norm of step = 0.00799784
-X = 13.6089 -33.7851 20.0974 -73.0659 
-G = -0.000410484 0.000115992 -0.00038213 0.000352657 
-Iteration    24
-LINE SEARCH 0 times; norm of step = 0.0107464
-X = 13.6115 -33.7891 20.0943 -73.075 
-G = -0.001817 -0.000487445 -0.000749506 0.00026271 
-Iteration    25
-LINE SEARCH 0 times; norm of step = 0.0528377
-X = 13.6247 -33.8113 20.0835 -73.1198 
-G = -0.00577555 -0.00216363 -0.00196628 -3.29597e-05 
-Iteration    26
-LINE SEARCH 0 times; norm of step = 0.0643649
-X = 13.6418 -33.8419 20.0784 -73.1736 
-G = -0.00436755 -0.00155189 -0.00191673 -7.6233e-05 
-Iteration    27
-LINE SEARCH 0 times; norm of step = 0.357891
-X = 13.7271 -34.0393 20.1158 -73.4572 
-G = -0.023619 -0.00990399 -0.00703183 -0.0011709 
-Iteration    28
-LINE SEARCH 0 times; norm of step = 0.255256
-X = 13.7902 -34.1832 20.1573 -73.654 
-G = -0.015675 -0.00646405 -0.00546667 -0.000918756 
-Iteration    29
-LINE SEARCH 0 times; norm of step = 2.26486
-X = 14.3321 -35.4887 20.6189 -75.3624 
-G = 0.0177643 0.00768849 0.00103684 0.000233619 
-Iteration    30
-LINE SEARCH 0 times; norm of step = 1.89059
-X = 14.7685 -36.6023 21.0947 -76.7471 
-G = 0.0290208 0.012214 0.00386356 0.00094917 
-Iteration    31
-LINE SEARCH 0 times; norm of step = 3.8609
-X = 15.6451 -38.8899 22.1217 -79.5489 
-G = 0.0232251 0.00885488 0.00379733 0.0014981 
-Iteration    32
-LINE SEARCH 0 times; norm of step = 0.195545
-X = 15.6569 -38.9869 22.2607 -79.6458 
-G = 0.0141149 0.0047405 0.00283854 0.0015685 
-Iteration    33
-LINE SEARCH 1 times; norm of step = 0.169073
-X = 15.6905 -39.0748 22.2895 -79.7833 
-G = -0.00433214 -0.00324759 -0.00169762 0.000658289 
-Iteration    34
-LINE SEARCH 0 times; norm of step = 0.230041
-X = 15.6274 -38.9365 22.2684 -79.6119 
-G = -0.00607503 -0.00399087 -0.00173519 0.000710003 
-Iteration    35
-LINE SEARCH 0 times; norm of step = 1.32932
-X = 15.8843 -39.6437 22.6733 -80.6303 
-G = -0.0106746 -0.00624403 -0.0021239 0.000857882 
-Iteration    36
-LINE SEARCH 0 times; norm of step = 1.10181
-X = 16.0522 -40.1353 23.0403 -81.5299 
-G = -0.0109469 -0.00648296 -0.0016031 0.00109543 
-Iteration    37
-LINE SEARCH 0 times; norm of step = 9.45291
-X = 17.4908 -44.2017 25.9571 -89.4195 
-G = -0.00660189 -0.00513101 0.000865981 0.0019678 
-Iteration    38
-LINE SEARCH 0 times; norm of step = 21.4913
-X = 20.1813 -52.161 32.7991 -107.979 
-G = -0.00948575 -0.00636763 0.00180802 0.00222853 
-Iteration    39
-LINE SEARCH 2 times; norm of step = 0.0272754
-X = 20.1729 -52.1387 32.8017 -107.966 
-G = 0.00209091 -0.00134945 0.0045855 0.00277585 
-Iteration    40
-LINE SEARCH 0 times; norm of step = 22.4369
-X = 22.5911 -59.5325 39.9798 -127.75 
-G = -0.0173762 -0.00907932 -0.000124999 0.00137568 
-Iteration    41
-LINE SEARCH 0 times; norm of step = 14.9982
-X = 24.0585 -63.998 44.6098 -141.219 
-G = 0.0107775 0.00400875 0.00375302 0.00123301 
-Iteration    42
-LINE SEARCH 0 times; norm of step = 6.71754
-X = 24.6434 -65.8381 46.6891 -147.307 
-G = 0.00643766 0.00252493 0.00145299 0.00038416 
-Iteration    43
-LINE SEARCH 0 times; norm of step = 1.70208
-X = 24.5128 -65.7402 47.3603 -148.863 
-G = 0.00300363 0.00126858 0.00115325 0.00030384 
-Iteration    44
-LINE SEARCH 0 times; norm of step = 0.0786107
-X = 24.5399 -65.7759 47.3022 -148.835 
-G = 7.31985e-05 1.36694e-05 7.32745e-05 2.6905e-05 
-Iteration    45
-LINE SEARCH 0 times; norm of step = 0.226014
-X = 24.509 -65.6859 47.2305 -148.643 
-G = 0.000113685 4.03398e-05 3.89118e-05 1.06559e-05 
-Iteration    46
-LINE SEARCH 1 times; norm of step = 0.0231589
-X = 24.5058 -65.6774 47.2238 -148.623 
-G = -0.000389357 -0.00018236 -7.44701e-05 -1.00066e-05 
-Iteration    47
-LINE SEARCH 1 times; norm of step = 0.074897
-X = 24.4957 -65.6492 47.2015 -148.558 
-G = -0.00123649 -0.000549922 -0.000265401 -4.52512e-05 
-Iteration    48
-LINE SEARCH 0 times; norm of step = 0.0482151
-X = 24.4891 -65.6299 47.186 -148.517 
-G = -0.00120488 -0.000531994 -0.000270464 -4.68201e-05 
-Iteration    49
-LINE SEARCH 1 times; norm of step = 0.0286914
-X = 24.4838 -65.6198 47.1949 -148.542 
-G = -0.00103132 -0.00044783 -0.000244694 -4.9927e-05 
-Iteration    50
-LINE SEARCH 0 times; norm of step = 0.0350491
-X = 24.4788 -65.606 47.1855 -148.511 
-G = -3.72324e-05 -1.63768e-05 -2.98683e-06 -2.001e-06 
-Iteration    51
-LINE SEARCH 2 times; norm of step = 0.15749
-X = 24.4589 -65.5482 47.1379 -148.374 
-G = 0.000990058 0.000429937 0.000242468 4.83206e-05 
-Iteration    52
-LINE SEARCH 0 times; norm of step = 0.0358571
-X = 24.4642 -65.5627 47.1477 -148.405 
-G = 0.000310857 0.000135072 7.33405e-05 1.2928e-05 
-Iteration    53
-LINE SEARCH 0 times; norm of step = 0.039692
-X = 24.4599 -65.5497 47.1347 -148.37 
-G = 9.9696e-08 4.41841e-07 -1.72776e-06 -2.44128e-06 
-Iteration    54
-LINE SEARCH 1 times; norm of step = 0.116838
-X = 24.4473 -65.511 47.0968 -148.267 
-G = -0.000694525 -0.000302513 -0.000174554 -3.58247e-05 
-Iteration    55
-LINE SEARCH 0 times; norm of step = 0.0126288
-X = 24.4483 -65.5146 47.1013 -148.278 
-G = -0.000475963 -0.000208738 -0.000120009 -2.81651e-05 
-Iteration    56
-LINE SEARCH 1 times; norm of step = 0.0119248
-X = 24.4455 -65.5079 47.0998 -148.269 
-G = 3.89509e-05 1.42051e-05 1.4612e-05 2.39456e-06 
-Iteration    57
-LINE SEARCH 0 times; norm of step = 0.00953096
-X = 24.4443 -65.5045 47.0969 -148.261 
-G = 1.9769e-05 8.52631e-06 1.02116e-05 2.1176e-06 
-Iteration    58
-LINE SEARCH 1 times; norm of step = 0.00181027
-X = 24.4445 -65.5045 47.0957 -148.259 
-G = 8.86178e-05 3.87445e-05 1.97781e-05 2.59212e-06 
-Iteration    59
-LINE SEARCH 0 times; norm of step = 0.00632794
-X = 24.444 -65.5028 47.0934 -148.254 
-G = 5.24755e-06 1.89691e-06 -3.70058e-06 -1.88164e-06 
-Iteration    60
-LINE SEARCH 3 times; norm of step = 0.0237003
-X = 24.4403 -65.4933 47.0876 -148.233 
-G = -0.0001943 -8.49507e-05 -3.57576e-05 -6.0581e-06 
-Iteration    61
-LINE SEARCH 0 times; norm of step = 0.0438142
-X = 24.4345 -65.4771 47.0751 -148.195 
-G = -0.000258492 -0.000113419 -4.19218e-05 -5.40747e-06 
-Iteration    62
-LINE SEARCH 0 times; norm of step = 0.0757915
-X = 24.4252 -65.4501 47.0518 -148.129 
-G = -0.000186529 -7.9581e-05 -2.42049e-05 -1.52302e-06 
-Iteration    63
-LINE SEARCH 1 times; norm of step = 0.0113523
-X = 24.4269 -65.4546 47.0548 -148.139 
-G = -2.54577e-05 -1.21606e-05 8.6776e-06 4.447e-06 
-Iteration    64
-LINE SEARCH 0 times; norm of step = 0.00887283
-X = 24.4266 -65.4525 47.051 -148.131 
-G = 3.79754e-05 1.60133e-05 1.57771e-05 3.88199e-06 
-Iteration    65
-LINE SEARCH 1 times; norm of step = 0.0174397
-X = 24.4252 -65.4474 47.0444 -148.116 
-G = 9.11792e-05 3.89272e-05 1.87425e-05 2.61873e-06 
-Iteration    66
-LINE SEARCH 1 times; norm of step = 0.0157326
-X = 24.4237 -65.4423 47.0389 -148.102 
-G = 0.000155285 6.83612e-05 3.01157e-05 3.53399e-06 
-Iteration    67
-LINE SEARCH 3 times; norm of step = 0.00027714
-X = 24.4237 -65.4422 47.0388 -148.102 
-G = 0.000156272 6.79837e-05 2.77577e-05 2.96488e-06 
-
-iterations 68
-function evaluations 109
-segments explored during Cauchy searches 1
-BFGS updates skipped 0
-active bounds at final generalized Cauchy point 0
-norm of the final projected gradient 0.000156272
-final function value -0.193173
-
-X = 24.4237 -65.4422 47.0388 -148.102 
-F = -0.193173
-final  value -0.193173 
-converged
-[[1]]
-[1] 4
-
-[[2]]
-[1]  15.63969 -39.91929  21.26583 -68.48065
-
-[[3]]
-[1]  15.63969 -39.91929  21.26583 -68.48065
-
-[[4]]
-[1] 0.1931734
-
-[1] &quot;Strain 1 is fitter than strain 2.&quot;
-[1]   24.42369  -65.44220   47.03883 -148.10157
-[1]   24.42369  -65.44220   47.03883 -148.10157
-[1] &quot;starting iteration 4&quot;
-N = 4, M = 5 machine precision = 2.22045e-16
-L = -inf -inf -inf -inf 
-X0 = 24.4237 -65.4422 47.0388 -148.102 
-U = inf inf inf inf 
-This problem is unconstrained.
-At X0, 0 variables are exactly at the bounds
-At iterate     0  f=           -0  |proj g|=      0.14064
-Iteration     0
-
----------------- CAUCHY entered-------------------
-
-There are 0  breakpoints
-
-GCP found in this segment
-Piece      1 f1, f2 at start point -2.5179e-02  2.5179e-02
-Distance to the stationary point =   1.0000e+00
-Cauchy X =  24.283 -65.501 46.9962 -148.112 
-
----------------- exit CAUCHY----------------------
-
-4  variables are free at GCP on iteration 1
-LINE SEARCH 1 times; norm of step = 0.0307258
-X = 24.3965 -65.4536 47.0306 -148.104 
-G = 0.0145984 0.00399166 0.013618 0.00539621 
-Iteration     1
-LINE SEARCH 0 times; norm of step = 0.00491149
-X = 24.3931 -65.4545 47.0273 -148.105 
-G = -0.00197387 -0.00321814 0.00980239 0.00467747 
-Iteration     2
-LINE SEARCH 0 times; norm of step = 0.00483208
-X = 24.3922 -65.4539 47.023 -148.107 
-G = -0.00836444 -0.00599653 0.00830539 0.00439375 
-Iteration     3
-LINE SEARCH 0 times; norm of step = 0.0323401
-X = 24.3908 -65.448 46.9942 -148.12 
-G = -0.0305822 -0.015645 0.00296443 0.00334073 
-Iteration     4
-LINE SEARCH 0 times; norm of step = 0.0731742
-X = 24.3928 -65.4321 46.9295 -148.15 
-G = -0.0561715 -0.0267277 -0.00348807 0.00201511 
-Iteration     5
-LINE SEARCH 0 times; norm of step = 0.198456
-X = 24.4061 -65.3854 46.7553 -148.232 
-G = -0.090412 -0.0414978 -0.0129269 -7.64966e-05 
-Iteration     6
-LINE SEARCH 0 times; norm of step = 0.378785
-X = 24.4409 -65.292 46.4248 -148.388 
-G = -0.1111 -0.0502454 -0.0206495 -0.00212509 
-Iteration     7
-LINE SEARCH 0 times; norm of step = 0.512847
-X = 24.5022 -65.1576 45.9814 -148.599 
-G = -0.0760506 -0.0346159 -0.0164798 -0.00214825 
-Iteration     8
-LINE SEARCH 0 times; norm of step = 0.229042
-X = 24.5399 -65.0909 45.7872 -148.694 
-G = -0.0155561 -0.0080565 -0.0041805 -0.000199749 
-Iteration     9
-LINE SEARCH 0 times; norm of step = 0.00964433
-X = 24.5441 -65.0863 45.7809 -148.697 
-G = -0.000446484 -0.00145544 -0.000754386 0.000424799 
-Iteration    10
-LINE SEARCH 0 times; norm of step = 0.0066569
-X = 24.5436 -65.0875 45.7869 -148.695 
-G = 0.000820094 -0.00090748 -0.000417438 0.000496936 
-Iteration    11
-LINE SEARCH 0 times; norm of step = 0.00467236
-X = 24.5429 -65.0878 45.7913 -148.693 
-G = 0.00161217 -0.000565927 -0.000203315 0.000543323 
-Iteration    12
-LINE SEARCH 0 times; norm of step = 0.0141692
-X = 24.5396 -65.0859 45.8046 -148.69 
-G = 0.00409378 0.000509814 0.000459552 0.000685077 
-Iteration    13
-LINE SEARCH 0 times; norm of step = 0.0241625
-X = 24.532 -65.0778 45.826 -148.689 
-G = 0.00723815 0.00187128 0.00131995 0.000872167 
-Iteration    14
-LINE SEARCH 0 times; norm of step = 0.0565383
-X = 24.5111 -65.0491 45.8698 -148.693 
-G = 0.0120815 0.00396983 0.00268921 0.00117519 
-Iteration    15
-LINE SEARCH 0 times; norm of step = 0.129002
-X = 24.4596 -64.9671 45.9512 -148.719 
-G = 0.0186586 0.00682691 0.0046182 0.00160818 
-Iteration    16
-LINE SEARCH 0 times; norm of step = 0.311365
-X = 24.3328 -64.7495 46.1139 -148.803 
-G = 0.0254926 0.00981366 0.00691743 0.00215478 
-Iteration    17
-LINE SEARCH 0 times; norm of step = 0.649434
-X = 24.0723 -64.2611 46.3721 -149.023 
-G = 0.0338016 0.013531 0.00971014 0.00278351 
-Iteration    18
-LINE SEARCH 0 times; norm of step = 1.2209
-X = 23.5776 -63.3339 46.8164 -149.458 
-G = 0.00866429 0.00280378 0.00543946 0.00214897 
-Iteration    19
-LINE SEARCH 0 times; norm of step = 1.58369
-X = 22.992 -62.066 47.1312 -150.135 
-G = 0.0446025 0.0189797 0.0134494 0.00339589 
-Iteration    20
-LINE SEARCH 0 times; norm of step = 0.715942
-X = 22.7544 -61.493 47.1103 -150.492 
-G = 0.0190096 0.00813117 0.00629386 0.00172644 
-Iteration    21
-LINE SEARCH 0 times; norm of step = 0.404038
-X = 22.6824 -61.2213 46.9236 -150.714 
-G = 0.00204388 0.000947199 0.000453739 0.000228972 
-Iteration    22
-LINE SEARCH 0 times; norm of step = 0.0623159
-X = 22.6591 -61.1715 46.9327 -150.742 
-G = -0.000103366 3.08211e-05 -5.72647e-05 0.000122087 
-Iteration    23
-LINE SEARCH 0 times; norm of step = 0.00147034
-X = 22.6587 -61.1704 46.9325 -150.743 
-G = -5.70511e-05 5.16603e-05 -5.19123e-05 0.000122407 
-Iteration    24
-LINE SEARCH 0 times; norm of step = 0.00944133
-X = 22.6556 -61.1631 46.9334 -150.748 
-G = 0.000105637 0.000125994 -2.37008e-05 0.00012431 
-Iteration    25
-LINE SEARCH 0 times; norm of step = 0.00822021
-X = 22.655 -61.1599 46.9309 -150.755 
-G = 6.64044e-05 0.000113769 -6.92702e-05 0.000108199 
-Iteration    26
-LINE SEARCH 0 times; norm of step = 0.0183113
-X = 22.6596 -61.1675 46.9289 -150.771 
-G = 0.000496517 0.00030277 -2.43853e-05 0.000106423 
-Iteration    27
-LINE SEARCH 0 times; norm of step = 0.112469
-X = 22.6805 -61.2091 46.9372 -150.873 
-G = 0.00199483 0.000965516 0.000121201 9.59413e-05 
-Iteration    28
-LINE SEARCH 0 times; norm of step = 0.264314
-X = 22.7235 -61.3071 46.9733 -151.112 
-G = -0.00290059 -0.00115649 -0.00131589 -0.000231266 
-Iteration    29
-LINE SEARCH 0 times; norm of step = 0.405952
-X = 22.8143 -61.5206 47.0507 -151.436 
-G = 0.00291503 0.00136442 -0.00023038 -6.65701e-05 
-Iteration    30
-LINE SEARCH 0 times; norm of step = 0.983765
-X = 23.0377 -62.0721 47.27 -152.188 
-G = 0.00723989 0.00318482 0.000518083 5.34476e-05 
-Iteration    31
-LINE SEARCH 0 times; norm of step = 2.38606
-X = 23.5799 -63.4451 47.8498 -153.97 
-G = 0.00915123 0.00382461 0.000862403 0.000170777 
-Iteration    32
-LINE SEARCH 0 times; norm of step = 2.05436
-X = 23.973 -64.4797 48.4188 -155.605 
-G = 0.0183763 0.00773326 0.00305906 0.000630698 
-Iteration    33
-LINE SEARCH 0 times; norm of step = 3.21166
-X = 24.5415 -66.0141 49.3381 -158.211 
-G = 0.015424 0.00628871 0.00258981 0.000633271 
-Iteration    34
-LINE SEARCH 0 times; norm of step = 5.75717
-X = 25.3619 -68.4353 51.2816 -162.989 
-G = 0.0377708 0.0157558 0.00961293 0.00235266 
-Iteration    35
-LINE SEARCH 0 times; norm of step = 2.12826
-X = 25.6662 -69.3196 51.9075 -164.796 
-G = -0.0117675 -0.00590991 -0.00170744 0.00027838 
-Iteration    36
-LINE SEARCH 0 times; norm of step = 1.17402
-X = 25.3659 -68.5677 51.6412 -163.989 
-G = -0.00858769 -0.00439439 -0.00105628 0.000338155 
-Iteration    37
-LINE SEARCH 0 times; norm of step = 2.36817
-X = 25.1029 -68.1267 52.3632 -166.185 
-G = -0.00169027 -0.000958547 -0.000426946 0.00011934 
-Iteration    38
-LINE SEARCH 1 times; norm of step = 5.31025
-X = 25.1535 -68.8284 54.3833 -171.045 
-G = 0.000632833 0.00030377 0.00168506 0.000668208 
-Iteration    39
-LINE SEARCH 1 times; norm of step = 14.5668
-X = 26.3468 -72.5888 58.7812 -184.36 
-G = -0.00599102 -0.00210827 -0.00238739 -0.000734414 
-Iteration    40
-LINE SEARCH 0 times; norm of step = 36.3362
-X = 31.1901 -86.4632 69.9191 -215.67 
-G = 0.0441227 0.0192641 0.0102482 0.00191723 
-Iteration    41
-LINE SEARCH 1 times; norm of step = 4.69064
-X = 31.8034 -88.263 71.3656 -219.706 
-G = 0.00460183 0.00192212 0.00153524 0.000393172 
-Iteration    42
-LINE SEARCH 0 times; norm of step = 2.52994
-X = 31.4353 -87.2059 70.5601 -217.585 
-G = -5.79379e-06 -8.58722e-06 2.36417e-05 9.86635e-06 
-Iteration    43
-LINE SEARCH 0 times; norm of step = 0.601452
-X = 31.3588 -86.9832 70.3732 -217.065 
-G = -2.40702e-05 -5.32003e-06 -8.2351e-06 -3.80203e-06 
-Iteration    44
-LINE SEARCH 17 times; norm of step = 1.5835e-14
-X = 31.3588 -86.9832 70.3732 -217.065 
-G = -2.40702e-05 -5.32003e-06 -1.27458e-05 -3.80203e-06 
-
-iterations 45
-function evaluations 67
-segments explored during Cauchy searches 1
-BFGS updates skipped 0
-active bounds at final generalized Cauchy point 0
-norm of the final projected gradient 2.40702e-05
-final function value -0.0190888
-
-X = 31.3588 -86.9832 70.3732 -217.065 
-F = -0.0190888
-Warning:  more than 10 function and gradient evaluations
-   in the last line search
-final  value -0.019089 
-converged
-[[1]]
-[1] 5
-
-[[2]]
-[1]   24.42369  -65.44220   47.03883 -148.10157
-
-[[3]]
-[1]   24.42369  -65.44220   47.03883 -148.10157
-
-[[4]]
-[1] 0.01908875
-
-[1] &quot;Strain 1 is fitter than strain 2.&quot;
-[1]   31.35883  -86.98317   70.37316 -217.06454
-[1]   31.35883  -86.98317   70.37316 -217.06454
-[1] &quot;starting iteration 5&quot;
-N = 4, M = 5 machine precision = 2.22045e-16
-L = -inf -inf -inf -inf 
-X0 = 31.3588 -86.9832 70.3732 -217.065 
-U = inf inf inf inf 
-This problem is unconstrained.
-At X0, 0 variables are exactly at the bounds
-At iterate     0  f=   4.4409e-16  |proj g|=     0.096593
-Iteration     0
-
----------------- CAUCHY entered-------------------
-
-There are 0  breakpoints
-
-GCP found in this segment
-Piece      1 f1, f2 at start point -1.1595e-02  1.1595e-02
-Distance to the stationary point =   1.0000e+00
-Cauchy X =  31.2622 -87.0253 70.3514 -217.069 
-
----------------- exit CAUCHY----------------------
-
-4  variables are free at GCP on iteration 1
-LINE SEARCH 1 times; norm of step = 0.0241805
-X = 31.3371 -86.9926 70.3683 -217.065 
-G = 0.0107236 0.00457711 0.00231267 0.000453675 
-Iteration     1
-LINE SEARCH 0 times; norm of step = 0.00300307
-X = 31.3344 -86.9938 70.3677 -217.066 
-G = 6.17007e-05 -8.38522e-05 -9.23017e-05 2.04642e-05 
-Iteration     2
-LINE SEARCH 3 times; norm of step = 0.00302261
-X = 31.3331 -86.992 70.3697 -217.066 
-G = -0.000427972 -0.000299195 -0.000189648 3.83079e-06 
-Iteration     3
-LINE SEARCH 0 times; norm of step = 0.020387
-X = 31.3244 -86.9797 70.3831 -217.069 
-G = -0.00160312 -0.000812419 -0.000385685 -1.89392e-05 
-Iteration     4
-LINE SEARCH 0 times; norm of step = 0.0291832
-X = 31.3124 -86.9619 70.4024 -217.073 
-G = -0.00168793 -0.000850109 -0.00030563 1.1803e-05 
-Iteration     5
-LINE SEARCH 0 times; norm of step = 0.0409756
-X = 31.2959 -86.9299 70.4161 -217.087 
-G = -0.0018404 -0.000911695 -0.000299247 1.80513e-05 
-Iteration     6
-LINE SEARCH 0 times; norm of step = 0.322026
-X = 31.1701 -86.6722 70.4967 -217.21 
-G = -0.00172525 -0.00080393 -0.000134888 4.951e-05 
-Iteration     7
-LINE SEARCH 1 times; norm of step = 0.00125858
-X = 31.1708 -86.6731 70.4969 -217.209 
-G = -0.000376784 -0.000216703 0.00017217 0.000104107 
-Iteration     8
-LINE SEARCH 0 times; norm of step = 0.145264
-X = 31.1181 -86.5543 70.5126 -217.272 
-G = 0.000120989 3.56521e-05 0.000207807 8.53851e-05 
-Iteration     9
-LINE SEARCH 0 times; norm of step = 0.0759769
-X = 31.0949 -86.4933 70.5035 -217.31 
-G = -5.41641e-05 -2.01331e-05 1.41419e-05 1.47041e-05 
-Iteration    10
-LINE SEARCH 0 times; norm of step = 0.00481771
-X = 31.0966 -86.4949 70.4994 -217.311 
-G = -1.09099e-05 2.35652e-07 -1.50593e-06 7.91762e-06 
-Iteration    11
-LINE SEARCH 0 times; norm of step = 0.00463872
-X = 31.0985 -86.4987 70.498 -217.31 
-G = -1.44381e-06 4.43967e-06 -7.27954e-06 5.85537e-06 
-Iteration    12
-LINE SEARCH 0 times; norm of step = 0.00689391
-X = 31.1013 -86.5047 70.4971 -217.308 
-G = 7.41898e-06 6.9092e-06 -3.26514e-06 8.1397e-06 
-Iteration    13
-LINE SEARCH 1 times; norm of step = 9.07526e-05
-X = 31.1013 -86.5048 70.497 -217.308 
-G = -1.96438e-05 -5.03588e-06 -9.56711e-06 6.62474e-06 
-
-iterations 14
-function evaluations 21
-segments explored during Cauchy searches 1
-BFGS updates skipped 0
-active bounds at final generalized Cauchy point 0
-norm of the final projected gradient 1.96438e-05
-final function value -0.00150004
-
-X = 31.1013 -86.5048 70.497 -217.308 
-F = -0.00150004
-final  value -0.001500 
-converged
-[[1]]
-[1] 6
-
-[[2]]
-[1]   31.35883  -86.98317   70.37316 -217.06454
-
-[[3]]
-[1]   31.35883  -86.98317   70.37316 -217.06454
-
-[[4]]
-[1] 0.00150004
-
-[1] &quot;Strain 1 difference is minute.&quot;</code></pre>
-<!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
