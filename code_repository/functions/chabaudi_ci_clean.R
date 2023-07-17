@@ -232,8 +232,12 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     }
     
     # only no immunity or saturating immunity uses lambda
-    if(immunity != "tsukushi"){lambda <- parameters["lambda"]} # maximum RBC replenishment rate
+    if(immunity != "tsukushi"){lambda <- parameters["lambda"]
+    # define K (not used for Tsukushi's immunity model)
+    K <- lambda*R1/(lambda-mu*R1)} # maximum RBC replenishment rate
 
+    
+    
     #----------------------#
     # Rename states for cleaner code
     #----------------------#

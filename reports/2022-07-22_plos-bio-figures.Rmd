@@ -257,6 +257,169 @@ si_ci_fitness.pl <- ggplot() +
 #=========================================================#
 #---------get "ideal" single infection and co-infection dynamics---------#
 This is when stuff are optimized based on time
+
+### Sanity checks to see if we have successfully optimized time-based co-infection strategy. it seems that for no immunity model, starting from single infection helps. However, for our models that include immunity, the different starting points make little differences
+```{r}
+# sanity checks. Should recaptitulate Greischar et al's co-infection model without immunity
+## Greischar et al 2016 (ni, single infection as starting value): 11.80 -23.58 -3.97 -16.15
+## ni, tskushi parameter value, starting parameter 0.5x4: 11.95826 -28.01326  12.97268 -49.61479 
+## ni, greischar parameter value, starting parameter 0.5x4: 9.404444 -25.422225  22.104180 -70.732451
+## ni, greischar parameter value, starting parameter value 4.55386, -13.0056, 4.15466, -11.9424 (best single infection):8.226041 -18.188289   3.769436 -17.745308
+## tsukushi, tsukushi parameter value, starting parameter 4.55386, -13.0056, 4.15466, -11.9424 (best single infection):31.35883  -86.98317   70.37316 -217.06454
+## tsukushi immunity, tsukushi parameter value, startint parameter: 8.226041, -18.188289,   3.769436 ,-17.745308 (greischar et al with lag): 30.02169  -83.75933   68.36241 -208.66380 (no difference!)
+
+parameters_ni <- c(R1 = 8.5*10^6, # down from 8.89*10^6
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 4*10^-6, # down from 8*10^-6
+                alpha = 1, 
+                alphag = 2, 
+                beta = 10, # up from 5.721
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1)
+
+ci_opt_t.sc <- co_infection_opt_alt(parameters_cr = c(4.55386, -13.0056, 4.15466, -11.9424),
+                             limit = limit,
+                             model = chabaudi_ci_clean,
+                             immunity = "tsukushi",
+                             parameters = parameters_tsukushi,
+                             time_range = time_range,
+                             cue_1 = "t",
+                             cue_2 = "t",
+                             cue_range_1 = time_range,
+                             cue_range_2 = time_range,
+                             solver = "vode",
+                             log_cue_1 = "none",
+                             log_cue_2 = "none")
+
+
+## simulate and get conversion rate dynamics
+### default time as parameter (tsukushi immunity after co-infection opt)
+ci_t.df <- chabaudi_ci_clean(parameters_cr_1 = c(26.16425,	-71.07799,	53.34121,	-166.25693),
+                            parameters_cr_2 = c(26.16425,	-71.07799,	53.34121,	-166.25693),
+                            immunity = "tsukushi",
+                            parameters = parameters_tsukushi,
+                            time_range = time_range, 
+                            cue_1 =  "t",
+                            cue_2= "t",
+                            cue_range_1 = time_range, # cue range of strain 1
+                            cue_range_2 = time_range, # cue range of strain 2
+                            log_cue_1 = "none", # whether to log transform cue 1
+                            log_cue_2 = "none", # whether to log transform cue 2
+                            solver = "vode", # solver for numerical integration. Vode often gives faster runs
+                              dyn = T)
+
+ci_t.df2 <- chabaudi_ci_clean(parameters_cr_1 = c(31.35883,  -86.98317 ,  70.37316, -217.06454),
+                            parameters_cr_2 = c(31.35883,  -86.98317 ,  70.37316, -217.06454),
+                            immunity = "tsukushi",
+                            parameters = parameters_tsukushi,
+                            time_range = time_range, 
+                            cue_1 =  "t",
+                            cue_2= "t",
+                            cue_range_1 = time_range, # cue range of strain 1
+                            cue_range_2 = time_range, # cue range of strain 2
+                            log_cue_1 = "none", # whether to log transform cue 1
+                            log_cue_2 = "none", # whether to log transform cue 2
+                            solver = "vode", # solver for numerical integration. Vode often gives faster runs
+                              dyn = T)
+
+ci_t_sc.df <- chabaudi_ci_clean(parameters_cr_1 = c(11.95826, -28.01326 , 12.97268, -49.61479),
+                            parameters_cr_2 = c(11.95826, -28.01326 , 12.97268, -49.61479),
+                            immunity = "ni",
+                            parameters = parameters_tsukushi,
+                            time_range = time_range, 
+                            cue_1 =  "t",
+                            cue_2= "t",
+                            cue_range_1 = time_range, # cue range of strain 1
+                            cue_range_2 = time_range, # cue range of strain 2
+                            log_cue_1 = "none", # whether to log transform cue 1
+                            log_cue_2 = "none", # whether to log transform cue 2
+                            solver = "vode", # solver for numerical integration. Vode often gives faster runs
+                              dyn = T)
+
+ci_t_sc.df2 <- chabaudi_ci_clean(parameters_cr_1 = c(9.404444, -25.422225 , 22.104180 ,-70.732451),
+                            parameters_cr_2 = c(9.404444, -25.422225 , 22.104180 ,-70.732451),
+                            immunity = "ni",
+                            parameters = parameters_ni,
+                            time_range = time_range, 
+                            cue_1 =  "t",
+                            cue_2= "t",
+                            cue_range_1 = time_range, # cue range of strain 1
+                            cue_range_2 = time_range, # cue range of strain 2
+                            log_cue_1 = "none", # whether to log transform cue 1
+                            log_cue_2 = "none", # whether to log transform cue 2
+                            solver = "vode", # solver for numerical integration. Vode often gives faster runs
+                              dyn = T)
+
+ci_t_sc.df3 <- chabaudi_ci_clean(parameters_cr_1 = c(8.226041, -18.188289,   3.769436, -17.745308),
+                            parameters_cr_2 = c(8.226041, -18.188289,   3.769436, -17.745308),
+                            immunity = "ni",
+                            parameters = parameters_ni,
+                            time_range = time_range, 
+                            cue_1 =  "t",
+                            cue_2= "t",
+                            cue_range_1 = time_range, # cue range of strain 1
+                            cue_range_2 = time_range, # cue range of strain 2
+                            log_cue_1 = "none", # whether to log transform cue 1
+                            log_cue_2 = "none", # whether to log transform cue 2
+                            solver = "vode", # solver for numerical integration. Vode often gives faster runs
+                              dyn = T)
+
+## best parameter values differ based on initial starting values. Here, we are going to compare the performance of the values derived from 0.5x4 vs single infection best paramters. -0.07071394. Here, it seems that using the initial si strategy as starting value is better
+chabaudi_ci_clean(
+  parameters_cr_1 = c(9.404444, -25.422225 , 22.104180 ,-70.732451),
+  parameters_cr_2 = c(8.226041, -18.188289,   3.769436, -17.745308),
+  immunity = "ni",
+  parameters = parameters_ni,
+  time_range = time_range, 
+                            cue_1 =  "t",
+                            cue_2= "t",
+                            cue_range_1 = time_range, # cue range of strain 1
+                            cue_range_2 = time_range, # cue range of strain 2
+                            log_cue_1 = "none", # whether to log transform cue 1
+                            log_cue_2 = "none", # whether to log transform cue 2
+                            solver = "vode", # solver for numerical integration. Vode often gives faster runs
+                              dyn = F)
+
+### for tsukushi immunity model, compare fitness of optimized from si vs optimized from 0.5x4. 0.0074109. Not huge difference
+chabaudi_ci_clean(
+  parameters_cr_1 = c(31.35883,  -86.98317,   70.37316, -217.06454),
+  parameters_cr_2 = c(26.16425,	-71.07799,	53.34121,	-166.25693),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = time_range, 
+                            cue_1 =  "t",
+                            cue_2= "t",
+                            cue_range_1 = time_range, # cue range of strain 1
+                            cue_range_2 = time_range, # cue range of strain 2
+                            log_cue_1 = "none", # whether to log transform cue 1
+                            log_cue_2 = "none", # whether to log transform cue 2
+                            solver = "vode", # solver for numerical integration. Vode often gives faster runs
+                              dyn = F)
+
+## plot
+ggplot() +
+  geom_line(data = ci_t_sc.df %>% filter(variable == "cr_1"),
+            aes(x = time, y = value, color = "no immunity, tsukushi, 0.5x4")) +
+  geom_line(data = ci_t_sc.df2 %>% filter(variable == "cr_1"),
+            aes(x = time, y = value, color = "no immunity, greischar, 0.5x4")) +
+  geom_line(data = ci_t_sc.df3 %>% filter(variable == "cr_1"),
+            aes(x = time, y = value, color = "no immunity, greischar, si")) +
+  geom_line(data = ci_t.df %>% filter(variable == "cr_1"),
+            aes(x = time, y = value, color = "immunity, tsukushi, 0.5x4")) +
+  geom_line(data = ci_t.df2 %>% filter(variable == "cr_1"),
+            aes(x = time, y = value, color = "immunity, tsukushi, si")) +
+  labs(y = "Conversion rate") +
+  theme_classic()
+
+ggsave(here("figures/plos-bio/ci_sc.png"), height = 4)
+```
+
 ```{r}
 source(here("functions/chabaudi_si_clean.R"))
 source(here("functions/chabaudi_ci_clean.R"))
@@ -2756,5 +2919,120 @@ ggarrange(mc_dyn_a, mc_dyn_b, ncol = 1, align = "v", labels = c("A", "B"))
 ggsave(here("figures/plos-bio/MC_dyn.tiff"), units = "px", width = 2000, height = 2600, scale = 1, dpi=300, bg = "white")
 ```
 
+#=============================#
+# spline flexibility and solution
+#=============================#
+# nested function to generate different iterations of each parameter values
+```{r}
+spline_par <- function(
+  par_seq, # range of parameters we want to test
+  cue_range,
+  mode = "place") # cue_range optimized over
+  { 
+  
+  get_spline <- function(par, cue_range){
+  # create dummy model
+  dummy_y.vals <- rep(0, length(cue_range)) 
+  dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
+    
+  # fit basic cubic spline with no internal knots. 
+  dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3))
+  dummy_cr.mod$data <- dummy_cr.data
+    
+  # assign coefficient to be optimized to the dummy conversion rate function
+  dummy_cr.mod$coefficients <- par
+    
+  # trying heaviside transformation
+  cr_pred <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
+  if(mode == "exp"){cr_trans <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))}
+    
+  # fit spline function to predicted conversion rate. This increases processing speed
+  cr_fun <- splinefun(cbind(cue_range, cr_trans))
+  return(cr_fun)
+  }
+  
+  # get dataframe of all permutation of parameter values and their position
+  par.df <- expand.grid(n = c(1,2,3,4), par = par_seq)
+  ## paste0 to get id
+  par.df$id <- paste0(par.df$n, "_", par.df$par)
+  
+  # substitute each value within the 4 parameters with par_seq (generate all iterations)
+  changed_par <- mapply(function(x, y){
+    ## define original parameter
+    par_trans <- rep(-0.3665129,4) # number needed to start cr = 0.5 at cue range = 0
+    ## change according to df
+    par_trans[[x]] <- y
+    return(par_trans)
+  }, x = par.df$n, y = par.df$par)
+  
+  # convert matrix (each column) into a list of parameters
+  par.ls <- lapply(seq_len(ncol(changed_par)), function(i) changed_par[,i])
 
+  
+  #get a list of splines form the transformed parameter lists
+  spline.ls <- lapply(par.ls, function(x){
+    get_spline(par = x, cue_range = cue_range)
+  })
+  
+  # convert spline to dataframe
+  spline_int.ls <- mapply(function(x, y){
+    data.frame(cue = cue_range, cr = x(cue_range), group = y)},
+    x = spline.ls, y = par.df$id)
+  
+  # convert to df.ls
+  df.ls <- lapply(seq_len(ncol(spline_int.ls)), function(i){
+    df <- spline_int.ls[,i]
+    df_cat <- data.frame(cbind(
+      cue = as.numeric(df$cue), 
+      cr = as.numeric(df$cr), 
+      group = df$group))
+  return(df_cat)
+} )
+  
+  res <- do.call(rbind, df.ls)
+  
+  return(res)
+  
+}
+
+```
+
+# getting solution space with double exponential basis spline and plotting
+```{r}
+exp_spline <- spline_par(par_seq = c(seq(-1,1,0.1), seq(-10,10,1), seq(-100,100,10),seq(-10000,10000,100)), cue_range = seq(0, 100, by = 1),
+                         mode = "exp")
+
+# process data. add coefficient name and get parameter values
+exp_spline2 <- exp_spline %>% 
+  mutate(n = paste("Coefficient", gsub("_.*", "", group)),
+         par = gsub("*._", "", group)) %>% 
+  distinct(n, par, cue, .keep_all = T)
+
+exp_spline2$par <- as.numeric(exp_spline2$par)
+exp_spline2$cue <- as.numeric(exp_spline2$cue)
+exp_spline2$cr <- as.numeric(exp_spline2$cr)
+
+# get reference point at which difference is calculated. Here, for a given parameter alteration and cue value, we set the cr when parameter=0 as an arbitrary starting point.
+exp_spline.ref <- exp_spline2 %>% 
+  filter(par == 0.5) %>% 
+  distinct(n, par, cue, cr) %>% 
+  select(n, cue, cr_ref = cr)
+
+exp_spline2 %>% 
+  left_join(exp_spline.ref, by = c("n", "cue")) %>% 
+  mutate(cr_diff = sqrt((cr-cr_ref)^2)) %>% 
+  group_by(n, par) %>% 
+  mutate(cr_diff_avg = sum(cr_diff)/100) %>% 
+  distinct(n, par, .keep_all = T) %>% 
+  group_by(n) %>% 
+  arrange(par, .by_group = T) %>% 
+  mutate(change_cr = cr_diff_avg - lag(cr_diff_avg)) %>% # calculate the rate of change in sd. if sd does not change, means increasing spline coefficient space does not change line
+  filter(abs(change_cr)> 0.005) %>% 
+  ggplot(aes(x = par, y = cr_diff_avg)) +
+  geom_line() +
+  facet_wrap(~n, scales = "free") +
+  labs(x = "Coefficient value", y = "Average conversion rate difference") +
+  theme_bw()
+ggsave(here("figures/plos-bio/spline_space.tiff"), units = "px", width = 1500, height = 1000, dpi=300, bg = "white")
+```
 

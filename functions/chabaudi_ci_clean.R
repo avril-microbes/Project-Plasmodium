@@ -3,7 +3,7 @@
 #-------------------#
 # Used for infection simulation of co-infection model and for optimization of best conversion rate strategy
 # Avril Wang
-# last edited 2022-05-27
+# last edited 2023-06-17
 ## added heaviside transfromation to constrain cue range
 ## Note, added "sum" as possibility for cue. This would give us I1+I2+Ig1+Ig2
 
@@ -217,7 +217,7 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     
     # additional parameters if saturating immunity is used
     if(immunity == "i") {
-      a <- parameters["a"] # maximum iRBC removal rate /day for saturating immunity (not used if i or tsukushi chosen for immunity)
+      a <- parameters["a"] # maximum iRBC removal rate /day for saturating immunity (not used if ni or tsukushi chosen for immunity)
       b <- parameters["b"] # total iRBC density needed to activate half of maximum iRBC removal 
     }
 
@@ -232,7 +232,10 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
     }
     
     # only no immunity or saturating immunity uses lambda
-    if(immunity != "tsukushi"){lambda <- parameters["lambda"]} # maximum RBC replenishment rate
+    if(immunity != "tsukushi"){
+      lambda <- parameters["lambda"]
+    # define K (not used for Tsukushi's immunity model)
+    K <- lambda*R1/(lambda-mu*R1)} # maximum RBC replenishment rate
 
     #----------------------#
     # Rename states for cleaner code
@@ -256,6 +259,8 @@ chabaudi_ci_clean <- function(parameters_cr_1, # parameters for strain 1 convers
       N <- state["N"] # extent of indiscriminant RBC removal
       W <- state["W"] # extent of targetted iRBC removal
     }
+    
+    
     
     #---------------------#
     # Define initial iRBC population structure
