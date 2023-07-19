@@ -299,6 +299,7 @@ chabaudi_si_clean <- function(
     }
     
     ### For simple cues (if it does not contain special characters)
+    #### cue 1
     if(stringr::str_detect(cue, "\\+|\\-|\\*|\\/", negate = TRUE)){
       #### if cue is time-based
       if(t>alpha+delay && cue == "t"){ ##### lag 1 day ago
@@ -311,23 +312,37 @@ chabaudi_si_clean <- function(
       #### if cue is state-based
       if(t>alpha+delay && cue != "t"){ ##### lag 1 day ago
         cue_lag1 <- lag1[lag.i]
-        ##### get second cue if second cue is given
-        if(cue_b != "none"){cue_lag1_b <- lag1[lag.i_b]}
-      }
-      
-      if(t>alphag+delay && cue != "t") { ##### lag 2 days ago
-        cue_lag2 <- lag2[lag.i]
-        if(cue_b != "none"){cue_lag2_b <- lag2[lag.i_b]}
-      } ### for complex cues that involve additions
-    } else{
-      if(stringr::str_detect(cue, "\\+")){ 
-        #### for cue 1 day ago
-        if(t>alpha+delay && cue != "t"){
-          cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]] #### add first cue to second cue
-          if(cue_b != "none"){cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]}
-        }
       }
     }
+    #### cue 2
+    if(stringr::str_detect(cue_b, "\\+|\\-|\\*|\\/", negate = TRUE) && cue_b != "none"){
+      #### if cue is time-based
+      if(t>alpha+delay && cue_b == "t"){ ##### lag 1 day ago
+        cue_lag1_b <- t-alpha} 
+      
+      if(t>alphag+delay && cue_b == "t") { ##### lag 2 days ago
+        cue_lag2 <- t-alphag
+      } 
+      
+      #### if cue is state-based
+      if(t>alpha+delay && cue_b != "t"){ ##### lag 1 day ago
+        cue_lag1_b <- lag1[lag.i_b]
+      }
+    }
+    
+    
+    ### for complex cues that involve additions
+    if(stringr::str_detect(cue, "\\+|\\-|\\*|\\/")){
+      if(t>alpha+delay && cue != "t"){
+        cue_lag1 <- lag1[lag.i[1]]+lag1[lag.i[2]]
+      }
+    }
+      
+      if(stringr::str_detect(cue_b, "\\+|\\-|\\*|\\/") && cue_b != "none"){
+        if(t>alpha+delay && cue_b != "t"){
+          cue_lag1_b <- lag1[lag.i_b[1]]+lag1[lag.i_b[2]]
+        }
+      }
     
     #------------------#
     # Process cue values

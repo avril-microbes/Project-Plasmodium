@@ -578,8 +578,11 @@ chabaudi_si_clean(
     log_cue_b = "log10",
     solver = "vode",
     gam = "te")
+```
 
 
+
+```{r}
 # check dynamics. very weird. negative gametocyte and all. 
 # change solver to lsode.didn't help. 
 # decreased time step to 0.001. didn't help

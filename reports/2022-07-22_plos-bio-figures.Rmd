@@ -252,6 +252,7 @@ si_ci_fitness.pl <- ggplot() +
   lims(x = c(8, 10.3)) +
   theme_bw()
 ```
+
 #=========================================================#
 # time series conversion rate for single and co-infection
 #=========================================================#
@@ -420,11 +421,12 @@ ggplot() +
 ggsave(here("figures/plos-bio/ci_sc.png"), height = 4)
 ```
 
+# get time-based optimization for both co-infection and single-infection.
 ```{r}
 source(here("functions/chabaudi_si_clean.R"))
 source(here("functions/chabaudi_ci_clean.R"))
 
-# single infection dynamic with time as cue. Optimized using local optimizer. Note that the time variable in dual cue is slightly different with higher flexibility. While that increases the fitness value by ~0.1, the overall conversion rate dynamic does not change that much
+# single infection dynamic with time as cue. Optimized using local optimizer. Note that the time variable in dual cue is slightly different with higher flexibility. While that increases the fitness value by ~0.1, the overall conversion rate dynamic does not change that much. 
 si_t.df <- chabaudi_si_clean(
   parameters_cr = c(4.55386, -13.0056, 4.15466, -11.9424),
   immunity = "tsukushi",
@@ -548,6 +550,174 @@ ggarrange(si_ci_fitness.pl, cr.pl, ncol = 1, labels = c("A", ""), align = "hv")
 # save
 ggsave(units = "px", dpi = 300, width = 2000, height = 2000, filename = here("figures/plos-bio/fitness_cr-dyn.tiff"), bg = "white", scale = 1.35)
 ```
+
+#===========================================================#
+# additional infection dynamics figure for Nicole
+#===========================================================#
+Here, we need to plot, for the top 3 performing single and co-infection cues, the dynamics of RBC, log10 total iRBC, log10 gametocytes, N, and W
+
+# process dataset
+filter out dynamics of top performing cues
+```{r}
+# get the ids of the top 3 performing cues (plus time). we are going to append time within them
+si_top4 <- si_fitness.df %>% 
+  select(id, value) %>% 
+  rbind(data.frame(id = "time", value = 9.787899)) %>% 
+  arrange(desc(value)) %>% 
+  slice_head(n=4) %>% select("id") %>% unlist()
+
+ci_top4 <- ci_fitness.df %>% 
+  select(label, value) %>% 
+  rbind(data.frame(label = "time", value = 2.311841)) %>% 
+  arrange(desc(value)) %>% 
+  slice_head(n=4) %>% select("label") %>% unlist()
+
+
+# filter dynamics data to only include those within the top list
+si_dyn.top <- si_dyn.df %>% rbind(cbind(si_t.df, id = "time")) %>% 
+  filter(id %in% si_top4 & variable %in% c("R", "I", "Ig", "G", "N", "W", "tau") & time < 20)
+
+ci_dyn.top <- ci_dyn.df %>% 
+  rbind(cbind(ci_t.df, label = "time")) %>% 
+  filter(label %in% ci_top4 & variable %in% c("R", "I1", "Ig1", "G1", "N", "W", "tau1") & time < 20)
+
+
+# calculate total IRBC (I+Ig), log transform the iRBC variables
+si_dyn.top_p <- si_dyn.top %>%
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, id)) %>% 
+  mutate(I_Ig = log10(I+Ig),
+         G = log10(G+1)) %>% 
+  select(-c(I, Ig)) %>% 
+  tidyr::pivot_longer(-c(time, id), names_to = "variable") %>% 
+  mutate(variable2 = case_when(
+    variable == "R" ~ "RBC",
+    variable == "I_Ig" ~ "Total iRBC",
+    variable == "N" ~ "Nondis immunity",
+    variable == "W" ~ "Targeted immunity",
+    variable == "G" ~ "Gametocyte",
+    variable == "tau" ~ "Fitness"
+  ))
+
+ci_dyn.top_p <-  ci_dyn.top %>%
+  select(time, variable, value, label) %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, label)) %>% 
+  mutate(I_Ig = log10(I1+Ig1+1),
+         G1 = log10(G1+1)) %>% 
+  select(-c(I1, Ig1)) %>% 
+  tidyr::pivot_longer(-c(time, label), names_to = "variable") %>% 
+  mutate(variable2 = case_when(
+    variable == "R" ~ "RBC",
+    variable == "I_Ig" ~ "Total iRBC",
+    variable == "N" ~ "Nondis immunity",
+    variable == "W" ~ "Targeted immunity",
+    variable == "G1" ~ "Gametocyte",
+    variable == "tau1" ~ "Fitness"
+  ))
+```
+
+# plot dynamics
+```{r}
+si_dyn_top.pl <- ggplot(data = si_dyn.top_p) +
+  geom_line(aes(x = time, y = value, color = id)) +
+  facet_wrap(~variable2, scales = "free", ncol = 3) +
+  labs(x = "Time", y  = "Value", color = "Cue") +
+  theme_classic2()
+
+ci_dyn_top.pl <- ggplot(data = ci_dyn.top_p) +
+  geom_line(aes(x = time, y = value, color = label)) +
+  facet_wrap(~variable2, scales = "free", ncol = 3) +
+  labs(x = "Time", y  = "Value", color = "Cue") +
+  theme_classic2()
+
+ggarrange(si_dyn_top.pl, ci_dyn_top.pl, labels = c("A", "B"), ncol = 1)
+ggsave(here("figures/plos-bio/top-sici_dyn.png"))
+
+# specifically look at fitness accumulation
+## single infection all range
+si_tauc.pl1 <- si_dyn.df %>% rbind(cbind(si_t.df, id = "time")) %>% 
+  filter(id %in% si_top4 & variable == "tau_cum" & time < 20) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = value, color = id)) +
+  labs(x = "Time (days)", y = "Fitness", color = "Cue") +
+  theme_classic()
+## single infection with limited range to show difference
+si_tauc.pl2 <- si_dyn.df %>% rbind(cbind(si_t.df, id = "time")) %>% 
+  filter(id %in% si_top4 & variable == "tau_cum" & time < 20) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = value, color = id)) +
+  xlim(16,20) +
+  ylim(7,10) +
+  labs(x = "Time (days)", y = "Fitness", color = "Cue") +
+  theme_classic()
+
+## co-infection with all arange
+ci_tauc.pl1 <- ci_dyn.df %>% rbind(cbind(ci_t.df, label = "time")) %>% 
+  filter(label %in% ci_top4 & variable == "tau_cum1" & time < 20) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = value, color = label)) +
+  labs(x = "Time (days)", y = "Fitness", color = "Cue") +
+  theme_classic()
+
+## co-infection limited range
+ci_tauc.pl2 <- ci_dyn.df %>% rbind(cbind(ci_t.df, label = "time")) %>% 
+  filter(label %in% ci_top4 & variable == "tau_cum1" & time < 20) %>% 
+  ggplot() +
+  geom_line(aes(x = time, y = value, color = label)) +
+  xlim(12,20) +
+  ylim(1.25,2.5) +
+  labs(x = "Time (days)", y = "Fitness", color = "Cue") +
+  theme_classic()
+
+## plot together
+ggarrange(si_tauc.pl1, si_tauc.pl2, ci_tauc.pl1, ci_tauc.pl2, labels = c("A", "", "B", ""))
+ggsave(here("figures/plos-bio/transmission-accumulation.png"), height = 4)
+```
+
+#===========================================================#
+plotting cumulative transmission potential of si and ci
+#===========================================================#
+# process datasets
+```{r}
+# join with time-bsaed optimization and filter only tau (transmission potential)
+si_tau.df <- si_dyn.df %>% 
+  rbind(cbind(si_t.df, id = "time")) %>% 
+  left_join(select(si_fitness.df, id, fitness = value) %>% rbind(data.frame(id = "time", fitness = 9.787899)), by  = "id") %>% 
+  filter(variable == "tau" & time < 20) %>% 
+  left_join(select(ez_label, ez_label_si, id_si), by = c("id" = "id_si"))
+
+# do the same to ci
+ci_tau.df <-ci_dyn.df %>% 
+  rbind(cbind(ci_t.df, label = "time")) %>% 
+  left_join(select(ci_fitness.df, label, fitness = value) %>% rbind(data.frame(label = "time", fitness = 2.311841)), by  = "label") %>% 
+  filter(variable == "tau1" & time < 20) %>% 
+  left_join(select(ez_label, ez_label, label_ci), by = c("label" = "label_ci"))
+
+# replace NA in ci with 0 (transmission potential)
+ci_tau.df[is.na(ci_tau.df$value), "value"] <- 0
+```
+
+# plot tau across time series and ordered based on decreasing fitness
+```{r}
+# single infection transmission potential
+si_tau.pl <- ggplot() +
+  geom_raster(data = si_tau.df, aes(x = time, y = fct_reorder(ez_label_si, fitness), fill = value)) +
+  scale_fill_viridis_c() +
+  labs(x = "Time (days)", y = "Cue", fill = "Fitness") +
+  theme_classic() +
+  theme(legend.position = "bottom")
+
+ci_tau.pl <- ggplot() +
+  geom_raster(data = ci_tau.df, aes(x = time, y = fct_reorder(ez_label, fitness), fill = value)) +
+  scale_fill_viridis_c(option = "magma") +
+  labs(x = "Time (days)", y = "Cue", fill = "Fitness") +
+  theme_classic()+
+  theme(legend.position = "bottom")
+
+ggarrange(si_tau.pl, ci_tau.pl, labels = c("A", "B"), ncol = 2)
+ggsave(here("figures/plos-bio/si_ci_tau.png"), width = 10, height = 5.5)
+```
+
+
 
 #===========================================================#
 # Demographic stochasticity
