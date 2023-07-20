@@ -500,125 +500,6 @@ te.df %>%
 
 ```
 
-# check cue combination that produced low fitness. All contains I+Ig. Might be code processing error?
-I+Ig is processed properly. Not sure why this is the case??? I think this is a starting point error. Note that I+Ig also had 0 fitness with dds and previous simulation with 100 random start point also yielded very low values. is it cue range
-
-I give up.
-```{r}
-ti.df %>% 
-  filter(fitness < 7)
-
-# note that I+Ig alone produced 4.007948 fitness so I+Ig is processed properly
-chabaudi_si_clean(
-    parameters_cr = rep(0.5, 9),
-    immunity = "tsukushi",
-    parameters = parameters_tsukushi,
-    time_range = seq(0, 20, 0.01),
-    cue = "I+Ig",
-    cue_b = "I+Ig",
-    cue_range = seq(0, log10(6*(10^6)), length.out = 500),
-    cue_range_b = seq(0, log10(6*(10^6)), length.out = 500),
-    log_cue = "log10",
-    log_cue_b = "log10",
-    solver = "vode",
-    gam = "te")
-
-# compared to I+Ig alone. 2.092387
-chabaudi_si_clean(
-    parameters_cr = rep(0.5, 4),
-    immunity = "tsukushi",
-    parameters = parameters_tsukushi,
-    time_range = seq(0, 20, 0.01),
-    cue = "I+Ig",
-    cue_range = seq(0, log10(6*(10^6)), length.out = 500),
-    log_cue = "log10",
-    solver = "vode")
-
-# is it because there is more than 2 cues? not really. this combination gives us 2.788363
-chabaudi_si_clean(
-    parameters_cr = rep(0.5, 9),
-    immunity = "tsukushi",
-    parameters = parameters_tsukushi,
-    time_range = seq(0, 20, 0.01),
-    cue = "G+I",
-    cue_b = "R+Ig",
-    cue_range = seq(0, log10(6*(10^6)), length.out = 500),
-    cue_range_b = seq(0, log10(6*(10^6)), length.out = 500),
-    log_cue = "log10",
-    log_cue_b = "log10",
-    solver = "vode",
-    gam = "te")
-
-# this combination somehow gives ok fitness... 4.054223
-chabaudi_si_clean(
-    parameters_cr = rep(0.5, 9),
-    immunity = "tsukushi",
-    parameters = parameters_tsukushi,
-    time_range = seq(0, 20, 0.01),
-    cue = "I+R",
-    cue_b = "I+Ig",
-    cue_range = seq(0, log10(6*(10^6)), length.out = 500),
-    cue_range_b = seq(0, log10(6*(10^6)), length.out = 500),
-    log_cue = "log10",
-    log_cue_b = "log10",
-    solver = "vode",
-    gam = "te")
-
-# higher cue range didnt'e help either
-chabaudi_si_clean(
-    parameters_cr = rep(0.5, 9),
-    immunity = "tsukushi",
-    parameters = parameters_tsukushi,
-    time_range = seq(0, 20, 0.01),
-    cue = "I",
-    cue_b = "I+Ig",
-    cue_range = seq(0, log10(6*(10^6)), length.out = 500),
-    cue_range_b = seq(0, log10(6*(10^8)), length.out = 500),
-    log_cue = "log10",
-    log_cue_b = "log10",
-    solver = "vode",
-    gam = "te")
-```
-
-
-
-```{r}
-# check dynamics. very weird. negative gametocyte and all. 
-# change solver to lsode.didn't help. 
-# decreased time step to 0.001. didn't help
-# increased cue_range step to 5000. didn't help
-# decreasing atol to 1*10^-7. did not help
-# changing slver to lsoda (nope), lsodes (nope), lsodar (nope), "daspk" (nope)
-# all dede solver tried. none of them worked!
-# changed + to sum na.rm = T. did not work
-
-source(here("functions/chabaudi_si_clean.R"))
-source(here("functions/test.R"))
-dyn <-test(
-    parameters_cr = rep(5, 9),
-    immunity = "tsukushi",
-    parameters = parameters_tsukushi,
-    time_range = seq(0, 20, 0.01),
-    cue = "I",
-    cue_b = "I+Ig",
-    cue_range = seq(0, 6*(10^6), length.out = 500),
-    cue_range_b = seq(0, 6*(10^6), length.out = 500),
-    log_cue = "none",
-    log_cue_b = "none",
-    solver = "vode",
-    gam = "te",
-    dyn = T)
-
-ggplot() +
-  geom_line(data = dyn, aes(x = time, y = value)) +
-  facet_wrap(~variable, scales = "free_y")
-
-# check reaction norm
-source(here("functions/par_to_hm_te.R"))
-
-par_to_hm_te(par = rep(0.5, 9), seq(0, 6*(10^6), length.out = 500), seq(0, 6*(10^6), length.out = 500), plot = T)
-```
-
 
 # sanity check. check fitness values manually. Looks good! everything processed fine
 ```{r}
@@ -733,6 +614,10 @@ te.df2 <- te.df %>%
 te_df.ls <- split(te.df2, seq(nrow(te.df2)))
 
 mclapply(te_df.ls, dual_cue_dyn, mc.cores = 2)
+
+# re run dyanmics only for those with I+Ig
+te_df.ls2 <- split(te.df2 %>% filter(cue == "I+Ig" | cue_b == "I+Ig"), seq(nrow(te.df2 %>% filter(cue == "I+Ig" | cue_b == "I+Ig"))))
+mclapply(te_df.ls2, dual_cue_dyn, mc.cores = 2)
 ```
 
 #--------------------------------#
@@ -757,13 +642,6 @@ dual_dyn.ls <- list.files(here("data/dual_cue_dyn/"), pattern = "*.parquet", ful
 dual_dyn.ls2 <- lapply(dual_dyn.ls, read_parquet)
 
 # get max fitness
-dual.fitness <- lapply(dual_dyn.ls2, function(x){
-  # rename column
-  names(x) <- c("id", "id_b", "label", "label_b", "cue", "cue_b", "time","variable", "value")
-  df <- x %>% filter(time == 30 & variable == "tau_cum")
-  return(df)
-})
-
 dual.fitness_20 <- lapply(dual_dyn.ls2, function(x){
   # rename column
   names(x) <- c("id", "id_b", "label", "label_b", "cue", "cue_b", "time","variable", "value")
@@ -771,12 +649,20 @@ dual.fitness_20 <- lapply(dual_dyn.ls2, function(x){
   return(df)
 })
 
-dual_fitness.df <- do.call(rbind, dual.fitness)
 dual_fitness_20.df <- do.call(rbind, dual.fitness_20)
 #write.csv(dual_fitness.df, here("data/dual_cue_opt4/dual_cue_fitness.csv"))
-#write.csv(dual_fitness_20.df, here("data/dual_cue_opt4/dual_cue_fitness_20.csv"))
-dual_fitness.df <- read.csv(here("data/dual_cue_opt4/dual_cue_fitness.csv"))
+write.csv(dual_fitness_20.df, here("data/dual_cue_opt4/dual_cue_fitness_20.csv"))
 dual_fitness_20.df <- read.csv(here("data/dual_cue_opt4/dual_cue_fitness_20.csv"))
+
+# save dynamics parquet
+dual_cue.dyn <- do.call(rbind, 
+lapply(dual_dyn.ls2,
+  function(x){
+  # rename column
+  names(x) <- c("id", "id_b", "label", "label_b", "cue", "cue_b", "time","variable", "value")
+  return(x)}))
+
+write_parquet(dual_cue.dyn, here("data/dual_cue_dyn/dual_cue_dyn.parquet"))
 ```
 
 # plot 30 days fitness

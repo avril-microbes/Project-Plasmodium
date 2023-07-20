@@ -955,8 +955,7 @@ dual_fitness.df <- read.csv(here("data/dual_cue_opt4/dual_cue_fitness_20.csv"))
 dual_fitness.df <- dual_fitness.df %>% 
   mutate(temp_label = gsub("log", "log10", label),
          temp_label_b = gsub("log", "log10", label_b),
-         label_final = paste0(temp_label, "+", temp_label_b)) %>% 
-  filter(value > 2)
+         label_final = paste(temp_label, "&", temp_label_b)) 
 
 # get single cue fitness
 si_dyn.df <- read_parquet(here("data/si_dyn/si_dyn_30.parquet")) 
@@ -968,7 +967,10 @@ dual_si_fitness.df <- dual_fitness.df %>%
   left_join(select(si_fitness.df, id, si_fitness = value), by = "id") %>% 
   left_join(select(si_fitness.df, id_b = id, si_fitness_b = value), by = "id_b") %>% 
   mutate(si_fitness_max = ifelse(si_fitness > si_fitness_b, si_fitness, si_fitness_b),
-         dual_label = gsub("log", "log10", paste(label, "+", label_b)))
+         dual_label = gsub("log", "log10", paste(label, "&", label_b)))
+
+dual_si_fitness.df$dual_label <- as.factor(dual_si_fitness.df$dual_label)
+dual_si_fitness.df
 ```
 
 # plot
@@ -979,8 +981,8 @@ dual_si_fitness.pl <- ggplot() +
   labs(x = "Fitness", y = "Dual cue", color = "Cue", shape = "Cue") +
   scale_color_manual(values=c("#fc8d59", "#4575b4")) +
   geom_vline(xintercept = 9.883602) +
-  geom_text(aes(x=9.883602, label="\nTime-based fitness (df=9)", y = "G + R log10"), angle=90) +
-  xlim(8.35, 10) +
+  geom_text(aes(x=9.883602, label="\nTime-based fitness (df=9)", y = "G & I log10"), angle=90) +
+  #xlim(8.35, 10) +
   theme_bw() +
   theme(legend.position = "top")
 ```
@@ -1073,7 +1075,7 @@ dual_cr.pl <- ggplot() +
   labs(x = "Time (days)", y = "Conversion rate", color = "Cue", shape = "Cue") +
   xlim(0, 20) +
   scale_color_manual(values = c("#fc8d59","#fdcb44","black", "#4575b4")) +
-  theme_bw() +
+  theme_classic() +
   theme(legend.position="right",
         plot.margin = margin(t = 40, r = 0, b = 0, l = 0, unit = "pt")) +
   guides(color = guide_legend(nrow = 4, byrow = TRUE))
@@ -1158,7 +1160,7 @@ dual_pl.BC <- ggarrange(dual_cr.pl, dual_rn.pl, align = "v", ncol = 1, labels = 
 
 # assemble panel A
 ggarrange(dual_si_fitness.pl, dual_pl.BC, ncol = 2, labels = c("A", ""), widths = c(1,1.1))
-ggsave(here("figures/plos-bio/dual_cue.tiff"), units = "px", width = 2100, height = 1400, scale = 1.3, dpi=300,  bg = "white")
+ggsave(here("figures/plos-bio/dual_cue.tiff"), units = "px", width = 2250, height = 1400, scale = 1.3, dpi=300,  bg = "white")
 ```
 
 
@@ -1170,10 +1172,10 @@ ggsave(here("figures/plos-bio/dual_cue.tiff"), units = "px", width = 2100, heigh
 # import in dual cue dynamics
 dual_dyn.df <- read_parquet(here("data/dual_cue_dyn/dual_cue_dyn.parquet"))
 
-# keep only cr and make labels for plotting. we are going to omit any cue combinations containing I+Ig due to those not optimizing at all
+# keep only cr and make labels for plotting. 
 dual_cr.df_p <- dual_dyn.df %>% 
-  filter(variable == "cr" & cue != "I+Ig" & cue_b != "I+Ig") %>% 
-  mutate(label_plot = paste(label, "+", label_b)) %>% 
+  filter(variable == "cr") %>% 
+  mutate(label_plot = paste(label, "&", label_b)) %>% 
   group_by(label_plot) %>% 
   arrange(time, .by_group = T) %>% 
   filter(row_number() %% 10 == 1) %>%  # cut down on number of rows
@@ -1213,8 +1215,6 @@ ggplot(data = dual_tau.df_p, aes(x = time, y = value, color = label_plot)) +
 ```
 
 
-
-
 #============================================#
 # get dual cue disease map (simulated)
 #============================================#
@@ -1223,7 +1223,7 @@ I am going to take the optimal dynamic (R log10 + I log10) and plot all possible
 # process 
 ```{r}
 # get list of interested variables for plotting. drop cr, fitness, and death probability, immunity, and merozoites (which is not optimized in dual cue)
-dual_var.ls <- unique(dual.cr$variable)[!unique(dual.cr$variable) %in% c("tau", "tau_cum", "cr", "cr_t", "ID", "N", "W", "M", "Mg")]
+dual_var.ls <- c(unique(dual.cr$variable)[!unique(dual.cr$variable) %in% c("tau", "tau_cum", "cr", "cr_t", "ID", "N", "W", "M", "Mg")], "I_Ig")
 
 # create all possible variable combinations. 6 variable combination (4*4 with 4 same redundant and half of that) is expected
 dual_var.comb <- tidyr::expand_grid(x = dual_var.ls,
@@ -1233,7 +1233,6 @@ dual_var.comb <- tidyr::expand_grid(x = dual_var.ls,
   slice_head(n = 1, by = tmp) %>% 
   select(-tmp)
 
-dual_var.comb
 
 # filter out intermediate data points in dynamic so we could have faster plotting. Also make wider for plotting
 ## filtering out all (none cr variable) value below 1 so negative vlues do not overwhelm disease curve. For cr, keep only value below or equal to 1
@@ -1242,11 +1241,17 @@ dual_cr.f <- dual.cr %>%
   tidyr::pivot_wider(names_from = variable, id_cols = c(time)) %>% 
   arrange(time) %>% 
   filter(row_number() %% 100 == 1) 
-
+## replace NA with 0
+dual_cr.f[is.na(dual_cr.f)] <- 0
+## get I+Ig
+dual_cr.f <- dual_cr.f %>% mutate(I_Ig = I+Ig)
+dual_cr.f
 ```
 
 # plot
 ```{r}
+library(scales)
+
 # make path plot
 ## no logged on x and y
 dual_curve.pl <- purrr::map2(.x = dual_var.comb$x, 
@@ -1329,17 +1334,17 @@ dual_curve_log.pl <- purrr::map2(
           )
 
 # save all 4 plates
-ggarrange(plotlist = dual_curve.pl, ncol = 2, nrow = 3, align = "hv")
-ggsave(here("figures/plos-bio/dual_curve1.tiff"), units = "px", width = 1000, height = 1000, scale = 1.5, dpi=300,  bg = "white")
+ggarrange(plotlist = dual_curve.pl, ncol = 2, nrow = 5, align = "hv")
+ggsave(here("figures/plos-bio/dual_curve1.tiff"), units = "px", width = 1000, height = 1200, scale = 1.8, dpi=300,  bg = "white")
 
-ggarrange(plotlist = dual_curve_xlog.pl, ncol = 2, nrow = 3, align = "hv")
-ggsave(here("figures/plos-bio/dual_curve2.tiff"), units = "px", width = 1000, height = 1000, scale = 1.5, dpi=300,  bg = "white")
+ggarrange(plotlist = dual_curve_xlog.pl, ncol = 2, nrow = 5, align = "hv")
+ggsave(here("figures/plos-bio/dual_curve2.tiff"), units = "px", width = 1000, height = 1200, scale = 1.8, dpi=300,  bg = "white")
 
-ggarrange(plotlist = dual_curve_ylog.pl, ncol = 2, nrow = 3, align = "hv")
-ggsave(here("figures/plos-bio/dual_curve3.tiff"), units = "px", width = 1000, height =1000, scale = 1.5, dpi=300,  bg = "white")
+ggarrange(plotlist = dual_curve_ylog.pl, ncol = 2, nrow = 5, align = "hv")
+ggsave(here("figures/plos-bio/dual_curve3.tiff"), units = "px", width = 1000, height =1200, scale = 1.8, dpi=300,  bg = "white")
 
-ggarrange(plotlist = dual_curve_log.pl, ncol = 2, nrow = 3, align = "hv")
-ggsave(here("figures/plos-bio/dual_curve4.tiff"), units = "px", width = 1000, height = 1000, scale = 1.5, dpi=300,  bg = "white")
+ggarrange(plotlist = dual_curve_log.pl, ncol = 2, nrow = 5, align = "hv")
+ggsave(here("figures/plos-bio/dual_curve4.tiff"), units = "px", width = 1000, height = 1200, scale = 1.8, dpi=300,  bg = "white")
 ```
 
 
