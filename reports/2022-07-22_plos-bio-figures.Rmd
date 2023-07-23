@@ -1159,7 +1159,7 @@ ggsave(here("poster/dual_cue.png"), width = 7, height = 4)
 dual_pl.BC <- ggarrange(dual_cr.pl, dual_rn.pl, align = "v", ncol = 1, labels = c("B", "C"))
 
 # assemble panel A
-ggarrange(dual_si_fitness.pl, dual_pl.BC, ncol = 2, labels = c("A", ""), widths = c(1,1.1))
+ggarrange(dual_si_fitness.pl, dual_pl.BC, ncol = 2, labels = c("A", ""), widths = c(1.1,1))
 ggsave(here("figures/plos-bio/dual_cue.tiff"), units = "px", width = 2250, height = 1400, scale = 1.3, dpi=300,  bg = "white")
 ```
 
