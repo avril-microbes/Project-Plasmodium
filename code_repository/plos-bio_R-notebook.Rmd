@@ -54,11 +54,8 @@ source(here("code_repository/functions/ci_invasion_analysis.R"))
 source(here("code_repository/functions/partition_si.R"))
 
 # for semi-stochastic single infection model
-source(here("code_repository/functions/mc_run.R")) ## 1000 MC simulations of single infection model where all 6 parameters vary
-source(here("code_repository/functions/mc_five.R")) ## wrapper around mc_run to simulate 5000 MC simulations. Avoid memory overload
-source(here("code_repository/functions/partition_var.R")) ## performs 1000 MC simulations of the single infection model where only one specified parameter vary
-source(here("code_repository/functions/mc_five2.R")) ## wrapper around partition_var to perform 5000 simulations
-source(here("code_repository/functions/get_par_MC.R")) ## wrapper around mc_five2 to execute all 6 iterations of 5000 simulations where only one parameter vary
+source(here("code_repository/functions/mc_all.R"))
+source(here("code_repository/functions/mc_single.R"))
 ```
 
 ### Load parameters
@@ -729,173 +726,187 @@ lapply(si_opt.ls, partition_si)
 ```
 
 # Semi-stochastic single infection model
-Here, we are going to perform 5000 Monte Carlo simulations where the parasite is adopting the optimal single infection strategy with all six random variables. For each run, the values of these random variables is drawn from a log normal distribution. Thus, while the variable value remains constant through out the simulation, each run will likely have a different set of parameters describing host immunity, parasite burst size, and RBC regeneration speed. To partition the contribution of each random variable to the overall effect on infection outcomes, we will perform Monte Carlo simulations where only one random variable is present during each run. 
+Here, we are going to perform 5000 Monte Carlo simulations where the parasite is adopting the optimal single infection strategy with all six random variables. For each run, the values of these random variables is drawn from the posterior distribution of the variables. Thus, while the variable value remains constant through out the simulation, each run will likely have a different set of parameters describing host immunity, parasite burst size, and RBC regeneration speed. To partition the contribution of each random variable to the overall effect on infection outcomes, we will perform Monte Carlo simulations where only one random variable is present during each run. 
 
 ### All six parameters vary
-#### Asexual iRBC
 ```{r}
-# non-logged
-mc_I.res <- mc_five(par = c(0.1135384,  -39.0585154, 1941.9082813,  119.8228980),
+# import in posterior distribution. Note that id = 1 is the reference!
+posterior <- read.csv(here("code_repository/data/posterior.csv"))
+
+# get list of dataframes split by row
+posterior.ls <- split(posterior, seq(nrow(posterior)))
+
+# Asexual iRBC
+mc_I.res <- mclapply(posterior.ls, function(x){
+  mc_all(par = c(0.1135384,  -39.0585154, 1941.9082813,  119.8228980),
                     cue = "I",
                     cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
-                    log= "none")
+                    log= "none",
+                   rand_df = x)},
+  mc.cores = 8)
 
-write.csv(mc_I.res[[1]], here("data/MC2/mc_I_fitness.csv"))
-write_parquet(mc_I.res[[3]], here("data/MC2/mc_I_dyn.parquet"))
-
-# logged
-mc_I_log.res <- mc_five(par = c(5.463558,   2.383948, -17.757281,   4.571835),
+mc_I_log.res <- mclapply(posterior.ls, function(x){
+  mc_all(par = c(5.463558,   2.383948, -17.757281,   4.571835),
                     cue = "I",
                     cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
-                    log= "log10")
+                    log= "log10",
+                   rand_df = x)},
+  mc.cores = 8)
 
-write.csv(mc_I_log.res[[1]], here("data/MC2/mc_I_log_fitness.csv"))
-write_parquet(mc_I_log.res[[3]], here("data/MC2/mc_I_log_dyn.parquet"))
-```
-
-#### Sexual iRBC
-```{r}
-# non-logged
-mc_Ig.res <- mc_five(par = c(0.05234791,  -46.03368629, 1897.61313455,   70.57689145),
+# Sexual iRBC
+mc_Ig.res <- mclapply(posterior.ls, function(x){
+  mc_all(par = c(0.05234791,  -46.03368629, 1897.61313455,   70.57689145),
                     cue = "Ig",
                     cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
-                    log= "none")
+                    log= "none",
+         rand_df = x)},
+  mc.cores = 8)
 
-write.csv(mc_Ig.res[[1]], here("data/MC2/mc_Ig_fitness.csv"))
-write_parquet(mc_Ig.res[[3]], here("data/MC2/mc_Ig_dyn.parquet"))
-
-# logged
-mc_Ig_log.res <- mc_five(par = c(1.74633, -1.78582, -5.52834, 1.57344 ),
+mc_Ig_log.res <- mclapply(posterior.ls, function(x){
+  mc_all(par = c(1.74633, -1.78582, -5.52834, 1.57344 ),
                     cue = "Ig",
                     cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
-                    log= "log10")
+                    log= "log10",
+         rand_df = x)},
+  mc.cores = 8)
 
-write.csv(mc_Ig_log.res[[1]], here("data/MC2/mc_Ig_log_fitness.csv"))
-write_parquet(mc_Ig_log.res[[3]], here("data/MC2/mc_Ig_log_dyn.parquet"))
-```
-
-#### iRBC
-```{r}
-mc_I_Ig.res <- mc_five(par = c(0.3159297,  -46.1104558, 1250.7529081,   -6.1982093),
+# all iRBC
+mc_I_Ig.res <- mclapply(posterior.ls, function(x){
+  mc_all(par = c(0.3159297,  -46.1104558, 1250.7529081,   -6.1982093),
                     cue = "I+Ig",
                     cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
-                    log= "none")
+                    log= "none",
+         rand_df = x)},
+  mc.cores = 8)
 
-write.csv(mc_I_Ig.res[[1]], here("data/MC2/mc_I_Ig_fitness.csv"))
-write_parquet(mc_I_Ig.res[[3]], here("data/MC2/mc_I_Ig_dyn.parquet"))
-
-mc_I_Ig_log.res <- mc_five(par = c(3.594042,   4.157744, -13.530672,   2.599905),
+mc_I_Ig_log.res <- mclapply(posterior.ls, function(x){
+  mc_all(par = c(3.594042,   4.157744, -13.530672,   2.599905),
                     cue = "I+Ig",
                     cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
-                    log= "log10")
+                    log= "log10",
+         rand_df = x)},
+  mc.cores = 8)
 
-write.csv(mc_I_Ig_log.res[[1]], here("data/MC2/mc_I_Ig_log_fitness.csv"))
-write_parquet(mc_I_Ig_log.res[[3]], here("data/MC2/mc_I_Ig_log_dyn.parquet"))
-```
-
-#### Gametocyte
-```{r}
-# non-logged
-MC_G.res <- MC_five(par = c(0.04061288,   -9.31445958,   74.13015506, -431.59843638),
+# gametocyte
+MC_G.res <- mclapply(posterior.ls, function(x){
+  mc_all(par = c(0.04061288,   -9.31445958,   74.13015506, -431.59843638),
                     cue = "G",
                     cue_range = seq(0, 6*(10^4), (6*(10^4))/5000),
-                    log= "none")
+                    log= "none",
+         rand_df = x)},
+  mc.cores = 8)
 
-write.csv(mc_G.res[[1]], here("data/MC2/mc_G_fitness.csv"))
-write_parquet(mc_G.res[[3]], here("data/MC2/mc_G_dyn.parquet"))
-
-
-mc_G_log.res <- mc_five(par = c(1.211521, -3.936778,-1.312944, -1.285713),
+mc_G_log.res <- mclapply(posterior.ls, function(x){
+  mc_all(par = c(1.211521, -3.936778,-1.312944, -1.285713),
                     cue = "G",
                     cue_range = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000),
-                    log= "log10")
+                    log= "log10",
+         rand_df = x)},
+  mc.cores = 8)
 
-write.csv(mc_G_log.res[[1]], here("data/MC2/mc_G_log_fitness.csv"))
-write_parquet(mc_G_log.res[[3]], here("data/MC2/mc_G_log_dyn.parquet"))
-```
-
-#### RBC
-```{r}
-mc_R.res <- mc_five(par = c(7.0976026,  30.1295151, -28.0565613,  -0.2788713),
+# RBC
+mc_R.res <- mclapply(posterior.ls, function(x){
+  mc_all(par = c(7.0976026,  30.1295151, -28.0565613,  -0.2788713),
                     cue = "R",
                     cue_range = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
-                    log= "none")
+                    log= "none",
+         rand_df = x)},
+  mc.cores = 8)
 
-write.csv(mc_R.res[[1]], here("data/MC2/mc_R_fitness.csv"))
-write_parquet(mc_R.res[[3]], here("data/MC2/mc_R_dyn.parquet"))
-
-mc_R_log.res <- mc_five(par = c(48.70772, 105.18882, -81.80625, -44.60051),
+mc_R_log.res <- mclapply(posterior.ls, function(x){
+  mc_all(par = c(48.70772, 105.18882, -81.80625, -44.60051),
                     cue = "R",
                     cue_range = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
-                    log= "log10")
-
-write.csv(mc_R_log.res[[1]], here("data/MC2/mc_R_log_fitness.csv"))
-write_parquet(mc_R_log.res[[3]], here("data/MC2/mc_R_log_dyn.parquet"))
+                    log= "log10",
+         rand_df = x)},
+  mc.cores = 8)
 ```
 
 ### Only one parameter vary
 ```{r}
-# I
-## non-logged
-get_par_MC(par = c(0.1135384,  -39.0585154, 1941.9082813,  119.8228980),
+# Asexual iRBC
+mclapply(posterior.ls[1:8], function(x){
+  mc_single(par = c(0.1135384,  -39.0585154, 1941.9082813,  119.8228980),
                     cue = "I",
                     cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
-                    log= "none")
+                    log= "none",
+                   rand_df = x)},
+  mc.cores = 8)
 
-## logged
-get_par_MC(par = c(5.463558,   2.383948, -17.757281,   4.571835),
+mclapply(posterior.ls, function(x){
+  mc_single(par = c(5.463558,   2.383948, -17.757281,   4.571835),
                     cue = "I",
                     cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
-                    log= "log10")
+                    log= "log10",
+                   rand_df = x)},
+  mc.cores = 8)
 
-# Ig
-## non-logged
-get_par_MC(par = c(0.05234791,  -46.03368629, 1897.61313455,   70.57689145),
+# Sexual iRBC
+mclapply(posterior.ls, function(x){
+  mc_single(par = c(0.05234791,  -46.03368629, 1897.61313455,   70.57689145),
                     cue = "Ig",
                     cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
-                    log= "none")
+                    log= "none",
+         rand_df = x)},
+  mc.cores = 8)
 
-## logged
-get_par_MC(par = c(1.74633, -1.78582, -5.52834, 1.57344 ),
+mclapply(posterior.ls, function(x){
+  mc_single(par = c(1.74633, -1.78582, -5.52834, 1.57344 ),
                     cue = "Ig",
                     cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
-                    log= "log10")
+                    log= "log10",
+         rand_df = x)},
+  mc.cores = 8)
 
-# I+Ig
-## non-logged
-get_par_MC(par = c(0.3159297,  -46.1104558, 1250.7529081,   -6.1982093),
+# all iRBC
+mclapply(posterior.ls, function(x){
+  mc_single(par = c(0.3159297,  -46.1104558, 1250.7529081,   -6.1982093),
                     cue = "I+Ig",
                     cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
-                    log= "none")
+                    log= "none",
+         rand_df = x)},
+  mc.cores = 8)
 
-## logged
-get_par_MC(par = c(3.594042,   4.157744, -13.530672,   2.599905),
+mclapply(posterior.ls, function(x){
+  mc_single(par = c(3.594042,   4.157744, -13.530672,   2.599905),
                     cue = "I+Ig",
                     cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
-                    log= "log10")
-# G
-## non-logged
-get_par_MC(par = c(0.04061288,   -9.31445958,   74.13015506, -431.59843638),
+                    log= "log10",
+         rand_df = x)},
+  mc.cores = 8)
+
+# gametocyte
+mclapply(posterior.ls, function(x){
+  mc_single(par = c(0.04061288,   -9.31445958,   74.13015506, -431.59843638),
                     cue = "G",
                     cue_range = seq(0, 6*(10^4), (6*(10^4))/5000),
-                    log= "none")
+                    log= "none",
+         rand_df = x)},
+  mc.cores = 8)
 
-## logged
-get_par_MC(par = c(1.211521, -3.936778,-1.312944, -1.285713),
+mclapply(posterior.ls, function(x){
+  mc_single(par = c(1.211521, -3.936778,-1.312944, -1.285713),
                     cue = "G",
                     cue_range = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000),
-                    log= "log10")
-# R
-## non-logged
-get_par_MC(par = c(7.0976026,  30.1295151, -28.0565613,  -0.2788713),
+                    log= "log10",
+         rand_df = x)},
+  mc.cores = 8)
+
+# RBC
+mclapply(posterior.ls, function(x){
+  mc_single(par = c(7.0976026,  30.1295151, -28.0565613,  -0.2788713),
                     cue = "R",
                     cue_range = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
-                    log= "none")
+                    log= "none",
+         rand_df = x)},
+  mc.cores = 8)
 
-## logged
-get_par_MC(par = c(48.70772, 105.18882, -81.80625, -44.60051),
+mclapply(posterior.ls, function(x){
+  mc_single(par = c(48.70772, 105.18882, -81.80625, -44.60051),
                     cue = "R",
                     cue_range = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
-                    log= "log10")
+                    log= "log10",
+         rand_df = x)},
+  mc.cores = 8)
 ```
 

@@ -1,3 +1,13 @@
+# Base code for running 1000 iterations of semi-stochastic modelling (all six parameters vary). You need to split the 5000 runs
+# into 5 iterations or else R will crash!
+
+# par = coefficients for strategy
+# cue = cue used
+# cue range
+# is log true or false?
+# set seed for reproducibility
+# rand_df = dataframe containing 
+
 mc_run <- function(par, cue, cue_range, log, seed){
   # run 5 iterations each with 1000
   cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
