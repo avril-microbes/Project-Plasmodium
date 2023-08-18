@@ -71,11 +71,11 @@ mc_all <- function(par, cue, cue_range, log, rand_df){
   
   # keep only conversion rate and transmission potential and write it into MC_all_dyn
   dyn_f <- dyn %>% 
-    filter(variable %in% c("cr", "tau")) %>% 
-    group_by(variable) %>% 
-    arrange(time) %>% 
+    dplyr::filter(variable %in% c("cr", "tau")) %>% 
+    dplyr::group_by(variable) %>% 
+    dplyr::arrange(time) %>% 
    # filter(row_number() %% 10 == 1) %>% # keep only the 0.01th 
-    mutate(cue = cue, 
+    dplyr::mutate(cue = cue, 
            log = log) # add cue and log
 
   # write files

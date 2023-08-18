@@ -24,5 +24,5 @@ opt_local <- function(
   # close cluster
   stopCluster(cl)
   
-  return (res)
+  return(res)
 }

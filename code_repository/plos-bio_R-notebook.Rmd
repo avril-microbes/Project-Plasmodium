@@ -32,6 +32,7 @@ library(parallel)
 ```{r warning=FALSE}
 # for single infections
 source(here("code_repository/functions/opt_local.R"))
+source(here("code_repository/functions/opt_global.R"))
 source(here("code_repository/functions/chabaudi_si_clean.R"))
 source(here("code_repository/functions/validate_si.R"))
 
@@ -84,6 +85,7 @@ parameters_tsukushi <- c(R1 = 8.89*10^6,
 
 # time range and time step at which the model will be simulated
 time_range <- seq(0, 20, by = 1e-3)
+time_range_l <- seq(0, 20, by = 1e-2)
 
 # smallest fitness difference for co-infection optimization script to exit
 limit <- 0.01
@@ -98,13 +100,14 @@ G_range_log <- seq(0, log10(6*(10^4)), by = (log10(6*(10^4)))/5000)
 # Single infection optimization
 The purpose of numerical optimization is to identify the basis-spline coefficients that maximizes the cumulative transmission potential of the model. Here, model optimization is performed using the L-BFGS-B algorithm implemented in optimParallel. Model optimization is performed using the opt_local wrapper function, which works around the chabaudi_si_clean.R script, which simulates the single infection dynamics of P. chabaudi. We will perform optimization for each cue separately.
 
-### Model optimization
+### Model optimization (local)
 ```{r}
 # Time (ideal case)
 t_loc.op <- opt_local(par = rep(0.5, 4),
                             cue = "t",
                             log = "none",
                             cue_range = time_range)
+
 
 # I 
 I_loc.op <- opt_local(par = rep(0.5, 4),
@@ -169,6 +172,83 @@ G_loc.op <- opt_local(par = rep(0.5, 4),
 
 # G logged 
 G_log_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "G",
+                            log = "log10",
+                            cue_range = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000))
+```
+
+### Model optimization (global)
+```{r}
+# Time (ideal case)
+t_glb.op <- opt_global(
+                            cue = "t",
+                            log = "none",
+                            cue_range = time_range)
+
+
+# I 
+I_glb.op <- opt_global(
+                            cue = "I",
+                            log = "none",
+                            cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000))
+
+# I logged
+I_log_glb.op <- opt_global(
+                            cue = "I",
+                            log = "log10",
+                            cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000))
+
+# Ig
+Ig_glb.op <- opt_global(
+                            cue = "Ig",
+                            log = "none",
+                            cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000))
+
+
+# Ig logged
+Ig_log_glb.op <- opt_global(
+                            cue = "Ig",
+                            log = "log10",
+                            cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000))
+
+# I + Ig
+I_Ig_glb.op <- opt_global(
+                            cue = "I+Ig",
+                            log = "none",
+                            cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000))
+
+# I+Ig logged
+I_Ig_log_glb.op <- opt_global(
+                            cue = "Ig+I",
+                            log = "log10",
+                            cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000))
+
+# I logged
+I_log_glb.op <- opt_global(
+                            cue = "I",
+                            log = "log10",
+                            cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000))
+
+# RBC 
+R_glb.op <- opt_global(
+                            cue = "R",
+                            log = "none",
+                            cue_range = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000))
+
+# RBC logged
+R_glb_log.op <- opt_global(
+                            cue = "R",
+                            log = "log10",
+                            cue_range = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000))
+
+# G
+G_glb.op <- opt_global(
+                            cue = "G",
+                            log = "none",
+                            cue_range = seq(0, 6*(10^4), (6*(10^4))/5000))
+
+# G logged 
+G_log_glb.op <- opt_global(
                             cue = "G",
                             log = "log10",
                             cue_range = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000))
@@ -731,7 +811,7 @@ Here, we are going to perform 5000 Monte Carlo simulations where the parasite is
 ### All six parameters vary
 ```{r}
 # import in posterior distribution. Note that id = 1 is the reference!
-posterior <- read.csv(here("code_repository/data/posterior.csv"))
+posterior <- utils::read.csv(here("code_repository/data/posterior.csv"))
 
 # get list of dataframes split by row
 posterior.ls <- split(posterior, seq(nrow(posterior)))
@@ -745,6 +825,10 @@ mc_I.res <- mclapply(posterior.ls, function(x){
                    rand_df = x)},
   mc.cores = 8)
 
+```
+
+
+```{r}
 mc_I_log.res <- mclapply(posterior.ls, function(x){
   mc_all(par = c(5.463558,   2.383948, -17.757281,   4.571835),
                     cue = "I",
@@ -752,6 +836,7 @@ mc_I_log.res <- mclapply(posterior.ls, function(x){
                     log= "log10",
                    rand_df = x)},
   mc.cores = 8)
+
 
 # Sexual iRBC
 mc_Ig.res <- mclapply(posterior.ls, function(x){
@@ -866,7 +951,10 @@ mclapply(posterior.ls, function(x){
                     log= "none",
          rand_df = x)},
   mc.cores = 8)
+```
 
+
+```{r}
 mclapply(posterior.ls, function(x){
   mc_single(par = c(3.594042,   4.157744, -13.530672,   2.599905),
                     cue = "I+Ig",
