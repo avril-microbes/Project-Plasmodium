@@ -1,15 +1,17 @@
 validate_si <- function(df){
+
   # cluster initialization
-  cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+  cl <- makeCluster(8); setDefaultCluster(cl = cl)
   registerDoParallel(cl)
   registerDoRNG(137)
   
-  res <- foreach(i= 1:1000, .verbose = T, .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
+  res <- foreach(i= 1:1000, .verbose = T, .export = c("chabaudi_si_clean", "parameters_tsukushi"), 
+                 .packages = c("doParallel", "doRNG", "deSolve", "splines2", "stringr", "dplyr", "tidyr", "crone", "here")) %dorng% {
     # generate random par, bounds for parameters based on previous determined bounds
-    par1 <- runif(1, -1, 1)
-    par2 <- runif(1, -100, 100)
-    par3 <- runif(1, -1000, 10000)
-    par4 <- runif(1, -5000, 5000)
+    par1 <- runif(1, -5, 5)
+    par2 <- runif(1, -500, 500)
+    par3 <- runif(1, -500, 500)
+    par4 <- runif(1, -500, 500)
     
     # get random parameters
     par_rand <- c(par1, par2, par3, par4)
@@ -25,17 +27,18 @@ validate_si <- function(df){
     fitness <- chabaudi_si_clean(parameters_cr = par_rand,
                                  parameters= parameters_tsukushi,
                                  immunity = "tsukushi",
-                                 time_range = seq(0,30,0.001),
+                                 time_range = seq(0,20,0.001),
                                  cue = df$cue,
                                  log_cue = log,
                                  cue_range = cue_range,
                                  dyn = F)
     
-    print(fitness)
+    return(fitness)
   }
   
   ## get fitness.df
   fitness.df <- do.call("rbind", res)
+
   ## rbind
   fitness.df <- as.data.frame(cbind(fitness.df, 
                                     cue = rep(df$cue, nrow(fitness.df)),
@@ -45,5 +48,5 @@ validate_si <- function(df){
   filename <- paste0("si_", df$id, "_cf.csv")
   
   ## write.csv
-  write.csv(fitness.df, here(paste0("data/si_validation/", filename)))
+  write.csv(fitness.df, here(paste0("code_repository/data/si_validation/", filename)))
 }

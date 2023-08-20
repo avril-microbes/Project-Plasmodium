@@ -3095,119 +3095,219 @@ ggsave(here("figures/plos-bio/MC_dyn.tiff"), units = "px", width = 2000, height 
 ```
 
 #=============================#
-# spline flexibility and solution
+# spline flexibility and solution (4 parameters)
 #=============================#
 # nested function to generate different iterations of each parameter values
 ```{r}
 spline_par <- function(
-  par_seq, # range of parameters we want to test
-  cue_range,
-  mode = "place") # cue_range optimized over
+  par.df, # range of parameters we want to test
+  cue_range)
   { 
+  #---------- creating a dummy spline model ----------#
+      ## create dummy model
+      dummy_y.vals <- rep(0, length(cue_range)) 
+      dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
+        
+      ## fit basic cubic spline with no internal knots. 
+      dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3))
+      dummy_cr.mod$data <- dummy_cr.data
   
-  get_spline <- function(par, cue_range){
-  # create dummy model
-  dummy_y.vals <- rep(0, length(cue_range)) 
-  dummy_cr.data <- as.data.frame(cbind(cue_range, dummy_y.vals))
-    
-  # fit basic cubic spline with no internal knots. 
-  dummy_cr.mod <- lm(dummy_y.vals ~ splines2::bSpline(x = cue_range, degree = 3))
-  dummy_cr.mod$data <- dummy_cr.data
-    
-  # assign coefficient to be optimized to the dummy conversion rate function
-  dummy_cr.mod$coefficients <- par
-    
-  # trying heaviside transformation
-  cr_pred <- predict(dummy_cr.mod, newdata = data.frame(cue_range))
-  if(mode == "exp"){cr_trans <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))}
-    
-  # fit spline function to predicted conversion rate. This increases processing speed
-  cr_fun <- splinefun(cbind(cue_range, cr_trans))
-  return(cr_fun)
-  }
+  #---------- function to get spline for a given parameter value ----------#
+      get_spline <- function(par){
+          ## assign coefficient to be optimized to the dummy conversion rate function
+          dummy_cr.mod$coefficients <- par
+          ## get cr
+          cr <- exp(-exp(predict(dummy_cr.mod, newdata = data.frame(cue_range))))
+          return(cr)
+      }
   
-  # get dataframe of all permutation of parameter values and their position
-  par.df <- expand.grid(n = c(1,2,3,4), par = par_seq)
-  ## paste0 to get id
-  par.df$id <- paste0(par.df$n, "_", par.df$par)
+  #---------- creating a list of parameters to test ----------#
+      ## substitute each value within the 4 parameters with par_seq (generate all iterations)
+      changed_par <- mapply(function(x, y){
+        ## define original parameter
+        par_trans <- rep(-0.3665129,4) # number needed to start cr = 0.5
+        ## change according to df
+        par_trans[[x]] <- y
+        return(par_trans)
+      }, x = par.df$n, y = par.df$par)
   
-  # substitute each value within the 4 parameters with par_seq (generate all iterations)
-  changed_par <- mapply(function(x, y){
-    ## define original parameter
-    par_trans <- rep(-0.3665129,4) # number needed to start cr = 0.5 at cue range = 0
-    ## change according to df
-    par_trans[[x]] <- y
-    return(par_trans)
-  }, x = par.df$n, y = par.df$par)
-  
-  # convert matrix (each column) into a list of parameters
-  par.ls <- lapply(seq_len(ncol(changed_par)), function(i) changed_par[,i])
+      ## convert matrix (each column) into a list of parameters
+      par.ls <- lapply(seq_len(ncol(changed_par)), function(i) changed_par[,i])
 
+  #---------- get cr from the list of parameters ----------#
+      spline.ls <- lapply(par.ls, function(x){
+        cbind.data.frame(cr = get_spline(par = x),
+                         cue_range = cue_range)
+      })
   
-  #get a list of splines form the transformed parameter lists
-  spline.ls <- lapply(par.ls, function(x){
-    get_spline(par = x, cue_range = cue_range)
-  })
-  
-  # convert spline to dataframe
-  spline_int.ls <- mapply(function(x, y){
-    data.frame(cue = cue_range, cr = x(cue_range), group = y)},
-    x = spline.ls, y = par.df$id)
-  
-  # convert to df.ls
-  df.ls <- lapply(seq_len(ncol(spline_int.ls)), function(i){
-    df <- spline_int.ls[,i]
-    df_cat <- data.frame(cbind(
-      cue = as.numeric(df$cue), 
-      cr = as.numeric(df$cr), 
-      group = df$group))
-  return(df_cat)
-} )
-  
-  res <- do.call(rbind, df.ls)
-  
+      ## attach parameter id to dataframe
+      spline_id.ls <- mapply(function(x, y){
+        x$id <- y
+        return(x)},
+        x = spline.ls, y = par.df$id, SIMPLIFY = F)
+      
+  # Combine results
+  res <- do.call(rbind, spline_id.ls)
   return(res)
-  
 }
-
 ```
 
-# getting solution space with double exponential basis spline and plotting
+# getting cr 
+Here, we ran the function to get the cr across an arbitrary cue range (1->100) for a list of parameters.
 ```{r}
-exp_spline <- spline_par(par_seq = c(seq(-1,1,0.1), seq(-10,10,1), seq(-100,100,10),seq(-10000,10000,100)), cue_range = seq(0, 100, by = 1),
-                         mode = "exp")
+# creating the par.df
+par.df4 <- rbind.data.frame(
+  data.frame(n = 1, par = seq(-10,10,1)),
+  data.frame(n = 2, par = seq(-500,500,1)),
+  data.frame(n = 3, par = seq(-500,500,1)),
+  data.frame(n = 4, par = seq(-500,500,1))) %>% mutate(id = paste0(n, "_", par))
+
+# run function
+exp_spline <- spline_par(par.df = par.df4, cue_range = seq(0,100,1))
 
 # process data. add coefficient name and get parameter values
 exp_spline2 <- exp_spline %>% 
-  mutate(n = paste("Coefficient", gsub("_.*", "", group)),
-         par = gsub("*._", "", group)) %>% 
-  distinct(n, par, cue, .keep_all = T)
+  mutate(n = paste("Coefficient", gsub("_.*", "", id)),
+         par = gsub("*._", "", id)) %>% 
+  distinct(n, par, cue_range, .keep_all = T)
 
 exp_spline2$par <- as.numeric(exp_spline2$par)
-exp_spline2$cue <- as.numeric(exp_spline2$cue)
-exp_spline2$cr <- as.numeric(exp_spline2$cr)
 
-# get reference point at which difference is calculated. Here, for a given parameter alteration and cue value, we set the cr when parameter=0 as an arbitrary starting point.
-exp_spline.ref <- exp_spline2 %>% 
-  filter(par == 0.5) %>% 
-  distinct(n, par, cue, cr) %>% 
-  select(n, cue, cr_ref = cr)
+# for a given cue value (i.e., 10), we can track how it changes as a function of parameter alterations 
+exp_spline2.p <- exp_spline2 %>% 
+  group_by(cue_range, n) %>% # we will first group so that we are working with each cue value when a given coefficient is changing
+  arrange(par, .by_group = T) %>% # arrange so that cr are arranged at increasing parameter values within each group
+  mutate(cr_diff = cr-lag(cr)) # calculate how cr is changing as we change parameters
 
-exp_spline2 %>% 
-  left_join(exp_spline.ref, by = c("n", "cue")) %>% 
-  mutate(cr_diff = sqrt((cr-cr_ref)^2)) %>% 
-  group_by(n, par) %>% 
-  mutate(cr_diff_avg = sum(cr_diff)/100) %>% 
-  distinct(n, par, .keep_all = T) %>% 
-  group_by(n) %>% 
-  arrange(par, .by_group = T) %>% 
-  mutate(change_cr = cr_diff_avg - lag(cr_diff_avg)) %>% # calculate the rate of change in sd. if sd does not change, means increasing spline coefficient space does not change line
-  filter(abs(change_cr)> 0.005) %>% 
-  ggplot(aes(x = par, y = cr_diff_avg)) +
-  geom_line() +
+# plot
+spline_flex_4.plt <- ggplot() +
+  geom_point(data = exp_spline2.p, aes(x = par, y = cr_diff), size = 0.1) +
   facet_wrap(~n, scales = "free") +
-  labs(x = "Coefficient value", y = "Average conversion rate difference") +
-  theme_bw()
-ggsave(here("figures/plos-bio/spline_space.tiff"), units = "px", width = 1500, height = 1000, dpi=300, bg = "white")
+  labs(x = "Parameter values", y = "Change in cr") +
+  theme_classic()
+
+ggplot() +
+  geom_point(data = exp_spline2.p, aes(x = par, y = cr), size = 0.1) +
+  stat_smooth(data = exp_spline2.p, aes(x = par, y = cr)) +
+  facet_wrap(~n, scales = "free") +
+  labs(x = "Parameter values", y = "Change in cr") +
+  theme_classic()
 ```
+
+#=============================#
+# spline flexibility and solution (9 parameter)
+#=============================#
+# nested function to generate different iterations of each parameter values
+```{r}
+spline_par_9 <- function(
+  cue_range,
+  cue_range_b,
+  par.df) # cue_range optimized over
+  { 
+  #---------- creating a dummy spline model ----------#
+    ## assign conversion rate grid
+    cr_grid <- expand.grid(cue_range, cue_range_b)
+    ## rename
+    names(cr_grid) <- c("cue_range", "cue_range_b")
+    
+    ## create dummy y
+    dummy_y <- runif(length(cue_range_b), 0, 1)
+    ## put together df
+    dummy_df <- data.frame(cue_range, cue_range_b, dummy_y)
+    ## fit dummy model
+    dummy_cr.mod <- mgcv::gam(dummy_y ~ te(cue_range, cue_range_b, 
+                                             k = c(3,3)), 
+                                data = dummy_df)
+    
+  #---------- function that calculates cr based on given parameters ----------#
+    get_spline <- function(par){
+      # assign coefficient to be optimized to the dummy conversion rate function. Returns conversion rate 
+      dummy_cr.mod$coefficients <- par
+      pred_cr <- exp(-exp(mgcv::predict.gam(dummy_cr.mod, 
+                                     newdata = cr_grid)))
+      return(pred_cr)
+    }
+    
+  #---------- get a list of parameters to test ----------#
+    ## substitute each value within the 9 parameters with par_seq (generate all iterations)
+    changed_par <- mapply(function(x, y){
+      ## define original parameter
+      par_trans <- rep(-0.3665129,9) # this gives us approximately cr = 0.5 across most ranges!
+      ## change according to df
+      par_trans[[x]] <- y
+      return(par_trans)
+    }, x = par.df$n, y = par.df$par)
+  
+  # convert matrix (each column) into a list of parameters
+  par.ls <- lapply(seq_len(ncol(changed_par)), function(i) changed_par[,i])
+  
+  #---------- get cr for the list of parameters ----------#
+      spline.ls <- lapply(par.ls, function(x){
+        cbind.data.frame(
+          cr_grid,
+          cr = get_spline(par = x))
+      })
+      
+      ## add parameters id to dataframe
+      spline_id.ls <- mapply(function(x, y){
+        y$id <- x
+        return(y)
+        },
+        y = spline.ls, x = par.df$id, SIMPLIFY = F)
+      
+      ## combine the dataframes
+      res <- do.call(rbind, spline_id.ls)
+      return(res)
+}
+```
+
+# run function
+```{r}
+# list of parameter ranges we want to test out
+par.df9 <- rbind.data.frame(
+  data.frame(n = 1, par = seq(-10,10,length.out = 100)),
+  data.frame(n = 2, par = seq(-500,500,length.out = 100)),
+  data.frame(n = 3, par = seq(-1000,1000,length.out = 100)),
+  data.frame(n = 4, par = seq(-1000,1000,length.out = 100)),
+  data.frame(n = 5, par = seq(-250,250,length.out = 100)),
+  data.frame(n = 6, par = seq(-500,500,length.out = 100)),
+  data.frame(n = 7, par = seq(-1000,1000,length.out = 100)),
+  data.frame(n = 8, par = seq(-500,500,length.out = 100)),
+  data.frame(n = 9, par = seq(-250,250,length.out = 100))
+) %>% mutate(id = paste0(n, "_", par))
+
+
+# get dataframe
+exp_spline_9 <- spline_par_9(cue_range = seq(0, 10, by = 1),
+                         cue_range_b = seq(0, 10, by = 1),
+                         par.df = par.df9)
+
+
+# process data. add coefficient name and get parameter values
+exp_spline_9_2 <- exp_spline_9 %>% 
+  mutate(n = paste("Coefficient", gsub("_.*", "", id)),
+         par = gsub("*._", "", id)) %>% 
+  distinct(n, par, cue_range, cue_range_b, .keep_all = T)
+
+exp_spline_9_2$par <- as.numeric(exp_spline_9_2$par)
+
+# calculate how a single cr changes at a given coordinate as a function of parameter changes
+exp_spline_9_2.p <- exp_spline_9_2 %>% 
+  group_by(cue_range,cue_range_b, n) %>% # we will first group so that we are working with each cue value when a given coefficient is changing
+  arrange(par, .by_group = T) %>% # arrange so that cr are arranged at increasing parameter values within each group
+  mutate(cr_diff = cr-lag(cr)) 
+
+# plot
+spline_flex_9.plt <- ggplot() +
+  geom_point(data = exp_spline_9_2.p, aes(x = par, y = cr_diff), size = 0.1) +
+  facet_wrap(~n, scales = "free") +
+  labs(x = "Parameter values", y = "Change in cr") +
+  theme_classic()
+
+# save
+ggarrange(spline_flex_4.plt, spline_flex_9.plt, ncol = 2, labels = c("A", "B"), widths = c(0.7, 1))
+ggsave(here("figures/plos-bio/spline_space.tiff"), units = "px", width = 2500, height = 1200, scale = 1.2, dpi=300, bg = "white")
+
+```
+
 

@@ -85,7 +85,6 @@ parameters_tsukushi <- c(R1 = 8.89*10^6,
 
 # time range and time step at which the model will be simulated
 time_range <- seq(0, 20, by = 1e-3)
-time_range_l <- seq(0, 20, by = 1e-2)
 
 # smallest fitness difference for co-infection optimization script to exit
 limit <- 0.01
@@ -185,7 +184,6 @@ t_glb.op <- opt_global(
                             log = "none",
                             cue_range = time_range)
 
-
 # I 
 I_glb.op <- opt_global(
                             cue = "I",
@@ -259,22 +257,23 @@ To ensure that we have obtained a result near the global optimum, we need to val
 
 ```{r results='hide', message=FALSE, warning=FALSE}
 # Import in the list of single infection optimization results
-si_opt.df2 <- read.csv(here("data/si_opt.csv"))
+si_opt.df <- read.csv(here("code_repository/data/si_opt.csv"))
 
 # split into individual tables
 si_opt.ls <- split(si_opt.df, seq(nrow(si_opt.df)))
 
 # cluster initialization. This will write the results to a data/si_validation folder
+source(here("code_repository/functions/validate_si.R"))
 surveillance::plapply(si_opt.ls, validate_si)
 
 # import in all single infection data
-si_val.ls <- list.files(path = here("data/si_validation"), pattern = "*.csv", full.names = T)
+si_val.ls <- list.files(path = here("code_repository/data/si_validation"), pattern = "*.csv", full.names = T)
 
 si_val.df <- lapply(si_val.ls, read.csv)
 si_val.df <- do.call(rbind, si_val.df)
 
 # get max fitness from simulation. left join with si_opt
-si_opt.df <- read.csv(here("data/si_opt.csv"))
+si_opt.df <- read.csv(here("code_repository/data/si_opt.csv"))
 
 # we can see that all of the randomly simulated models have a fitness value that is less than the optimized model
 si_val.df %>% group_by(id) %>% summarise(max_fitness = max(V1)) %>% 
@@ -825,10 +824,6 @@ mc_I.res <- mclapply(posterior.ls, function(x){
                    rand_df = x)},
   mc.cores = 8)
 
-```
-
-
-```{r}
 mc_I_log.res <- mclapply(posterior.ls, function(x){
   mc_all(par = c(5.463558,   2.383948, -17.757281,   4.571835),
                     cue = "I",
@@ -889,9 +884,10 @@ mc_G_log.res <- mclapply(posterior.ls, function(x){
          rand_df = x)},
   mc.cores = 8)
 
+
 # RBC
 mc_R.res <- mclapply(posterior.ls, function(x){
-  mc_all(par = c(7.0976026,  30.1295151, -28.0565613,  -0.2788713),
+  mc_all(par = c(-4.912371,	45.345566,	-16.844173,	11.91522),
                     cue = "R",
                     cue_range = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
                     log= "none",
@@ -899,7 +895,7 @@ mc_R.res <- mclapply(posterior.ls, function(x){
   mc.cores = 8)
 
 mc_R_log.res <- mclapply(posterior.ls, function(x){
-  mc_all(par = c(48.70772, 105.18882, -81.80625, -44.60051),
+  mc_all(par = c(3.460017,	203.970669,	-45.649759,	1.691582),
                     cue = "R",
                     cue_range = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
                     log= "log10",
@@ -951,10 +947,7 @@ mclapply(posterior.ls, function(x){
                     log= "none",
          rand_df = x)},
   mc.cores = 8)
-```
 
-
-```{r}
 mclapply(posterior.ls, function(x){
   mc_single(par = c(3.594042,   4.157744, -13.530672,   2.599905),
                     cue = "I+Ig",
@@ -982,7 +975,7 @@ mclapply(posterior.ls, function(x){
 
 # RBC
 mclapply(posterior.ls, function(x){
-  mc_single(par = c(7.0976026,  30.1295151, -28.0565613,  -0.2788713),
+  mc_single(par = c(-4.912371,	45.345566,	-16.844173,	11.91522),
                     cue = "R",
                     cue_range = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
                     log= "none",
@@ -990,7 +983,7 @@ mclapply(posterior.ls, function(x){
   mc.cores = 8)
 
 mclapply(posterior.ls, function(x){
-  mc_single(par = c(48.70772, 105.18882, -81.80625, -44.60051),
+  mc_single(par = c(3.460017,	203.970669,	-45.649759,	1.691582),
                     cue = "R",
                     cue_range = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
                     log= "log10",

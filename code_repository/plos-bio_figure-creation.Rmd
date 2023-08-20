@@ -1,0 +1,174 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+This file will take you through recreating the figures presented in the manuscript. Note that some of the figures went through additional edits in Illustrator for additional labelling!
+
+# Preparation
+## Load packages
+```{r}
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(here)
+library(deSolve)
+library(crone)
+library(optimParallel)
+library(doParallel)
+library(doRNG)
+library(arrow)
+library(stringr)
+library(parallel)
+library(ggpubr)
+library(scales)
+```
+
+## load variables
+```{r}
+parameters_tsukushi <- c(R1 = 8.89*10^6, 
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, 
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+
+# import in data files
+ez_label <- read.csv(here("code_repository/data/ez_label.csv"))
+si_opt.df <- read.csv(here("code_repository/data/si_opt.csv"))
+si_dyn.df <- read_parquet(here("code_repository/data/si_dyn.parquet"))
+
+# import in code
+source(here("code_repository/functions/chabaudi_si_clean.R"))
+```
+
+#=================================#
+# Cue perception mediates fitness
+#=================================#
+#------------ A. conversion rate dynamics and fitness values ------------#
+## function for dynamics generation
+```{r}
+# function for getting single cue infection dynamics
+get_si_dyn <- function(df){
+  ## processing model input
+  par <- c(df$var1, df$var2, df$var3, df$var4) ## parameters
+  cue <- df$cue ## cue choice
+  log <- ifelse(df$log=="log", "log10", "none") ## log or not
+  cue_range <- seq(df$low, df$high, by = df$by) ## cue range
+  id <- df$id ## id
+  
+  ## get dynamics data
+  dyn <- chabaudi_si_clean(
+            parameters_cr = par, 
+            parameters = parameters_tsukushi, 
+            time_range = seq(0, 20, 0.001), 
+            cue = cue, 
+            cue_range = cue_range, 
+            log_cue = log,
+            immunity = "tsukushi",
+            solver = "vode",
+            dyn = TRUE)
+  
+  # append id
+  dyn2 <- cbind(dyn, id = rep(id, nrow(dyn)))
+  
+  # return results
+ return(dyn2)
+}
+```
+
+## run function to generate data
+```{r}
+## split si_opt into list
+si_opt.ls <- split(si_opt.df, seq(nrow(si_opt.df)))
+
+## get dynamics
+si_dyn <- mclapply(si_opt.ls, get_si_dyn, mc.cores = 8)
+
+## combine the dynamics file
+si_dyn.df <- do.call(rbind, si_dyn)
+
+## save
+# write_parquet(si_dyn.df, here("code_repository/data/si_dyn.parquet"))
+```
+
+## process data to isolate conversion rate and pair them with fitness
+```{r}
+## keep only conversion rate from dynamics
+si_dyn_cr.df <- si_dyn.df %>% filter(variable == "cr")
+
+## left join with fitness values
+si_dyn_cr_fitness.df <- si_dyn_cr.df %>% 
+  left_join(si_opt.df, by = "id") 
+```
+
+## plot
+```{r}
+## fitness values ranked from high to low
+fitness_rank.plt <- ggplot(si_opt.df, aes(x = fitness_20, y = fct_reorder(long_label, fitness_20))) +
+  geom_bar(stat = "identity", fill = "black") +
+  labs(x = "Fitness", y = "Cue") +
+  theme_classic()
+
+## conversion rate dynamic ranked in the same order
+fitness_cr.plt <- ggplot(si_dyn_cr_fitness.df, aes(x = time, y = fct_reorder(long_label, fitness_20), fill = value)) +
+  geom_raster() +
+  scale_fill_viridis_c() +
+  labs(fill = "Conversion\nrate", x = "Time (days)") +
+  xlim(1, 20) + # note that cr at day 0->1 is always 0 due to how the model is set up!
+  theme_classic() +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),  #remove y axis labels
+        axis.ticks.y=element_blank()  #remove y axis ticks
+        )
+
+## plot together
+fitness_rank_cr.plt <- ggarrange(fitness_rank.plt, fitness_cr.plt, widths = c(0.7, 1), align = "h")
+  fitness_rank_cr.plt
+```
+
+#------------ B. Reaction norms ------------#
+
+## Data processing and functions
+```{r}
+# read in the si_opt file while contains the parameters for the optimized models
+si_opt.df <- read.csv(here("code_repository/data/si_opt.csv"))
+
+# function to get single infection reaction norm
+get_si_rn <- function(df){
+  ## read in the parameter sets
+  par <- c(df$var1, df$var2, df$var3, df$var4)
+  ## interet
+  cue_range <- seq(df$low, df$high, by = df$by)
+  
+  rn <- par_to_df(par = par, cue_range = cue_range)
+  
+  # for logged, backtransform cue range of reaction norm 
+  rn2 <- rn
+  if(stringr::str_detect(df$log, "log")){rn2$cue_range <- 10^(rn2$cue_range)}
+
+  # append label to reaction norm, dyn, and rug
+  rn2 <- data.frame(rn2, id = df$id, label = rep(df$label, nrow(rn)))
+  
+  return(rn2)
+}
+# rn function and bind together
+si_opt.ls <- split(si_opt.df, seq(nrow(si_opt.df)))
+si_opt.rn <- lapply(si_opt.ls, get_si_rn)
+si_opt.rn2 <- do.call(rbind, si_opt.rn)
+write_parquet(si_opt.rn2, here("data/si_dyn/si_rn.parquet"))
+```
+

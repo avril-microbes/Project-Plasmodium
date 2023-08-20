@@ -46,7 +46,7 @@ dual_cue_opt <- function(df){
                              fitness = fitness,
                              par1 = par[1], par2 = par[2], par3 = par[3], par4 = par[4], par5 = par[5], par6 = par[6], par7 = par[7], par8 = par[8], par9 = par[9])
   
-  write.csv(output, here(paste0("data/dual_cue_opt/", df$Var1, "_", df$Var2, ".csv")))
+  write.csv(output, here(paste0("code_repository/data/dual_cue_opt/", df$Var1, "_", df$Var2, ".csv")))
   return(output)
   
 }

@@ -399,8 +399,8 @@ write_parquet(ci_rug.df , here("data/ci_dyn/ci_rug.parquet"))
 
 # get in single infection reaction norm to match
 ```{r}
-si_opt.df <- read.csv(here("data/si_opt.csv"))
-cue_range_si <- read.csv(here("data/cue_range_si.csv"))
+si_opt.df <- read.csv(here("code_repository/data/si_opt.csv"))
+cue_range_si <- read.csv(here("code_repository/data/cue_range_si.csv"))
 
 si_opt.df <- si_opt.df %>% left_join(select(cue_range_si, id, low, high, by, label), by = "id")
 

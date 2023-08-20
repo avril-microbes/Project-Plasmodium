@@ -14,7 +14,7 @@ opt_global <- function(cue, #
                        ...){
   
   ## for time based optimization, need to match cue range to time range so overrides existing input cue_range
-  if(cue == "t"){cue_range_global <- seq(0, 20, by = 1e-2)} 
+  if(cue == "t"){cue_range <- seq(0, 20, by = 1e-2)} 
   
   # start cluster
   cl <- makeCluster(8); setDefaultCluster(cl = cl)
@@ -31,7 +31,7 @@ opt_global <- function(cue, #
     time_range = seq(0, 20, by = 1e-2), # increase speed
     cue = cue,
     log_cue = log,
-    cue_range = cue_range_global,
+    cue_range = cue_range,
     solver = "vode",
     neg = T # DE Is minimization function so must return negative fitness
   )
