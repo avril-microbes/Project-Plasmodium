@@ -1,30 +1,30 @@
 # function to perform differential evolution optimziation (global optimization) of the dual-cue model
 
-dual_cue_global <- function(df){
+dual_cue_opt_global <- function(df){
   # process cues
   cue <- df$cue
   cue_b <- df$cue_b
   
   # process log
-  log <- ifelse(str_detect("log", df$log), "log10", "none")
-  log_b <- ifelse(str_detect("log", df$log_b), "log10", "none")
+  log <- ifelse(stringr::str_detect("log", df$log), "log10", "none")
+  log_b <- ifelse(stringr::str_detect("log", df$log_b), "log10", "none")
   
   # process cue_range. cannot use by to ensure that both cue ranges are of the same length
   cue_range <- seq(df$low, df$high, length.out = 500)
   cue_range_b <- seq(df$low_b, df$high_b, length.out = 500)
   
-  # optimization
-  cl <- makeCluster(8); setDefaultCluster(cl = cl)
-  
+
   # DE optimization
   global <- DEoptim::DEoptim(
     fn = chabaudi_si_clean, 
-    control = list(trace = 1, parallelType = "parallel", itermax = 500, steptol = 50),
+    control = list(trace = 1, parallelType = "parallel", itermax = 500, steptol = 50,
+                    NP = 90, F = 0.8, CR = 0.9,
+                   packages = c("crone", "splines2", "mgcv", "deSolve", "tidyr", "stringr", "dplyr")), # NP, F, CR values set according to rec by storn et al 2006
     lower = c(-10, -500, -1000, -1000, -250, -500, -1000, -500, -250), # lower and upper bound values are derived empirically based on spline space
     upper = c(10, 500, 1000, 1000, 250, 500, 1000, 500, 250),
     immunity = "tsukushi",
     parameters = parameters_tsukushi,
-    time_range = seq(0, 20, 0.01),
+    time_range = seq(0, 20, 0.05), # this is the largest time step we can do without convergence issues
     cue = cue,
     cue_b = cue_b,
     cue_range = cue_range,
@@ -36,6 +36,7 @@ dual_cue_global <- function(df){
     neg = T)
   
   # local optimization
+  cl <- makeCluster(8); setDefaultCluster(cl = cl)
   res <- optimParallel(
     par = c(global$optim$bestmem), # starting value is the optimal from global 
     fn = chabaudi_si_clean, 
@@ -51,7 +52,6 @@ dual_cue_global <- function(df){
     log_cue_b = log_b,
     solver = "vode",
     gam = "te")
-  
   # close cluster
   stopCluster(cl)
   

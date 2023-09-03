@@ -19,8 +19,6 @@ library(arrow)
 library(stringr)
 library(parallel)
 library(ggpubr)
-library(ppso)
-library(Rmpi)
 library(ggrepel)
 library(forcats)
 
