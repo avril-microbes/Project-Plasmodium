@@ -55,10 +55,19 @@ si_rn.df <-  read_parquet(here("code_repository/data/si_rn.parquet")) ## reactio
 si_rug.df <- read_parquet(here("code_repository/data/si_rug.parquet")) ## data for rug plots
 mc_all_fitness.df <- read_parquet(here("code_repository/data/mc_all_fitness.parquet")) ## fitness values for mc when all parameters are varying
 mc_single_fitness.df <- read_parquet(here("code_repository/data/mc_single_fitness.parquet")) ## fitness values for mc when only one parameter is varying
+dual_cue_f_lc.df <- read.csv(here("code_repository/data/dual_cue_fitness_local.csv")) ## optimized dual cue strategy using L-BFGS-B
+dual_cue_f_glb.df <- read.csv(here("code_repository/data/dual_cue_fitness_global.csv")) ## optimized dual cue strategy using DEoptim + L-BFG
+dual_cue_f_final.df <- read.csv(here("code_repository/data/dual_cue_fitness_final.csv")) ## final dataframe containing strategy that produced highest fitness (dual cue models)
+dual_selected_cr.df <- read_parquet(here("code_repository/data/dual_selected_cr.parquet")) ## cr dynamics of selected models
+cue_range_si_alt.df <- read.csv(here("code_repository/data/cue_range_si_alt.csv")) ## cue ranges for dual cue models
+dual_cue_dyn.df <- read_parquet(here("code_repository/data/dual_cue_dyn.parquet")) ## dynamics of dual cue models
 
 # import in code
 source(here("code_repository/functions/chabaudi_si_clean.R"))
 source(here("code_repository/functions/par_to_df.R"))
+source(here("code_repository/functions/chabaudi_si_clean_high.R"))
+source(here("code_repository/functions/par_to_hm.R"))
+source(here("code_repository/functions/par_to_hm_te.R"))
 ```
 
 #=================================#
@@ -467,11 +476,285 @@ ggarrange(mc_all_fitness.pl, mc_partition.pl, align = "h", widths = c(1.3, 2), l
 ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("code_repository/figures/mc_fitness_partition.tiff"), bg = "white", scale = 1.2)
 ```
 
+#=================================#
+# Dual cue fitness main figure
+#=================================#
+#------------Relative ranking of dual cue vs single cue fitness-----------#
+## Prepare dual cue dataset
+```{r}
+## For the dual cue models, we optimized each cue combinations in 2 ways, one with L-BFGS-B with 0.5X9 starting point and another with DEoptim + L-FGBS-B. For each cue combination, we are going to pick the strategy that gave us the higher fitness
+dual_cue_f_final.df <- dual_cue_f_glb.df %>% 
+  select(id, id_b, label, label_b, fitness_glb = fitness, 
+         par1_glb = par1, par2_glb = par2, par3_glb = par3, par4_glb = par4, par5_glb = par5, par6_glb = par6,
+         par7_glb = par7, par8_glb = par8, par9_glb = par9) %>% 
+  left_join(
+    select(dual_cue_f_lc.df,
+         id, id_b, fitness_lc = fitness, 
+         par1_lc = par1, par2_lc = par2, par3_lc = par3, par4_lc = par4, par5_lc = par5, par6_lc = par6,
+         par7_lc = par7, par8_lc = par8, par9_lc = par9), by = c("id", "id_b")
+  ) %>% ## rename columns and join global and local optimization fitness dataframes
+  mutate(
+    fitness = ifelse(fitness_glb > fitness_lc, fitness_glb, fitness_lc),
+    par1 = ifelse(fitness_glb > fitness_lc, par1_glb, par1_lc),
+    par2 = ifelse(fitness_glb > fitness_lc, par2_glb, par2_lc),
+    par3 = ifelse(fitness_glb > fitness_lc, par3_glb, par3_lc),
+    par4 = ifelse(fitness_glb > fitness_lc, par4_glb, par4_lc),
+    par5 = ifelse(fitness_glb > fitness_lc, par5_glb, par5_lc),
+    par6 = ifelse(fitness_glb > fitness_lc, par6_glb, par6_lc),
+    par7 = ifelse(fitness_glb > fitness_lc, par7_glb, par7_lc),
+    par8 = ifelse(fitness_glb > fitness_lc, par8_glb, par8_lc),
+    par9 = ifelse(fitness_glb > fitness_lc, par9_glb, par9_lc)
+  ) ## the columns are assigned based on which strategy produced the highest fitness
+
+## write csv
+write.csv(dual_cue_f_final.df, here("code_repository/data/dual_cue_fitness_final.csv"))
+```
+
+## Combine single cue and dual cue dataset
+```{r}
+dual_si_fitness.df <- dual_cue_f_final.df %>% 
+  select(id, id_b, label, label_b, fitness_dual = fitness) %>% 
+  left_join(select(si_opt.df, id, fitness_si = fitness_20), by = "id") %>% ## get fitness of single cue model based on first cue
+  left_join(select(si_opt.df, id_b = id, fitness_si_b = fitness_20), by = "id_b") %>%  ## get fitness of single cue model based on second cue
+  mutate(fitness_si_final = ifelse(fitness_si > fitness_si_b, fitness_si, fitness_si_b),
+         label_comb = paste(label, "&", label_b)) ## select the highest single cue model fitness
+```
+
+## plot fitness rank
+```{r}
+dual_fitness.pl <- ggplot(dual_si_fitness.df) +
+  geom_segment(aes(y = fct_reorder(label_comb, fitness_dual), yend = fct_reorder(label_comb, fitness_dual), x = fitness_dual, xend = fitness_si_final)) + ## line segment connecting the cue values
+  geom_point(aes(y = fct_reorder(label_comb, fitness_dual), x = fitness_dual, color = "Dual cue", shape = "Dual cue"),
+             size = 2.5) + ## dual cue fitness
+  geom_point(aes(y = fct_reorder(label_comb, fitness_dual), x = fitness_si_final, color = "Best single cue", shape = "Best single cue"), size = 2.5) + ## best single cue fitness
+  scale_color_manual(values=c("#fc8d59", "#4575b4")) +
+  geom_vline(xintercept = 9.883602, linetype = "dashed") + ## ideal fitness value based on time
+  labs(x = "Fitness", y = "Dual cue combinations", colour = "Legend", shape = "Legend") +
+  theme_classic() +
+  theme(legend.position = "top")
+```
+
+#------------Time series conversion rate of dual cue models-----------#
+Note that our dual cue models take 9 parameters. To ensure that any difference  between dual and single cue models is due to the inclusion of additional cues and NOT higher spline flexibility,we performed L-BFGS-B (local) optimization of single cue models with df = 9 to control for the spline flexibility. 
+
+## dynamics simulation of high parameter cues 
+```{r}
+## best dual cue model: I log and R log
+Rlog_Ilog.cr <- chabaudi_si_clean(
+  parameters_cr = c(4.446192033,	10.97518275,	1.38762817,	23.3059254,	-3.452052371,	-18.0070692,	39.66614226,	-3.545193141,	18.78350799),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(6, 7, by = 1/500),
+  cue_range_b = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/500),
+  cue = "R",
+  cue_b = "I",
+  log_cue = "log10",
+  log_cue_b = "log10",
+  solver = "vode",
+  dyn = T
+)
+
+## when time is used as a cue (9 parameters). chabaudi_si_clean_high is simply a variation of chabaudi_si_clean that makes a more flexible spline!
+time_high.cr <- chabaudi_si_clean_high(
+  parameters_cr = c(9.154314,  -7.570829, -22.506638 ,  3.382405 ,-13.453519 ,-17.011485  , 3.678181, -12.851895 ,-26.115158),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(0, 20, by = 1e-3),
+  cue = "t",
+  solver = "vode",
+  dyn = T)
+
+## when asexual iRBC is used as a cue (high flexibility)
+I_high.cr <- chabaudi_si_clean_high(
+  parameters_cr = c(1.296675,  3.544034 , 4.907484,  2.174249, -3.238309 ,-5.181614 ,-1.645072 , 1.834302 , 1.581011),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000),
+  cue = "I",
+  log_cue = "log10",
+  solver = "vode",
+  dyn = T)
+
+## when RBC is used as cue (high flexibility)
+R_high.cr <- chabaudi_si_clean_high(
+  parameters_cr = c(5.0340348 ,  0.5846168 ,  0.3749648 ,  0.6842673  , 2.4748107 , 10.9036034 , 16.8246316, -24.8690971 ,1.8007238),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  cue_range =  seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+  cue = "R",
+  log_cue = "log10",
+  solver = "vode",
+  dyn = T)
+
+# process 
+I_high.cr_p <- I_high.cr %>% filter(variable == "cr") %>% mutate(label_new = "I log10 (df=9)") %>% select(-variable)
+
+R_high.cr_p <- R_high.cr %>% filter(variable == "cr") %>% mutate(label_new = "R log10 (df=9)") %>% select(-variable)
+
+time_high.cr_p <- time_high.cr %>% filter(variable == "cr") %>% mutate(label_new = "Time (df=9)") %>% select(-variable)
+
+Rlog_Ilog.cr_p <- Rlog_Ilog.cr %>% filter(variable == "cr") %>% mutate(label_new = "R log10 & I log10\n(df=9)") %>% select(-variable)
+
+## combine
+dual_selected_cr.df <- rbind(I_high.cr_p, R_high.cr_p, time_high.cr_p, Rlog_Ilog.cr_p)
+write_parquet(dual_selected_cr.df, here("code_repository/data/dual_selected_cr.parquet"))
+```
+
+## plot
+```{r}
+dual_selected_cr.pl <- ggplot() +
+  geom_line(data = dual_selected_cr.df, aes(color = label_new, x = time, y = value), size = 1) +
+  geom_point(data = dual_selected_cr.df %>% filter(time%%1 == 0), aes(color = label_new, x = time, y = value, shape = label_new), size = 3) +
+  labs(x = "Time (days)", y = "Conversion rate", color = "Cue(s)", shape = "Cue(s)") +
+  xlim(0, 20) +
+  scale_color_manual(values = c("#fc8d59","#fdcb44","black", "#4575b4")) +
+  theme_classic() +
+  theme(legend.position="right",
+        plot.margin = margin(t = 40, r = 0, b = 0, l = 0, unit = "pt")) +
+  guides(color = guide_legend(nrow = 4, byrow = TRUE))
+```
+
+#-------- Reaction norm heatmap of R log10 + I log10 ------------#
+# Process data
+```{r}
+# make heatmap data.frame
+Rlog_Ilog.hm <- par_to_hm_te(par = c(4.446192033,	10.97518275,	1.38762817,	23.3059254,	-3.452052371,	-18.0070692,	39.66614226,	-3.545193141,	18.78350799),
+             cue_range = seq(6,	7, length.out = 500),
+             cue_range_b = seq(0,	6.77815125, length.out = 500))
+
+# process dynamics
+Rlog_Ilog.dyn <- Rlog_Ilog.cr %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value) %>% 
+  mutate(log_R = log10(R),
+         log_I = log10(I))
+```
+
+# plot
+```{r}
+Rlog_Ilog_rn.pl <- ggplot() +
+  geom_raster(data = Rlog_Ilog.hm, aes(x = cue_range_b, y = cue_range, fill = cr)) +
+  scale_fill_viridis_c() +
+  geom_path(data = Rlog_Ilog.dyn, aes(x = log_I, y = log_R), color = "white", arrow = arrow(angle = 30, length = unit(0.1, "inches"))) +
+  geom_point(data = Rlog_Ilog.dyn %>% filter(row_number() %% 1000 == 1 & time <= 20), aes(x = log_I, y = log_R), color = "white") +
+  xlim(0.99*min(hablar::s(Rlog_Ilog.dyn$log_I), na.rm = T), 1.01* max(hablar::s(Rlog_Ilog.dyn$log_I), na.rm = T)) +
+  ylim(0.99*min(hablar::s(Rlog_Ilog.dyn$log_R), na.rm = T),1.01* max(hablar::s(Rlog_Ilog.dyn$log_R), na.rm = T)) +
+  labs(y = "RBC log10", x = "Asexual iRBC log10", fill = "Conversion\nrate") +
+  theme_classic() +
+  theme(legend.position = "right")
+```
+
+#----------- Plot together ------------#
+```{r}
+# assemble panel B and C
+dual_main.BC <- ggarrange(dual_selected_cr.pl, Rlog_Ilog_rn.pl, align = "v", ncol = 1, labels = c("B", "C"))
+
+# assemble panel A
+ggarrange(dual_fitness.pl, dual_main.BC, ncol = 2, labels = c("A", ""), widths = c(1.1,1))
+ggsave(here("code_repository/figures/dual_main_intermediate.tiff"), units = "px", width = 2250, height = 1400, scale = 1.3, dpi=300,  bg = "white")
+```
+
+#=================================#
+# Dual cue conversion rate supplementary figure
+#=================================#
+## Function to simulate dual cue dynamics
+```{r}
+dual_cue_dyn <- function(df){
+  ## process cues
+  cue <- df$cue
+  cue_b <- df$cue_b
+  
+  ## process log
+  log <- ifelse(str_detect(df$id, "log"), "log10", "none")
+  log_b <- ifelse(str_detect(df$id_b, "log"), "log10", "none")
+  
+  # process cue_range. ensure that both cue ranges are of the same length
+  cue_range <- seq(df$low, df$high, length.out = 500)
+  cue_range_b <- seq(df$low_b, df$high_b, length.out = 500)
+  
+  # get parameter set
+  par <- c(df$par1, df$par2, df$par3, df$par4, df$par5, df$par6, df$par7, df$par8, df$par9)
+  
+  # simulate dynamics
+  dyn <- chabaudi_si_clean(
+    parameters_cr = par,
+    immunity = "tsukushi",
+    parameters = parameters_tsukushi,
+    time_range = seq(0, 20, 0.01),
+    cue = cue,
+    cue_b = cue_b,
+    cue_range = cue_range,
+    cue_range_b = cue_range_b,
+    log_cue = log,
+    log_cue_b = log_b,
+    solver = "vode",
+    gam = "te",
+    dyn = T)
+  
+  # return 
+  dyn2 <- cbind(id = df$id, id_b = df$id_b, 
+                label = df$label, label_b = df$label_b,
+                cue = cue, cue_b = cue_b, dyn)
+  
+  write_parquet(dyn2, here(paste0("code_repository/data/dual_cue_dyn/", df$id, "_", df$id_b, ".parquet")))
+}
+```
+
+## Get dynamics of dual cue models
+```{r}
+## For the dual cue fitness dataframe, add the cue range for each individual cue
+dual_cue_f_final.df_p <- dual_cue_f_final.df %>% 
+  left_join(select(cue_range_si_alt.df, id, cue, low, high), by = "id") %>% 
+  left_join(select(cue_range_si_alt.df, id_b = id, cue_b = cue, low_b = low, high_b = high), by = "id_b")
+
+## Split dataframes
+dual_cue_f_final.ls <- split(dual_cue_f_final.df_p, seq(nrow(dual_cue_f_final.df_p)))
+
+## Run function
+mclapply(dual_cue_f_final.ls, dual_cue_dyn, mc.cores = 6)
+
+## Concat all files
+dual_cue_dyn.ls <- list.files(path = here("code_repository/data/dual_cue_dyn"), pattern = "*.parquet", full.names = T)
+dual_cue_dyn.df <- do.call(rbind, lapply(dual_cue_dyn.ls, read_parquet))
+write_parquet(dual_cue_dyn.df, here("code_repository/data/dual_cue_dyn.parquet"))
+```
+
+## Preparing dataset for plotting
+```{r}
+## filter out only conversion rate and attach fitness values
+dual_cue_cr.df <- dual_cue_dyn.df %>% 
+  filter(variable == "cr") %>% 
+  left_join(select(dual_cue_f_final.df, id, id_b, fitness), by = c("id", "id_b")) %>% 
+  mutate(label_comb = paste(label, "&", label_b))
+
+## Sanity check that the dynamics produced the same fitness as the optimized values. Yes!
+dual_cue_dyn.df %>% 
+  filter(variable == "tau_cum") %>% 
+  filter(time == 20) %>% 
+  distinct(id, id_b, value) %>% 
+  left_join(select(dual_cue_f_final.df, id, id_b, fitness), by = c("id", "id_b")) %>% 
+  mutate(diff = value-fitness)
+```
+
+## Plot
+```{r}
+ggplot(data = dual_cue_cr.df, aes(x = time, y = fct_reorder(label_comb, fitness), fill = value)) +
+  geom_raster() +
+  scale_fill_viridis_c() +
+  xlim(1, 20) +
+  labs(x = "Time (days)", y = "Dual cue combination", fill = "Conversion rate") +
+  theme_classic()
+
+ggsave(here("code_repository/figures/dual_cue_cr.tiff"), units = "px", width = 2000, height = 1500, dpi=300,  bg = "white")
+```
+
+
 
 # do a rank plots of median fitness across all individual parameter variation
 ```{r}
-
-
 mc_single_fitness.df %>% mutate(temp = paste(cue, log)) %>% 
 ggplot() +
   geom_violin(aes(x = fitness_phin, y = fct_reorder(temp, fitness_phin, .fun = "median")),
@@ -480,10 +763,6 @@ ggplot() +
   theme_classic() +
   theme(legend.position = "top")
 ```
-
-
-
-
 
 
 
