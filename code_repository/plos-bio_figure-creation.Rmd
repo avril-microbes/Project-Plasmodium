@@ -61,6 +61,7 @@ dual_cue_f_final.df <- read.csv(here("code_repository/data/dual_cue_fitness_fina
 dual_selected_cr.df <- read_parquet(here("code_repository/data/dual_selected_cr.parquet")) ## cr dynamics of selected models
 cue_range_si_alt.df <- read.csv(here("code_repository/data/cue_range_si_alt.csv")) ## cue ranges for dual cue models
 dual_cue_dyn.df <- read_parquet(here("code_repository/data/dual_cue_dyn.parquet")) ## dynamics of dual cue models
+posterior.df <- read.csv(here("code_repository/data/posterior.csv")) ## posterior distribution of different parameter values
 
 # import in code
 source(here("code_repository/functions/chabaudi_si_clean.R"))
@@ -305,175 +306,6 @@ fitness_rn.plt <- ggplot() +
 ```{r}
 ggarrange(fitness_rank_cr.plt, fitness_rn.plt, widths = c(2.3, 1), align = "h", ncol = 2, labels = c("A", "B"))
 ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("code_repository/figures/fitness_rn.tiff"), bg = "white", scale = 1.1)
-```
-
-#=================================#
-# MC simulation of single cue infection
-#=================================#
-#------------ Impact of all parameter variation on fitness ------------#
-## Append all fitness data and sanity checks
-```{r}
-## Import all fitness data and make into single dataframe
-mc_all.ls <- list.files(path = here("code_repository/data/mc_all_fitness"), pattern = "*.csv", full.names = T)
-
-## we are expecting 11*5010 = 55110 data files
-length(mc_all.ls)
-
-## read and append
-mc_all_fitness.df <- do.call(rbind, mclapply(mc_all.ls, function(x){df <- read.csv(x)}, mc.cores = 6))
-
-## just correct the log -> log10 for consistency purpose and also rename id to iter
-mc_all_fitness.df <- mc_all_fitness.df %>% mutate(log = ifelse(log == "log10", "log", "none"),
-                                                  iter = id) %>% select(-id)
-
-## write
-write_parquet(mc_all_fitness.df, here("code_repository/data/mc_all_fitness.parquet"))
-
-## for each cue and log, id = 1 is where all parameters are default values. Given that we simulated the time step with 0.01 rather than  0.001, we need to check whether this higher time step alters the fitness values. We can see that the difference is very small ~0.002 so this will not affect any our outcomes.
-mc_all_fitness.df %>% filter(iter == 1) %>% 
-  left_join(select(si_opt.df, cue, log, fitness_20), by = c("cue", "log")) %>% 
-  mutate(diff = max_fitness - fitness_20)
-```
-
-## process data for plotting fitness
-```{r}
-## attach label
-mc_all_fitness.df_p <- mc_all_fitness.df %>% 
-  left_join(select(si_opt.df, cue, log, id), by = c("cue", "log")) %>% ## get id from si_opt.df
-  left_join(ez_label, by = "id") # get label
-
-## get the reference fitness (default parameter variation), which is where iter = 1
-mc_all_fitness_ref.df <- mc_all_fitness.df_p %>% filter(iter == 1)
-
-## get the rest of the data points (excluding iter == 1) and calculate median and mean
-mc_all_fitness_rand.df <- mc_all_fitness.df_p %>% 
-  filter(iter != 1) 
-
-## get mean and mode in a separate df
-mc_all_fitness_sum.df <- mc_all_fitness_rand.df %>% 
-  group_by(id) %>% 
-  summarize(mean = mean(max_fitness),
-            median = median(max_fitness)) %>% 
-  left_join(ez_label, by = "id")
-
-mc_all_fitness_rand.df$long_label <- fct_reorder(mc_all_fitness_rand.df)
-```
-
-## plot fitness variation 
-```{r}
-mc_all_fitness.pl <- ggplot() +
-  geom_violin(data = mc_all_fitness_rand.df, aes(x = max_fitness, y = fct_reorder(long_label, max_fitness, .fun = "median")),
-              fill = "transparent", trim = F) +
-  geom_point(data = mc_all_fitness_ref.df, aes(x = max_fitness, y = long_label, 
-                                               shape = "Deterministic"), size = 3) +
-  geom_point(data = mc_all_fitness_sum.df, aes(x = median, y = long_label, 
-                                              shape = "Median"), size = 3) +
-  labs(x ="Fitness", y = "Cues", shape = "Category") +
-  theme_classic() +
-  expand_limits(y = 12.5) +
-  theme(legend.position = c(0.1,1), 
-        legend.direction = "horizontal",
-        legend.justification = "top") 
-```
-
-#------------ Impact of individual parameter variation on fitness ------------#
-## combine all single parameter variation files
-```{r}
-## list of file paths linked to the single parameter files
-mc_single.ls <- list.files(path = here("code_repository/data/mc_single_fitness"), pattern = "*.csv", full.names = T)
-
-## read and combine
-mc_single_fitness.df <- do.call(rbind, mclapply(mc_single.ls, function(x) read.csv(x), mc.cores = 6))
-
-## change id -> iter and correctin log label
-mc_single_fitness.df <- mc_single_fitness.df %>% mutate(log = ifelse(log == "log10", "log", "none"),
-                                                  iter = id) %>% select(-id)
-## write
-write_parquet(mc_single_fitness.df, here("code_repository/data/mc_single_fitness.parquet"))
-
-## sanity check. iter = 1 is where all parameters are default. Should produce the same fitness values!
-mc_single_fitness.df %>% filter(iter == 1)
-
-## sanity check. We should have the same values for iter 1 across all and single parameter datasets. 
-mc_single_fitness.df %>% filter(iter == 1)
-```
-
-## process data for plotting
-```{r}
-## note that for each iter across the "single" and "all" dataset, the parameter alteration is the same. Thus, for each data point at which all parameter are varied, there is a corresponding datapoint where only one parameter is varied. We can join these 2 dataset by iter and cue and log
-mc_single_all_fitness.df <- mc_single_fitness.df %>% 
-  left_join(select(mc_all_fitness.df, fitness_all = max_fitness, cue, log, iter), by = c("cue", "log", "iter"))
-
-## make the dataframe into a long format such that all fitness variations are in a single column
-mc_single_fitness.long <- mc_single_all_fitness.df %>% 
-  filter(iter != 1) %>% ## filter out iter = 1, which does not have variation
-  left_join(select(mc_all_fitness_ref.df, fitness_ref = max_fitness, cue , log),
-            by = c("cue", "log")) %>% ## add in the deterministic fitness values
-  select(-c("X", "rho", "burst", "iota_N1", "iota_N2", "phi_N1", "phi_N2")) %>% # keep only fitness and associated labels
-  tidyr::pivot_longer(-c("cue", "log", "fitness_all", "iter", "fitness_ref")) %>% ## make long
-  mutate(parameter = gsub("fitness_", "", name)) ## isolate parameter being altered
-
-## calculate degree deviation from deterministic values. note that rel_diff_single ranges from -1 to 1. -1 ->  one variable perturbation is acting in the opposite direction to the overall perturbation caused by randomizing all variables. 0 parameter variation contributes very little, 1 -> one variable contributes a lot
-mc_single_fitness.long_p <- mc_single_fitness.long %>% 
-  mutate(diff_single = value-fitness_ref, ## pertubation to fitness caused by single parameter variation
-         diff_all = fitness_all-fitness_ref, ## pertubation to fintess caused by all parameter varying
-         rel_diff_single = diff_single/diff_all ## normalized pertunation to fitness (single parameter)
-         ) %>% 
-  left_join(select(si_opt.df, cue, log, id), by = c("cue", "log")) %>% 
-  left_join(ez_label, by = "id") # get label
-
-## calculate summary statistics. this includes median, credible interval (contains 89% data points calculated via Highest Density Interval, which is better for skewed data)
-mc_single_fitness.sum <- mc_single_fitness.long_p %>% 
-  group_by(long_label, parameter, log) %>% 
-  summarise(ci_lower = ci(rel_diff_single, method = "HDI", ci = 0.89)[[2]],
-            ci_higher = ci(rel_diff_single, method = "HDI", ci = 0.89)[[3]],
-            quantile_low = quantile(rel_diff_single, 0.025),
-            quantile_high = quantile(rel_diff_single, 0.975),
-            median = median(rel_diff_single)) %>% 
-  mutate(parameter_label = case_when( ## recode parameter values
-    parameter == "rho" ~ "RBC replenishment (ρ)",
-    parameter == "phin" ~ "Half-life indis (ϕn)",
-    parameter == "phiw" ~ "Half-life targeted (ϕw)",
-    parameter == "psin" ~ "Activation indis (ψn)",
-    parameter == "psiw" ~ "Activation targeted (ψw)",
-    parameter == "beta" ~ "Burst size (β)",
-  ))
-
-## arrange ordering of cues
-mc_single_fitness.sum$long_label <- factor(mc_single_fitness.sum$long_label,
-                                           c("Asexual iRBC", "Asexual iRBC log",
-                                             "Sexual iRBC", "Sexual iRBC log",
-                                             "Total iRBC", "Total iRBC log",
-                                             "Gametocyte", "Gametocyte log", 
-                                             "RBC", "RBC log"))
-```
-
-# plotting 89% credible interval. By visual inspection of the distribution, ci represented the distribution (more honestly) than quantile, even when quantile seems to display larger differences of logging cues.
-```{r}
-mc_partition.pl <- ggplot() +
-  geom_segment(data = mc_single_fitness.sum, aes(x = ci_lower, xend = ci_higher,
-                                                 y = long_label, yend = long_label,
-                                                 color = log), size = 1) + ## 89% credible interval
-  geom_point(data = mc_single_fitness.sum, aes(x = median,  y = long_label, color = log, fill = log, shape = log), 
-             size = 2.5) + ## median point
-  geom_vline(xintercept = 0, linetype = "dashed") +
-  facet_wrap(~parameter_label) +
-  labs(x = "Relative fitness pertubation", y = "Cues") +
-  scale_color_manual(values=c("#4575b4", "#fc8d59")) +
-  scale_fill_manual(values=c("#4575b4", "#fc8d59")) +
-  scale_shape_manual(values = c(22,23)) +
-  theme_bw() +
-  scale_y_discrete(limits=rev) + ## reverse ordering of y-axis so that cues are displayed correctly
-  theme(legend.position = "none",
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank()
-  )
-```
-
-#--------- arrange plots together ---------#
-```{r}
-ggarrange(mc_all_fitness.pl, mc_partition.pl, align = "h", widths = c(1.3, 2), labels = c("A", "B"))
-ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("code_repository/figures/mc_fitness_partition.tiff"), bg = "white", scale = 1.2)
 ```
 
 #=================================#
@@ -749,6 +581,255 @@ ggplot(data = dual_cue_cr.df, aes(x = time, y = fct_reorder(label_comb, fitness)
   theme_classic()
 
 ggsave(here("code_repository/figures/dual_cue_cr.tiff"), units = "px", width = 2000, height = 1500, dpi=300,  bg = "white")
+```
+
+#=================================#
+# MC simulation of single cue and dual cue infection
+#=================================#
+#------------ Impact of all parameter variation on fitness ------------#
+## Append all fitness data and sanity checks
+```{r}
+## Import all fitness data and make into single dataframe
+mc_all.ls <- list.files(path = here("code_repository/data/mc_all_fitness"), pattern = "*.csv", full.names = T)
+
+## filter out MC records containing R log & I log. These data have different headers and would need to be processed differently
+mc_all_sc.ls <- mc_all.ls[!grepl("R_log10-I_log10*", mc_all.ls)]
+mc_all_Rlog_Ilog.ls <- mc_all.ls[grepl("R_log10-I_log10*", mc_all.ls)]
+
+## we are expecting 11*5010 = 55110 data files
+length(mc_all_sc.ls)
+length(mc_all_Rlog_Ilog.ls) ## 5010 records nice
+
+## read and append
+mc_all_fitness_rc.df <- do.call(rbind, mclapply(mc_all_sc.ls, function(x){df <- read.csv(x)}, mc.cores = 6))
+mc_all_fitness_Rlog_Ilog.df <- do.call(rbind, mclapply(mc_all_Rlog_Ilog.ls, function(x){df <- read.csv(x)}, mc.cores = 6))
+
+## just correct the log -> log10 for consistency purpose and also rename id to iter
+mc_all_fitness.df <- mc_all_fitness_Rlog_Ilog.df %>% 
+  mutate(cue = "R log & I log", log = "log10") %>% ## renaming the cue names of R log and I log data so they fit
+  select(-c(cue_b, log_b)) %>% 
+  rbind(mc_all_fitness_rc.df) %>% 
+  mutate(log = ifelse(log == "log10", "log", "none"),
+         iter = id) %>% select(-id)
+
+## write
+write_parquet(mc_all_fitness.df, here("code_repository/data/mc_all_fitness.parquet"))
+
+## for each cue and log, id = 1 is where all parameters are default values. Given that we simulated the time step with 0.01 rather than  0.001, we need to check whether this higher time step alters the fitness values. We can see that the difference is very small ~0.002 so this will not affect any our outcomes.
+mc_all_fitness.df %>% filter(iter == 1) %>% 
+  left_join(select(si_opt.df, cue, log, fitness_20), by = c("cue", "log")) %>% 
+  mutate(diff = max_fitness - fitness_20)
+```
+
+## process data for plotting fitness
+```{r}
+## attach label
+mc_all_fitness.df_p <- mc_all_fitness.df %>% 
+  left_join(select(si_opt.df, cue, log, id), by = c("cue", "log")) %>% ## get id from si_opt.df
+  left_join(ez_label, by = "id") %>% # get label
+  mutate(long_label = ifelse(cue == "R log & I log", "RBC log &\nasexual iRBC log", long_label)) ## assign label manually to dual cue data
+
+## manually check that everything is assigned correctly
+mc_all_fitness.df_p %>% distinct(long_label, cue, log)
+
+## get the reference fitness (default parameter variation), which is where iter = 1
+mc_all_fitness_ref.df <- mc_all_fitness.df_p %>% filter(iter == 1)
+
+## get the rest of the data points (excluding iter == 1) and calculate median and mean
+mc_all_fitness_rand.df <- mc_all_fitness.df_p %>% 
+  filter(iter != 1) 
+
+## get mean and mode in a separate df
+mc_all_fitness_sum.df <- mc_all_fitness_rand.df %>% 
+  group_by(long_label) %>% 
+  summarize(mean = mean(max_fitness),
+            median = median(max_fitness)) 
+```
+
+## plot fitness variation 
+```{r}
+mc_all_fitness.pl <- ggplot() +
+  geom_violin(data = mc_all_fitness_rand.df, aes(x = max_fitness, y = fct_reorder(long_label, max_fitness, .fun = "median")),
+              fill = "transparent", trim = F) +
+  geom_point(data = mc_all_fitness_ref.df, aes(x = max_fitness, y = long_label, 
+                                               shape = "Deterministic"), size = 3) +
+  geom_point(data = mc_all_fitness_sum.df, aes(x = median, y = long_label, 
+                                              shape = "Median"), size = 3) +
+  labs(x ="Fitness", y = "Cues", shape = "Category") +
+  theme_classic() +
+  expand_limits(y = 13.7) +
+  theme(legend.position = c(0.1,1), 
+        legend.direction = "horizontal",
+        legend.justification = "top") 
+```
+
+#------------ Impact of individual parameter variation on fitness ------------#
+## combine all single parameter variation files
+```{r}
+## list of file paths linked to the single parameter files
+mc_single.ls <- list.files(path = here("code_repository/data/mc_single_fitness"), pattern = "*.csv", full.names = T)
+
+## filter out R log and I log data. these will be attached later
+mc_single_sc.ls <- mc_single.ls[!grepl("R_log10-I_log10*", mc_single.ls)]
+mc_single_Rlog_Ilog.ls <- mc_single.ls[grepl("R_log10-I_log10*", mc_single.ls)]
+
+## check number of files
+length(mc_single_sc.ls)
+length(mc_single_Rlog_Ilog.ls)
+
+## read and combine
+mc_single_sc_fitness.df <- do.call(rbind, mclapply(mc_single_sc.ls, function(x) read.csv(x), mc.cores = 6))
+mc_single_Rlog_Ilog_fitness.df <- do.call(rbind, mclapply(mc_single_Rlog_Ilog.ls, function(x) read.csv(x), mc.cores = 6))
+
+## change id -> iter and correcting log label
+mc_single_fitness.df <- mc_single_Rlog_Ilog_fitness.df %>% 
+  mutate(cue = "R log & I log") %>% ## manually recode cue for the dual cue results
+  select(-c(cue_b, log_b)) %>% ## these columns are not present in the single cue models and are removed
+  rbind(mc_single_sc_fitness.df) %>% 
+  mutate(log = ifelse(log == "log10", "log", "none"),
+                                                  iter = id) %>% select(-id)
+## write
+write_parquet(mc_single_fitness.df, here("code_repository/data/mc_single_fitness.parquet"))
+
+## sanity check. iter = 1 is where all parameters are default. Should produce the same fitness values!
+mc_single_fitness.df %>% filter(iter == 1)
+
+## sanity check. We should have the same values for iter 1 across all and single parameter datasets. 
+mc_single_fitness.df %>% filter(iter == 1)
+```
+
+## process data for plotting
+```{r}
+## note that for each iter across the "single" and "all" dataset, the parameter alteration is the same. Thus, for each data point at which all parameter are varied, there is a corresponding datapoint where only one parameter is varied. We can join these 2 dataset by iter and cue and log
+mc_single_all_fitness.df <- mc_single_fitness.df %>% 
+  left_join(select(mc_all_fitness.df, fitness_all = max_fitness, cue, log, iter), by = c("cue", "log", "iter"))
+
+## make the dataframe into a long format such that all fitness variations are in a single column
+mc_single_fitness.long <- mc_single_all_fitness.df %>% 
+  filter(iter != 1) %>% ## filter out iter = 1, which does not have variation
+  left_join(select(mc_all_fitness_ref.df, fitness_ref = max_fitness, cue , log),
+            by = c("cue", "log")) %>% ## add in the deterministic fitness values
+  select(-c("X", "rho", "burst", "iota_N1", "iota_N2", "phi_N1", "phi_N2")) %>% # keep only fitness and associated labels
+  tidyr::pivot_longer(-c("cue", "log", "fitness_all", "iter", "fitness_ref")) %>% ## make long
+  mutate(parameter = gsub("fitness_", "", name)) ## isolate parameter being altered
+
+## calculate degree deviation from deterministic values. note that rel_diff_single ranges from -1 to 1. -1 ->  one variable perturbation is acting in the opposite direction to the overall perturbation caused by randomizing all variables. 0 parameter variation contributes very little, 1 -> one variable contributes a lot
+mc_single_fitness.long_p <- mc_single_fitness.long %>% 
+  mutate(diff_single = value-fitness_ref, ## pertubation to fitness caused by single parameter variation
+         diff_all = fitness_all-fitness_ref, ## pertubation to fintess caused by all parameter varying
+         rel_diff_single = diff_single/diff_all ## normalized pertunation to fitness (single parameter)
+         ) %>% 
+  left_join(select(si_opt.df, cue, log, id), by = c("cue", "log")) %>% 
+  left_join(ez_label, by = "id") %>% # get label
+  mutate(long_label = ifelse(cue == "R log & I log", "RBC log &\nasexual iRBC log", long_label)) ## maually assign label to dual cue data
+
+## calculate summary statistics. this includes median, credible interval (contains 89% data points calculated via Highest Density Interval, which is better for skewed data)
+mc_single_fitness.sum <- mc_single_fitness.long_p %>% 
+  group_by(long_label, parameter, log) %>% 
+  summarise(ci_lower = ci(rel_diff_single, method = "HDI", ci = 0.89)[[2]],
+            ci_higher = ci(rel_diff_single, method = "HDI", ci = 0.89)[[3]],
+            quantile_low = quantile(rel_diff_single, 0.025),
+            quantile_high = quantile(rel_diff_single, 0.975),
+            median = median(rel_diff_single)) %>% 
+  mutate(parameter_label = case_when( ## recode parameter values
+    parameter == "rho" ~ "RBC replenishment (ρ)",
+    parameter == "phin" ~ "Half-life indis (ϕn)",
+    parameter == "phiw" ~ "Half-life targeted (ϕw)",
+    parameter == "psin" ~ "Activation indis (ψn)",
+    parameter == "psiw" ~ "Activation targeted (ψw)",
+    parameter == "beta" ~ "Burst size (β)",
+  ))
+
+
+## for violin plots, what we can do is plot out only the 89% credible interval so the graph is easier to interpret
+mc_single_fitness.long_p_f <- mc_single_fitness.long_p %>% 
+  left_join(select(mc_single_fitness.sum, long_label, parameter, ci_lower, ci_higher, parameter_label), by = c("long_label", "parameter")) %>% 
+  filter(rel_diff_single >= ci_lower & rel_diff_single < ci_higher)
+
+
+## arrange ordering of cues and parameters
+mc_single_fitness.long_p_f$long_label <- factor(mc_single_fitness.long_p_f$long_label,
+                                           c("RBC log &\nasexual iRBC log",
+                                             "Asexual iRBC", "Asexual iRBC log",
+                                             "Sexual iRBC", "Sexual iRBC log",
+                                             "Total iRBC", "Total iRBC log",
+                                             "Gametocyte", "Gametocyte log", 
+                                             "RBC", "RBC log"))
+
+mc_single_fitness.long_p_f$parameter_label <- factor(mc_single_fitness.long_p_f$parameter_label,
+                                                     c("Burst size (β)",
+                                                       "RBC replenishment (ρ)",
+                                                       "Half-life indis (ϕn)",
+                                                       "Half-life targeted (ϕw)",
+                                                       "Activation indis (ψn)",
+                                                       "Activation targeted (ψw)"))
+```
+
+# plotting 89% credible interval. By visual inspection of the distribution, ci represented the distribution (more honestly) than quantile, even when quantile seems to display larger differences of logging cues.
+```{r}
+mc_partition.pl <- ggplot() +
+  geom_violin(data = mc_single_fitness.long_p_f, aes(x = rel_diff_single, y = long_label,
+                                                 fill = log, color = log)) + ## 89% credible interval
+  geom_vline(xintercept = 0, linetype = "dashed") +
+  facet_wrap(~parameter_label) +
+  labs(x = "Relative fitness pertubation", y = "Cues") +
+  scale_color_manual(values=c("#4575b4", "#fc8d59")) +
+  scale_fill_manual(values=c("#4575b4", "#fc8d59")) +
+  scale_shape_manual(values = c(22,23)) +
+  theme_bw() +
+  scale_y_discrete(limits=rev) + ## reverse ordering of y-axis so that cues are displayed correctly
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  )
+```
+
+#--------- arrange plots together ---------#
+```{r}
+ggarrange(mc_all_fitness.pl, mc_partition.pl, align = "h", widths = c(1.3, 2), labels = c("A", "B"))
+ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("code_repository/figures/mc_fitness_partition.tiff"), bg = "white", scale = 1.2)
+```
+
+#==========================================#
+# Supplementary figure on MC posterior parameter distribution
+#==========================================#
+## Process data
+```{r}
+## manually make dataframe containing the parameter values used in the deterministic model
+par_det.df <- data.frame(
+  parameter = c("rho", "phi_N1", "phi_N2", "iota_N1", "iota_N2", "burst"),
+  deterministic = c(2.627156e-01, log10(3.520591e-02), log10(5.508420e+02), log10(1.669234e+01), 8.431785e-01, 5.721000e+00 )
+)
+
+## make into long format
+posterior.long <- posterior.df %>% 
+  mutate(iota_N1 = log10(iota_N1),
+         phi_N1 = log10(phi_N1),
+         phi_N2 = log10(phi_N2)) %>% 
+  tidyr::pivot_longer(-id, names_to = "parameter") %>% 
+  left_join(par_det.df, by = "parameter") %>% ## add in the deterministic parameter values
+  mutate(label = case_when(
+    parameter == "rho" ~ "RBC replenishment (ρ)",
+    parameter == "phi_N1" ~ "log10 Half-life indis (ϕn)",
+    parameter == "phi_N2" ~ "log10 Half-life targeted (ϕw)",
+    parameter == "iota_N1" ~ "log10 Activation indis (ψn)",
+    parameter == "iota_N2" ~ "Activation targeted (ψw)",
+    parameter == "burst" ~ "Burst size (β)"
+  )) ## rename paramter values
+
+```
+
+## plot
+```{r}
+ggplot(posterior.long) +
+  geom_density(aes(x = value), fill = "grey") +
+  geom_vline(aes(xintercept = deterministic), linetype = "dashed") +
+  facet_wrap(~label, scales = "free") +
+  labs(x = "Value", y = "Density") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+  
 ```
 
 
