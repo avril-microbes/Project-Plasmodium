@@ -1,12 +1,12 @@
-id,short_label,long_label,cue_label
-I_none,I,Asexual iRBC,Asexual iRBC
-I_log,I log,Asexual iRBC log,Asexual iRBC
-Ig_none,Ig,Sexual iRBC,Sexual iRBC
-Ig_log,Ig log,Sexual iRBC log,Sexual iRBC
-I+Ig_none,I+Ig,Total iRBC,Total iRBC
-I+Ig_log,I+Ig log,Total iRBC log,Total iRBC
-G_none,G,Gametocyte,Gametocyte
-G_log,G log,Gametocyte log,Gametocyte
-R_none,R,RBC,RBC
-R_log,R log,RBC log,RBC
-time,Time,Time,Time
+id,short_label,long_label,cue_label,cue,log
+I_none,I,Asexual iRBC,Asexual iRBC,I,none
+I_log,I log,Asexual iRBC log,Asexual iRBC,I,log
+Ig_none,Ig,Sexual iRBC,Sexual iRBC,Ig,none
+Ig_log,Ig log,Sexual iRBC log,Sexual iRBC,Ig,log
+I+Ig_none,I+Ig,Total iRBC,Total iRBC,I+Ig,none
+I+Ig_log,I+Ig log,Total iRBC log,Total iRBC,I+Ig,log
+G_none,G,Gametocyte,Gametocyte,G,none
+G_log,G log,Gametocyte log,Gametocyte,G,log
+R_none,R,RBC,RBC,R,none
+R_log,R log,RBC log,RBC,R,log
+time,Time,Time,Time,time,none

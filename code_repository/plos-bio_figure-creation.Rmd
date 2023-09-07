@@ -22,6 +22,7 @@ library(parallel)
 library(ggpubr)
 library(scales)
 library(bayestestR)
+library(purrr)
 ```
 
 ## load variables
@@ -61,6 +62,7 @@ dual_cue_f_final.df <- read.csv(here("code_repository/data/dual_cue_fitness_fina
 dual_selected_cr.df <- read_parquet(here("code_repository/data/dual_selected_cr.parquet")) ## cr dynamics of selected models
 cue_range_si_alt.df <- read.csv(here("code_repository/data/cue_range_si_alt.csv")) ## cue ranges for dual cue models
 dual_cue_dyn.df <- read_parquet(here("code_repository/data/dual_cue_dyn.parquet")) ## dynamics of dual cue models
+exp_ss.df <- read.csv(here("code_repository/data/experimental_data.csv")) ## cleaned experimental records of P. chabaudi infection
 posterior.df <- read.csv(here("code_repository/data/posterior.csv")) ## posterior distribution of different parameter values
 
 # import in code
@@ -69,6 +71,10 @@ source(here("code_repository/functions/par_to_df.R"))
 source(here("code_repository/functions/chabaudi_si_clean_high.R"))
 source(here("code_repository/functions/par_to_hm.R"))
 source(here("code_repository/functions/par_to_hm_te.R"))
+
+# color codes
+orange <- "#fc8d59"
+blue <- "#4575b4"
 ```
 
 #=================================#
@@ -584,6 +590,223 @@ ggsave(here("code_repository/figures/dual_cue_cr.tiff"), units = "px", width = 2
 ```
 
 #=================================#
+# Experimental disease maps of P. chabaudi
+#=================================#
+## Import in data
+```{r}
+# import in https://academic.oup.com/emph/article/2018/1/127/5045871?login=true
+## (2018 published in EMPH)
+emph_2018 <- readxl::read_xls(here("code_repository/experimental_data/Huijben_2018_EMPH.xls"), sheet = 1)
+
+# import in https://onlinelibrary.wiley.com/doi/10.1111/j.1558-5646.2010.01068.x
+## (2010 published in Evolution)
+evo_2010 <- readxl::read_xls(here("code_repository/experimental_data/Huijben_2010_evolution.xls"), sheet = 1)
+
+# import in https://journals.plos.org/plospathogens/article?id=10.1371/journal.ppat.1003578#:~:text=The%20philosophy%20is%20that%20aggressive,longer%20feel%20sick%20%5B13%5D.
+## (2013 in PLoS pathogen)
+plos_2013_1 <- readxl::read_xlsx(here("code_repository/experimental_data/Huijben_2013_PLoS.xlsx"), sheet = 2)
+
+plos_2013_2 <- readxl::read_xlsx(here("code_repository/experimental_data/Huijben_2013_PLoS.xlsx"), sheet = 3)
+
+# import in https://onlinelibrary.wiley.com/doi/10.1111/j.1420-9101.2011.02369.x
+## (2011 in Journal of Evolutionary Biology)
+eseb_2011 <- readxl::read_xls(here("code_repository/experimental_data/Huijben_2011_eseb.xls"), sheet = 1)
+
+# import in https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3939351/
+## (2011 in Journal of American naturalist). Note private dataset so not provided in the supplementary!
+amna_2011 <- readxl::read_xls(here("experimental_data/Pollitt_2011_naturalist.xls"), sheet = 1)
+```
+
+## Clean data 
+```{r}
+## for EMPH 2018 study, include only infection series without drugs were R-inoculum is administered by itself, which includes 6, 7, 8, 9, 10. Box 6 has a starting inoculum number of 10^6, which is most similar to other studies. Filtering between day 3-21 because those are the days where we have single day data.
+emph_2018_ss.df <- emph_2018 %>% 
+  filter(Box %in% seq(6, 10) &
+         dplyr::between(Day, 3, 21)) %>% 
+  mutate(dose = case_when(
+    Box == 6 ~ 10^6,
+    Box == 7 ~ 10^5,
+    Box == 8 ~ 10^3,
+    Box == 9 | Box == 10 ~ 10^1
+  )) %>% 
+  mutate(strain = "As6p",
+         study = "emph2018",
+         study_strain = paste0(strain, study),
+         id = paste0(study, strain, Box, Mouse, 1),
+         RBC = RBC * (10^6)) %>%
+  select(day = Day,
+         mouse = Mouse, 
+         RBC, 
+         asex = Rasex,
+         gam = Rgam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+## for 2011 eseb, only day 3-17 data are analyzed because those are the days where gametocyte data are available
+eseb_2011_ss.df <- eseb_2011 %>% 
+  filter(Clones == "R" & between(Day, 3, 17) &
+           Drugs == "N") %>% 
+  mutate(dose = 10^6,
+         strain = "As8p",
+         study = "eseb2011",
+         study_strain = paste0(strain, study),
+         RBC = RBC*(10^6),
+         id = paste0(study, strain, Box, Mouse, 2)) %>% 
+  select(day = Day,
+         mouse = Mouse,
+         RBC,
+         asex = R.asex,
+         gam = R.gam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+## for evolution_2010, single infection data for both resistant and susceptible clones are available without drug treatment
+evolution_2010_ss.df <- evo_2010 %>% 
+  filter(Clone == "R" | Clone == "S") %>%
+  filter(between(Day, 3, 21) &
+           Drugs == "nodrugs") %>% 
+  mutate(asex = R.asex + S.asex,
+         gam = R.gam + S.gam,
+         dose = 10^6,
+         RBC = RBC*(10^6),
+         study = "evol2011",
+         strain = ifelse(Clone == "R", "As12", "AJ51"),
+         study_strain = paste0(strain, "_", study),
+         id = paste0(study, strain, Box, Mouse, 3)) %>% 
+  select(day = Day,
+         mouse = Mouse,
+         RBC,
+         asex,
+         gam,
+         dose,
+         strain,
+         study,
+         study_strain,
+         id)
+
+## for amnat 2011, get single infection data. Filter out any mice that have missing data. Set negative asexuasl data ot 0
+amna_2011_ss.df <-  amna_2011 %>% 
+  filter(treat %in% c("AJ", "AS", "ER", "CR", "CW", "DK")) %>% 
+  mutate(asex = tot.para - tot.gcyte,
+         gam = tot.gcyte,
+         dose = 10^6,
+         study = "amna_2011",
+         RBC = rbc/(10^6),
+         study_strain = paste0(treat, "_", study),
+         id = paste0(study, treat, div, mouse, 4)) %>% 
+  mutate(asex = ifelse(asex < 0, 0, asex)) # sometimes total parasite is less than gametocyte so need to correct for this
+
+### check for NA by groups
+amna_na.id <- amna_2011_ss.df %>% 
+  filter_at(vars(asex, gam, RBC), all_vars(is.na(.))) %>% 
+  distinct(id) %>% 
+  select(id)
+
+amna_2011_ss.df2 <- amna_2011_ss.df %>% 
+  filter(!(id %in% amna_na.id$id)) %>% 
+  select(day,
+         mouse,
+         RBC,
+         asex,
+         gam,
+         dose,
+         strain = treat,
+         study,
+         study_strain,
+         id)
+
+## rbind
+exp_ss.df <- rbind(emph_2018_ss.df, eseb_2011_ss.df, evolution_2010_ss.df, amna_2011_ss.df2)
+
+## write
+write.csv(exp_ss.df, here("code_repository/data/experimental_data.csv"))
+```
+
+## Prepare dataset for plotting
+```{r}
+names(exp_ss.df) <- c("X", "Day", "Mouse", "RBC", "iRBC", "Gametocyte", "Dose", "Strain", "Study", "Study_strain", "id")
+
+## prepare a list of variable combinations we want to plot
+exp_var.comb <- tidyr::expand_grid(x = c("RBC", "iRBC", "Gametocyte"),
+                   y = c("RBC", "iRBC", "Gametocyte")) %>% ## get all pairwise combinations of variables
+  filter(x != y) %>% ## remove incidences where the 2 variables are the same
+  mutate(tmp = paste0(pmin(x, y), pmax(x, y))) %>% ## eliminate same variable but different order
+  slice_head(n = 1, by = tmp) %>% 
+  select(-tmp) 
+```
+
+## List-wise plotting
+```{r}
+## x and y axis are not logged!
+exp_xy.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
+  x_col <- .x
+  y_col <- .y
+  
+  ggplot(exp_ss.df, aes_string(x = x_col, y = y_col)) +
+        geom_path(aes(colour = Day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0, "inches"))) +
+        theme_classic() + 
+        scale_color_viridis_c(limits = c(3, 21)) +
+        labs(color = "Days post-infection")  +
+        scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
+        scale_x_continuous(labels = label_scientific(digits = 1))
+}
+)
+
+## x-axis is logged
+exp_xlogy.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
+  x_col <- .x
+  y_col <- .y
+  
+  ggplot(exp_ss.df, aes_string(x = sprintf("log10(%s)", x_col), y = y_col)) +
+        geom_path(aes(colour = Day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0, "inches"))) +
+        theme_classic() + 
+        scale_color_viridis_c(limits = c(3, 21)) +
+        labs(color = "Days post-infection")  +
+        scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
+}
+)
+
+## y-axis logged
+exp_xylog.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
+  x_col <- .x
+  y_col <- .y
+  
+  ggplot(exp_ss.df, aes_string(x = x_col, y = sprintf("log10(%s)", y_col))) +
+        geom_path(aes(colour = Day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0, "inches"))) +
+        theme_classic() + 
+        scale_color_viridis_c(limits = c(3, 21)) +
+        labs(color = "Days post-infection")   +
+        scale_x_continuous(labels = label_scientific(digits = 1))
+}
+)
+
+## both x and y axis is logged
+exp_xlogylog.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
+  x_col <- .x
+  y_col <- .y
+  
+  ggplot(exp_ss.df, aes_string(x = sprintf("log10(%s)", x_col), y = sprintf("log10(%s)", y_col))) +
+        geom_path(aes(colour = Day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0, "inches"))) +
+        theme_classic() + 
+        scale_color_viridis_c(limits = c(3, 21)) +
+        labs(color = "Days post-infection") 
+}
+)
+
+## plot together
+ggarrange(plotlist = c(exp_xy.pl_ls, exp_xlogy.pl_ls, exp_xylog.pl_ls, exp_xlogylog.pl_ls), 
+          common.legend = T, align = "hv")
+ggsave(here("code_repository/figures/exp_disease-curve.tiff"), units = "px", width = 2250, height = 1500, scale = 1.4, dpi=300,  bg = "white")
+```
+
+
+#=================================#
 # MC simulation of single cue and dual cue infection
 #=================================#
 #------------ Impact of all parameter variation on fitness ------------#
@@ -650,12 +873,13 @@ mc_all_fitness_sum.df <- mc_all_fitness_rand.df %>%
 ```{r}
 mc_all_fitness.pl <- ggplot() +
   geom_violin(data = mc_all_fitness_rand.df, aes(x = max_fitness, y = fct_reorder(long_label, max_fitness, .fun = "median")),
-              fill = "transparent", trim = F) +
+              fill = "light grey", trim = T) +
   geom_point(data = mc_all_fitness_ref.df, aes(x = max_fitness, y = long_label, 
-                                               shape = "Deterministic"), size = 3) +
+                                               shape = "Deterministic", color = "Deterministic"), size = 3) +
   geom_point(data = mc_all_fitness_sum.df, aes(x = median, y = long_label, 
-                                              shape = "Median"), size = 3) +
-  labs(x ="Fitness", y = "Cues", shape = "Category") +
+                                              shape = "Median", color = "Median"), size = 3) +
+  labs(x ="Fitness", y = "Cues", shape = "Legend", color = "Legend") +
+  scale_color_manual(values = c(blue, "black")) +
   theme_classic() +
   expand_limits(y = 13.7) +
   theme(legend.position = c(0.1,1), 
@@ -725,7 +949,7 @@ mc_single_fitness.long_p <- mc_single_fitness.long %>%
 
 ## calculate summary statistics. this includes median, credible interval (contains 89% data points calculated via Highest Density Interval, which is better for skewed data)
 mc_single_fitness.sum <- mc_single_fitness.long_p %>% 
-  group_by(long_label, parameter, log) %>% 
+  group_by(long_label, parameter) %>% 
   summarise(ci_lower = ci(rel_diff_single, method = "HDI", ci = 0.89)[[2]],
             ci_higher = ci(rel_diff_single, method = "HDI", ci = 0.89)[[3]],
             quantile_low = quantile(rel_diff_single, 0.025),
@@ -798,21 +1022,18 @@ ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("co
 ## manually make dataframe containing the parameter values used in the deterministic model
 par_det.df <- data.frame(
   parameter = c("rho", "phi_N1", "phi_N2", "iota_N1", "iota_N2", "burst"),
-  deterministic = c(2.627156e-01, log10(3.520591e-02), log10(5.508420e+02), log10(1.669234e+01), 8.431785e-01, 5.721000e+00 )
+  deterministic = c(2.627156e-01, 3.520591e-02, 5.508420e+02, 1.669234e+01, 8.431785e-01, 5.721000e+00 )
 )
 
 ## make into long format
 posterior.long <- posterior.df %>% 
-  mutate(iota_N1 = log10(iota_N1),
-         phi_N1 = log10(phi_N1),
-         phi_N2 = log10(phi_N2)) %>% 
   tidyr::pivot_longer(-id, names_to = "parameter") %>% 
   left_join(par_det.df, by = "parameter") %>% ## add in the deterministic parameter values
   mutate(label = case_when(
     parameter == "rho" ~ "RBC replenishment (ρ)",
-    parameter == "phi_N1" ~ "log10 Half-life indis (ϕn)",
-    parameter == "phi_N2" ~ "log10 Half-life targeted (ϕw)",
-    parameter == "iota_N1" ~ "log10 Activation indis (ψn)",
+    parameter == "phi_N1" ~ "Half-life indis (ϕn)",
+    parameter == "phi_N2" ~ "Half-life targeted (ϕw)",
+    parameter == "iota_N1" ~ "Activation indis (ψn)",
     parameter == "iota_N2" ~ "Activation targeted (ψw)",
     parameter == "burst" ~ "Burst size (β)"
   )) ## rename paramter values
@@ -821,29 +1042,111 @@ posterior.long <- posterior.df %>%
 
 ## plot
 ```{r}
-ggplot(posterior.long) +
+## portion of parameter values that does not need log-transforming
+posterior_1.pl <- ggplot(posterior.long %>% filter(!parameter %in% c("phi_N1", "phi_N2", "iota_N1"))) +
+  geom_density(aes(x = value), fill = "grey") +
+  geom_vline(aes(xintercept = deterministic), linetype = "dashed") +
+  facet_wrap(~label, scales = "free") +
+  labs(x = "", y = "Density") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+## Plots where the x-axis should be log-transformed so it is easier to read
+posterior_2.pl <- ggplot(posterior.long %>% filter(parameter %in% c("phi_N1", "phi_N2", "iota_N1"))) +
   geom_density(aes(x = value), fill = "grey") +
   geom_vline(aes(xintercept = deterministic), linetype = "dashed") +
   facet_wrap(~label, scales = "free") +
   labs(x = "Value", y = "Density") +
+  scale_x_continuous(trans = "log10") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank())
+
+## plot together
+ggarrange(posterior_1.pl, posterior_2.pl, ncol = 1, align = "hv")
   
+## save
+ggsave(units = "px", dpi = 300, width = 2000, height = 1300, filename = here("code_repository/figures/posterior.tiff"), bg = "white", scale = 1)
 ```
 
-
-
-# do a rank plots of median fitness across all individual parameter variation
+#==========================================#
+# Rank plot of parasite fitness with only one parameter varying
+#==========================================#
+## Process data
 ```{r}
-mc_single_fitness.df %>% mutate(temp = paste(cue, log)) %>% 
-ggplot() +
-  geom_violin(aes(x = fitness_phin, y = fct_reorder(temp, fitness_phin, .fun = "median")),
-              fill = "transparent", trim = F) +
-  labs(x ="Fitness", y = "Cues", shape = "Category") +
-  theme_classic() +
-  theme(legend.position = "top")
+## simpler version of long table containing fitness of parasites when various parameter is pertubed
+mc_single_fitness.long2 <- mc_single_fitness.df %>% 
+  filter(iter != 1) %>% ## filter out iter = 1, which does not have variation
+  select(-c("X", "rho", "burst", "iota_N1", "iota_N2", "phi_N1", "phi_N2")) %>% # keep only fitness and associated labels
+  tidyr::pivot_longer(-c("cue", "log", "iter")) %>% ## make long
+  mutate(parameter = gsub("fitness_", "", name)) %>% 
+  left_join(ez_label, by = c("cue", "log")) %>% 
+  mutate(long_label = ifelse(cue == "R log & I log", "RBC log &\nasexual iRBC log", long_label),
+         short_label = ifelse(cue == "R log & I log", "R log & I log", short_label),
+         parameter_label = case_when( ## recode parameter values
+    parameter == "rho" ~ "RBC replenishment (ρ)",
+    parameter == "phin" ~ "Half-life indis (ϕn)",
+    parameter == "phiw" ~ "Half-life targeted (ϕw)",
+    parameter == "psin" ~ "Activation indis (ψn)",
+    parameter == "psiw" ~ "Activation targeted (ψw)",
+    parameter == "beta" ~ "Burst size (β)",
+  )) ## manually add in the labels
+
+## reorder parameter
+mc_single_fitness.long2$parameter_label <- factor(mc_single_fitness.long2$parameter_label,
+                                                     c("Burst size (β)",
+                                                       "RBC replenishment (ρ)",
+                                                       "Half-life indis (ϕn)",
+                                                       "Half-life targeted (ϕw)",
+                                                       "Activation indis (ψn)",
+                                                       "Activation targeted (ψw)"))
+
+## get median fitness values
+mc_single_fitness.sum2 <- mc_single_fitness.long2 %>% 
+  group_by(short_label, parameter_label) %>% 
+  summarize(median = median(value))
+
+## get deterministic model fitness
+mc_single_det.df <- mc_single_fitness.sum2 %>% 
+  left_join(select(si_opt.df, short_label, fitness_det = fitness_20), by  = "short_label") %>% 
+  mutate(fitness_det = ifelse(short_label == "R log & I log", 9.854174, fitness_det)) ## manually input deterministic fitness of R log and I log
+
+## get data only with 89% credible interval
+mc_single_fitness.long2_f <- mc_single_fitness.long2 %>% 
+  group_by(long_label, parameter_label) %>% 
+  mutate(ci_lower = ci(value, method = "HDI", ci = 0.89)[[2]],
+         ci_higher = ci(value, method = "HDI", ci = 0.89)[[3]]) %>% 
+  filter(value >= ci_lower & value <= ci_higher) %>% 
+  left_join(mc_single_det.df, by = c("short_label", "parameter_label"))
+
+mc_single_det.df
 ```
+
+# plot
+```{r}
+ggplot() +
+  geom_violin(data = mc_single_fitness.long2_f,
+              aes(x = fct_reorder(short_label, fitness_det, .desc = T), y = value), 
+              fill = "light grey", trim = T) +
+  geom_point(data =  mc_single_det.df,
+             aes(x = short_label, y = median, shape = "Median", color = "Median"), size = 2) +
+  facet_wrap(~parameter_label) +
+    geom_point(data =  mc_single_det.df,
+             aes(x = short_label, y = fitness_det, shape = "Deterministic", color = "Deterministic"), size =2) +
+  labs(x = "Cue(s)", y = "Fitness", shape = "Legend", color = "Legend") +
+  scale_color_manual(values = c(blue, "black")) +
+  theme_bw() +
+  theme(legend.position = "top",
+        axis.text.x=element_text(angle=45,hjust=1),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) 
+
+ggsave(units = "px", dpi = 300, width = 2000, height = 1500, filename = here("code_repository/figures/mc_single_fitness.tiff"), bg = "white", scale = 1)
+```
+
+#===============================#
+
 
 
 
