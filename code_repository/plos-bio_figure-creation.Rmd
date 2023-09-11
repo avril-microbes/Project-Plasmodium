@@ -23,6 +23,7 @@ library(ggpubr)
 library(scales)
 library(bayestestR)
 library(purrr)
+library(tidyr)
 ```
 
 ## load variables
@@ -803,6 +804,81 @@ exp_xlogylog.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
 ggarrange(plotlist = c(exp_xy.pl_ls, exp_xlogy.pl_ls, exp_xylog.pl_ls, exp_xlogylog.pl_ls), 
           common.legend = T, align = "hv")
 ggsave(here("code_repository/figures/exp_disease-curve.tiff"), units = "px", width = 2250, height = 1500, scale = 1.4, dpi=300,  bg = "white")
+```
+
+#=================================#
+# Simulated disease curve graph
+#=================================#
+## Function to obtain dynamics data based on the dual cue input
+```{r}
+get_dual_rn <- function(df){
+  ## assign the two cues
+  cue <- unique(df$cue)
+  cue_b <- unique(df$cue_b)
+  
+  ## assign log status
+  log <- ifelse(str_detect(unique(df$id), "log"), "log", "none")
+  log_b <- ifelse(str_detect(unique(df$id_b), "log"), "log", "none")
+  
+  ## assign which cues are going to be logged
+  if(log == "log" & log_b == "none"){logged_cue <- cue}
+  if(log == "none" & log_b == "log"){logged_cue <- cue_b}
+  if(log == "log" & log_b == "log"){logged_cue <- c(cue, cue_b)}
+  if(log == "none" & log_b == "none"){logged_cue <- c()}
+
+  ## keep variables that corresponds to the cue used
+  ### for dataframes that does not involve combined variables such as I+Ig
+  if(isTRUE(str_detect(cue, "\\+", negate = T)) & isTRUE(str_detect(cue_b, "\\+", negate = T))){
+    df_f <- df %>% 
+      filter(variable %in% c(cue, cue_b)) %>% 
+      mutate(value = case_when(
+        variable %in% logged_cue ~ log10(value),
+        TRUE ~ value
+      )) %>% ## log transform values only when they match with the logged cue list
+      filter(value >= 0) ## filter out values <0, these happen due to stiffness of models but are not relevant
+         
+  } else{
+    ### assign both cues to a list
+    cue_ls <- c(cue, cue_b)
+    ### pick the cue that has the "+" sign
+    combined_cue <- cue_ls[grepl("\\+", cue_ls)]
+    non_combined_cue <- cue_ls[!grepl("\\+", cue_ls)] ### this is the none combined cue
+    ### unlist the cues
+    cue_unlist <- unlist(str_split(combined_cue, "\\+"))
+    
+    ### get filtered dataset containing only non-combine cue
+    df_f1 <- df %>% 
+      filter(variable == non_combined_cue)
+    
+    ### get filtered dataset containing combined cue. These will be summed up and bound back to the previous
+    df_f2 <- df %>% 
+      filter(variable %in% cue_unlist) %>% ## keep only variables that we will combine
+      group_by(variable, time) %>% ## for each time point, group the variables
+      mutate(value = sum(value),
+             variable = combined_cue) ## recalculate the value as sum of the values and reassign variable!
+    
+    #### combine the two and log transform if necessary
+    df_f <- rbind(df_f1, df_f2) %>% 
+      mutate(value = case_when(
+        variable %in% logged_cue ~ log10(value),
+        TRUE ~ value
+      )) %>% ## log transform values only when they match with the logged cue list
+      filter(value >= 0) 
+  }
+  return(df_f)
+}
+
+
+```
+
+## Run function to get a curated dataset containing only relevant 
+```{r}
+# split dual dynamics dataframe into list grouped by the dual cues
+dual_cue_dyn.ls <- dual_cue_dyn.df %>% group_split(id, id_b)
+dual_cue_dyn.ls 
+
+get_dual_rn(dual_cue_dyn.ls[[1]])
+
 ```
 
 
