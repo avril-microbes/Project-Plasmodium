@@ -768,7 +768,7 @@ exp_xlogy.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
         geom_path(aes(colour = Day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0, "inches"))) +
         theme_classic() + 
         scale_color_viridis_c(limits = c(3, 21)) +
-        labs(color = "Days post-infection")  +
+        labs(color = "Days post-infection", x = paste(x_col, "log"))  +
         scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
 }
 )
@@ -782,7 +782,7 @@ exp_xylog.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
         geom_path(aes(colour = Day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0, "inches"))) +
         theme_classic() + 
         scale_color_viridis_c(limits = c(3, 21)) +
-        labs(color = "Days post-infection")   +
+        labs(color = "Days post-infection", y = paste(y_col, "log"))   +
         scale_x_continuous(labels = label_scientific(digits = 1))
 }
 )
@@ -796,7 +796,7 @@ exp_xlogylog.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
         geom_path(aes(colour = Day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0, "inches"))) +
         theme_classic() + 
         scale_color_viridis_c(limits = c(3, 21)) +
-        labs(color = "Days post-infection") 
+        labs(color = "Days post-infection", x = paste(x_col, "log"), y = paste(y_col, "log")) 
 }
 )
 
@@ -830,7 +830,7 @@ get_dual_rn <- function(df){
   ### for dataframes that does not involve combined variables such as I+Ig
   if(isTRUE(str_detect(cue, "\\+", negate = T)) & isTRUE(str_detect(cue_b, "\\+", negate = T))){
     df_f <- df %>% 
-      filter(variable %in% c(cue, cue_b)) %>% 
+      filter(variable %in% c(cue, cue_b, "cr")) %>% 
       mutate(value = case_when(
         variable %in% logged_cue ~ log10(value),
         TRUE ~ value
@@ -848,38 +848,84 @@ get_dual_rn <- function(df){
     
     ### get filtered dataset containing only non-combine cue
     df_f1 <- df %>% 
-      filter(variable == non_combined_cue)
+      filter(variable %in% c(non_combined_cue, "cr"))
     
     ### get filtered dataset containing combined cue. These will be summed up and bound back to the previous
     df_f2 <- df %>% 
       filter(variable %in% cue_unlist) %>% ## keep only variables that we will combine
-      group_by(variable, time) %>% ## for each time point, group the variables
-      mutate(value = sum(value),
-             variable = combined_cue) ## recalculate the value as sum of the values and reassign variable!
+      group_by(time) %>% ## for each time point, group the variables
+      mutate(value = sum(value, na.rm = T),
+             variable = combined_cue) %>% ## recalculate the value as sum of the values and reassign variable!
+      distinct(time, .keep_all = T) ## note that because we are mutating we must dedeuplicate the records
     
     #### combine the two and log transform if necessary
     df_f <- rbind(df_f1, df_f2) %>% 
-      mutate(value = case_when(
-        variable %in% logged_cue ~ log10(value),
-        TRUE ~ value
-      )) %>% ## log transform values only when they match with the logged cue list
+      mutate(value = ifelse(variable %in% logged_cue, log10(value), value)) %>% ## log transform values only when they match with the logged cue list
       filter(value >= 0) 
   }
-  return(df_f)
+  
+  ## Convert dataframes wider such that the different variables have their own columns
+  df_fp <- df_f %>% 
+    mutate(variable_id = ifelse(variable == cue, paste0(variable, "_", log), paste0(variable, "_", log_b))) %>%  ### assign a unique variable id that could later be used to assign labels
+    left_join(select(ez_label, id, long_label), by = c("variable_id" = "id")) %>% 
+    mutate(long_label = ifelse(variable == "cr", "cr", long_label)) %>% ## manually add cr
+    mutate(long_label = gsub(" ", "_", long_label)) %>%  ## convert spaces to _ for plotting
+    pivot_wider(names_from = long_label, values_from = value, id_cols = c(time, id, id_b)) %>% 
+    filter(time >= 1) %>% ## filter out day 0->1 because all cr = 0 before that
+    arrange(time) ## this is needed to prevent geom_path from joining the first and last data point
+  
+  ## assign NAs (meaning no stuff is produced yet to 0)
+  df_fp[is.na(df_fp)] <- 0
+
+  return(df_fp)
 }
-
-
 ```
 
 ## Run function to get a curated dataset containing only relevant 
 ```{r}
-# split dual dynamics dataframe into list grouped by the dual cues
+## split dual dynamics dataframe into list grouped by the dual cues
 dual_cue_dyn.ls <- dual_cue_dyn.df %>% group_split(id, id_b)
-dual_cue_dyn.ls 
 
-get_dual_rn(dual_cue_dyn.ls[[1]])
+## run function across list
+dual_cue_rn.ls <- mclapply(dual_cue_dyn.ls, get_dual_rn, mc.cores = 6)
 
+## sanity checks that we are actually summing iRBCs. Rings out
+max(dual_cue_rn.ls[[2]]$Total_iRBC)
+max(dual_cue_rn.ls[[4]]$Asexual_iRBC)
+max(dual_cue_rn.ls[[6]]$Sexual_iRBC)
+
+max(dual_cue_rn.ls[[10]]$Total_iRBC)
+max(dual_cue_rn.ls[[12]]$Asexual_iRBC)
+max(dual_cue_rn.ls[[14]]$Sexual_iRBC)
 ```
+
+## plot
+```{r}
+## list apply all dataframes
+cue_cue_rn_pl.ls <- lapply(dual_cue_rn.ls,
+       function(x){
+          ## get names of columns used in the x and y axis
+         axis_cols <- setdiff(names(x), c("time", "id", "id_b", "cr"))
+         
+         ## ggplot
+         ggplot() +
+           geom_path(data = x, aes_string(x = axis_cols[[1]], y = axis_cols[[2]], color = "cr"),
+                     arrow = arrow(length = unit(c(rep(0, nrow(x) - 2), 0.25), "inches")),
+                     size = 1.5) +
+           geom_point(data = x %>% filter(time %% 1 == 0), 
+                      aes_string(x = axis_cols[[1]], y = axis_cols[[2]]), size = 1.5, shape = 1) +
+           theme_classic() +
+           scale_color_viridis_c(limits = c(0, 1)) +
+           labs(color = "Conversion rate", x = gsub("_", " ", axis_cols[[1]]), y = gsub("_", " ", axis_cols[[2]])) +
+           scale_x_continuous(labels = label_scientific(digits = 1)) +
+           scale_y_continuous(labels = label_scientific(digits = 1))
+       })
+
+## arrange together
+cue_cue_rn.pl <- ggarrange(plotlist = cue_cue_rn_pl.ls, ncol = 5, nrow = 8, common.legend = T, align = "hv") 
+ggsave(here("code_repository/figures/sim_disease-curve.tiff"), units = "px", width = 2250, height = 2500, scale = 2, dpi=300,  bg = "white")
+```
+
 
 
 #=================================#
@@ -1221,8 +1267,12 @@ ggplot() +
 ggsave(units = "px", dpi = 300, width = 2000, height = 1500, filename = here("code_repository/figures/mc_single_fitness.tiff"), bg = "white", scale = 1)
 ```
 
-#===============================#
 
+#=================================#
+# Examining the reliability of cues
+#=================================#
+```{r}
 
+```
 
 

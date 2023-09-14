@@ -26,6 +26,7 @@ library(doParallel)
 library(doRNG)
 library(arrow)
 library(parallel)
+library(RoughSets)
 ```
 
 ### Load scripts
@@ -576,7 +577,7 @@ ci_val.df %>%
 # Dual cue optimization
 ```{r}
 # import in single infection optimization dataframe
-si_opt_notime.csv <- read.csv(here("code_repository/data/si_opt.csv"))
+si_opt.csv <- read.csv(here("code_repository/data/si_opt.csv"))
 
 #W get all unique combinations but eliminating all combinations that uses the same cue
 dual_cue.df <- expand.grid(si_opt.csv$id, si_opt.csv$id) %>% 
@@ -598,12 +599,11 @@ dual_cue.ls <- split(dual_cue.df2, seq(nrow(dual_cue.df2)))
 
 # run optimization (local)
 lapply(dual_cue.ls, dual_cue_opt)
+dual_cue_opt(dual_cue.ls[[39]])
 
-# run optimizaiton (global)
+# run optimization (global)
 source(here("code_repository/functions/dual_cue_opt_global.R"))
 lapply(dual_cue.ls, dual_cue_opt_global)
-
-dual_cue.df2
 ```
 
 # Phase-mapping of laboratory mice infection
@@ -1026,4 +1026,34 @@ mclapply(posterior.ls, function(x){
 
 source(here("code_repository/functions/mc_single_dual.R"))
 ```
+
+#=================================#
+# Examining the reliability of cues
+#=================================#
+```{r}
+
+```
+
+
+
+#=================================#
+# Examining the robustness and reliability of cues under stochasticity
+#=================================#
+#---------- Examining cue reliability with burst size -----------#
+```{r}
+ggplot(posterior.df) +
+  geom_density(aes(x = burst)) +
+  geom_vline(xintercept = c(4.3, 5.15, 5.8))
+
+posterior.df %>% 
+  mutate(burst_class = case_when(
+    burst < 4.3 ~ 1,
+    4.3 <= burst & burst < 5.15 ~ 2,
+    5.15 <= burst & burst < 5.8 ~ 3,
+    burst >= 5.8 ~ 4
+  )) %>% 
+  ggplot() +
+  geom_point(aes(x = beta, y = ))
+```
+
 

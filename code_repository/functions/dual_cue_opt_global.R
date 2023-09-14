@@ -1,6 +1,6 @@
 # function to perform differential evolution optimziation (global optimization) of the dual-cue model
 
-dual_cue_opt_global <- function(df){
+dual_cue_opt_global <- function(df, itermax = 500, steptol = 50){
   # process cues
   cue <- df$cue
   cue_b <- df$cue_b
@@ -17,7 +17,7 @@ dual_cue_opt_global <- function(df){
   # DE optimization
   global <- DEoptim::DEoptim(
     fn = chabaudi_si_clean, 
-    control = list(trace = 1, parallelType = "parallel", itermax = 500, steptol = 50,
+    control = list(trace = 1, parallelType = "parallel", itermax = itermax,
                     NP = 90, F = 0.8, CR = 0.9,
                    packages = c("crone", "splines2", "mgcv", "deSolve", "tidyr", "stringr", "dplyr")), # NP, F, CR values set according to rec by storn et al 2006
     lower = c(-10, -500, -1000, -1000, -250, -500, -1000, -500, -250), # lower and upper bound values are derived empirically based on spline space
