@@ -7,10 +7,11 @@ opt_local_beta <- function(df, default = F){
   # process input
   beta <- df$beta ## beta values to replace 
   ifelse(default == F, par <- c(df$var1, df$var2, df$var3, df$var4), par <- rep(0.5,4)) ## the original optimized parameter set (with beta = 5.721) is used as the starting point
-  time_range <- seq(0, 20, by = 1e-3) ## default time range values
+  time_range <- seq(0, 20, by = 1e-2) ## time range values used for MC simulation
   cue <- df$cue
   ifelse(df$log == "log", log <- "log10", log <- "none")
   cue_range <- seq(df$low, df$high, by = df$by)
+  if(cue == "time"){cue_range <- time_range} ## manually set cue range if time is cue
   id <- df$id
   
   

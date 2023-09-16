@@ -26,7 +26,6 @@ library(doParallel)
 library(doRNG)
 library(arrow)
 library(parallel)
-library(RoughSets)
 ```
 
 ### Load scripts
@@ -61,7 +60,18 @@ source(here("code_repository/functions/mc_all.R"))
 source(here("code_repository/functions/mc_single.R"))
 source(here("code_repository/functions/mc_all_dual.R"))
 source(here("code_repository/functions/mc_single_dual.R"))
+source(here("code_repository/functions/opt_local_beta.R"))
 ```
+
+### Load datasets
+```{r}
+## single infection optimization values
+si_opt.df <- read.csv(here("code_repository/data/si_opt.csv"))
+
+## posterior distribution of parameters for MC
+posterior.df <- read.csv(here("code_repository/data/posterior.csv"))
+```
+
 
 ### Load parameters
 ```{r}
@@ -1029,11 +1039,6 @@ mclapply(posterior.ls, function(x){
 # Examining the robustness and reliability of cues under stochasticity
 #=================================#
 #---------- Examining cue reliability with burst size -----------#
-## import relevant database
-```{r}
-posterior.df <- read.csv(here("code_repository/"))
-```
-
 ```{r}
 ## plotting the psoterior distribution. It seems that these values represent the peak points
 ggplot(posterior.df) +
@@ -1059,8 +1064,11 @@ si_opt_beta.ls <- split(si_opt_beta.df, seq(nrow(si_opt_beta.df)))
 
 ## Run function
 ```{r}
-source(here("code_repository/functions/opt_local_beta.R"))
+## optimization with initial starting point of optimized parameter set
 lapply(si_opt_beta.ls, function(x){opt_local_beta(x)})
+
+## optimization with initial starting point of (0.5x4)
+lapply(si_opt_beta.ls, function(x){opt_local_beta(x, default = T)})
 ```
 
 
