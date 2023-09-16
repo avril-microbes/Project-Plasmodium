@@ -7,18 +7,27 @@
   # geom_line(data = df, aes(x = cue_range, y = cr))
 
 
-par_to_df <- function(par, cue_range, transformation = "exp"){
+par_to_df <- function(par, cue_range, max, transformation = "exp"){
   
   # ensure correct model arguments
   if(transformation != "norm" && transformation != "exp" && transformation != "logit"){
     stop("Transformation must be either 'norm' or 'exp' or 'logit'")
   }
   
+  # heaviside transformation function
+  heaviside_trans <- function(cue_range, max){
+    res <- crone::heaviside(cue_range)*(cue_range)+(crone::heaviside(cue_range-max)*(max-cue_range))
+    return(res)
+  }
+  
+  # get  heaviside transformed cue_range
+  cue_range_h <- heaviside_trans(cue_range, max = max)
+  
   # get df from length of parameter values
   df <- length(par)-1
 
   # define basic spline model
-  basis_mod <- splines2::bSpline(x = cue_range, df = df)
+  basis_mod <- splines2::bSpline(x = cue_range_h, df = df)
   
   # iterate through parameter values and basic spline model to create conversion rate values
   model_part <- list()

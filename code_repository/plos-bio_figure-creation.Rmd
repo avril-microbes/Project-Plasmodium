@@ -24,6 +24,7 @@ library(scales)
 library(bayestestR)
 library(purrr)
 library(tidyr)
+library(splines2)
 ```
 
 ## load variables
@@ -314,6 +315,15 @@ fitness_rn.plt <- ggplot() +
 ggarrange(fitness_rank_cr.plt, fitness_rn.plt, widths = c(2.3, 1), align = "h", ncol = 2, labels = c("A", "B"))
 ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("code_repository/figures/fitness_rn.tiff"), bg = "white", scale = 1.1)
 ```
+
+#=================================#
+# Examining the reliability of cues
+#=================================#
+## process data for processing
+
+
+
+
 
 #=================================#
 # Dual cue fitness main figure
@@ -1268,11 +1278,95 @@ ggsave(units = "px", dpi = 300, width = 2000, height = 1500, filename = here("co
 ```
 
 
-#=================================#
-# Examining the reliability of cues
-#=================================#
+#==================================#
+# Deciphering why certain cues are less susceptible to burst size variation
+#==================================#
+## Getting the burst size we want to simulate stuff for
 ```{r}
-
+## plotting the psoterior distribution. It seems that these values represent the peak points
+ggplot(posterior.df) +
+  geom_density(aes(x = burst)) +
+  geom_vline(xintercept = c(3.98,4.7,5.53, 6.08)) +
+  theme_classic()
 ```
+
+## G
+
+
+
+
+```{r}
+## get the perfect dynamic (time-based with df = 3)
+time_dyn.df <- si_dyn.df %>% filter(id == "time")
+
+## convert to wide 
+time_dyn.wide <- time_dyn.df %>%
+  pivot_wider(id_cols = time, values_from = value, names_from = variable) %>% 
+  mutate(`I+Ig` = I+Ig)
+
+## Get input dataframe to fetch reaction norm data
+### process rug dataframes to get the minimum and maximum traversed in the actual infection
+si_rug.df_sum <- si_rug.df %>% 
+  group_by(id) %>% 
+  summarise(rug_min = min(value), rug_max = max(value)) %>% 
+  rbind(c(id = "time", rug_min = 0, rug_max = 20)) %>% 
+  mutate(rug_min_p = ifelse(str_detect(id, "log") & rug_min != 0,  log10(as.numeric(rug_min)), as.numeric(rug_min)),
+         rug_max_p = ifelse(str_detect(id, "log") & rug_max != 0,  log10(as.numeric(rug_max)), as.numeric(rug_max)))
+```
+
+## function to fetch the optimal cr and expressed cr based on cue values presented in an ideal infection
+```{r}
+get_cr_reliability <- function(df){
+  ## Define the values
+  ifelse(df$cue == "t", cue <- "time", cue <- df$cue) ### cue (no log yet) of interest
+  log <- df$log ### if cue should be log transformed or not
+  par <- c(df$var1, df$var2, df$var3, df$var4) ### list of parameter values
+  max <- df$high ### maximum cue value as defined by our models
+  min <- df$low ### min cue value as defined by our models
+  id <- df$id
+  long_label <- df$long_label
+  
+  ## heaviside transformation function
+  heaviside_trans <- function(cue_range, max){
+    res <- crone::heaviside(cue_range)*(cue_range)+(crone::heaviside(cue_range-max)*(max-cue_range))
+    return(res)
+  }
+  
+  ## Filter out the cue value from the ideal infection database. If log is TRUE, log10 transform the vector
+  ifelse(log == "log", cue_ls <- log10(time_dyn.wide[[cue]]), cue_ls <- time_dyn.wide[[cue]])
+  time_dyn.f <- cbind.data.frame(opt_cue = cue_ls, opt_cr = time_dyn.wide$cr) %>% 
+    mutate(opt_cue = ifelse(opt_cue == -Inf, 0, opt_cue)) %>% ### log transformation of 0 = -Inf. Convert back to 0
+    distinct(opt_cue, opt_cr, .keep_all = T) %>% ### keep only unique cue values
+    filter(opt_cue >= min & opt_cue <= max) ### keep only cue values that do not fall into the min or max (note that these values do not matter because they willl be perceived by parasites as boundary values any way)
+  
+  ## Get dataframe that map the cue value to cr (expressed). Note that we are bordering the cue_range based on the min and max
+  cr_exp.df <- par_to_df(par = par, cue_range = c(min, time_dyn.f$opt_cue, max), max = max) %>% 
+    distinct(cue_range, cr)
+  
+  ## Join the 2 dataframes based on cue values. Note that we are left joining based on the cue values obtained from the ideal database only!
+  res <- left_join(time_dyn.f,cr_exp.df, by = c("opt_cue" = "cue_range")) %>% 
+    mutate(id = id, long_label, log)
+  
+  return(res)
+}
+time_dyn.f
+```
+
+```{r}
+cue_reliability.ls <- lapply(split(si_opt.df, seq(nrow(si_opt.df))), get_cr_reliability)
+cue_reliability.df <- do.call(rbind, cue_reliability.ls)
+cue_reliability.df %>% 
+  ggplot()  +
+  geom_point(aes(x = cr, y = opt_cr)) +
+  facet_wrap(~long_label, scales = "free") +
+  theme_bw()
+
+cue_reliability.df %>% 
+  ggplot()  +
+  geom_point(aes(x = opt_cue, y = opt_cr)) +
+  facet_wrap(~long_label, scales = "free") +
+  theme_bw()
+```
+
 
 

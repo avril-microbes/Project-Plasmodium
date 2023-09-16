@@ -1023,37 +1023,47 @@ mclapply(posterior.ls, function(x){
                     log_b = "log10",
          rand_df = x)},
   mc.cores = 8)
-
-source(here("code_repository/functions/mc_single_dual.R"))
 ```
-
-#=================================#
-# Examining the reliability of cues
-#=================================#
-```{r}
-
-```
-
-
 
 #=================================#
 # Examining the robustness and reliability of cues under stochasticity
 #=================================#
 #---------- Examining cue reliability with burst size -----------#
+## import relevant database
 ```{r}
+posterior.df <- read.csv(here("code_repository/"))
+```
+
+```{r}
+## plotting the psoterior distribution. It seems that these values represent the peak points
 ggplot(posterior.df) +
   geom_density(aes(x = burst)) +
-  geom_vline(xintercept = c(4.3, 5.15, 5.8))
-
-posterior.df %>% 
-  mutate(burst_class = case_when(
-    burst < 4.3 ~ 1,
-    4.3 <= burst & burst < 5.15 ~ 2,
-    5.15 <= burst & burst < 5.8 ~ 3,
-    burst >= 5.8 ~ 4
-  )) %>% 
-  ggplot() +
-  geom_point(aes(x = beta, y = ))
+  geom_vline(xintercept = c(3.98,4.7,5.53, 6.08)) +
+  theme_classic()
 ```
+
+## Prepare database
+```{r}
+## List of beta values to test
+beta_ls <- c(3.98,4.7,5.53, 6.08)
+
+## dataframes containing all single cues to loop over (we will perform the dual cue opt separately)
+si_opt_beta.df <- cbind.data.frame(id = rep(si_opt.df$id, length(beta_ls))) %>% 
+  arrange(id) %>% 
+  mutate(beta = rep(beta_ls, n_distinct(si_opt.df$id))) %>% 
+  left_join(si_opt.df, by = "id")
+
+## split
+si_opt_beta.ls <- split(si_opt_beta.df, seq(nrow(si_opt_beta.df)))
+```
+
+## Run function
+```{r}
+source(here("code_repository/functions/opt_local_beta.R"))
+lapply(si_opt_beta.ls, function(x){opt_local_beta(x)})
+```
+
+
+
 
 
