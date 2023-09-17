@@ -1067,6 +1067,8 @@ si_opt_beta.ls <- split(si_opt_beta.df, seq(nrow(si_opt_beta.df)))
 ## optimization with initial starting point of optimized parameter set
 lapply(si_opt_beta.ls, function(x){opt_local_beta(x)})
 
+si_opt_beta.ls[[41]]
+
 ## optimization with initial starting point of (0.5x4)
 lapply(si_opt_beta.ls, function(x){opt_local_beta(x, default = T)})
 ```

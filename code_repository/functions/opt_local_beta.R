@@ -11,7 +11,7 @@ opt_local_beta <- function(df, default = F){
   cue <- df$cue
   ifelse(df$log == "log", log <- "log10", log <- "none")
   cue_range <- seq(df$low, df$high, by = df$by)
-  if(cue == "time"){cue_range <- time_range} ## manually set cue range if time is cue
+  if(cue == "t"){cue_range <- time_range} ## manually set cue range if time is cue
   id <- df$id
   
   
@@ -68,13 +68,15 @@ opt_local_beta <- function(df, default = F){
                              beta = beta,
                              fitness = fitness,
                              par1 = par[1], par2 = par[2], par3 = par[3], par4 = par[4],
-                             default = default)
+                             default = ifelse(default == F, F, T))
   
   # write output
   beta_label <- gsub("\\.", "-", beta) ### code to substitute the decimal point of beta with (-) for file naming purposes
   
-  gsub("5.721", "\\.", "_")
-  ifelse(default == F, 
-         write.csv(output, here(paste0("code_repository/data/mc_burst_opt/", id, "_", beta_label, ".csv"))),
-         write.csv(output, here(paste0("code_repository/data/mc_burst_opt/", id, "_", beta_label, "_default.csv"))))
+  
+  if(default == F){write.csv(output, here(paste0("code_repository/data/mc_burst_opt/", id, "_", beta_label, ".csv")))
+  } else{
+    write.csv(output, here(paste0("code_repository/data/mc_burst_opt/", id, "_", beta_label, "_default.csv")))
+    }
+  
 }
