@@ -1067,10 +1067,31 @@ si_opt_beta.ls <- split(si_opt_beta.df, seq(nrow(si_opt_beta.df)))
 ## optimization with initial starting point of optimized parameter set
 lapply(si_opt_beta.ls, function(x){opt_local_beta(x)})
 
-si_opt_beta.ls[[41]]
-
 ## optimization with initial starting point of (0.5x4)
 lapply(si_opt_beta.ls, function(x){opt_local_beta(x, default = T)})
+```
+
+## Optimize R log+I log
+```{r}
+## import in the functions
+source(here("code_repository/functions/dual_cue_opt_beta.R"))
+
+## import in dual cue fitness dataframe
+dual_cue_f.df <- read.csv(here("code_repository/data/dual_cue_fitness_final.csv"))
+
+## make df for optimization by adding beta
+Rlog_Ilog_burst.df <- dual_cue_f.df %>% 
+  filter(id == "R_log" & id_b == "I_log") %>% 
+  mutate(log = "log", log_b = "log", cue = "R", cue_b = "I",
+         low = 6, high = 7, low_b = 0, high_b = 6.77815125) %>% 
+  cbind(beta = beta_ls)
+
+## split
+Rlog_Ilog_burst.ls <- split(Rlog_Ilog_burst.df, seq(nrow(Rlog_Ilog_burst.df)))
+
+## run function
+lapply(Rlog_Ilog_burst.ls, function(x){dual_cue_opt_beta(x)})
+lapply(Rlog_Ilog_burst.ls, function(x){dual_cue_opt_beta(x, default = T)})
 ```
 
 

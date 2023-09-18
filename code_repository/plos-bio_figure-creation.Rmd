@@ -66,6 +66,7 @@ cue_range_si_alt.df <- read.csv(here("code_repository/data/cue_range_si_alt.csv"
 dual_cue_dyn.df <- read_parquet(here("code_repository/data/dual_cue_dyn.parquet")) ## dynamics of dual cue models
 exp_ss.df <- read.csv(here("code_repository/data/experimental_data.csv")) ## cleaned experimental records of P. chabaudi infection
 posterior.df <- read.csv(here("code_repository/data/posterior.csv")) ## posterior distribution of different parameter values
+mc_burst.df <- read.csv(here("code_repository/data/mc_burst_opt.csv")) ## fitness values of cues when optimized with different beta values
 
 # import in code
 source(here("code_repository/functions/chabaudi_si_clean.R"))
@@ -980,9 +981,9 @@ mc_all_fitness.df %>% filter(iter == 1) %>%
 ```{r}
 ## attach label
 mc_all_fitness.df_p <- mc_all_fitness.df %>% 
-  left_join(select(si_opt.df, cue, log, id), by = c("cue", "log")) %>% ## get id from si_opt.df
-  left_join(ez_label, by = "id") %>% # get label
-  mutate(long_label = ifelse(cue == "R log & I log", "RBC log &\nasexual iRBC log", long_label)) ## assign label manually to dual cue data
+  left_join(ez_label, by = c("cue", "log")) %>% # get label
+  mutate(long_label = ifelse(cue == "R log & I log", "RBC log &\nasexual iRBC log", long_label),
+         long_label = ifelse(cue == "t", "Time", long_label)) ## assign label manually to dual cue data
 
 ## manually check that everything is assigned correctly
 mc_all_fitness.df_p %>% distinct(long_label, cue, log)
@@ -1075,8 +1076,7 @@ mc_single_fitness.long_p <- mc_single_fitness.long %>%
          diff_all = fitness_all-fitness_ref, ## pertubation to fintess caused by all parameter varying
          rel_diff_single = diff_single/diff_all ## normalized pertunation to fitness (single parameter)
          ) %>% 
-  left_join(select(si_opt.df, cue, log, id), by = c("cue", "log")) %>% 
-  left_join(ez_label, by = "id") %>% # get label
+  left_join(ez_label, by = c("cue", "log")) %>% # get label
   mutate(long_label = ifelse(cue == "R log & I log", "RBC log &\nasexual iRBC log", long_label)) ## maually assign label to dual cue data
 
 ## calculate summary statistics. this includes median, credible interval (contains 89% data points calculated via Highest Density Interval, which is better for skewed data)
@@ -1126,6 +1126,7 @@ mc_single_fitness.long_p_f$parameter_label <- factor(mc_single_fitness.long_p_f$
 mc_partition.pl <- ggplot() +
   geom_violin(data = mc_single_fitness.long_p_f, aes(x = rel_diff_single, y = long_label,
                                                  fill = log, color = log)) + ## 89% credible interval
+  geom_point(data = mc_single_fitness.sum, aes(x = median, y = long_label)) +
   geom_vline(xintercept = 0, linetype = "dashed") +
   facet_wrap(~parameter_label) +
   labs(x = "Relative fitness pertubation", y = "Cues") +
@@ -1281,16 +1282,40 @@ ggsave(units = "px", dpi = 300, width = 2000, height = 1500, filename = here("co
 #==================================#
 # Deciphering why certain cues are less susceptible to burst size variation
 #==================================#
-## Getting the burst size we want to simulate stuff for
+#--------------- What underlies reduced robustness against beta variation?-------------#
+This could be attributed to lower ability of cues (even with optimal reaction norm) to respond to changed beta. Or it could be robustness!
+## Process data for downstream analysis (execute once)
 ```{r}
-## plotting the psoterior distribution. It seems that these values represent the peak points
-ggplot(posterior.df) +
-  geom_density(aes(x = burst)) +
-  geom_vline(xintercept = c(3.98,4.7,5.53, 6.08)) +
+## get list of files
+mc_burst.ls <- list.files(here("code_repository/data/mc_burst_opt/"), pattern = "*.csv", full.names = T)
+
+## read in and bind
+mc_burst.df_raw <- do.call(rbind, lapply(mc_burst.ls, read.csv))
+
+## we optimized each cue (and burst size) via 2 methods: one starting from the optimal parameter size when beta = 5.721 (default = F) and one starting at (0.5x4) (default = T). We are going to pick the whichever one of them gave the highest fitness
+mc_burst.df <- mc_burst.df_raw %>% 
+  group_by(id, beta) %>% 
+  top_n(1, fitness) ### pick the one with the highest fitness
+
+## write 
+write.csv(mc_burst.df, here("code_repository/data/mc_burst_opt.csv"))
+```
+
+## Process data for plotting
+```{r}
+
+```
+
+```{r}
+mc_single_fitness.df
+ggplot(mc_burst.df) +
+  geom_line(aes(x = fct_reorder(id, fitness, .fun = "mean"), y = fitness, group = beta)) +
+  geom_point(aes(x = id, y = fitness, color = beta), size = 2) +
+  #ylim(0, 11) +
   theme_classic()
 ```
 
-## G
+
 
 
 
