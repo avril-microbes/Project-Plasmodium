@@ -72,6 +72,9 @@ mc_burst_dual_input.df <- read.csv(here("code_repository/data/mc_burst_dual_inpu
 mc_burst_final_diff.df <- read.csv(here("code_repository/data/mc_burst_final_diff.csv")) ## fitness of parasites adopting different parameters optimized for diff burst size but simulated with discordant burst size 
 mc_burst_rn.df <- read_parquet(here("code_repository/data/mc_burst_rn.parquet")) ## dataframe containing reaction norms of strains optimzied at various burst size filtered by relevant ranges (rug)
 mc_burst_rn_RI.df <- read_parquet(here("code_repository/data/mc_burst_rn_RI.parquet")) ## dataframe containing reaction norms of strains optimzied at various burst size filtered by relevant ranges (rug)
+mc_burst_rug.df_f <- read_parquet(here("code_repository/data/mc_burst_rug_f.parquet")) ## rug dataframe for parasites adopting the ideal strategy for various burst sizes
+mc_burst_RI_rug.df <- read_parquet(here("code_repository/data/mc_burst_RI_rug.parquet")) ## dito but for R log and I log
+mc_burst_dyn.df <- read_parquet(here("code_repository/data/mc_burst_dyn.parquet")) ## dynamics data for mc burst
 
 # import in code
 source(here("code_repository/functions/chabaudi_si_clean.R"))
@@ -1365,7 +1368,6 @@ mc_burst_fitness_med.df <- mc_burst_fitness_final.df %>%
          geom_mean = exp(mean(log(value)))) %>%
   distinct(cue, log, .keep_all = T) %>% 
   ungroup()
-  
 ```
 
 ## plot
@@ -1393,7 +1395,7 @@ mc_burst_fitness.pl <- ggplot() +
 
 #--------------- The advantage of I log is not due to default optimization position----------------#
 Here, we will use the 4 optimized parameter at various time point and obtain their fitness across the 3 other burst values
-## function to get fitness
+## function to get fitness and conversion rate 
 ```{r}
 get_mc_fitness_diff <- function(df, dual = F){
   ## list of burst values to test
@@ -1444,21 +1446,27 @@ get_mc_fitness_diff <- function(df, dual = F){
   ## get dynamics data
   if(isFALSE(dual)){
     fitness_ls <- lapply(parameter_tsukushi_ls, function(x){
-      fitness <- chabaudi_si_clean(parameters_cr = par, 
+      dyn <- chabaudi_si_clean(parameters_cr = par, 
       parameters = x, 
       immunity = "tsukushi",
       time_range = seq(0, 20, 0.01), 
       cue = cue, 
       log_cue = log, 
       cue_range = cue_range, 
-      dyn = F)
-      
+      solver = "vode",
+      dyn = T)
+      ### process dynamics dataframe to add beta, cue, and log
+      dyn_p <- dyn %>% mutate(id = df$id, beta_optimized = df$beta, beta_simulated = x[[7]])
+      write_parquet(dyn_p, here(paste0("code_repository/data/mc_burst_dyn/", df$id, "_", gsub("\\.", "-", df$beta),
+                                       "_", gsub("\\.", "-", x[[7]]), "_dyn.parquet")))
+      ### get fitness
+      fitness <- max(dyn[dyn$variable == "tau_cum", 3], na.rm = T)
       fitness_beta <- c(beta_simulated = x[[7]], fitness = fitness) ## attach the beta used in the simulation here
       return(fitness_beta)
     })
   } else{ ## dual cue models
     fitness_ls <- lapply(parameter_tsukushi_ls, function(x){
-      fitness <- chabaudi_si_clean(parameters_cr = par, 
+      dyn <- chabaudi_si_clean(parameters_cr = par, 
       parameters = x,
       immunity = "tsukushi",
       time_range = seq(0, 20, 0.01), 
@@ -1469,7 +1477,15 @@ get_mc_fitness_diff <- function(df, dual = F){
       cue_range = cue_range, 
       cue_range_b = cue_range_b,
       gam = "te",
-      dyn = F)
+      solver = "vode",
+      dyn = T)
+      
+     ### process dynamics dataframe to add beta, cue, and log
+      dyn_p <- dyn %>% mutate(id = df$id, beta_optimized = df$beta, beta_simulated = x[[7]])
+      write_parquet(dyn_p, here(paste0("code_repository/data/mc_burst_dyn/", df$id, "_", gsub("\\.", "-", df$beta),
+                                       "_", gsub("\\.", "-", x[[7]]), "_dyn.parquet")))
+      ### get fitness
+      fitness <- max(dyn[dyn$variable == "tau_cum", 3], na.rm = T)
       
       fitness_beta <- c(beta_simulated = x[[7]], fitness = fitness) ## attach the beta used in the simulation here
       return(fitness_beta)
@@ -1477,7 +1493,7 @@ get_mc_fitness_diff <- function(df, dual = F){
     )
   }
   
-  ## add identifiers to results
+  ## add identifiers to results (fitness)
   res_final <- do.call(rbind, fitness_ls) %>% 
     as.data.frame() %>% 
     mutate(id = df$id,
@@ -1547,15 +1563,20 @@ mc_burst_RI_diff.df %>%
   mutate(diff = abs(fitness_optimized - fitness))
 
 ## write
+### fitness
 mc_burst_final_diff.df <- rbind(mc_burst_single_diff.df, mc_burst_RI_diff.df) %>% 
   left_join(select(ez_label, id, long_label, short_label), by = "id") %>% 
   mutate(short_label = ifelse(id == "R_log+I_log", "R log & I log", short_label))
 write.csv(mc_burst_final_diff.df, here("code_repository/data/mc_burst_final_diff.csv"))
+### dynamics
+mc_burst_dyn.ls <- list.files(here("code_repository/data/mc_burst_dyn"), pattern = "*.parquet", full.names = T)
+mc_burst_dyn.df <- do.call(rbind, lapply(mc_burst_dyn.ls, read_parquet))
+write_parquet(mc_burst_dyn.df, here("code_repository/data/mc_burst_dyn.parquet"))
 ```
 
 ## process data for plotting
 ```{r}
-## get geometric mean
+## get geometric mean. note that we are including cases where optimized beta = simulated beta to account for how good the rn is under optimal circumstances
 mc_burst_diff.sum <- mc_burst_final_diff.df %>% 
   group_by(short_label) %>% 
   summarise(geom_mean = exp(mean(log(fitness)))) %>% 
@@ -1568,9 +1589,9 @@ mc_burst_final_diff.df$short_label <- factor(mc_burst_final_diff.df$short_label,
 ## plot
 ```{r}
 mc_burst_diff.pl <- ggplot() +
-  geom_violin(data = mc_burst_final_diff.df %>% filter(beta_optimized != beta_simulated), 
+  geom_violin(data = mc_burst_final_diff.df, 
              aes(x = short_label, y = fitness), color = "transparent", fill = "light grey") +
-  geom_jitter(data = mc_burst_final_diff.df %>% filter(beta_optimized != beta_simulated), 
+  geom_jitter(data = mc_burst_final_diff.df, 
              aes(x = short_label, y = fitness, color = beta_optimized), size = 2, alpha = 0.7, width = 0.2) +
   scale_color_viridis_c() +
   geom_crossbar(data = mc_burst_diff.sum, aes(
@@ -1694,9 +1715,11 @@ mc_burst_RI.ls <- split(mc_burst_dual_input.df, seq(nrow(mc_burst_dual_input.df)
 ## get rug
 mc_burst_rug.ls_f <- mclapply(mc_burst_par.ls_f, get_mc_burst_rug, mc.cores = 6)
 mc_burst_rug.df_f <- do.call(rbind, mc_burst_rug.ls_f)
+write_parquet(mc_burst_rug.df_f, here("code_repository/data/mc_burst_rug_f.parquet"))
 
 mc_burst_RI_rug.ls <- mclapply(mc_burst_RI.ls, function(x) get_mc_burst_rug(x, dual = T), mc.cores = 6)
 mc_burst_RI_rug.df <- do.call(rbind, mc_burst_RI_rug.ls)
+write_parquet(mc_burst_RI_rug.df, here("code_repository/data/mc_burst_RI_rug.parquet"))
 
 ## get dataframe of reaction norm 
 ### single cue models
@@ -1730,6 +1753,7 @@ mc_burst_RI_rn.ls <- lapply(mc_burst_RI.ls, function(x){
   return(res)
 })
 mc_burst_rn_RI.df <- do.call(rbind, mc_burst_RI_rn.ls)
+mc_burst_rn_RI.df
 
 ### get boundary limit based on rug
 mc_burst_bound <- mc_burst_rug.df_f %>% 
@@ -1737,8 +1761,8 @@ mc_burst_bound <- mc_burst_rug.df_f %>%
   summarize(min = min(value), max = max(value))
 
 mc_burst_bound_RI <- mc_burst_RI_rug.df %>% 
-  group_by(id, beta, variable) %>% 
-  summarize(min = min(value), max = max(value))
+  group_by(id, variable, beta) %>% 
+  summarize(min = min(value)*0.9, max = max(value)*1.1)
 
 ### filter by boundary
 mc_burst_rn.df_fp <- mc_burst_rn.df_f %>% 
@@ -1747,10 +1771,8 @@ mc_burst_rn.df_fp <- mc_burst_rn.df_f %>%
 
 mc_burst_rn_RI.df_p <- mc_burst_rn_RI.df %>% 
   left_join(mc_burst_bound_RI %>% filter(variable == "R"), by = c("id", "beta")) %>% 
-  left_join(mc_burst_bound_RI %>% filter(variable == "I") %>% 
-              select(min_b = min, max_b = max, id, beta), by = c("id", "beta")) %>% 
-  filter(cue_range >= min & cue_range <= max &
-           cue_range_b >= min_b & cue_range_b <= max_b)
+  left_join(mc_burst_bound_RI %>% filter(variable == "I") %>% select(id, beta, min_b = min, max_b = max), by = c("id", "beta")) %>% 
+  filter(cue_range >= min & cue_range <= max & cue_range_b >= min_b & cue_range_b <= max_b)
 
 ## write
 write_parquet(mc_burst_rn.df_fp, here("code_repository/data/mc_burst_rn.parquet"))
@@ -1759,65 +1781,29 @@ write_parquet(mc_burst_rn_RI.df_p, here("code_repository/data/mc_burst_rn_RI.par
 
 ## Prepare data for plotting
 ```{r}
-## add short form of label for consistency purposes
-mc_burst_rn.df_lab <- mc_burst_rn.df %>% 
-  left_join(select(ez_label, id, short_label), by = "id") %>% 
-  mutate(long_short_label = paste0(long_label, " (", short_label, ")"))
-
-mc_burst_rn_RI.df_lab <- mc_burst_rn_RI.df %>% 
-  mutate(long_short_label = "RBC log & asexual iRBC log\n(R log & I log)")
-
-## for dual cue models, it is worth calculating the amount of variance (standard variation at each cue)
-mc_burst_rn_RI.sd <- mc_burst_rn_RI.df_lab %>% 
-  group_by(cue_range, cue_range_b) %>% 
-  summarise(sd = sd(cr, na.rm = T),
-            n = n())
+## get label and only look at I log10 and I log + R log10 for comparison
+mc_burst_dyn.df_p <- mc_burst_dyn.df %>% 
+  filter(id %in% c("I_log","R_log+I_log") & variable == "cr" & beta_simulated != 5.721) %>% ## only get the cues we want to plot
+  left_join(ez_label, by = "id") %>% 
+  mutate(long_short_label = ifelse(id == "R_log+I_log", "RBC log & asexual iRBC log\n(R log & I log)",
+    paste0(long_label, " (", short_label, ")")))
 ```
 
 
 ## Plot
 ```{r}
-### for the main figure, we will only plot the top 2 and bottom 2 cues ranked by geometric means across all optimization (so section B ranking)
-mc_burst_rn.pl1 <- ggplot(mc_burst_rn.df_lab %>% filter(id == "I+Ig_log")) +
-  geom_line(aes(x = cue_range, y = cr, color = beta, group = beta)) +
+mc_burst_cr.pl <- ggplot() +
+  geom_line(data = mc_burst_dyn.df_p %>% filter(beta_optimized != beta_simulated), 
+            aes(x = time, y = value, group = beta_optimized, color = beta_optimized)) + ## only plotting unoptimized
+  geom_line(data = mc_burst_dyn.df_p %>% filter(beta_optimized == beta_simulated), 
+            aes(x = time, y = value, group = beta_optimized, color = beta_optimized), linetype = "longdash", size = 1) + ## optimized cr is indicated by a dashed line
+  facet_grid(rows = vars(beta_simulated), cols = vars(long_short_label)) +
+  labs(x = "Time (days)", y = "Conversion rate", color = "Optimized\nburst size") +
   scale_color_viridis_c() +
-  labs(x = "Cue range", y = "Conversion rate", color = "Burst size", subtitle = "Total iRBC log (I+Ig log)") +
   theme_bw() +
-  theme(legend.position = "none",
-    panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-    plot.subtitle=element_text(size=13))
-
-mc_burst_rn.pl2 <- ggplot(mc_burst_rn.df_lab %>% filter(id == "I_log")) +
-  geom_line(aes(x = cue_range, y = cr, color = beta, group = beta)) +
-  scale_color_viridis_c() +
-  labs(x = "Cue range", y = "Conversion rate", color = "Burst size", subtitle = "Asexual iRBC log (I log)") +
-  theme_bw() +
-  theme(legend.position = "none",
+  theme(
         panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-    plot.subtitle=element_text(size=13))
-
-mc_burst_rn.pl3 <- ggplot(mc_burst_rn.df_lab %>% filter(id == "I+Ig_none")) +
-  geom_line(aes(x = cue_range, y = cr, color = beta, group = beta)) +
-  scale_color_viridis_c() +
-  labs(x = "Cue range", y = "Conversion rate", color = "Burst size", subtitle = "Total iRBC (I+Ig)") +
-  theme_bw() +
-  theme(legend.position = "bottom",
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-    plot.subtitle=element_text(size=13)) +
- scale_x_continuous(labels = function(x) format(x, scientific = TRUE, digits = 1))
-
-mc_burst_rn.pl4 <-ggplot(mc_burst_rn_RI.sd) +
-  geom_raster(aes(y = cue_range, x = cue_range_b, fill = sd)) +
-  scale_fill_viridis_c(option = "B") +
-  labs(x = "Asexual iRBC log10", y = "RBC log10", subtitle = "RBC log & asexual iRBC log (R log & I log)") +
-  theme_bw() +
-  theme(legend.position = "bottom",
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-    plot.subtitle=element_text(size=13))
+        panel.grid.minor = element_blank())
 ```
 
 #------ arrange together!-------------#
@@ -1825,20 +1811,102 @@ mc_burst_rn.pl4 <-ggplot(mc_burst_rn_RI.sd) +
 ## first arrange the two fitness graphs
 mc_burst_fitness_com.pl <- ggarrange(mc_burst_fitness.pl, mc_burst_diff.pl, ncol = 1, align = "hv", labels = c("A", "B"), heights = c(0.6,0.4))
 
-## arrange the reaction norms
-mc_burst_rn.pl <- ggarrange(mc_burst_rn.pl1, mc_burst_rn.pl2, mc_burst_rn.pl3, mc_burst_rn.pl4, ncol = 2, nrow = 2, align = "hv", heights = c(0.45,0.6))
-
 ## put them together
-ggarrange(mc_burst_fitness_com.pl, mc_burst_rn.pl, ncol = 2, align = "hv", labels = c("", "C"), widths = c(0.5,0.55))
-ggsave(units = "px", dpi = 300, width = 2600, height = 1600, filename = here("code_repository/figures/mc_burst_main.tiff"), bg = "white", scale = 1.25)
+ggarrange(mc_burst_fitness_com.pl, mc_burst_cr.pl, ncol = 2, align = "hv", labels = c("", "C"), widths = c(0.5,0.55))
+ggsave(units = "px", dpi = 300, width = 2650, height = 1500, filename = here("code_repository/figures/mc_burst_main.tiff"), bg = "white", scale = 1.26)
 ```
-
 
 #=================================#
 # Supplementary fig: all rn at different burst sizes
 #=================================#
+## Process data for plotting
+```{r}
+## get plotting label
+mc_burst_rn.df_p <- mc_burst_rn.df %>% 
+  left_join(select(ez_label, id, short_label), by = "id") %>% 
+  mutate(long_short_label = paste0(long_label, " (", short_label, ")"))
+
+## get plotting order. We are ranking them based on the geometric mean of unoptimized fitness (for all combinations)
+mc_burst_order <- mc_burst_final_diff.df %>% 
+  mutate(long_label = ifelse(id == "R_log+I_log", "RBC log & asexual iRBC log", long_label)) %>% 
+  mutate(long_short_label = paste0(long_label, " (", short_label, ")")) %>% 
+  group_by(long_short_label) %>% 
+  summarise(geom_fitness = exp(mean(log(fitness)))) %>% 
+  ungroup() %>%
+  arrange(-geom_fitness)
+
+mc_burst_rn.df_p$long_short_label <- factor(mc_burst_rn.df_p$long_short_label, mc_burst_order$long_short_label)
+
+## Normalize cue range for plotting
+mc_burst_rn.df_p_n <- mc_burst_rn.df_p %>% 
+  group_by(id) %>% 
+  mutate(range = max(cue_range) - min(cue_range),
+         mean = mean(cue_range),
+         cue_range_norm = (cue_range - mean)/range)
+
+## make rug plot of RI wider for trajectory plotting
+mc_burst_RI_rug.wide <- mc_burst_RI_rug.df %>% 
+  select(time, variable,value, beta) %>% 
+  pivot_wider(names_from = variable, values_from = value, id_cols = c(time, beta))
+
+mc_burst_RI_rug.wide
+```
+
+## plot
+```{r}
+## single cue
+mc_burst_rn_sc.pl <- ggplot(data = mc_burst_rn.df_p_n) +
+  geom_line(aes(x = cue_range_norm, y = cr, color = beta, group = beta)) +
+  facet_wrap(~long_short_label, scales = "free", ncol = 3) +
+  labs(x = "Cue range (normalized)", y = "Conversion rate", color = "Burst size") +
+  scale_color_viridis_c() +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  scale_x_continuous(labels = label_number(accuracy = 0.1))
+
+## dual cue
+mc_burst_rn_dc.pl <- ggplot() +
+  geom_raster(data = mc_burst_rn_RI.df, aes(y = cue_range, x = cue_range_b, fill = cr)) +
+  geom_path(data = mc_burst_RI_rug.wide, aes(x = I, y = R), size = 0.75, color = "cyan", arrow = arrow(angle = 30, length = unit(0.1, "inches"))) +
+  geom_point(data = mc_burst_RI_rug.wide %>% filter(time %% 1 == 0), aes(x = I, y = R), size = 1, color = "cyan") +
+  scale_fill_viridis_c(option = "C") +
+  facet_wrap(~beta, ncol = 1) +
+  labs(x = "Asexual iRBC log10", y = "RBC log10", fill = "Conversion\nrate") +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+    plot.subtitle=element_text(size=13)) +
+  scale_y_continuous(labels = label_number(accuracy = 0.1),
+                     limits = c(6.8,7))
+```
+
+
+```{r}
+## plot together
+ggarrange(mc_burst_rn_sc.pl, mc_burst_rn_dc.pl, widths = c(2.5,1.1), labels = c("A", "B"), ncol = 2, nrow = 1, align = "hv")
+ggsave(units = "px", dpi = 300, width = 2550, height = 1800, filename = here("code_repository/figures/mc_burst_rn.tiff"), bg = "white", scale = 1)
+```
+
+## sanity check. RI rn is different between the beta != 3.98
+```{r}
+mc_burst_rn_RI.df %>% 
+  filter(beta != 3.98) %>% 
+  group_by(cue_range, cue_range_b) %>% 
+  mutate(sd = sd(cr)) %>% 
+  ggplot() + geom_raster(aes(x = cue_range_b, y = cue_range, fill = sd))
+```
+
+#=============================#
+# Impact of cue perception on virulence
+#=============================#
+
 ```{r}
 
 ```
+
+
 
 
