@@ -76,6 +76,10 @@ mc_burst_rug.df_f <- read_parquet(here("code_repository/data/mc_burst_rug_f.parq
 mc_burst_RI_rug.df <- read_parquet(here("code_repository/data/mc_burst_RI_rug.parquet")) ## dito but for R log and I log
 mc_burst_dyn.df <- read_parquet(here("code_repository/data/mc_burst_dyn.parquet")) ## dynamics data for mc burst
 
+## validation data (comparing fitness to random spline)
+validation.ls <- list.files(here("code_repository/data/si_validation/"), full.names = T)
+validation.df <- do.call(rbind, lapply(validation.ls, read.csv))
+
 # import in code
 source(here("code_repository/functions/chabaudi_si_clean.R"))
 source(here("code_repository/functions/par_to_df.R"))
@@ -1906,6 +1910,34 @@ mc_burst_rn_RI.df %>%
 ```{r}
 
 ```
+
+#=============================#
+# Validation of optimization
+#=============================#
+#------ process input data ------#
+# Process data
+```{r}
+## get difference betweent fitness conferred by model produced by a random spline strategy "V1" vs optimized fitness
+validation.df_p <- validation.df %>% 
+  left_join(select(si_opt.df, id, fitness_20, short_label, long_label), by = c("id")) %>% 
+  mutate(diff = fitness_20-V1,
+         long_short_label = paste0(long_label, " (", short_label, ")"))
+
+## no random strategy performed better!
+validation.df_p %>% filter(diff<=0)
+```
+
+# Plot
+```{r}
+ggplot(validation.df_p) +
+  geom_density(aes(x = diff), fill = "light grey") +
+  facet_wrap(~long_short_label, scales = "free") +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) 
+```
+
 
 
 
