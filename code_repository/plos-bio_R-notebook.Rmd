@@ -952,7 +952,7 @@ mc_R_I_log.res <- mclapply(posterior.ls[1201:length(posterior.ls)], function(x){
                     log= "none",
                     log_b = "log10",
          rand_df = x)},
-  mc.cores = 6)
+  mc.cores = 8)
 
 # R and I+Ig log
 mc_R_I_Ig_log.res <- mclapply(posterior.ls, function(x){
@@ -964,7 +964,7 @@ mc_R_I_Ig_log.res <- mclapply(posterior.ls, function(x){
                     log= "none",
                     log_b = "log10",
          rand_df = x)},
-  mc.cores = 6)
+  mc.cores = 8)
 
 # R log and I+Ig log
 mc_R_log_I_Ig_log.res <- mclapply(posterior.ls, function(x){
@@ -976,7 +976,7 @@ mc_R_log_I_Ig_log.res <- mclapply(posterior.ls, function(x){
                     log= "log10",
                     log_b = "log10",
          rand_df = x)},
-  mc.cores = 6)
+  mc.cores = 8)
 ```
 
 ### Only one parameter vary
