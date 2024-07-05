@@ -1932,10 +1932,13 @@ validation.df_p %>% filter(diff<=0)
 ggplot(validation.df_p) +
   geom_density(aes(x = diff), fill = "light grey") +
   facet_wrap(~long_short_label, scales = "free") +
+  labs(x = "Fitness difference (Optimal-Random)", y = "Density") +
   theme_bw() +
   theme(legend.position = "bottom",
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) 
+
+ggsave(units = "px", dpi = 300, width = 2550, height = 1500, filename = here("code_repository/figures/si_validation.tiff"), bg = "white", scale = 1)
 ```
 
 
