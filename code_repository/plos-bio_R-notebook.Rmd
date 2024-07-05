@@ -1071,7 +1071,7 @@ mclapply(posterior.ls, function(x){
   mc.cores = 8)
 
 # R and I log
-mclapply(posterior.ls[1200:length(posterior.ls)], function(x){
+mclapply(posterior.ls[1201:length(posterior.ls)], function(x){
   mc_single_dual(par = c(-9.518084898,	-439.4342135,	85.99834201,	118.6093975,	-244.108158,	33.24560006,	-30.89681964,	-24.84888061,	-88.60274223),
                     cue = "R",
          cue_b = "I",
