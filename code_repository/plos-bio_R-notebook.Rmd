@@ -983,6 +983,7 @@ mc_R_log_I_Ig_log.res <- mclapply(posterior.ls, function(x){
 ```
 
 ### Only one parameter vary
+Note, after checking the difference in distribution betweeen 5000 vs 1000 reps, I do not find any difference. Hence, for subsequent simulations, only perform 1000 replicates!
 ```{r}
 # Asexual iRBC
 mclapply(posterior.ls, function(x){
@@ -1089,7 +1090,7 @@ mclapply(posterior.ls, function(x){
   mc.cores = 10)
 
 # R and I+Ig log
-mclapply(posterior.ls, function(x){
+mclapply(posterior.ls[1:1000], function(x){
   mc_single_dual(par = c(-0.123534059,	10.41243862,	-16.13098789,	28.09607529,	-12.49060926,	12.77524469,	36.77045332,	7.011182218,	6.680916699),
                     cue = "R",
          cue_b = "I+Ig",
@@ -1101,7 +1102,7 @@ mclapply(posterior.ls, function(x){
   mc.cores = 10)
 
 # R log and I+Ig log
-mclapply(posterior.ls, function(x){
+mclapply(posterior.ls[1:1000], function(x){
   mc_single_dual(par = c(-7.687311702,	-497.7126667,	-1003.526906,	47.78563659,	-248.7360112,	-181.9755341,	27.71388409,	-22.55271948,	-52.13198563),
                     cue = "R",
          cue_b = "I+Ig",
@@ -1139,6 +1140,7 @@ si_opt_beta.df <- cbind.data.frame(id = rep(si_opt.df$id, length(beta_ls))) %>%
 
 ## split
 si_opt_beta.ls <- split(si_opt_beta.df, seq(nrow(si_opt_beta.df)))
+si_opt_beta.ls
 ```
 
 ## Run function
@@ -1158,19 +1160,31 @@ source(here("code_repository/functions/dual_cue_opt_beta.R"))
 ## import in dual cue fitness dataframe
 dual_cue_f.df <- read.csv(here("code_repository/data/dual_cue_fitness_final.csv"))
 
-## make df for optimization by adding beta
+## make df for optimization by adding the correspond optmization parameters
 dual_cue_burst.df <- dual_cue_f.df %>% 
   slice_max(n = 4, order_by = fitness) %>% 
-  mutate(log = "log", log_b = "log", cue = "R", cue_b = "I",
-         low = 6, high = 7, low_b = 0, high_b = 6.77815125) %>% 
-  cbind(beta = beta_ls)
+  cbind.data.frame(
+    log = c("log", "none", "none", "log"),
+    log_b = c("log", "log", "log", "log"),
+    cue = c("R", "R", "R", "R"),
+    cue_b = c("I", "I", "I+Ig", "I+Ig"),
+    low = c(6, 10^6,10^6, 6),
+    high = c(7, 10^7,10^7, 7),
+    low_b= c(0,0,0, 0),
+    high_b = c(log10(6*(10^6)),log10(6*(10^6)),log10(6*(10^6)),log10(6*(10^6)))
+  )
+
+## add beta
+dual_cue_burst.df <- do.call("rbind", replicate(4, dual_cue_burst.df, simplify = FALSE)) %>% 
+  arrange(id, id_b) %>% 
+  mutate(beta = rep(beta_ls, 4))
 
 ## split
 dual_cue_burst.ls <- split(dual_cue_burst.df, seq(nrow(dual_cue_burst.df)))
 
 ## run function
-lapply(dual_cue_burst.ls, function(x){dual_cue_opt_beta(x)})
-lapply(dual_cue_burst.ls, function(x){dual_cue_opt_beta(x, default = T)})
+lapply(dual_cue_burst.ls[5:16], function(x){dual_cue_opt_beta(x)})
+lapply(dual_cue_burst.ls[5:16], function(x){dual_cue_opt_beta(x, default = T)})
 ```
 
 
