@@ -25,6 +25,7 @@ library(bayestestR)
 library(purrr)
 library(tidyr)
 library(splines2)
+library(splancs)
 ```
 
 ## load variables
@@ -75,6 +76,8 @@ mc_burst_rn_RI.df <- read_parquet(here("code_repository/data/mc_burst_rn_RI.parq
 mc_burst_rug.df_f <- read_parquet(here("code_repository/data/mc_burst_rug_f.parquet")) ## rug dataframe for parasites adopting the ideal strategy for various burst sizes
 mc_burst_RI_rug.df <- read_parquet(here("code_repository/data/mc_burst_RI_rug.parquet")) ## dito but for R log and I log
 mc_burst_dyn.df <- read_parquet(here("code_repository/data/mc_burst_dyn.parquet")) ## dynamics data for mc burst
+si_dyn_30.df <- read_parquet(here("code_repository/data/si_dyn_30.parquet")) ## single cue dynamics data (30 days)
+dual_cue_dyn_30.df <- read_parquet(here("code_repository/data/dual_cue_dyn_30.parquet")) ## dual cue dynamics (30 days)
 
 ## validation data (comparing fitness to random spline)
 validation.ls <- list.files(here("code_repository/data/si_validation/"), full.names = T)
@@ -142,6 +145,20 @@ si_dyn.df <- do.call(rbind, si_dyn)
 # write_parquet(si_dyn.df, here("code_repository/data/si_dyn.parquet"))
 ```
 
+## get 30 day simulation data (not used for fitness but for plotting purposes)
+```{r}
+## get dynamics
+si_opt.ls2 <- split(si_opt.df %>% filter(cue != "t"), seq(nrow(si_opt.df%>% filter(cue != "t"))))
+si_dyn_30 <- mclapply(si_opt.ls2, get_si_dyn, mc.cores = 8)
+
+## combine the dynamics file
+si_dyn_30.df <- do.call(rbind, si_dyn_30)
+si_dyn_30.df %>% group_by(id) %>% summarise(max_time = max(time))
+
+## save
+write_parquet(si_dyn_30.df, here("code_repository/data/si_dyn_30.parquet"))
+```
+
 ## process data to isolate conversion rate and pair them with fitness
 ```{r}
 ## keep only conversion rate from dynamics
@@ -150,14 +167,18 @@ si_dyn_cr.df <- si_dyn.df %>% filter(variable == "cr")
 ## left join with fitness values
 si_dyn_cr_fitness.df <- si_dyn_cr.df %>% 
   left_join(si_opt.df, by = "id") 
+
+## normalize fitness by dividing all values by the fitness values we get when cue = time
+si_opt.df <- si_opt.df %>% 
+  mutate(fitness_norm = fitness_20 / si_opt.df[si_opt.df$cue == "t",]$fitness_20)
 ```
 
 ## plot
 ```{r}
 ## fitness values ranked from high to low
-fitness_rank.plt <- ggplot(si_opt.df, aes(x = fitness_20, y = fct_reorder(long_label, fitness_20))) +
+fitness_rank.plt <- ggplot(si_opt.df, aes(x = fitness_norm, y = fct_reorder(long_label, fitness_20))) +
   geom_bar(stat = "identity", fill = "black") +
-  labs(x = "Fitness", y = "Cue") +
+  labs(x = "Normalized fitness", y = "Cue") +
   theme_classic() +
   theme(plot.margin = margin(5.5, 0, 5.5, 5.5, "pt"))
 
@@ -174,7 +195,7 @@ fitness_cr.plt <- ggplot(si_dyn_cr_fitness.df, aes(x = time, y = fct_reorder(lon
         )
 
 ## plot together
-fitness_rank_cr.plt <- ggarrange(fitness_rank.plt, fitness_cr.plt, widths = c(1, 1), align = "h", common.legend = T,
+fitness_rank_cr.plt <- ggarrange(fitness_rank.plt, fitness_cr.plt, widths = c(1.2, 1), align = "h", common.legend = T,
                                  legend = "bottom")
 ```
 
@@ -325,18 +346,9 @@ fitness_rn.plt <- ggplot() +
 
 #------------ Plotting fitness, dynamics, and rn together ------------#
 ```{r}
-ggarrange(fitness_rank_cr.plt, fitness_rn.plt, widths = c(2.3, 1), align = "h", ncol = 2, labels = c("A", "B"))
-ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("code_repository/figures/fitness_rn.tiff"), bg = "white", scale = 1.1)
+ggarrange(fitness_rank_cr.plt, fitness_rn.plt, widths = c(2.7, 1), align = "h", ncol = 2, labels = c("A", "B"))
+ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("code_repository/figures/fitness_rn.tiff"), bg = "white", scale = 1.25)
 ```
-
-#=================================#
-# Examining the reliability of cues
-#=================================#
-## process data for processing
-
-
-
-
 
 #=================================#
 # Dual cue fitness main figure
@@ -374,24 +386,26 @@ write.csv(dual_cue_f_final.df, here("code_repository/data/dual_cue_fitness_final
 
 ## Combine single cue and dual cue dataset
 ```{r}
+dual_cue_f_final.df <- read.csv(here("code_repository/data/dual_cue_fitness_final.csv"))
+
 dual_si_fitness.df <- dual_cue_f_final.df %>% 
   select(id, id_b, label, label_b, fitness_dual = fitness) %>% 
   left_join(select(si_opt.df, id, fitness_si = fitness_20), by = "id") %>% ## get fitness of single cue model based on first cue
   left_join(select(si_opt.df, id_b = id, fitness_si_b = fitness_20), by = "id_b") %>%  ## get fitness of single cue model based on second cue
-  mutate(fitness_si_final = ifelse(fitness_si > fitness_si_b, fitness_si, fitness_si_b),
-         label_comb = paste(label, "&", label_b)) ## select the highest single cue model fitness
+  mutate(fitness_si_final = ifelse(fitness_si > fitness_si_b, fitness_si, fitness_si_b)/9.883602,
+         label_comb = paste(label, "&", label_b), ## select the highest single cue model fitness
+         fitness_dual_norm = fitness_dual/9.883602)## normalize by time fitness
 ```
 
 ## plot fitness rank
 ```{r}
 dual_fitness.pl <- ggplot(dual_si_fitness.df) +
-  geom_segment(aes(y = fct_reorder(label_comb, fitness_dual), yend = fct_reorder(label_comb, fitness_dual), x = fitness_dual, xend = fitness_si_final)) + ## line segment connecting the cue values
-  geom_point(aes(y = fct_reorder(label_comb, fitness_dual), x = fitness_dual, color = "Dual cue", shape = "Dual cue"),
+  geom_segment(aes(y = fct_reorder(label_comb, fitness_dual_norm), yend = fct_reorder(label_comb, fitness_dual), x = fitness_dual_norm, xend = fitness_si_final)) + ## line segment connecting the cue values
+  geom_point(aes(y = fct_reorder(label_comb, fitness_dual), x = fitness_dual_norm, color = "Dual cue", shape = "Dual cue"),
              size = 2.5) + ## dual cue fitness
-  geom_point(aes(y = fct_reorder(label_comb, fitness_dual), x = fitness_si_final, color = "Best single cue", shape = "Best single cue"), size = 2.5) + ## best single cue fitness
+  geom_point(aes(y = fct_reorder(label_comb, fitness_dual_norm), x = fitness_si_final, color = "Best single cue", shape = "Best single cue"), size = 2.5) + ## best single cue fitness
   scale_color_manual(values=c("#fc8d59", "#4575b4")) +
-  geom_vline(xintercept = 9.883602, linetype = "dashed") + ## ideal fitness value based on time
-  labs(x = "Fitness", y = "Dual cue combinations", colour = "Legend", shape = "Legend") +
+  labs(x = "Normalized fitness", y = "Dual cue combinations", colour = "Legend", shape = "Legend") +
   theme_classic() +
   theme(legend.position = "top")
 ```
@@ -468,6 +482,8 @@ write_parquet(dual_selected_cr.df, here("code_repository/data/dual_selected_cr.p
 
 ## plot
 ```{r}
+dual_selected_cr.df <- read_parquet(here("code_repository/data/dual_selected_cr.parquet"))
+
 dual_selected_cr.pl <- ggplot() +
   geom_line(data = dual_selected_cr.df, aes(color = label_new, x = time, y = value), size = 1) +
   geom_point(data = dual_selected_cr.df %>% filter(time%%1 == 0), aes(color = label_new, x = time, y = value, shape = label_new), size = 3) +
@@ -582,6 +598,17 @@ mclapply(dual_cue_f_final.ls, dual_cue_dyn, mc.cores = 6)
 dual_cue_dyn.ls <- list.files(path = here("code_repository/data/dual_cue_dyn"), pattern = "*.parquet", full.names = T)
 dual_cue_dyn.df <- do.call(rbind, lapply(dual_cue_dyn.ls, read_parquet))
 write_parquet(dual_cue_dyn.df, here("code_repository/data/dual_cue_dyn.parquet"))
+```
+
+## get 30 days dynamic (for plotting purposes)
+```{r}
+## Run function
+mclapply(dual_cue_f_final.ls, dual_cue_dyn, mc.cores = 6)
+
+## Concat all files
+dual_cue_dyn_30.ls <- list.files(path = here("code_repository/data/dual_cue_dyn_30"), pattern = "*.parquet", full.names = T)
+dual_cue_dyn_30.df <- do.call(rbind, lapply(dual_cue_dyn_30.ls, read_parquet))
+write_parquet(dual_cue_dyn_30.df, here("code_repository/data/dual_cue_dyn_30.parquet"))
 ```
 
 ## Preparing dataset for plotting
@@ -775,7 +802,7 @@ exp_xy.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
   ggplot(exp_ss.df, aes_string(x = x_col, y = y_col)) +
         geom_path(aes(colour = Day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0, "inches"))) +
         theme_classic() + 
-        scale_color_viridis_c(limits = c(3, 21)) +
+        scale_color_viridis_c(option = "A", limits = c(3, 21)) +
         labs(color = "Days post-infection")  +
         scale_y_continuous(labels = function(x) format(x, scientific = TRUE)) +
         scale_x_continuous(labels = label_scientific(digits = 1))
@@ -790,7 +817,7 @@ exp_xlogy.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
   ggplot(exp_ss.df, aes_string(x = sprintf("log10(%s)", x_col), y = y_col)) +
         geom_path(aes(colour = Day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0, "inches"))) +
         theme_classic() + 
-        scale_color_viridis_c(limits = c(3, 21)) +
+        scale_color_viridis_c(option = "A", limits = c(3, 21)) +
         labs(color = "Days post-infection", x = paste(x_col, "log"))  +
         scale_y_continuous(labels = function(x) format(x, scientific = TRUE))
 }
@@ -804,7 +831,7 @@ exp_xylog.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
   ggplot(exp_ss.df, aes_string(x = x_col, y = sprintf("log10(%s)", y_col))) +
         geom_path(aes(colour = Day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0, "inches"))) +
         theme_classic() + 
-        scale_color_viridis_c(limits = c(3, 21)) +
+        scale_color_viridis_c(option = "A", limits = c(3, 21)) +
         labs(color = "Days post-infection", y = paste(y_col, "log"))   +
         scale_x_continuous(labels = label_scientific(digits = 1))
 }
@@ -818,7 +845,7 @@ exp_xlogylog.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
   ggplot(exp_ss.df, aes_string(x = sprintf("log10(%s)", x_col), y = sprintf("log10(%s)", y_col))) +
         geom_path(aes(colour = Day, group = id), arrow = arrow(type = "closed", angle = 10, length = unit(0, "inches"))) +
         theme_classic() + 
-        scale_color_viridis_c(limits = c(3, 21)) +
+        scale_color_viridis_c(option = "A", limits = c(3, 21)) +
         labs(color = "Days post-infection", x = paste(x_col, "log"), y = paste(y_col, "log")) 
 }
 )
@@ -940,13 +967,67 @@ cue_cue_rn_pl.ls <- lapply(dual_cue_rn.ls,
            theme_classic() +
            scale_color_viridis_c(limits = c(0, 1)) +
            labs(color = "Conversion rate", x = gsub("_", " ", axis_cols[[1]]), y = gsub("_", " ", axis_cols[[2]])) +
-           scale_x_continuous(labels = label_scientific(digits = 1)) +
-           scale_y_continuous(labels = label_scientific(digits = 1))
+           scale_x_continuous(labels = label_scientific(digits = 2)) +
+           scale_y_continuous(labels = label_scientific(digits = 2))
        })
 
 ## arrange together
 cue_cue_rn.pl <- ggarrange(plotlist = cue_cue_rn_pl.ls, ncol = 5, nrow = 8, common.legend = T, align = "hv") 
-ggsave(here("code_repository/figures/sim_disease-curve.tiff"), units = "px", width = 2250, height = 2500, scale = 2, dpi=300,  bg = "white")
+ggsave(here("code_repository/figures/sim_disease-curve.tiff"), units = "px", width = 2250, height = 2500, scale = 2.2, dpi=300,  bg = "white")
+```
+
+#=================================#
+# Curating list of selected exo and simulated
+# disease curves (main figure)
+#=================================#
+# plot
+```{r}
+# main figure
+ggarrange(
+   cue_cue_rn_pl.ls[[31]] +
+    scale_x_continuous(labels = scales::number_format(accuracy = 0.1)) +
+    scale_y_continuous(labels = scales::number_format(accuracy = 1)) +
+    theme(legend.position = "none"), 
+          
+   exp_xlogylog.pl_ls[[1]] + theme(legend.position = "none"),
+
+   cue_cue_rn_pl.ls[[35]] + 
+     scale_y_continuous(labels = scales::number_format(accuracy = 1)) +
+     theme(legend.position = "none",
+           axis.text.x=element_text(size=6.5)), 
+   
+   exp_xylog.pl_ls[[1]] + 
+     scale_y_continuous(labels = scales::number_format(accuracy = 1)) +
+     theme(legend.position = "none",
+           axis.text.x=element_text(size=6.5)),
+   
+   cue_cue_rn_pl.ls[[30]] + 
+     scale_x_continuous(labels = scales::number_format(accuracy = 0.1)) +
+     theme(legend.position = "none"), 
+   
+   exp_xlogy.pl_ls[[1]] + theme(legend.position = "none"), 
+   
+   cue_cue_rn_pl.ls[[15]] + 
+     scale_x_continuous(labels = scales::number_format(accuracy = 0.1)) +
+     theme(legend.position = "none"), 
+   
+   exp_xlogy.pl_ls[[2]] + theme(legend.position = "none"),
+   
+   align = "hv", ncol = 4, nrow = 2
+)
+ggsave(here("code_repository/figures/sim_exp_disease_curve_main.tiff"), units = "px", width = 2250, height = 1000, scale = 1.25, dpi=300,  bg = "white")
+
+
+# get legend separately
+ggarrange(
+   cue_cue_rn_pl.ls[[31]] +
+    scale_x_continuous(labels = scales::number_format(accuracy = 0.1)) +
+    scale_y_continuous(labels = scales::number_format(accuracy = 1)) +
+    theme(legend.position = "top"), 
+          
+   exp_xlogylog.pl_ls[[1]] + theme(legend.position = "top"))
+ggsave(here("code_repository/figures/sim_exp_disease_curve_legend.tiff"), units = "px", width = 2250, height = 500, scale = 1.25, dpi=300,  bg = "white")
+
 ```
 
 
@@ -1139,7 +1220,8 @@ mc_single_fitness.long_p_f$parameter_label <- factor(mc_single_fitness.long_p_f$
 
 # plotting 89% credible interval. By visual inspection of the distribution, ci represented the distribution (more honestly) than quantile, even when quantile seems to display larger differences of logging cues.
 ```{r}
-mc_partition.pl <- ggplot() +
+mc_partition.pl <- x
+ggplot() +
   geom_violin(data = mc_single_fitness.long_p_f, aes(x = rel_diff_single, y = long_label,
                                                  fill = log, color = log)) + ## 89% credible interval
   geom_point(data = mc_single_fitness.sum, aes(x = median, y = long_label)) +
@@ -1903,13 +1985,194 @@ mc_burst_rn_RI.df %>%
   ggplot() + geom_raster(aes(x = cue_range_b, y = cue_range, fill = sd))
 ```
 
-#=============================#
+#=====================================#
 # Impact of cue perception on virulence
-#=============================#
-
+#====================================#
+#--------- Divid dynamics data into high and low performing ---------------#
+# Single cue 
 ```{r}
+# classify top 4 performing single cues as "high performing"
+top_4_single_cue <- si_opt.df %>% 
+  filter(cue != "t") %>% 
+  slice_max(n = 4, order_by = fitness_20)
 
+# get wide format dataframe. Here, we are interested in the RBC and total iRBC count
+si_dc.df <- si_dyn_30.df %>% 
+  mutate(value = as.numeric(value)) %>% 
+  filter(variable == "I" | variable == "Ig" | variable == "R") %>% 
+  tidyr::pivot_wider(names_from = variable, values_from = value) %>% 
+  mutate(total = I+Ig)
+
+# split into top and poor-performing cues
+si_dc.high <- si_dc.df %>% filter(id %in% top_4_single_cue$id)
+si_dc.poor <- si_dc.df %>% filter(!id %in% top_4_single_cue$id)
+
+# join high performing with label
+si_dc.high <- si_dc.high %>% left_join(ez_label %>% distinct(id, .keep_all = T), by = "id")
+
+# reorder cues by descending fitness
+si_dc.high$short_label <- factor(si_dc.high$short_label, top_4_single_cue$short_label)
 ```
+
+# Dual cue
+```{r}
+# classify top 4 performing dual cues as "high performing"
+top_4_dual_cue <- dual_cue_f_final.df %>% 
+  mutate(label_alt = paste(label, "&" , label_b)) %>% 
+  slice_max(n = 4, order_by = fitness)
+
+# get wide format dataframe. Here, we are interested in the RBC and total iRBC count
+dual_dc.df <- dual_cue_dyn_30.df %>% 
+  mutate(label_alt = paste(label, "&" , label_b)) %>% ## get new label
+  filter(variable == "I" | variable == "Ig" | variable == "R") %>% ## get desired variables
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, label_alt)) %>%
+  mutate(total = I+Ig)
+
+# split into top and poor-performing cues
+dual_dc.high <- dual_dc.df %>% filter(label_alt %in% top_4_dual_cue$label_alt)
+dual_dc.poor <- dual_dc.df %>% filter(!label_alt %in% top_4_dual_cue$label_alt)
+
+# reorder cues by descending fitness
+dual_dc.high$label_alt <- factor(dual_dc.high$label_alt, top_4_dual_cue$label_alt)
+```
+
+#-------------Plot disease curves-----------------#
+# Single cue
+```{r}
+# plot poor performing cues (these are grey lines)
+si_dc_pre.plt <- ggplot() +
+  geom_path(data = si_dc.poor, aes(x= total, y = R, group = id), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  labs(color = "Good performing cues", x = "Total iRBC", y = "RBC") +
+  theme_classic()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
+  guides(shape = FALSE)
+
+# overlay dynamics of good performing cues
+si_dc.plt <- si_dc_pre.plt +
+  geom_point(data = si_dc.high %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
+  geom_path(data = si_dc.high, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59"))  +
+  theme(legend.position = "top") +
+  labs(color = "Cues") 
+```
+
+# dual cue
+```{r}
+# plot poor performing cues (these are grey lines)
+dual_dc_pre.plt <- ggplot() +
+  geom_path(data = dual_dc.poor, aes(x= total, y = R, group = label_alt), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  labs(color = "Good performing cues", x = "Total iRBC", y = "RBC") +
+  theme_classic()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
+  guides(shape = FALSE)
+
+# overlay dynamics of good performing cues
+dual_dc.plt <- dual_dc_pre.plt +
+  geom_point(data = dual_dc.high %>% filter(row_number() %% 100 ==0), aes(x = total, y = R, color = label_alt, shape = label_alt), size = 2) +
+  geom_path(data = dual_dc.high, aes(x= total, y = R, group = label_alt, color = label_alt), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59"))  +
+  theme(legend.position = "top") +
+  labs(color = "Cues") 
+```
+
+#---------area of curve vs fitness---------------#
+# function to calculate area within curve
+```{r}
+get_dc_area <- function(df){
+  x <- df$total
+  y <- df$R
+  chull(x,y)->i
+  return(areapl(cbind(x[i],y[i])))
+}
+```
+
+# single cue area
+```{r}
+# split df
+si_dc.ls <- split(si_dc.df, si_dc.df$id)
+
+# get area
+si_dc.area <- cbind.data.frame(area = as.numeric(lapply(si_dc.ls, get_dc_area)), id = names(lapply(si_dc.ls, get_dc_area)))
+
+# join with fitness
+si_opt_area.df <- si_opt.df %>% 
+  filter(cue != "t") %>% 
+  left_join(si_dc.area, by = "id") %>% 
+  mutate(fitness_norm = fitness_20/9.883602) ## normalize fitness (use fitness obtained using time df=9 given that we are plotting dual cue and single on the same graph!)
+
+# sanity check area. The area should be on the order if we assume a rectangle!
+si_dc.df %>% 
+  group_by(id) %>% 
+  summarise(R_diff = max(R)-min(R),
+            total_diff = max(total)-min(total),
+            product = R_diff*total_diff)
+```
+
+# dual cue
+```{r}
+# split
+dual_dc.ls <- split(dual_dc.df, dual_dc.df$label_alt)
+
+# get area
+dual_dc.area <- cbind.data.frame(area = as.numeric(lapply(dual_dc.ls, get_dc_area)), label_alt = names(lapply(dual_dc.ls, get_dc_area)))
+
+# join with fitness
+dual_cue_f_final_area.df <- dual_cue_f_final.df %>% 
+  mutate(label_alt = paste(label, "&" , label_b)) %>% 
+  left_join(dual_dc.area, by = c("label_alt")) %>% 
+  mutate(fitness_norm = fitness/9.883602) ## normalize fitness (use fitness obtained using time df=9 given that we are plotting dual cue and single on the same graph!)
+```
+
+# fit GLM
+```{r}
+# fit lm
+si_lm <- lm(fitness_norm ~ area, data = si_opt_area.df)
+dual_lm <- lm(fitness_norm ~ area, data = dual_cue_f_final_area.df)
+
+# get prediction with 95% CI
+si_lm.ci = predict(si_lm, interval = "confidence") %>% cbind.data.frame(area = si_opt_area.df$area)
+dual_lm.ci = predict(dual_lm, interval = "confidence") %>% cbind.data.frame(area = dual_cue_f_final_area.df$area)
+
+# look at R^2
+summary(si_lm)$r.squared ## 0.1765248
+summary(dual_lm)$r.squared ## 0.1053591
+```
+
+# plot correlation
+```{r}
+# single cue
+si_corr_area.plt <- ggplot() +
+  geom_point(data = si_opt_area.df, aes(x = area, y = fitness_norm, color = "Single cue", shape = "Single cue"), size = 3, alpha = 0.7) +
+  geom_line(data = si_lm.ci, aes(x = area, fit)) +
+  geom_ribbon(data = si_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
+  annotate(geom = "text", label = "R^2=0.18", x = 1.6*(10^11), y = 0.76) +
+  labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
+  scale_color_manual(values = c(orange)) +
+  xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
+  theme_classic() +
+  theme(legend.position = "none")
+
+# dual cue
+dual_corr_area.plt <- ggplot() +
+  geom_point(data = dual_cue_f_final_area.df, aes(x = area, y = fitness_norm, color = "Dual cue", shape = "Dual cue"), size = 3, alpha = 0.7) +
+  geom_line(data = dual_lm.ci, aes(x = area, fit)) +
+  geom_ribbon(data = dual_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
+ annotate(geom = "text", label = "R^2=0.11", x = 1.6*(10^11), y = 0.76) +
+  labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
+  scale_color_manual(values = c(blue)) +
+  xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
+  theme_classic() +
+  theme(legend.position = "none")
+```
+
+#---------assemble figure------------#
+```{r}
+si_dc_area.plt <- ggarrange(si_dc.plt, si_corr_area.plt, ncol = 2, nrow = 1, align = "hv", common.legend = T, labels = c("A", "B"))
+dual_dc_area.plt <- ggarrange(dual_dc.plt, dual_corr_area.plt, ncol = 2, nrow = 1, align = "hv", common.legend = T, labels = c("C", "D"))
+
+ggarrange(si_dc_area.plt, dual_dc_area.plt, nrow = 2, align = "v")
+
+ggsave(units = "px", dpi = 300, width = 2550, height = 2000, filename = here("code_repository/figures/virulence.tiff"), bg = "white", scale = 1)
+```
+
 
 #=============================#
 # Validation of optimization

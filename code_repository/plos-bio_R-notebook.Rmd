@@ -941,7 +941,10 @@ mc_R_log_I_log.res <- mclapply(posterior.ls, function(x){
                     log_b = "log10",
          rand_df = x)},
   mc.cores = 8)
+```
 
+
+```{r}
 # R and I log
 mc_R_I_log.res <- mclapply(posterior.ls[1201:length(posterior.ls)], function(x){
   mc_all_dual(par = c(-9.518084898,	-439.4342135,	85.99834201,	118.6093975,	-244.108158,	33.24560006,	-30.89681964,	-24.84888061,	-88.60274223),
@@ -1069,7 +1072,10 @@ mclapply(posterior.ls, function(x){
                     log_b = "log10",
          rand_df = x)},
   mc.cores = 8)
+```
 
+
+```{r}
 # R and I log
 mclapply(posterior.ls, function(x){
   mc_single_dual(par = c(-9.518084898,	-439.4342135,	85.99834201,	118.6093975,	-244.108158,	33.24560006,	-30.89681964,	-24.84888061,	-88.60274223),
@@ -1080,7 +1086,7 @@ mclapply(posterior.ls, function(x){
                     log= "none",
                     log_b = "log10",
          rand_df = x)},
-  mc.cores = 8)
+  mc.cores = 10)
 
 # R and I+Ig log
 mclapply(posterior.ls, function(x){
@@ -1092,7 +1098,7 @@ mclapply(posterior.ls, function(x){
                     log= "none",
                     log_b = "log10",
          rand_df = x)},
-  mc.cores = 8)
+  mc.cores = 10)
 
 # R log and I+Ig log
 mclapply(posterior.ls, function(x){
@@ -1104,7 +1110,7 @@ mclapply(posterior.ls, function(x){
                     log= "log10",
                     log_b = "log10",
          rand_df = x)},
-  mc.cores = 8)
+  mc.cores = 10)
 
 ```
 
