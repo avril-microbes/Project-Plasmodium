@@ -13,7 +13,7 @@ mc_single <- function(par, cue, cue_range, log, rand_df){
   phiw_rand <- rand_df$phi_N2 # half-life for targeted immunity
   
   # id of the run (cue)
-  id <- paste0(cue, "_", log)
+  id <- gsub("log10", "log", paste0(cue, "_", log))
   
   # iter of the run
   iter <- rand_df$iter

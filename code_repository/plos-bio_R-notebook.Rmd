@@ -6,10 +6,8 @@ output: html_notebook
 This R Notebook will take you through the entirety of the modelling process of simulating and optimizing Plasmodium chabaudi intrahost dynamics. It will be roughly split into the following sections:
 
 - single infection optimization
-- co-infection optimization
 - dual cue optimization
 - phase mapping of laboratory mice infections
-- co-infection competition
 - partitioning the drivers of infection outcomes
 - semi-stochastic single infection model
 
@@ -36,24 +34,9 @@ source(here("code_repository/functions/opt_global.R"))
 source(here("code_repository/functions/chabaudi_si_clean.R"))
 source(here("code_repository/functions/validate_si.R"))
 
-# for co-infections
-source(here("code_repository/functions/co_infection_opt_alt.R"))
-source(here("code_repository/functions/co_infection_opt_do.R"))
-source(here("code_repository/functions/chabaudi_ci_clean.R"))
-source(here("code_repository/functions/validate_ci.R"))
-
 # for dual cue
 source(here("code_repository/functions/dual_cue_opt.R"))
 source(here("code_repository/functions/dual_cue_opt_global.R"))
-
-# for static competition
-source(here("code_repository/functions/ci_comp_static.R"))
-
-# for invasive competition
-source(here("code_repository/functions/ci_invasion_analysis.R"))
-
-# for partitioning analysis
-source(here("code_repository/functions/partition_si.R"))
 
 # for semi-stochastic single infection model
 source(here("code_repository/functions/mc_all.R"))
@@ -295,295 +278,6 @@ si_val.df %>% group_by(id) %>% summarise(max_fitness = max(V1)) %>%
   mutate(difference = fitness_20 - max_fitness)
 ```
 
-# Co-infection
-For co-infection optimization, the optimization process do not always converge (when using the L-BFGS-B algorithm). In these cases, I find that using an alternative global numerical optimization algorithm often does the trick (e.g. DEoptim).
-
-### Model optimization
-```{r}
-# time
-ci_opt_t <- co_infection_opt_alt(parameters_cr = rep(0.5,4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "t",
-                             cue_2 = "t",
-                             cue_range_1 = time_range,
-                             cue_range_2 = time_range,
-                             solver = "vode",
-                             log_cue_1 = "none",
-                             log_cue_2 = "none")
-
-# I (kin-disrimination)
-ci_opt_I_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "I1",
-                             cue_2 = "I2",
-                             cue_range_1 = I_range_none,
-                             cue_range_2 = I_range_none,
-                             solver = "vode",
-                             log_cue_1 = "none",
-                             log_cue_2 = "none")
-
-# I log (kin discrimination)
-ci_opt_I_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "I1",
-                             cue_2 = "I2",
-                             cue_range_1 = I_range_log,
-                             cue_range_2 = I_range_log,
-                             solver = "vode",
-                             log_cue_1 = "log10",
-                             log_cue_2 = "log10")
-
-# I (combined)
-ci_opt_Ic_none <- co_infection_opt_do(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "I1+I2",
-                             cue_2 = "I1+I2",
-                             cue_range_1 = I_range_none,
-                             cue_range_2 = I_range_none,
-                             solver = "vode",
-                             log_cue_1 = "none",
-                             log_cue_2 = "none",
-                             neg = T)
-
-# I log (combined)
-ci_opt_Ic_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "I1+I2",
-                             cue_2 = "I1+I2",
-                             cue_range_1 = I_range_log,
-                             cue_range_2 = I_range_log,
-                             solver = "vode",
-                             log_cue_1 = "log10",
-                             log_cue_2 = "log10")
-
-# Ig (kin discrimination)
-ci_opt_Ig_none <- co_infection_opt_alt(parameters_cr = c(59.08092, -101.28757,  -30.07456,  -76.75252),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "Ig1",
-                             cue_2 = "Ig2",
-                             cue_range_1 = I_range_none,
-                             cue_range_2 = I_range_none,
-                             solver = "vode",
-                             log_cue_1 = "none",
-                             log_cue_2 = "none")
-
-# Ig log (kin discrimination)
-ci_opt_Ig_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "Ig1",
-                             cue_2 = "Ig2",
-                             cue_range_1 = I_range_log,
-                             cue_range_2 = I_range_log,
-                             solver = "vode",
-                             log_cue_1 = "log10",
-                             log_cue_2 = "log10")
-
-# Ig (combined)
-ci_opt_Igc_none <- co_infection_opt_alt(parameters_cr = c(4.707722, -1821.744619,   420.111232,    25.925959),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "Ig1+Ig2",
-                             cue_2 = "Ig1+Ig2",
-                             cue_range_1 = I_range_none,
-                             cue_range_2 = I_range_none,
-                             solver = "vode",
-                             log_cue_1 = "none",
-                             log_cue_2 = "none")
-
-
-# I+Ig (kin discrimination)
-ci_opt_Ig_I_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "I1+Ig1",
-                             cue_2 = "I2+Ig2",
-                             cue_range_1 = I_range_none,
-                             cue_range_2 = I_range_none,
-                             solver = "vode",
-                             log_cue_1 = "none",
-                             log_cue_2 = "none")
-
-# I+Ig log (kin discrimination)
-ci_opt_I_Ig_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "I1+Ig1",
-                             cue_2 = "I2+Ig2",
-                             cue_range_1 = I_range_log,
-                             cue_range_2 = I_range_log,
-                             solver = "vode",
-                             log_cue_1 = "log10",
-                             log_cue_2 = "log10")
-
-# sum (I1+I2+Ig1+Ig2) 
-ci_opt_sum_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "sum",
-                             cue_2 = "sum",
-                             cue_range_1 = I_range_none,
-                             cue_range_2 = I_range_none,
-                             solver = "vode",
-                             log_cue_1 = "none",
-                             log_cue_2 = "none")
-
-# sum log (I1+I2+Ig1+Ig2) 
-ci_opt_sum_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "sum",
-                             cue_2 = "sum",
-                             cue_range_1 = I_range_log,
-                             cue_range_2 = I_range_log,
-                             solver = "vode",
-                             log_cue_1 = "log10",
-                             log_cue_2 = "log10")
-
-# G (kin discrimination)
-ci_opt_G_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "G1",
-                             cue_2 = "G2",
-                             cue_range_1 = G_range_none,
-                             cue_range_2 = G_range_none,
-                             solver = "vode",
-                             log_cue_1 = "none",
-                             log_cue_2 = "none")
-
-# G log (kin discrimination)
-ci_opt_G_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "G1",
-                             cue_2 = "G2",
-                             cue_range_1 = G_range_log,
-                             cue_range_2 = G_range_log,
-                             solver = "vode",
-                             log_cue_1 = "log10",
-                             log_cue_2 = "log10")
-
-# G (combined)
-ci_opt_Gc_none <- co_infection_opt_do(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "G1+G2",
-                             cue_2 = "G1+G2",
-                             cue_range_1 = G_range_none,
-                             cue_range_2 = G_range_none,
-                             solver = "vode",
-                             log_cue_1 = "none",
-                             log_cue_2 = "none",
-                             neg = T)
-
-# RBC
-ci_opt_R_none <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "R",
-                             cue_2 = "R",
-                             cue_range_1 = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
-                             cue_range_2 = seq((10^6), (10^7), by = ((10^7)-(10^6))/5000),
-                             solver = "vode",
-                             log_cue_1 = "none",
-                             log_cue_2 = "none")
-
-# RBC log
-ci_opt_R_log <- co_infection_opt_alt(parameters_cr = rep(0.5, 4),
-                             limit = limit,
-                             model = chabaudi_ci_clean,
-                             immunity = "tsukushi",
-                             parameters = parameters_tsukushi,
-                             time_range = time_range,
-                             cue_1 = "R",
-                             cue_2 = "R",
-                             cue_range_1 = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
-                             cue_range_2 = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
-                             solver = "vode",
-                             log_cue_1 = "log10",
-                             log_cue_2 = "log10")
-```
-
-### Model validation
-```{r}
-# import in ci optimum for same cue and join with cue range
-ci_opt.df <- read.csv(here("data/ci_opt.csv"))
-cue_range.df <- read.csv(here("data/cue_range_ci.csv"))
-
-ci_opt.df2 <- left_join(ci_opt.df, cue_range.df, by= c("id", "cue", "log"))
-
-# split
-ci_opt.ls <- split(ci_opt.df2, seq(nrow(ci_opt.df2)))
-
-# iterate and validate
-ci_opt.ls <- lapply(ci_opt.ls, validate_ci)
-
-# read in the results file
-ci_val.ls <- list.files(path = here("data/ci_validation"), pattern = "*.csv", full.names = T)
-ci_val.ls2 <- lapply(ci_val.ls, read.csv)
-ci_val.df <- do.call(rbind, ci_val.ls2)
-
-# Here, we are competing strain 1 (adopting supposed optimum strategy) with strain 2 adopting a randomized strategy. Hence, we expect fitness difference to be above 1!
-ci_val.df %>% 
-  group_by(label) %>% 
-  summarize(min_fitness = min(V1))
-```
-
 # Dual cue optimization
 ```{r}
 # import in single infection optimization dataframe
@@ -762,67 +456,6 @@ exp_ss_dose.df <- exp_ss_dose.df %>%
 exp_ss_R.df <- exp_ss_dose.df %>% filter(strain != "AJ51")
 ```
 
-# Co-infection competition
-### Static competition
-Here, both strains adopt the optimal co-infection strategy for their respective cues. The strains are not permitted to alter their reaction norm.
-```{r}
-# import in co-infection optimal dataframe and cue range
-ci_opt.df <- read.csv(here("data/ci_opt.csv"))
-cue_range.df <- read.csv(here("data/cue_range_ci.csv"))
-
-# join the two dataframes
-ci_opt.df2 <- left_join(ci_opt.df, cue_range.df, by= c("id", "cue", "log"))
-
-# get all pairwise combinations of cues
-ci_cue_pair.df <- ci_opt.df2 %>% 
-  setNames(paste0(names(ci_opt.df2), '_2')) %>% # add 2 infront of all col names
-  tidyr::crossing(ci_opt.df2, .name_repair = "check_unique") %>% 
-  janitor::clean_names()
-
-# keep only unique pairwise combinations
-ci_cue_pair.df2 <- ci_cue_pair.df[!duplicated(apply(select(ci_cue_pair.df, id, id_2), 1, function(x) paste(sort(x),collapse=''))),]
-
-# split to list
-ci_cue_pair.ls <- split(ci_cue_pair.df2, seq(nrow(ci_cue_pair.df2)))
-
-# parallelized lapply
-ci_static <- mclapply(ci_cue_pair.ls, ci_comp_static)
-ci_static.df <- data.frame(do.call(rbind, lapply(ci_static, unlist)))
-names(ci_static.df) <- c("id_1", "id_2", "fitness_1", "fitness_2")
-ci_static.df$fitness_1 <- as.numeric(ci_static.df$fitness_1)
-ci_static.df$fitness_2 <- as.numeric(ci_static.df$fitness_2)
-
-# write file
-write.csv(ci_static.df, here("data/ci_static.csv"))
-```
-
-### Invasive competition
-Here, the resident strain maintains a constant optimal co-infection strategy while the invader is allowed to "mutate" and optimize their strategy to increase the fitness difference between it and the resident strain.
-```{r}
-# do all pairwise cue combinations except for those of the same id
-ci_cue_pair.df3 <- ci_cue_pair.df %>% filter(id != id_2)
-
-# split dataframe into row based list
-ci_cue_pair.ls3 <- split(ci_cue_pair.df3, seq(nrow(ci_cue_pair.df3)))
-
-# run invasion analysis
-lapply(ci_cue_pair.ls3, ci_invasion_analysis)
-```
-
-# Partitioning analysis
-```{r}
-# import in optimized df
-si_opt.df <- read.csv(here("data/si_opt.csv"))
-
-# join with cue_range
-cue_range_si.df <- read.csv(here("data/cue_range_si.csv"))
-si_opt.df <- si_opt.df %>% left_join(select(cue_range_si.df, low, high, by, id), "id")
-
-# lapply loop to reoptimize
-si_opt.ls <- split(si_opt.df, seq(nrow(si_opt.df)))
-lapply(si_opt.ls, partition_si)
-```
-
 # Semi-stochastic single infection model
 Here, we are going to perform 5000 Monte Carlo simulations where the parasite is adopting the optimal single infection strategy with all six random variables. For each run, the values of these random variables is drawn from the posterior distribution of the variables. Thus, while the variable value remains constant through out the simulation, each run will likely have a different set of parameters describing host immunity, parasite burst size, and RBC regeneration speed. To partition the contribution of each random variable to the overall effect on infection outcomes, we will perform Monte Carlo simulations where only one random variable is present during each run. 
 
@@ -831,8 +464,8 @@ Here, we are going to perform 5000 Monte Carlo simulations where the parasite is
 # import in posterior distribution. Note that id = 1 is the reference!
 posterior <- utils::read.csv(here("code_repository/data/posterior.csv"))
 
-# get list of dataframes split by row
-posterior.ls <- split(posterior, seq(nrow(posterior)))
+# get list of dataframes split by row. only do the first 1000!
+posterior.ls <- split(posterior, seq(nrow(posterior)))[1:1000]
 
 # time
 mc_time.res <- mclapply(posterior.ls, function(x){
@@ -941,10 +574,7 @@ mc_R_log_I_log.res <- mclapply(posterior.ls, function(x){
                     log_b = "log10",
          rand_df = x)},
   mc.cores = 8)
-```
 
-
-```{r}
 # R and I log
 mc_R_I_log.res <- mclapply(posterior.ls[1201:length(posterior.ls)], function(x){
   mc_all_dual(par = c(-9.518084898,	-439.4342135,	85.99834201,	118.6093975,	-244.108158,	33.24560006,	-30.89681964,	-24.84888061,	-88.60274223),
@@ -1062,6 +692,14 @@ mclapply(posterior.ls, function(x){
          rand_df = x)},
   mc.cores = 8)
 
+mclapply(posterior.ls, function(x){
+  mc_single(par = c(3.460017,	203.970669,	-45.649759,	1.691582),
+                    cue = "R",
+                    cue_range = seq(log10(10^6), log10(10^7), by = (log10(10^7)-log10(10^6))/5000),
+                    log= "log10",
+         rand_df = x)},
+  mc.cores = 8)
+
 # R log and I log
 mclapply(posterior.ls, function(x){
   mc_single_dual(par = c(4.446192033,	10.97518275,	1.38762817,	23.3059254,	-3.452052371,	-18.0070692	,39.66614226,	-3.545193141,	18.78350799),
@@ -1073,10 +711,7 @@ mclapply(posterior.ls, function(x){
                     log_b = "log10",
          rand_df = x)},
   mc.cores = 8)
-```
 
-
-```{r}
 # R and I log
 mclapply(posterior.ls, function(x){
   mc_single_dual(par = c(-9.518084898,	-439.4342135,	85.99834201,	118.6093975,	-244.108158,	33.24560006,	-30.89681964,	-24.84888061,	-88.60274223),
@@ -1087,10 +722,10 @@ mclapply(posterior.ls, function(x){
                     log= "none",
                     log_b = "log10",
          rand_df = x)},
-  mc.cores = 10)
+  mc.cores = 8)
 
 # R and I+Ig log
-mclapply(posterior.ls[1:1000], function(x){
+mclapply(posterior.ls, function(x){
   mc_single_dual(par = c(-0.123534059,	10.41243862,	-16.13098789,	28.09607529,	-12.49060926,	12.77524469,	36.77045332,	7.011182218,	6.680916699),
                     cue = "R",
          cue_b = "I+Ig",
@@ -1099,10 +734,10 @@ mclapply(posterior.ls[1:1000], function(x){
                     log= "none",
                     log_b = "log10",
          rand_df = x)},
-  mc.cores = 10)
+  mc.cores = 8)
 
 # R log and I+Ig log
-mclapply(posterior.ls[1:1000], function(x){
+mclapply(posterior.ls, function(x){
   mc_single_dual(par = c(-7.687311702,	-497.7126667,	-1003.526906,	47.78563659,	-248.7360112,	-181.9755341,	27.71388409,	-22.55271948,	-52.13198563),
                     cue = "R",
          cue_b = "I+Ig",
@@ -1111,7 +746,7 @@ mclapply(posterior.ls[1:1000], function(x){
                     log= "log10",
                     log_b = "log10",
          rand_df = x)},
-  mc.cores = 10)
+  mc.cores = 8)
 
 ```
 

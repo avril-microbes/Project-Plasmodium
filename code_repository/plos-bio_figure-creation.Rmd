@@ -67,15 +67,6 @@ cue_range_si_alt.df <- read.csv(here("code_repository/data/cue_range_si_alt.csv"
 dual_cue_dyn.df <- read_parquet(here("code_repository/data/dual_cue_dyn.parquet")) ## dynamics of dual cue models
 exp_ss.df <- read.csv(here("code_repository/data/experimental_data.csv")) ## cleaned experimental records of P. chabaudi infection
 posterior.df <- read.csv(here("code_repository/data/posterior.csv")) ## posterior distribution of different parameter values
-mc_burst.df <- read.csv(here("code_repository/data/mc_burst_opt.csv")) ## fitness values of cues when optimized with different beta values
-mc_burst_single_input.df <- read.csv(here("code_repository/data/mc_burst_single_input.csv")) ## iput dataframe for simulating dyamics for for models optimized with different burst values (single cues only)
-mc_burst_dual_input.df <- read.csv(here("code_repository/data/mc_burst_dual_input.csv")) ## ditto for R log + I log
-mc_burst_final_diff.df <- read.csv(here("code_repository/data/mc_burst_final_diff.csv")) ## fitness of parasites adopting different parameters optimized for diff burst size but simulated with discordant burst size 
-mc_burst_rn.df <- read_parquet(here("code_repository/data/mc_burst_rn.parquet")) ## dataframe containing reaction norms of strains optimzied at various burst size filtered by relevant ranges (rug)
-mc_burst_rn_RI.df <- read_parquet(here("code_repository/data/mc_burst_rn_RI.parquet")) ## dataframe containing reaction norms of strains optimzied at various burst size filtered by relevant ranges (rug)
-mc_burst_rug.df_f <- read_parquet(here("code_repository/data/mc_burst_rug_f.parquet")) ## rug dataframe for parasites adopting the ideal strategy for various burst sizes
-mc_burst_RI_rug.df <- read_parquet(here("code_repository/data/mc_burst_RI_rug.parquet")) ## dito but for R log and I log
-mc_burst_dyn.df <- read_parquet(here("code_repository/data/mc_burst_dyn.parquet")) ## dynamics data for mc burst
 si_dyn_30.df <- read_parquet(here("code_repository/data/si_dyn_30.parquet")) ## single cue dynamics data (30 days)
 dual_cue_dyn_30.df <- read_parquet(here("code_repository/data/dual_cue_dyn_30.parquet")) ## dual cue dynamics (30 days)
 
@@ -1135,49 +1126,19 @@ mc_all_fitness.pl <- ggplot() +
 ## list of file paths linked to the single parameter files
 mc_single.ls <- list.files(path = here("code_repository/data/mc_single_fitness"), pattern = "*.csv", full.names = T)
 
-## filter out R log and I log data. these will be attached later
-mc_single_sc.ls <- mc_single.ls[!grepl("-", basename(mc_single.ls))]
-mc_single_dc.ls <- mc_single.ls[grepl("-", basename(mc_single.ls))]
-
-## check number of files
-length(mc_single_sc.ls)
-length(mc_single_dc.ls)
 
 ## read and combine
-mc_single_sc_fitness.df <- do.call(rbind, mclapply(mc_single_sc.ls, function(x) read.csv(x), mc.cores = 6))
-mc_single_dc_fitness.df <- do.call(rbind, mclapply(mc_single_dc.ls, function(x) read.csv(x), mc.cores = 6))
+mc_single_fitness.df <- do.call(rbind, mclapply(mc_single.ls, function(x) read.csv(x), mc.cores = 6))
 
 # look at # of reps
-mc_single_sc_fitness.df %>% 
-  group_by(cue, log) %>% 
+mc_single_fitness.d %>% 
+  group_by(id) %>% 
   tally()
-
-mc_single_dc_fitness.df %>% 
-  group_by(cue, log, cue_b, log_b) %>% 
-  tally()
-
-## combine
-mc_single_fitness.df <- mc_single_dc_fitness.df %>% 
-  mutate(iter = id,
-         id = paste0(cue, "_", log, "-", cue_b,"_", log_b)) %>%
-  select(-c(cue, cue_b, log, log_b)) %>% 
-  rbind(
-    mc_single_sc_fitness.df %>% 
-      mutate(iter = id,
-             id = ifelse(cue != "t", paste0(cue, "_", gsub("log10", "log", log)), "time")
-             ) %>% 
-      select(-c(cue, log))
-    ) %>% 
-  left_join(ez_label, by = "id") 
-
 
 ## write
 write_parquet(mc_single_fitness.df, here("code_repository/data/mc_single_fitness.parquet"))
 
 ## sanity check. iter = 1 is where all parameters are default. Should produce the same fitness values!
-mc_single_fitness.df %>% filter(iter == 1)
-
-## sanity check. We should have the same values for iter 1 across all and single parameter datasets. 
 mc_single_fitness.df %>% filter(iter == 1)
 ```
 
@@ -1412,7 +1373,6 @@ for(i in seq(1,6,1)){
   theme(axis.text.x=element_text(angle=45,hjust=1))
          
 }
-mc_single_plt.ls
 
 ## arrange together
 ggarrange(plotlist = mc_single_plt.ls, common.legend = T, ncol = 3, nrow = 2, align = "hv")
@@ -1423,27 +1383,49 @@ ggsave(units = "px", dpi = 300, width = 2500, height = 2000, filename = here("co
 #==================================#
 # Understanding the mechanism behind robustness
 #==================================#
-
+#--------Calculating deviations between cr and fitness----------#
+# Process single parameter dynamics data
 ```{r}
-source(here("code_repository/functions/mc_single.R"))
-# import in posterior distribution. Note that id = 1 is the reference!
-posterior <- utils::read.csv(here("code_repository/data/posterior.csv"))
+# get list of files
+mc_single_dyn.ls <- list.files(here("code_repository/data/mc_single_dyn"), pattern = "*.parquet", full.names = T)
 
-# get list of dataframes split by row
-posterior.ls <- split(posterior, seq(nrow(posterior)))
-posterior.ls[1:5]
-mclapply(posterior.ls[1:5], function(x){
-  mc_single(par = c(0.1135384,  -39.0585154, 1941.9082813,  119.8228980),
-                    cue = "I",
-                    cue_range = seq(0, 6*(10^6), by = (6*(10^6))/5000),
-                    log= "none",
-                   rand_df = x)},
-  mc.cores = 6)
+# read in all of the files, filtering only for conversion rate
+mc_single_dyn_cr.ls <- mclapply(mc_single_dyn.ls, function(x){
+  df <- read_parquet(x)
+  
+  ## filter to retain only cr
+  df_f <- df %>% filter(variable == "cr")
+  return(df_f)
+}, mc.cores = 6)
 
-test <- arrow::read_parquet(here("code_repository/data/mc_single_dyn/I_none_2_phin.parquet"))
-test
+# combine
+mc_single_dyn_cr.df <- do.call(rbind, mc_single_dyn_cr.ls)
 ```
 
+# Process deterministic conversion rate time series dynamic
+```{r}
+# single cue dynamics (conversion rate only)
+si_cr.df <- si_dyn.df %>%
+  filter(variable == "cr") %>%  ## get corresponding time steps (0.01) and cr only
+  select(id, time, cr_det = value)
+
+# dual cue dynamics (conversion rate only)
+dual_cr.df <- dual_cue_dyn.df %>% 
+  filter(variable == "cr") %>% 
+  mutate(id = paste0(id, "-", id_b)) %>% 
+  select(id, time, cr_det = value)
+```
+
+# Calculate deviation in cr
+```{r}
+# left join 
+mc_single_dyn_cr_join.df <- mc_single_dyn_cr.df %>% 
+  left_join(rbind(
+    si_cr.df, dual_cr.df
+  ), by = c("time", "id"))
+
+# get absoluate deviation and 
+```
 
 
 
