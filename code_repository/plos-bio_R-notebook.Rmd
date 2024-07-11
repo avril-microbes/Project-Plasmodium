@@ -640,7 +640,10 @@ mclapply(posterior.ls, function(x){
                     log= "none",
          rand_df = x)},
   mc.cores = 8)
+```
 
+
+```{r}
 mclapply(posterior.ls, function(x){
   mc_single(par = c(1.74633, -1.78582, -5.52834, 1.57344 ),
                     cue = "Ig",
