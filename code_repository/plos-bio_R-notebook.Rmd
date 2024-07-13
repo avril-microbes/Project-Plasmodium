@@ -28,11 +28,14 @@ library(parallel)
 
 ### Load scripts
 ```{r warning=FALSE}
-# for single infections
+# for single cues
 source(here("code_repository/functions/opt_local.R"))
 source(here("code_repository/functions/opt_global.R"))
 source(here("code_repository/functions/chabaudi_si_clean.R"))
 source(here("code_repository/functions/validate_si.R"))
+
+# for optimization of static conversion rate
+source(here("code_repository/functions/chabaudi_si_static.R"))
 
 # for dual cue
 source(here("code_repository/functions/dual_cue_opt.R"))
@@ -248,6 +251,38 @@ G_log_glb.op <- opt_global(
                             log = "log10",
                             cue_range = seq(0, log10(6*(10^4)), (log10(6*(10^4)))/5000))
 ```
+
+### Optimize static conversion rate
+```{r}
+# get list of cr to scan
+cr_ls <- seq(0, 1, by = 0.01)
+
+# run dynamics and append fitness
+si_static_opt.ls <- mclapply(cr_ls, function(x){
+  fitness <- chabaudi_si_static(
+  cr = x,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 20, by = 1e-3),
+  solver = "vode",
+  dyn = F)
+  
+  ## append to df
+  df <- data.frame(cr = x, fitness = fitness)
+  return(df)
+}, mc.cores = 6)
+
+# combine dataframes
+si_static_opt.df <- do.call(rbind, si_static_opt.ls)
+
+# look at cr that leads to highest fitness: 0.43
+si_static_opt.df %>% arrange(desc(fitness))
+
+# visualization
+ggplot(si_static_opt.df, aes(x = cr, y = fitness)) +
+  geom_line()
+```
+
 
 ### Model validation
 To ensure that we have obtained a result near the global optimum, we need to validate each of the results. This can be done by randomly simulating 1000 parameter sets and seeing whether those random parameters produces a higher cumulative transmission results compared to our optimized set. Here, we are using the validate_si package to generate 1000 random parameters (these parameter values are generated within a empirically determined bound that should encapsulate most spline flexibility).

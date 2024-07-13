@@ -67,7 +67,7 @@ chabaudi_si_clean_high <- function(
   ## Double checking cues
   ### Ensure that time_range is used as cue_range when t is used
   if(cue == "t" && !isTRUE(all.equal(cue_range, time_range))){
-    stop("Time is chosen as cue. Cue_range must equal to time_range")
+    print("Time is chosen as cue. Cue_range must equal to time_range")
   }
   
   if(cue_b == "t" && !isTRUE(all.equal(cue_range_b, time_range))){
@@ -165,6 +165,7 @@ chabaudi_si_clean_high <- function(
     
     ### fit spline function to predicted conversion rate. This increases processing speed
     cr_fun <- splinefun(cbind(cue_range, cr_fit))
+
   }
   
   ## Dual cue conversion rate
@@ -348,6 +349,11 @@ chabaudi_si_clean_high <- function(
       } # keep it the same
       
       if(cue_b == "none"){cr <- cr_fun(cue_lag1_p)}
+      
+      
+      ## only for special cases when cue = time and time range goes beyond optimized time.
+      ## maintain cr at 1
+      if(t>max(time_range) & cue == "t"){cr <- 1}
       
       ## if second cue is used
       if(cue_b != "none"){

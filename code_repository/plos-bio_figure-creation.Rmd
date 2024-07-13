@@ -80,6 +80,7 @@ source(here("code_repository/functions/par_to_df.R"))
 source(here("code_repository/functions/chabaudi_si_clean_high.R"))
 source(here("code_repository/functions/par_to_hm.R"))
 source(here("code_repository/functions/par_to_hm_te.R"))
+source(here("code_repository/functions/chabaudi_si_static.R"))
 
 # color codes
 orange <- "#fc8d59"
@@ -1097,7 +1098,11 @@ mc_all_fitness_sum.df <- mc_all_fitness_rand.df %>%
   group_by(short_label) %>% 
   summarize(mean = mean(fitness_norm),
             median = median(fitness_norm),
-            geom_mean = exp(mean(log(fitness_norm)))) 
+            geom_mean = exp(mean(log(fitness_norm))),
+            sd = sd(fitness_norm)) %>% 
+  left_join(select(mc_all_fitness_ref.df, short_label, max_fitness), by = "short_label")
+
+mc_all_fitness_sum.df
 ```
 
 ## plot fitness variation 
@@ -1191,7 +1196,15 @@ mc_single_fitness.long_p_f <- mc_single_fitness.long_p %>%
   filter(rel_diff_single >= ci_lower & rel_diff_single < ci_higher)
 
 ## arrange ordering of cues and parameters
-mc_single_fitness.long_p_f$short_label <- factor(mc_single_fitness.long_p_f$short_label, mc_all_fitness_sum.df %>% arrange(desc(geom_mean)) %>% pull(short_label))
+mc_single_fitness.long_p_f$short_label <- factor(mc_single_fitness.long_p_f$short_label, c(
+  "R & I log", "R log & I log",
+  "R & I+Ig log","R log & I+Ig log",
+  "R", "R log",
+  "I", "I log",
+  "Ig", "Ig log", 
+  "I+Ig", "I+Ig log",
+  "G", "G log"))
+
 mc_single_fitness.long_p_f$parameter_label <- factor(mc_single_fitness.long_p_f$parameter_label,
                                                      c("Burst size (β)",
                                                        "RBC replenishment (ρ)",
@@ -1428,9 +1441,6 @@ mc_single_dyn_cr_join.df <- mc_single_dyn_cr.df %>%
 ```
 
 
-
-
-
 #=====================================#
 # Impact of cue perception on virulence
 #====================================#
@@ -1451,7 +1461,6 @@ si_dc.df <- si_dyn_30.df %>%
 
 # split into top and poor-performing cues
 si_dc.high <- si_dc.df %>% filter(id %in% top_4_single_cue$id)
-si_dc.poor <- si_dc.df %>% filter(!id %in% top_4_single_cue$id)
 
 # join high performing with label
 si_dc.high <- si_dc.high %>% left_join(ez_label %>% distinct(id, .keep_all = T), by = "id")
@@ -1476,47 +1485,88 @@ dual_dc.df <- dual_cue_dyn_30.df %>%
 
 # split into top and poor-performing cues
 dual_dc.high <- dual_dc.df %>% filter(label_alt %in% top_4_dual_cue$label_alt)
-dual_dc.poor <- dual_dc.df %>% filter(!label_alt %in% top_4_dual_cue$label_alt)
 
 # reorder cues by descending fitness
 dual_dc.high$label_alt <- factor(dual_dc.high$label_alt, top_4_dual_cue$label_alt)
 ```
 
+#------------Get reference dynamics---------------#
+# the ideal dynamic (time as cue, df = 9)
+```{r}
+source(here("code_repository/functions/chabaudi_si_clean_high.R"))
+time_high.dyn <- chabaudi_si_clean_high(
+  parameters_cr = c(9.154314,  -7.570829, -22.506638 ,  3.382405 ,-13.453519 ,-17.011485  , 3.678181, -12.851895 ,-26.115158),
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 30, by = 1e-3),
+  cue_range =  seq(0, 20, by = 1e-3),
+  cue = "t",
+  solver = "vode",
+  dyn = T)
+
+
+# check dynamics. 
+ggplot(time_high.dyn, aes(x = time, y = value)) +
+  geom_line() +
+  facet_wrap(~variable, scales ="free")
+
+# get total I and R
+time_high.vir <- time_high.dyn %>% 
+ mutate(short_label = "Time") %>% ## get new label
+  filter(variable == "I" | variable == "Ig" | variable == "R") %>% ## get desired variables
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, short_label)) %>%
+  mutate(total = I+Ig)
+```
+
+# when conversion rate is static
+I am using the ideal stsatic conversion rate of 0.43
+```{r}
+static.dyn <- chabaudi_si_static(
+  cr = 0.43,
+  immunity = "tsukushi",
+  parameters = parameters_tsukushi,
+  time_range = seq(0, 30, by = 1e-3),
+  solver = "vode",
+  dyn = T)
+
+static.vir <- static.dyn  %>% 
+ mutate(short_label = "Static") %>% ## get new label
+  filter(variable == "I" | variable == "Ig" | variable == "R") %>% ## get desired variables
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, short_label)) %>%
+  mutate(total = I+Ig)
+```
+
 #-------------Plot disease curves-----------------#
 # Single cue
 ```{r}
-# plot poor performing cues (these are grey lines)
-si_dc_pre.plt <- ggplot() +
-  geom_path(data = si_dc.poor, aes(x= total, y = R, group = id), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  labs(color = "Good performing cues", x = "Total iRBC", y = "RBC") +
-  theme_classic()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
-  guides(shape = FALSE)
-
-# overlay dynamics of good performing cues
-si_dc.plt <- si_dc_pre.plt +
+si_dc.plt <- ggplot() +
+  geom_point(data = static.vir %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
+  geom_point(data = time_high.vir %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
   geom_point(data = si_dc.high %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
-  geom_path(data = si_dc.high, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59"))  +
-  theme(legend.position = "top") +
-  labs(color = "Cues") 
+  geom_path(data = static.vir, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  geom_path(data = time_high.vir, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+   geom_path(data = si_dc.high, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "grey", "black"), name = "Cues")  +
+  labs(fill = "Cues", x = "Total iRBC", y = "RBC", color = "Cues") +
+  theme_classic()+ 
+  scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
+  guides(shape = F) +
+  theme(legend.position = "top")
 ```
 
 # dual cue
 ```{r}
-# plot poor performing cues (these are grey lines)
-dual_dc_pre.plt <- ggplot() +
-  geom_path(data = dual_dc.poor, aes(x= total, y = R, group = label_alt), color = "dark grey", arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  labs(color = "Good performing cues", x = "Total iRBC", y = "RBC") +
-  theme_classic()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
-  guides(shape = FALSE)
-
-# overlay dynamics of good performing cues
-dual_dc.plt <- dual_dc_pre.plt +
+dual_dc.plt <- ggplot() +
+  geom_point(data = static.vir %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
+  geom_point(data = time_high.vir %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
   geom_point(data = dual_dc.high %>% filter(row_number() %% 100 ==0), aes(x = total, y = R, color = label_alt, shape = label_alt), size = 2) +
-  geom_path(data = dual_dc.high, aes(x= total, y = R, group = label_alt, color = label_alt), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59"))  +
-  theme(legend.position = "top") +
-  labs(color = "Cues") 
+  geom_path(data = static.vir, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  geom_path(data = time_high.vir, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+   geom_path(data = dual_dc.high, aes(x= total, y = R, group = label_alt, color = label_alt), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "grey", "black"))  +
+  theme_classic()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
+  guides(shape = FALSE) +
+  theme(legend.position = "top")
 ```
 
 #---------area of curve vs fitness---------------#
@@ -1567,7 +1617,18 @@ dual_cue_f_final_area.df <- dual_cue_f_final.df %>%
   mutate(fitness_norm = fitness/9.883602) ## normalize fitness (use fitness obtained using time df=9 given that we are plotting dual cue and single on the same graph!)
 ```
 
+# get area for ideal and static cr
+```{r}
+# static
+static.area <- get_dc_area(static.vir)
+
+# time
+time_high.area <- get_dc_area(time_high.vir)
+
+```
+
 # fit GLM
+Note that static and time based cue is not included in the model!
 ```{r}
 # fit lm
 si_lm <- lm(fitness_norm ~ area, data = si_opt_area.df)
@@ -1585,26 +1646,32 @@ summary(dual_lm)$r.squared ## 0.1053591
 # plot correlation
 ```{r}
 # single cue
-si_corr_area.plt <- ggplot() +
+si_corr_area.plt <- x
+ggplot() +
   geom_point(data = si_opt_area.df, aes(x = area, y = fitness_norm, color = "Single cue", shape = "Single cue"), size = 3, alpha = 0.7) +
+  geom_point(aes(x = static.area, y = max(static.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Static", shape = "Static"), size = 3) +
+  geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
   geom_line(data = si_lm.ci, aes(x = area, fit)) +
   geom_ribbon(data = si_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
   annotate(geom = "text", label = "R^2=0.18", x = 1.6*(10^11), y = 0.76) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
-  scale_color_manual(values = c(orange)) +
-  xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
+  scale_color_manual(values = c(orange,"grey", "black")) +
+  #xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
   theme_classic() +
   theme(legend.position = "none")
 
 # dual cue
-dual_corr_area.plt <- ggplot() +
+dual_corr_area.plt <- x
+ggplot() +
   geom_point(data = dual_cue_f_final_area.df, aes(x = area, y = fitness_norm, color = "Dual cue", shape = "Dual cue"), size = 3, alpha = 0.7) +
+  geom_point(aes(x = static.area, y = max(static.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Static", shape = "Static"), size = 3) +
+  geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
   geom_line(data = dual_lm.ci, aes(x = area, fit)) +
   geom_ribbon(data = dual_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
  annotate(geom = "text", label = "R^2=0.11", x = 1.6*(10^11), y = 0.76) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
-  scale_color_manual(values = c(blue)) +
-  xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
+  scale_color_manual(values = c(blue, "grey", "black")) +
+  #xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
   theme_classic() +
   theme(legend.position = "none")
 ```
