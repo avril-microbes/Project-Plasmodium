@@ -1,2 +1,2 @@
-"","cue","log","id","rho","burst","iota_N1","iota_N2","phi_N1","phi_N2","fitness_rho","fitness_beta","fitness_psin","fitness_psiw","fitness_phin","fitness_phiw"
-"558","I","none",558,0.40748189,6.0721351,46.1299403,2.19625271,0.02615556,436.278795,8.45150926540508,5.86554349416251,7.67730859946746,4.80799778276031,7.45551950552309,8.50702884568798
+"","iter","rho","burst","iota_N1","iota_N2","phi_N1","phi_N2","max_fitness_rho","max_fitness_beta","max_fitness_psin","max_fitness_psiw","max_fitness_phin","max_fitness_phiw","id"
+"558",558,0.40748189,6.0721351,46.1299403,2.19625271,0.02615556,436.278795,8.45150990933154,5.86554743381028,7.67730863008484,4.80799785982852,7.45551345223676,8.50702887065642,"I_none"

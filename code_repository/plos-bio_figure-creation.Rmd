@@ -1059,7 +1059,7 @@ mc_all_fitness_dc.df %>%
 ## combine dataframes
 mc_all_fitness.df <- mc_all_fitness_dc.df %>% 
   mutate(iter = id,
-         id = paste0(cue, "_", log, "-", cue_b,"_", log_b)) %>%
+         id = gsub("log10", "log", paste0(cue, "_", log, "-", cue_b,"_", log_b))) %>%
   select(id, iter, max_fitness) %>% 
   rbind(
     mc_all_fitness_sc.df %>% 
@@ -1131,12 +1131,11 @@ mc_all_fitness.pl <- ggplot() +
 ## list of file paths linked to the single parameter files
 mc_single.ls <- list.files(path = here("code_repository/data/mc_single_fitness"), pattern = "*.csv", full.names = T)
 
-
 ## read and combine
 mc_single_fitness.df <- do.call(rbind, mclapply(mc_single.ls, function(x) read.csv(x), mc.cores = 6))
 
 # look at # of reps
-mc_single_fitness.d %>% 
+mc_single_fitness.df %>% 
   group_by(id) %>% 
   tally()
 
@@ -1159,9 +1158,9 @@ mc_single_fitness.long <- mc_single_all_fitness.df %>%
   filter(iter != 1) %>% ## filter out iter = 1, which does not have variation
   left_join(select(mc_all_fitness_ref.df, fitness_ref = max_fitness, id),
             by = c("id")) %>% ## add in the deterministic fitness values
-  select(id, fitness_rho, fitness_beta, fitness_psin, fitness_psiw, fitness_phin, fitness_phiw, iter, fitness_all, fitness_ref) %>% # keep only fitness and associated labels
+  select(id, max_fitness_rho, max_fitness_beta, max_fitness_psin, max_fitness_psiw, max_fitness_phin, max_fitness_phiw, iter, fitness_all, fitness_ref) %>% # keep only fitness and associated labels
   tidyr::pivot_longer(-c("id", "fitness_all", "iter", "fitness_ref")) %>% ## make long
-  mutate(parameter = gsub("fitness_", "", name)) ## isolate parameter being altered
+  mutate(parameter = gsub("max_fitness_|fitness_", "", name)) ## isolate parameter being altered
 
 ## calculate degree deviation from deterministic values. note that rel_diff_single ranges from -1 to 1. -1 ->  one variable perturbation is acting in the opposite direction to the overall perturbation caused by randomizing all variables. 0 parameter variation contributes very little, 1 -> one variable contributes a lot
 mc_single_fitness.long_p <- mc_single_fitness.long %>% 
@@ -1172,8 +1171,10 @@ mc_single_fitness.long_p <- mc_single_fitness.long %>%
   left_join(ez_label, by = c("id"))
 
 ## calculate summary statistics. this includes median, credible interval (contains 89% data points calculated via Highest Density Interval, which is better for skewed data)
+mc_single_fitness.long_p %>% filter(id == "R_log-I+Ig_log")
+
 mc_single_fitness.sum <- mc_single_fitness.long_p %>% 
-  group_by(short_label, parameter) %>% 
+  group_by(id, parameter) %>% 
   summarise(ci_lower = ci(rel_diff_single, method = "HDI", ci = 0.89)[[2]],
             ci_higher = ci(rel_diff_single, method = "HDI", ci = 0.89)[[3]],
             quantile_low = quantile(rel_diff_single, 0.025),
@@ -1646,32 +1647,34 @@ summary(dual_lm)$r.squared ## 0.1053591
 # plot correlation
 ```{r}
 # single cue
-si_corr_area.plt <- x
-ggplot() +
+si_corr_area.plt <- ggplot() +
   geom_point(data = si_opt_area.df, aes(x = area, y = fitness_norm, color = "Single cue", shape = "Single cue"), size = 3, alpha = 0.7) +
   geom_point(aes(x = static.area, y = max(static.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Static", shape = "Static"), size = 3) +
   geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
   geom_line(data = si_lm.ci, aes(x = area, fit)) +
   geom_ribbon(data = si_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
   annotate(geom = "text", label = "R^2=0.18", x = 1.6*(10^11), y = 0.76) +
+  annotate(geom = "text", label = "Time", x = 2.7*(10^11), y = 0.98) +
+  annotate(geom = "text", label = "Static", x = 4.3*(10^11), y = 0.79) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
   scale_color_manual(values = c(orange,"grey", "black")) +
-  #xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
+  xlim(min(si_opt_area.df$area), NA) +
   theme_classic() +
   theme(legend.position = "none")
 
 # dual cue
-dual_corr_area.plt <- x
-ggplot() +
+dual_corr_area.plt <- ggplot() +
   geom_point(data = dual_cue_f_final_area.df, aes(x = area, y = fitness_norm, color = "Dual cue", shape = "Dual cue"), size = 3, alpha = 0.7) +
   geom_point(aes(x = static.area, y = max(static.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Static", shape = "Static"), size = 3) +
   geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
   geom_line(data = dual_lm.ci, aes(x = area, fit)) +
   geom_ribbon(data = dual_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
- annotate(geom = "text", label = "R^2=0.11", x = 1.6*(10^11), y = 0.76) +
+  annotate(geom = "text", label = "R^2=0.11", x = 1.6*(10^11), y = 0.76) +
+  annotate(geom = "text", label = "Time", x = 2.7*(10^11), y = 0.98) +
+  annotate(geom = "text", label = "Static", x = 4.3*(10^11), y = 0.79) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
   scale_color_manual(values = c(blue, "grey", "black")) +
-  #xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
+  xlim(min(si_opt_area.df$area), NA) +
   theme_classic() +
   theme(legend.position = "none")
 ```

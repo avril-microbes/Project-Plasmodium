@@ -258,5 +258,5 @@ mc_single <- function(par, cue, cue_range, log, rand_df){
   dyn.ls, c("rho", "beta", "psin", "psiw", "phin", "phiw"))
   
   # write fitness 
-  write.csv(res, here(paste0("code_repository/data/mc_single_fitness2/", id, "_", iter, "_single.csv")))
+  write.csv(res, here(paste0("code_repository/data/mc_single_fitness/", id, "_", iter, "_single.csv")))
 }

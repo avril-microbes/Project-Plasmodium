@@ -10,7 +10,7 @@ G_log,G log,Gametocyte log,Gametocyte,G,log
 R_none,R,RBC,RBC,R,none
 R_log,R log,RBC log,RBC,R,log
 time,Time,Time,Time,time,none
-R_log10-I_log10,R log & I log,RBC log &asexual iRBC log,,,
-R_none-I_log10,R & I log,RBC &\nasexual iRBC log,,,
-R_log10-I+Ig_log10,R log & I+Ig log,RBC log &\ntotal iRBC log,,,
-R_none-I+Ig_log10,R & I+Ig log,RBC &\ntotal iRBC log,,,
+R_log-I_log,R log & I log,RBC log &asexual iRBC log,,,
+R_none-I_log,R & I log,RBC &\nasexual iRBC log,,,
+R_log-I+Ig_log,R log & I+Ig log,RBC log &\ntotal iRBC log,,,
+R_none-I+Ig_log,R & I+Ig log,RBC &\ntotal iRBC log,,,
