@@ -1308,9 +1308,9 @@ mc_single_fitness.long2 <- mc_single_fitness.df %>%
   filter(iter %in% seq(0,1000,1)) %>% ## filter out iter = 1, which does not have variation
   distinct(id, iter, .keep_all = T) %>% ## ensure there are not replicates
   filter(iter != 1) %>% 
-  dplyr::select(id, fitness_rho, fitness_beta, fitness_psin, fitness_psiw, fitness_phin, fitness_phiw, iter) %>% # keep only fitness and associated labels
+  dplyr::select(id, max_fitness_rho, max_fitness_beta, max_fitness_psin, max_fitness_psiw, max_fitness_phin, max_fitness_phiw, iter) %>% # keep only fitness and associated labels
   tidyr::pivot_longer(-c("id", "iter")) %>% ## make long
-  mutate(parameter = gsub("fitness_", "", name)) %>% 
+  mutate(parameter = gsub("max_fitness_", "", name)) %>% 
   mutate(
          parameter_label = case_when( ## recode parameter values
     parameter == "rho" ~ "RBC replenishment (ρ)",
@@ -1325,7 +1325,7 @@ mc_single_fitness.long2 <- mc_single_fitness.df %>%
   left_join(
     rbind(
     select(si_opt.df, id, fitness_det = fitness_20) ,## get deterministic fitness (single cue) 
-    dual_cue_f_final.df %>% mutate(id = paste0(gsub("log", "log10", id), "-", gsub("log", "log10", id_b))) %>% select(id, fitness_det = fitness) ## get deterministic fitness (dual cue)
+    dual_cue_f_final.df %>% mutate(id = paste0(id, "-", id_b)) %>% select(id, fitness_det = fitness) ## get deterministic fitness (dual cue)
     ),
     by = "id") %>% 
   mutate(fitness_det_norm = fitness_det/9.883602) ## normalize deterministic fitness
@@ -1414,10 +1414,12 @@ mc_single_dyn_cr.ls <- mclapply(mc_single_dyn.ls, function(x){
 
 # combine
 mc_single_dyn_cr.df <- do.call(rbind, mc_single_dyn_cr.ls)
-mc_single_dyn_cr.df %>% group_by(id) %>% tally()
 
 # write
-write_parquet(mc_single_dyn_cr.df, here("mc_single_dyn_cr.parquet"))
+write_parquet(mc_single_dyn_cr.df, here("code_repository/mc_single_dyn_cr.parquet"))
+
+# check # of records
+mc_single_dyn_cr.df %>% group_by(id) %>% tally()
 ```
 
 # Process deterministic conversion rate time series dynamic
@@ -1442,27 +1444,7 @@ mc_single_dyn_cr_join.df <- mc_single_dyn_cr.df %>%
     si_cr.df, dual_cr.df
   ), by = c("time", "id"))
 
-# get absoluate deviation 
-mc_single_dyn_cr_join.df_p <- mc_single_dyn_cr_join.df %>% 
-  filter(time != 0) %>% ## get rid of time = 0 wher cr is NA
-  mutate(diff = abs(cr_det-value)) ## calculate absolute deviation
-write_parquet(mc_single_dyn_cr_join.df_p, here("code_repository/data/mc_sinle_dyn_cr_join.parquet"))
-
-# check for NAs
-mc_single_dyn_cr_join.df_p %>% filter(is.na(diff))
-
-# calculate summary statistics
-mc_single_dyn_cr.sum <- mc_single_dyn_cr_join.df_p %>% 
-  ungroup() %>% 
-  group_by(id, parameter) %>% 
-  summarise(mean = mean(diff),
-            median = median(diff),
-            sd = sd(diff),
-            mad = mad(diff))
-
-write.csv(mc_single_dyn_cr.sum, here("code_repository/data/mc_single_dyn_cr_sum.csv"))
-
-ggplot(mc_single_dyn_cr.sum, aes(x = id, y = mean)) +geom_point()
+# get absoluate deviation and 
 ```
 
 
