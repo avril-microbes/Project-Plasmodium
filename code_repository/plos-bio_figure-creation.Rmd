@@ -1450,7 +1450,7 @@ mc_single_dyn_cr_join.df <- mc_single_dyn_cr.df %>%
 mc_single_dyn_cr_join.df_p <- mc_single_dyn_cr_join.df %>% 
   filter(time != 0) %>% ## get rid of time = 0 wher cr is NA
   mutate(diff = abs(cr_det-value)) ## calculate absolute deviation
-write_parquet(mc_single_dyn_cr_join.df_p, here("code_repository/data/mc_sinle_dyn_cr_join.parquet"))
+write_parquet(mc_single_dyn_cr_join.df_p, here("code_repository/data/mc_single_dyn_cr_join.parquet"))
 
 # check for NAs
 mc_single_dyn_cr_join.df_p %>% filter(is.na(diff))
