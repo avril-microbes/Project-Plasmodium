@@ -69,6 +69,8 @@ exp_ss.df <- read.csv(here("code_repository/data/experimental_data.csv")) ## cle
 posterior.df <- read.csv(here("code_repository/data/posterior.csv")) ## posterior distribution of different parameter values
 si_dyn_30.df <- read_parquet(here("code_repository/data/si_dyn_30.parquet")) ## single cue dynamics data (30 days)
 dual_cue_dyn_30.df <- read_parquet(here("code_repository/data/dual_cue_dyn_30.parquet")) ## dual cue dynamics (30 days)
+mc_single_dyn_cr_join.df_pr <- read_parquet(here("code_repository/data/mc_sinle_dyn_cr_join.parquet")) ## mc dynamics (single parameter variation) with only cr along with determinstic model cr
+mc_single_dyn_cr.sumre <- read.csv(here("code_repository/data/mc_single_dyn_cr_sum.csv")) ## mc dynamics (single parameter) cr summary
 
 ## validation data (comparing fitness to random spline)
 validation.ls <- list.files(here("code_repository/data/si_validation/"), full.names = T)
@@ -1343,7 +1345,7 @@ mc_single_fitness.long2$parameter_label <- factor(mc_single_fitness.long2$parame
 
 ## get median fitness values (normalized)
 mc_single_fitness.sum2 <- mc_single_fitness.long2 %>% 
-  group_by(short_label, id, parameter_label) %>% 
+  group_by(short_label, id, parameter_label, parameter) %>% 
   summarize(median = median(fitness_norm),
             mean = mean(fitness_norm),
             geo_mean = exp(mean(log(fitness_norm))),
@@ -1416,7 +1418,7 @@ mc_single_dyn_cr.ls <- mclapply(mc_single_dyn.ls, function(x){
 mc_single_dyn_cr.df <- do.call(rbind, mc_single_dyn_cr.ls)
 
 # write
-write_parquet(mc_single_dyn_cr.df, here("code_repository/mc_single_dyn_cr.parquet"))
+write_parquet(mc_single_dyn_cr.df, here("code_repository/data/mc_single_dyn_cr.parquet"))
 
 # check # of records
 mc_single_dyn_cr.df %>% group_by(id) %>% tally()
@@ -1444,7 +1446,114 @@ mc_single_dyn_cr_join.df <- mc_single_dyn_cr.df %>%
     si_cr.df, dual_cr.df
   ), by = c("time", "id"))
 
-# get absoluate deviation and 
+# get absoluate deviation 
+mc_single_dyn_cr_join.df_p <- mc_single_dyn_cr_join.df %>% 
+  filter(time != 0) %>% ## get rid of time = 0 wher cr is NA
+  mutate(diff = abs(cr_det-value)) ## calculate absolute deviation
+write_parquet(mc_single_dyn_cr_join.df_p, here("code_repository/data/mc_sinle_dyn_cr_join.parquet"))
+
+# check for NAs
+mc_single_dyn_cr_join.df_p %>% filter(is.na(diff))
+
+# check # of samples
+mc_single_dyn_cr_join.df_p %>% group_by(id, parameter) %>% tally()
+
+# calculate summary statistics
+mc_single_dyn_cr.sum <- mc_single_dyn_cr_join.df_p %>% 
+  ungroup() %>% 
+  group_by(id, parameter) %>% 
+  summarise(mean_cr_diff = mean(diff),
+            median_cr_diff = median(diff),
+            sd_cr_diff = sd(diff),
+            mad_cr_diff= mad(diff))
+
+write.csv(mc_single_dyn_cr.sum, here("code_repository/data/mc_single_dyn_cr_sum.csv"))
+```
+
+# calculate loss of fitness due to variation
+```{r}
+mc_single_dyn_cr.sum_fitness <- mc_single_fitness.sum2 %>% 
+  mutate(geo_mean_diff = geo_mean-fitness_det_norm) %>% 
+  left_join(mc_single_dyn_cr.sum, by = c("id", "parameter"))
+```
+
+# isolate examples of robust and non-robust cues
+```{r}
+## robust cue (I log)
+mc_single_dyn_cr_join.df_p_robust <- mc_single_dyn_cr_join.df_p %>% 
+  filter(id == "I_log" & parameter %in% c("beta", "psin") & row_number() %% 10 == 0) %>% 
+  mutate(parameter_label = case_when(
+    parameter == "psin" ~ "Activation indis (ψn)",
+    parameter == "beta" ~ "Burst size (β)"
+  ))
+  
+## non-robust cue (R and I+Ig log)
+mc_single_dyn_cr_join.df_p_notrobust <- mc_single_dyn_cr_join.df_p %>% 
+  filter(id == "R_none-I+Ig_log" & parameter %in% c("beta", "psin") & row_number() %% 10 == 0) %>% 
+  mutate(parameter_label = case_when(
+    parameter == "psin" ~ "Activation indis (ψn)",
+    parameter == "beta" ~ "Burst size (β)"
+  ))
+```
+
+# plot cr time series
+```{r}
+mc_single_cr_dyn.plt1 <- ggplot(mc_single_dyn_cr_join.df_p_robust) +
+  geom_line(aes(x = time, y = value, group = iter), alpha = 0.01) +
+  geom_line(aes(x = time, y = cr_det, group = iter), alpha = 1, color = "#785EF0") +
+  facet_wrap(~parameter_label) +
+  ylim(0, 1) +
+  labs(x = "Time (days)", y = "Conversion rate") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+mc_single_cr_dyn.plt2 <- ggplot(mc_single_dyn_cr_join.df_p_notrobust) +
+  geom_line(aes(x = time, y = value, group = iter), alpha = 0.01) +
+  geom_line(aes(x = time, y = cr_det, group = iter), alpha = 1, color = "#785EF0") +
+  facet_wrap(~parameter_label) +
+  ylim(0, 1) +
+  labs(x = "Time (days)", y = "Conversion rate") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+```
+
+# plot relationship
+```{r}
+# relationship between fitness vs robistness
+ggplot(mc_single_dyn_cr.sum_fitness, aes(x = fitness_det_norm, y = geo_mean_diff, color = fitness_det_norm)) +
+  geom_point(size = 2.5, color = "black", shape = 1) +
+  geom_point(size = 2, alpha=0.8) +
+  facet_wrap(~parameter_label, scales = "free") +
+  scale_color_viridis_c() +
+  labs(x = "Deterministic model fitness", y = "Normalized fitness difference\n(Single-Deterministic)", color = "Deterministic\nmodel fitness") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank())
+
+# relationship between conversion rate difference and difference in fitness 
+ggplot(mc_single_dyn_cr.sum_fitness, aes(x = median_cr_diff, geo_mean_diff, color = fitness_det_norm)) +
+  geom_point(size = 2.5, color = "black", shape = 1) +
+  geom_point(size = 2, alpha=0.8) +
+  facet_wrap(~parameter_label) +
+  scale_color_viridis_c() +
+  ylim(NA, 0.02) +
+  labs(x = "Median conversion rate difference", y = "Normalized fitness difference\n(Single-Deterministic)", color = "Deterministic\nmodel fitness") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "bottom")
+
+ggsave(here("code_repository/figures/mc_single_cr_rel_int.tiff"), units = "px", dpi = 300, width = 2550, height = 1400, bg = "white", scale = 1)
+
+```
+
+# plot together
+```{r}
+# conversion rate dynamic
+ggarrange(mc_single_cr_dyn.plt1, mc_single_cr_dyn.plt2, nrow = 2, align = "v", labels = c("B", "C"))
+ggsave(here("code_repository/figures/mc_single_cr_dyn_int.tiff"), units = "px", dpi = 300, width = 2550*(2/3), height = 1200, bg = "white", scale = 1)
 ```
 
 
