@@ -1503,10 +1503,11 @@ mc_single_cr_dyn.plt1 <- ggplot(mc_single_dyn_cr_join.df_p_robust) +
   geom_line(aes(x = time, y = cr_det, group = iter), alpha = 1, color = "#785EF0") +
   facet_wrap(~parameter_label) +
   ylim(0, 1) +
-  labs(x = "Time (days)", y = "Conversion rate") +
+  labs(x = "", y = "Conversion rate") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank())
+        panel.grid.minor = element_blank(),
+        axis.title.x = element_blank())
 
 mc_single_cr_dyn.plt2 <- ggplot(mc_single_dyn_cr_join.df_p_notrobust) +
   geom_line(aes(x = time, y = value, group = iter), alpha = 0.01) +
@@ -1545,15 +1546,28 @@ ggplot(mc_single_dyn_cr.sum_fitness, aes(x = median_cr_diff, geo_mean_diff, colo
         panel.grid.minor = element_blank(),
         legend.position = "bottom")
 
-ggsave(here("code_repository/figures/mc_single_cr_rel_int.tiff"), units = "px", dpi = 300, width = 2550, height = 1400, bg = "white", scale = 1)
+ggsave(here("code_repository/figures/mc_single_cr_rel_int.tiff"), units = "px", dpi = 300, width = 2550, height = 1200, bg = "white", scale = 1)
 
+# internal code to get positions of I log and R and I+Ig log
+ggplot(mc_single_dyn_cr.sum_fitness, aes(x = median_cr_diff, geo_mean_diff, color = fitness_det_norm)) +
+  geom_point(size = 2.5, color = "black", shape = 1) +
+  geom_point(size = 2, alpha=0.8) +
+  geom_text(data = mc_single_dyn_cr.sum_fitness %>% filter(id %in% c("I_log", "R_none-I+Ig_log")), aes(x = median_cr_diff, y =geo_mean_diff, label = id)) +
+  facet_wrap(~parameter_label) +
+  scale_color_viridis_c() +
+  ylim(NA, 0.02) +
+  labs(x = "Median conversion rate difference", y = "Normalized fitness difference\n(Single-Deterministic)", color = "Deterministic\nmodel fitness") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.position = "bottom")
 ```
 
 # plot together
 ```{r}
 # conversion rate dynamic
 ggarrange(mc_single_cr_dyn.plt1, mc_single_cr_dyn.plt2, nrow = 2, align = "v", labels = c("B", "C"))
-ggsave(here("code_repository/figures/mc_single_cr_dyn_int.tiff"), units = "px", dpi = 300, width = 2550*(2/3), height = 1200, bg = "white", scale = 1)
+ggsave(here("code_repository/figures/mc_single_cr_dyn_int.tiff"), units = "px", dpi = 300, width = 2550*(2/3), height = 1000, bg = "white", scale = 1)
 ```
 
 
