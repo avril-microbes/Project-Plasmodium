@@ -1648,35 +1648,15 @@ time_high.vir <- time_high.dyn %>%
   mutate(total = I+Ig)
 ```
 
-# when conversion rate is static
-I am using the ideal stsatic conversion rate of 0.43
-```{r}
-static.dyn <- chabaudi_si_static(
-  cr = 0.43,
-  immunity = "tsukushi",
-  parameters = parameters_tsukushi,
-  time_range = seq(0, 30, by = 1e-3),
-  solver = "vode",
-  dyn = T)
-
-static.vir <- static.dyn  %>% 
- mutate(short_label = "Static") %>% ## get new label
-  filter(variable == "I" | variable == "Ig" | variable == "R") %>% ## get desired variables
-  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, short_label)) %>%
-  mutate(total = I+Ig)
-```
-
 #-------------Plot disease curves-----------------#
 # Single cue
 ```{r}
 si_dc.plt <- ggplot() +
-  geom_point(data = static.vir %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
   geom_point(data = time_high.vir %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
   geom_point(data = si_dc.high %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
-  geom_path(data = static.vir, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
   geom_path(data = time_high.vir, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
    geom_path(data = si_dc.high, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "grey", "black"), name = "Cues")  +
+  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "black"), name = "Cues")  +
   labs(fill = "Cues", x = "Total iRBC", y = "RBC", color = "Cues") +
   theme_classic()+ 
   scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
@@ -1687,13 +1667,11 @@ si_dc.plt <- ggplot() +
 # dual cue
 ```{r}
 dual_dc.plt <- ggplot() +
-  geom_point(data = static.vir %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
   geom_point(data = time_high.vir %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
   geom_point(data = dual_dc.high %>% filter(row_number() %% 100 ==0), aes(x = total, y = R, color = label_alt, shape = label_alt), size = 2) +
-  geom_path(data = static.vir, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
   geom_path(data = time_high.vir, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
    geom_path(data = dual_dc.high, aes(x= total, y = R, group = label_alt, color = label_alt), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "grey", "black"))  +
+  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "black"))  +
   theme_classic()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
   guides(shape = FALSE) +
   theme(legend.position = "top")
@@ -1749,9 +1727,6 @@ dual_cue_f_final_area.df <- dual_cue_f_final.df %>%
 
 # get area for ideal and static cr
 ```{r}
-# static
-static.area <- get_dc_area(static.vir)
-
 # time
 time_high.area <- get_dc_area(time_high.vir)
 
@@ -1776,34 +1751,32 @@ summary(dual_lm)$r.squared ## 0.1053591
 # plot correlation
 ```{r}
 # single cue
-si_corr_area.plt <- ggplot() +
+si_corr_area.plt <- x
+ggplot() +
   geom_point(data = si_opt_area.df, aes(x = area, y = fitness_norm, color = "Single cue", shape = "Single cue"), size = 3, alpha = 0.7) +
-  geom_point(aes(x = static.area, y = max(static.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Static", shape = "Static"), size = 3) +
   geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
   geom_line(data = si_lm.ci, aes(x = area, fit)) +
   geom_ribbon(data = si_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
   annotate(geom = "text", label = "R^2=0.18", x = 1.6*(10^11), y = 0.76) +
   annotate(geom = "text", label = "Time", x = 2.7*(10^11), y = 0.98) +
-  annotate(geom = "text", label = "Static", x = 4.3*(10^11), y = 0.79) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
   scale_color_manual(values = c(orange,"grey", "black")) +
-  xlim(min(si_opt_area.df$area), NA) +
+  xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
   theme_classic() +
   theme(legend.position = "none")
 
 # dual cue
-dual_corr_area.plt <- ggplot() +
+dual_corr_area.plt <-x
+ggplot() +
   geom_point(data = dual_cue_f_final_area.df, aes(x = area, y = fitness_norm, color = "Dual cue", shape = "Dual cue"), size = 3, alpha = 0.7) +
-  geom_point(aes(x = static.area, y = max(static.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Static", shape = "Static"), size = 3) +
   geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
   geom_line(data = dual_lm.ci, aes(x = area, fit)) +
   geom_ribbon(data = dual_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
   annotate(geom = "text", label = "R^2=0.11", x = 1.6*(10^11), y = 0.76) +
   annotate(geom = "text", label = "Time", x = 2.7*(10^11), y = 0.98) +
-  annotate(geom = "text", label = "Static", x = 4.3*(10^11), y = 0.79) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
-  scale_color_manual(values = c(blue, "grey", "black")) +
-  xlim(min(si_opt_area.df$area), NA) +
+  scale_color_manual(values = c(blue, "black")) +
+  xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
   theme_classic() +
   theme(legend.position = "none")
 ```
