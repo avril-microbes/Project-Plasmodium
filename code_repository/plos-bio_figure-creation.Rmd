@@ -1672,6 +1672,7 @@ dual_dc.plt <- ggplot() +
   geom_path(data = time_high.vir, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
    geom_path(data = dual_dc.high, aes(x= total, y = R, group = label_alt, color = label_alt), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
   scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "black"))  +
+    labs(fill = "Cues", x = "Total iRBC", y = "RBC", color = "Cues") +
   theme_classic()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
   guides(shape = FALSE) +
   theme(legend.position = "top")
@@ -1751,8 +1752,7 @@ summary(dual_lm)$r.squared ## 0.1053591
 # plot correlation
 ```{r}
 # single cue
-si_corr_area.plt <- x
-ggplot() +
+si_corr_area.plt <- ggplot() +
   geom_point(data = si_opt_area.df, aes(x = area, y = fitness_norm, color = "Single cue", shape = "Single cue"), size = 3, alpha = 0.7) +
   geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
   geom_line(data = si_lm.ci, aes(x = area, fit)) +
@@ -1760,14 +1760,13 @@ ggplot() +
   annotate(geom = "text", label = "R^2=0.18", x = 1.6*(10^11), y = 0.76) +
   annotate(geom = "text", label = "Time", x = 2.7*(10^11), y = 0.98) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
-  scale_color_manual(values = c(orange,"grey", "black")) +
+  scale_color_manual(values = c(orange,"black")) +
   xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
   theme_classic() +
   theme(legend.position = "none")
 
 # dual cue
-dual_corr_area.plt <-x
-ggplot() +
+dual_corr_area.plt <-ggplot() +
   geom_point(data = dual_cue_f_final_area.df, aes(x = area, y = fitness_norm, color = "Dual cue", shape = "Dual cue"), size = 3, alpha = 0.7) +
   geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
   geom_line(data = dual_lm.ci, aes(x = area, fit)) +
