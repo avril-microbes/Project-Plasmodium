@@ -530,7 +530,7 @@ ggsave(here("code_repository/figures/dual_main_intermediate.tiff"), units = "px"
 ```
 
 #=================================#
-# Dual cue conversion rate supplementary figure
+# Dual cue conversion rate supplementary figure (cr dynamics)
 #=================================#
 ## Function to simulate dual cue dynamics
 ```{r}
@@ -632,6 +632,25 @@ ggplot(data = dual_cue_cr.df, aes(x = time, y = fct_reorder(label_comb, fitness)
   theme_classic()
 
 ggsave(here("code_repository/figures/dual_cue_cr.tiff"), units = "px", width = 2000, height = 1500, dpi=300,  bg = "white")
+```
+
+#=================================#
+# Cumulative transmission plot of dual and single cue models
+#=================================#
+# get cumulative tau
+```{r}
+# filter and add names
+I_high.taucum <- I_high.cr %>% filter(variable == "tau_cum") %>% mutate(label_new = "I log (df=9)") %>% select(-variable)
+
+R_high.taucum <- R_high.cr %>% filter(variable == "tau_cum") %>% mutate(label_new = "R log (df=9)") %>% select(-variable)
+
+time_high.taucum <- time_high.cr %>% filter(variable == "tau_cum") %>% mutate(label_new = "Time (df=9)") %>% select(-variable)
+
+Rlog_Ilog.taucum <- Rlog_Ilog.cr %>% filter(variable == "tau_cum") %>% mutate(label_new = "R log & I log\n(df=9)") %>% select(-variable)
+
+
+# bind together
+
 ```
 
 #=================================#
