@@ -3,8 +3,8 @@ I_none,I,Asexual iRBC,Asexual iRBC,I,none
 I_log,I log,Asexual iRBC log,Asexual iRBC,I,log
 Ig_none,Ig,Sexual iRBC,Sexual iRBC,Ig,none
 Ig_log,Ig log,Sexual iRBC log,Sexual iRBC,Ig,log
-I+Ig_none,I+Ig,Total iRBC,Total iRBC,I+Ig,none
-I+Ig_log,I+Ig log,Total iRBC log,Total iRBC,I+Ig,log
+I+Ig_none,Total I,Total iRBC,Total iRBC,I+Ig,none
+I+Ig_log,Total I log,Total iRBC log,Total iRBC,I+Ig,log
 G_none,G,Gametocyte,Gametocyte,G,none
 G_log,G log,Gametocyte log,Gametocyte,G,log
 R_none,R,RBC,RBC,R,none
@@ -12,5 +12,5 @@ R_log,R log,RBC log,RBC,R,log
 time,Time,Time,Time,time,none
 R_log-I_log,R log & I log,RBC log &asexual iRBC log,,,
 R_none-I_log,R & I log,RBC &\nasexual iRBC log,,,
-R_log-I+Ig_log,R log & I+Ig log,RBC log &\ntotal iRBC log,,,
-R_none-I+Ig_log,R & I+Ig log,RBC &\ntotal iRBC log,,,
+R_log-I+Ig_log,R log & Total I log,RBC log &\ntotal iRBC log,,,
+R_none-I+Ig_log,R & Total I log,RBC &\ntotal iRBC log,,,

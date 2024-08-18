@@ -180,7 +180,7 @@ fitness_rank.plt <- ggplot(si_opt.df, aes(x = fitness_norm, y = fct_reorder(long
 fitness_cr.plt <- ggplot(si_dyn_cr_fitness.df, aes(x = time, y = fct_reorder(long_label, fitness_20), fill = value)) +
   geom_raster() +
   scale_fill_viridis_c() +
-  labs(fill = "Conversion\nrate", x = "Time (days)") +
+  labs(fill = "Transmission\ninvestment", x = "Time (days)") +
   xlim(1, 20) + # note that cr at day 0->1 is always 0 due to how the model is set up!
   theme_classic() +
   theme(axis.title.y=element_blank(),
@@ -323,12 +323,12 @@ fitness_rn.plt <- ggplot() +
     distinct(id, rel_cue, .keep_all = T) %>% 
     filter(rel_cue %% 10 ==1),
              aes(x = cue_range, y = cr, color = log, shape = log), size = 2) +
-   geom_rug(data = si_rug_cue.df_none, aes(x = value), color = "#fc8d59", sides = "t", length = unit(0.1, "npc")) +
-  geom_rug(data = si_rug_cue.df_log, aes(x = value), color = "#4575b4", sides = "b", length = unit(0.1, "npc")) +
+   geom_rug(data = si_rug_cue.df_none, aes(x = value), color = "black", sides = "t", length = unit(0.1, "npc")) +
+  geom_rug(data = si_rug_cue.df_log, aes(x = value), color = "#D41159", sides = "b", length = unit(0.1, "npc")) +
   facet_wrap(~cue_label, scales = "free_x", ncol = 1) +
-  labs(x = "Cue range", y = "Conversion rate", color = "Cue status", shape = "Cue status") +
+  labs(x = "Cue range", y = "Transmission investment", color = "Cue status", shape = "Cue status") +
   ylim(0, 1) +
-  scale_color_manual(values=c( "#4575b4", "#fc8d59")) +
+  scale_color_manual(values=c("#D41159", "black")) +
   scale_x_continuous(labels = function(x) format(x, scientific = T),
                      guide = guide_axis(check.overlap = TRUE)) + 
   theme_bw() +
@@ -387,7 +387,7 @@ dual_si_fitness.df <- dual_cue_f_final.df %>%
   left_join(select(si_opt.df, id, fitness_si = fitness_20), by = "id") %>% ## get fitness of single cue model based on first cue
   left_join(select(si_opt.df, id_b = id, fitness_si_b = fitness_20), by = "id_b") %>%  ## get fitness of single cue model based on second cue
   mutate(fitness_si_final = ifelse(fitness_si > fitness_si_b, fitness_si, fitness_si_b)/9.883602,
-         label_comb = paste(label, "&", label_b), ## select the highest single cue model fitness
+         label_comb = gsub("I\\+Ig", "Total I", paste(label, "&", label_b)), ## select the highest single cue model fitness
          fitness_dual_norm = fitness_dual/9.883602)## normalize by time fitness
 ```
 
@@ -461,13 +461,13 @@ R_high.cr <- chabaudi_si_clean_high(
   dyn = T)
 
 # process 
-I_high.cr_p <- I_high.cr %>% filter(variable == "cr") %>% mutate(label_new = "I log10 (df=9)") %>% select(-variable)
+I_high.cr_p <- I_high.cr %>% filter(variable == "cr") %>% mutate(label_new = "I log (df=9)") %>% select(-variable)
 
-R_high.cr_p <- R_high.cr %>% filter(variable == "cr") %>% mutate(label_new = "R log10 (df=9)") %>% select(-variable)
+R_high.cr_p <- R_high.cr %>% filter(variable == "cr") %>% mutate(label_new = "R log (df=9)") %>% select(-variable)
 
 time_high.cr_p <- time_high.cr %>% filter(variable == "cr") %>% mutate(label_new = "Time (df=9)") %>% select(-variable)
 
-Rlog_Ilog.cr_p <- Rlog_Ilog.cr %>% filter(variable == "cr") %>% mutate(label_new = "R log10 & I log10\n(df=9)") %>% select(-variable)
+Rlog_Ilog.cr_p <- Rlog_Ilog.cr %>% filter(variable == "cr") %>% mutate(label_new = "R log & I log\n(df=9)") %>% select(-variable)
 
 ## combine
 dual_selected_cr.df <- rbind(I_high.cr_p, R_high.cr_p, time_high.cr_p, Rlog_Ilog.cr_p)
@@ -481,9 +481,9 @@ dual_selected_cr.df <- read_parquet(here("code_repository/data/dual_selected_cr.
 dual_selected_cr.pl <- ggplot() +
   geom_line(data = dual_selected_cr.df, aes(color = label_new, x = time, y = value), size = 1) +
   geom_point(data = dual_selected_cr.df %>% filter(time%%1 == 0), aes(color = label_new, x = time, y = value, shape = label_new), size = 3) +
-  labs(x = "Time (days)", y = "Conversion rate", color = "Cue(s)", shape = "Cue(s)") +
+  labs(x = "Time (days)", y = "Transmission investment", color = "Cue(s)", shape = "Cue(s)") +
   xlim(0, 20) +
-  scale_color_manual(values = c("#fc8d59","#fdcb44","black", "#4575b4")) +
+  scale_color_manual(values = c(orange,"#E1BE6A",blue ,"black")) +
   theme_classic() +
   theme(legend.position="right",
         plot.margin = margin(t = 40, r = 0, b = 0, l = 0, unit = "pt")) +
@@ -514,7 +514,7 @@ Rlog_Ilog_rn.pl <- ggplot() +
   geom_point(data = Rlog_Ilog.dyn %>% filter(row_number() %% 1000 == 1 & time <= 20), aes(x = log_I, y = log_R), color = "white") +
   xlim(0.99*min(hablar::s(Rlog_Ilog.dyn$log_I), na.rm = T), 1.01* max(hablar::s(Rlog_Ilog.dyn$log_I), na.rm = T)) +
   ylim(0.99*min(hablar::s(Rlog_Ilog.dyn$log_R), na.rm = T),1.01* max(hablar::s(Rlog_Ilog.dyn$log_R), na.rm = T)) +
-  labs(y = "RBC log10", x = "Asexual iRBC log10", fill = "Conversion\nrate") +
+  labs(y = "RBC log", x = "Asexual iRBC log", fill = "Transmission\ninvestment") +
   theme_classic() +
   theme(legend.position = "right")
 ```
@@ -611,7 +611,7 @@ write_parquet(dual_cue_dyn_30.df, here("code_repository/data/dual_cue_dyn_30.par
 dual_cue_cr.df <- dual_cue_dyn.df %>% 
   filter(variable == "cr") %>% 
   left_join(select(dual_cue_f_final.df, id, id_b, fitness), by = c("id", "id_b")) %>% 
-  mutate(label_comb = paste(label, "&", label_b))
+  mutate(label_comb = gsub("I\\+Ig", "Total I", paste(label, "&", label_b)))
 
 ## Sanity check that the dynamics produced the same fitness as the optimized values. Yes!
 dual_cue_dyn.df %>% 
@@ -628,7 +628,7 @@ ggplot(data = dual_cue_cr.df, aes(x = time, y = fct_reorder(label_comb, fitness)
   geom_raster() +
   scale_fill_viridis_c() +
   xlim(1, 20) +
-  labs(x = "Time (days)", y = "Dual cue combination", fill = "Conversion rate") +
+  labs(x = "Time (days)", y = "Dual cue combination", fill = "Transmission\ninvestment") +
   theme_classic()
 
 ggsave(here("code_repository/figures/dual_cue_cr.tiff"), units = "px", width = 2000, height = 1500, dpi=300,  bg = "white")
@@ -650,8 +650,32 @@ Rlog_Ilog.taucum <- Rlog_Ilog.cr %>% filter(variable == "tau_cum") %>% mutate(la
 
 
 # bind together
+dual_selected_taucum.df <- rbind(I_high.taucum, R_high.taucum, time_high.taucum, Rlog_Ilog.taucum)
+
+# write
+write_parquet(dual_selected_taucum.df, here("code_repository/data/dual_selected_taucum.parquet"))
+```
+
+# plot
+```{r}
+# read in data
+dual_selected_taucum.df <- read_parquet(here("code_repository/data/dual_selected_taucum.parquet"))
+
+# plot cumultative transmission plot
+ggplot() +
+  geom_line(data = dual_selected_taucum.df, aes(color = label_new, x = time, y = value), size = 1) +
+  geom_point(data = dual_selected_taucum.df %>% filter(time%%1 == 0), aes(color = label_new, x = time, y = value, shape = label_new), size = 3) +
+  labs(x = "Time (days)", y = "Cumulative transmission potential", color = "Cue(s)", shape = "Cue(s)") +
+  xlim(0, 20) +
+  scale_color_manual(values = c(orange,"#E1BE6A",blue ,"black")) +
+  theme_classic() +
+  theme(legend.position="right") +
+  guides(color = guide_legend(nrow = 4, byrow = TRUE))
+
+ggsave(here("code_repository/figures/dual_taucum.tiff"), units = "px", width = 1600, height = 1000, dpi=300,  bg = "white", scale = 1.2)
 
 ```
+
 
 #=================================#
 # Experimental disease maps of P. chabaudi
@@ -1105,7 +1129,8 @@ write_parquet(mc_all_fitness.df, here("code_repository/data/mc_all_fitness.parqu
 ## normalize fitness and take only first 1000 measurement (this is done given that subsequent simulations only include 1000 reps!)
 mc_all_fitness.df_p <- mc_all_fitness.df %>% 
   filter(iter %in% seq(1,1000,1)) %>% 
-  mutate(fitness_norm = max_fitness/9.883602)
+  mutate(fitness_norm = max_fitness/9.883602,
+         short_label = gsub("I\\+Ig", "Total I", short_label))
 
 ## get the reference fitness (default parameter variation), which is where iter = 1
 mc_all_fitness_ref.df <- mc_all_fitness.df_p %>% filter(iter == 1)
@@ -1195,7 +1220,7 @@ mc_single_fitness.long_p <- mc_single_fitness.long %>%
 mc_single_fitness.long_p %>% filter(id == "R_log-I+Ig_log")
 
 mc_single_fitness.sum <- mc_single_fitness.long_p %>% 
-  group_by(id, parameter) %>% 
+  group_by(id, parameter, short_label) %>% 
   summarise(ci_lower = ci(rel_diff_single, method = "HDI", ci = 0.89)[[2]],
             ci_higher = ci(rel_diff_single, method = "HDI", ci = 0.89)[[3]],
             quantile_low = quantile(rel_diff_single, 0.025),
@@ -1220,11 +1245,11 @@ mc_single_fitness.long_p_f <- mc_single_fitness.long_p %>%
 ## arrange ordering of cues and parameters
 mc_single_fitness.long_p_f$short_label <- factor(mc_single_fitness.long_p_f$short_label, c(
   "R & I log", "R log & I log",
-  "R & I+Ig log","R log & I+Ig log",
+  "R & Total I log","R log & Total I log",
   "R", "R log",
   "I", "I log",
   "Ig", "Ig log", 
-  "I+Ig", "I+Ig log",
+  "Total I", "Total I log",
   "G", "G log"))
 
 mc_single_fitness.long_p_f$parameter_label <- factor(mc_single_fitness.long_p_f$parameter_label,
@@ -1438,6 +1463,7 @@ mc_single_dyn_cr.df <- do.call(rbind, mc_single_dyn_cr.ls)
 
 # write
 write_parquet(mc_single_dyn_cr.df, here("code_repository/data/mc_single_dyn_cr.parquet"))
+mc_single_dyn_cr.df <- read_parquet(here("code_repository/data/mc_single_dyn_cr.parquet"))
 
 # check # of records
 mc_single_dyn_cr.df %>% group_by(id) %>% tally()
@@ -1470,6 +1496,7 @@ mc_single_dyn_cr_join.df_p <- mc_single_dyn_cr_join.df %>%
   filter(time != 0) %>% ## get rid of time = 0 wher cr is NA
   mutate(diff = abs(cr_det-value)) ## calculate absolute deviation
 write_parquet(mc_single_dyn_cr_join.df_p, here("code_repository/data/mc_single_dyn_cr_join.parquet"))
+mc_single_dyn_cr_join.df_p <- read_parquet(here("code_repository/data/mc_single_dyn_cr_join.parquet"))
 
 # check for NAs
 mc_single_dyn_cr_join.df_p %>% filter(is.na(diff))
@@ -1487,6 +1514,7 @@ mc_single_dyn_cr.sum <- mc_single_dyn_cr_join.df_p %>%
             mad_cr_diff= mad(diff))
 
 write.csv(mc_single_dyn_cr.sum, here("code_repository/data/mc_single_dyn_cr_sum.csv"))
+mc_single_dyn_cr.sum <- read.csv(here("code_repository/data/mc_single_dyn_cr_sum.csv"))
 ```
 
 # calculate loss of fitness due to variation
@@ -1599,7 +1627,8 @@ ggsave(here("code_repository/figures/mc_single_cr_dyn_int.tiff"), units = "px", 
 # classify top 4 performing single cues as "high performing"
 top_4_single_cue <- si_opt.df %>% 
   filter(cue != "t") %>% 
-  slice_max(n = 4, order_by = fitness_20)
+  slice_max(n = 4, order_by = fitness_20) %>% 
+  mutate(short_label = gsub("I\\+Ig", "Total I", short_label))
 
 # get wide format dataframe. Here, we are interested in the RBC and total iRBC count
 si_dc.df <- si_dyn_30.df %>% 
@@ -1622,12 +1651,12 @@ si_dc.high$short_label <- factor(si_dc.high$short_label, top_4_single_cue$short_
 ```{r}
 # classify top 4 performing dual cues as "high performing"
 top_4_dual_cue <- dual_cue_f_final.df %>% 
-  mutate(label_alt = paste(label, "&" , label_b)) %>% 
+  mutate(label_alt = gsub("I\\+Ig", "Total I", paste(label, "&" , label_b))) %>% 
   slice_max(n = 4, order_by = fitness)
 
 # get wide format dataframe. Here, we are interested in the RBC and total iRBC count
 dual_dc.df <- dual_cue_dyn_30.df %>% 
-  mutate(label_alt = paste(label, "&" , label_b)) %>% ## get new label
+  mutate(label_alt = gsub("I\\+Ig", "Total I", paste(label, "&" , label_b))) %>% ## get new label
   filter(variable == "I" | variable == "Ig" | variable == "R") %>% ## get desired variables
   tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, label_alt)) %>%
   mutate(total = I+Ig)
@@ -1740,7 +1769,7 @@ dual_dc.area <- cbind.data.frame(area = as.numeric(lapply(dual_dc.ls, get_dc_are
 
 # join with fitness
 dual_cue_f_final_area.df <- dual_cue_f_final.df %>% 
-  mutate(label_alt = paste(label, "&" , label_b)) %>% 
+  mutate(label_alt = gsub("I\\+Ig", "Total I", paste(label, "&" , label_b))) %>% 
   left_join(dual_dc.area, by = c("label_alt")) %>% 
   mutate(fitness_norm = fitness/9.883602) ## normalize fitness (use fitness obtained using time df=9 given that we are plotting dual cue and single on the same graph!)
 ```
@@ -1820,7 +1849,7 @@ ggsave(units = "px", dpi = 300, width = 2550, height = 2000, filename = here("co
 validation.df_p <- validation.df %>% 
   left_join(select(si_opt.df, id, fitness_20, short_label, long_label), by = c("id")) %>% 
   mutate(diff = fitness_20-V1,
-         long_short_label = paste0(long_label, " (", short_label, ")"))
+         long_short_label = gsub("I\\+Ig", "Total I",paste0(long_label, " (", short_label, ")")))
 
 ## no random strategy performed better!
 validation.df_p %>% filter(diff<=0)
