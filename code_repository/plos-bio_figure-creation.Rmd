@@ -661,11 +661,15 @@ write_parquet(dual_selected_taucum.df, here("code_repository/data/dual_selected_
 # read in data
 dual_selected_taucum.df <- read_parquet(here("code_repository/data/dual_selected_taucum.parquet"))
 
+# normalize fitness
+dual_selected_taucum.df_p <- dual_selected_taucum.df %>% mutate(fitness_norm = value/9.883602)
+
+
 # plot cumultative transmission plot
 ggplot() +
-  geom_line(data = dual_selected_taucum.df, aes(color = label_new, x = time, y = value), size = 1) +
-  geom_point(data = dual_selected_taucum.df %>% filter(time%%1 == 0), aes(color = label_new, x = time, y = value, shape = label_new), size = 3) +
-  labs(x = "Time (days)", y = "Cumulative transmission potential", color = "Cue(s)", shape = "Cue(s)") +
+  geom_line(data = dual_selected_taucum.df_p, aes(color = label_new, x = time, y = fitness_norm), size = 1) +
+  geom_point(data = dual_selected_taucum.df_p %>% filter(time%%1 == 0), aes(color = label_new, x = time, y = fitness_norm, shape = label_new), size = 3) +
+  labs(x = "Time (days)", y = "Cumulative transmission\npotential (normalized)", color = "Cue(s)", shape = "Cue(s)") +
   xlim(0, 20) +
   scale_color_manual(values = c(orange,"#E1BE6A",blue ,"black")) +
   theme_classic() +
