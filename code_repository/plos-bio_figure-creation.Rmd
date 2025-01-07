@@ -170,9 +170,10 @@ si_opt.df <- si_opt.df %>%
 ## plot
 ```{r}
 ## fitness values ranked from high to low
-fitness_rank.plt <- ggplot(si_opt.df, aes(x = fitness_norm, y = fct_reorder(long_label, fitness_20))) +
+fitness_rank.plt <- ggplot(si_opt.df, aes(x = fitness_norm, y = fct_reorder(long_label, fitness_norm))) +
   geom_bar(stat = "identity", fill = "black") +
   labs(x = "Normalized fitness", y = "Cue") +
+  scale_x_continuous(limits = c(0.7, 1), oob = rescale_none) +
   theme_classic() +
   theme(plot.margin = margin(5.5, 0, 5.5, 5.5, "pt"))
 
@@ -479,9 +480,9 @@ write_parquet(dual_selected_cr.df, here("code_repository/data/dual_selected_cr.p
 dual_selected_cr.df <- read_parquet(here("code_repository/data/dual_selected_cr.parquet"))
 
 dual_selected_cr.pl <- ggplot() +
-  geom_line(data = dual_selected_cr.df, aes(color = label_new, x = time, y = value), size = 1) +
-  geom_point(data = dual_selected_cr.df %>% filter(time%%1 == 0), aes(color = label_new, x = time, y = value, shape = label_new), size = 3) +
-  labs(x = "Time (days)", y = "Transmission investment", color = "Cue(s)", shape = "Cue(s)") +
+  geom_line(data = dual_selected_cr.df %>% filter(time%%0.5 == 0), aes(color = label_new, x = time, y = value, linetype=label_new), size = 0.7) +
+  geom_point(data = dual_selected_cr.df %>% filter(time%%2 == 0), aes(color = label_new, x = time, y = value, shape = label_new), size = 2.5) +
+  labs(x = "Time (days)", y = "Transmission investment", color = "Cue(s)", shape = "Cue(s)", linetype = "Cue(s)") +
   xlim(0, 20) +
   scale_color_manual(values = c(orange,"#E1BE6A",blue ,"black")) +
   theme_classic() +
@@ -667,9 +668,9 @@ dual_selected_taucum.df_p <- dual_selected_taucum.df %>% mutate(fitness_norm = v
 
 # plot cumultative transmission plot
 ggplot() +
-  geom_line(data = dual_selected_taucum.df_p, aes(color = label_new, x = time, y = fitness_norm), size = 1) +
-  geom_point(data = dual_selected_taucum.df_p %>% filter(time%%1 == 0), aes(color = label_new, x = time, y = fitness_norm, shape = label_new), size = 3) +
-  labs(x = "Time (days)", y = "Cumulative transmission\npotential (normalized)", color = "Cue(s)", shape = "Cue(s)") +
+  geom_line(data = dual_selected_taucum.df_p %>% filter(time%%0.5 == 0), aes(color = label_new, x = time, y = fitness_norm, linetype = label_new), size = 0.7) +
+  geom_point(data = dual_selected_taucum.df_p %>% filter(time%%1 == 0), aes(color = label_new, x = time, y = fitness_norm, shape = label_new), size = 2.5) +
+  labs(x = "Time (days)", y = "Cumulative transmission\npotential (normalized)", color = "Cue(s)", shape = "Cue(s)", linetype = "Cue(s)") +
   xlim(0, 20) +
   scale_color_manual(values = c(orange,"#E1BE6A",blue ,"black")) +
   theme_classic() +
@@ -818,6 +819,7 @@ exp_ss.df <- rbind(emph_2018_ss.df, eseb_2011_ss.df, evolution_2010_ss.df, amna_
 
 ## write
 write.csv(exp_ss.df, here("code_repository/data/experimental_data.csv"))
+exp_ss.df <- read.csv(here("code_repository/data/experimental_data.csv"))
 ```
 
 ## Prepare dataset for plotting
@@ -1596,7 +1598,7 @@ ggplot(mc_single_dyn_cr.sum_fitness, aes(x = median_cr_diff, geo_mean_diff, colo
   theme(panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.position = "bottom")
-
+mc_single_dyn_cr.sum_fitness
 ggsave(here("code_repository/figures/mc_single_cr_rel_int.tiff"), units = "px", dpi = 300, width = 2550, height = 1200, bg = "white", scale = 1)
 
 # internal code to get positions of I log and R and I+Ig log
@@ -1799,6 +1801,10 @@ dual_lm.ci = predict(dual_lm, interval = "confidence") %>% cbind.data.frame(area
 # look at R^2
 summary(si_lm)$r.squared ## 0.1765248
 summary(dual_lm)$r.squared ## 0.1053591
+
+# look at slope
+summary(si_lm) ## -5.674e-13
+summary(dual_lm) ## -3.185e-13
 ```
 
 # plot correlation
@@ -1809,25 +1815,25 @@ si_corr_area.plt <- ggplot() +
   geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
   geom_line(data = si_lm.ci, aes(x = area, fit)) +
   geom_ribbon(data = si_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
-  annotate(geom = "text", label = "R^2=0.18", x = 1.6*(10^11), y = 0.76) +
+  annotate(geom = "text", label = "R^2=0.18; slope = -5.67e-13", x = 2*(10^11), y = 0.76) +
   annotate(geom = "text", label = "Time", x = 2.7*(10^11), y = 0.98) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
   scale_color_manual(values = c(orange,"black")) +
-  xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
+  xlim(min(dual_cue_f_final_area.df$area), max(dual_cue_f_final_area.df$area)) +
   theme_classic() +
   theme(legend.position = "none")
 
 # dual cue
-dual_corr_area.plt <-ggplot() +
+dual_corr_area.plt <- ggplot() +
   geom_point(data = dual_cue_f_final_area.df, aes(x = area, y = fitness_norm, color = "Dual cue", shape = "Dual cue"), size = 3, alpha = 0.7) +
   geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
   geom_line(data = dual_lm.ci, aes(x = area, fit)) +
   geom_ribbon(data = dual_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
-  annotate(geom = "text", label = "R^2=0.11", x = 1.6*(10^11), y = 0.76) +
+  annotate(geom = "text", label = "R^2=0.11; slope = -3.19e-13", x = 2*(10^11), y = 0.76) +
   annotate(geom = "text", label = "Time", x = 2.7*(10^11), y = 0.98) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
   scale_color_manual(values = c(blue, "black")) +
-  xlim(min(si_opt_area.df$area), max(dual_cue_f_final_area.df$area)) +
+  xlim(min(dual_cue_f_final_area.df$area), max(dual_cue_f_final_area.df$area)) +
   theme_classic() +
   theme(legend.position = "none")
 ```
