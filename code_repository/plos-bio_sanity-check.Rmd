@@ -1,0 +1,112 @@
+---
+title: "Understanding the impact of reducing I_0"
+output: html_notebook
+---
+# Load libraries
+```{r}
+library(dplyr)
+library(ggplot2)
+library(here)
+library(deSolve)
+library(crone)
+library(optimParallel)
+library(doParallel)
+library(doRNG)
+library(arrow)
+library(parallel)
+```
+
+
+#===================================#
+# Rerunning certain optimization
+#===================================#
+# get new parameters
+```{r}
+parameters_tsukushi <- c(R1 = 8.89*10^6, 
+                lambda = 3.7*10^5,
+                mu = 0.025, 
+                p = 8*10^-6, 
+                alpha = 1, 
+                alphag = 2, 
+                beta = 5.721, 
+                mum = 48, 
+                mug = 4, 
+                I0 = 43.85965/10, 
+                Ig0 = 0, 
+                a = 150, 
+                b = 100, 
+                sp = 1,
+                psin = 16.69234,
+                psiw = 0.8431785,
+                phin = 0.03520591, 
+                phiw = 550.842,
+                iota = 2.18*(10^6),
+                rho = 0.2627156)
+```
+
+# Reoptimize time and asexual iRBC logged
+```{r}
+# Time (ideal case)
+t_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "t",
+                            log = "none",
+                            cue_range = time_range)
+
+
+# I logged
+I_log_loc.op <- opt_local(par = rep(0.5, 4),
+                            cue = "I",
+                            log = "log10",
+                            cue_range = seq(0, log10(6*(10^6)), by = (log10(6*(10^6)))/5000))
+```
+
+#-------------------------------------#
+# Checking whether reducing I_0 drastically changes dynamics + fitness
+#-------------------------------------#
+## function for dynamics generation
+```{r}
+# function for getting single cue infection dynamics
+get_si_dyn <- function(df){
+  ## processing model input
+  par <- c(df$var1, df$var2, df$var3, df$var4) ## parameters
+  cue <- df$cue ## cue choice
+  log <- ifelse(df$log=="log", "log10", "none") ## log or not
+  cue_range <- seq(df$low, df$high, by = df$by) ## cue range
+  id <- df$id ## id
+  
+  ## get dynamics data
+  dyn <- chabaudi_si_clean(
+            parameters_cr = par, 
+            parameters = parameters_tsukushi, 
+            time_range = seq(0, 20, 0.001), 
+            cue = cue, 
+            cue_range = cue_range, 
+            log_cue = log,
+            immunity = "tsukushi",
+            solver = "vode",
+            dyn = TRUE)
+  
+  # append id
+  dyn2 <- cbind(dyn, id = rep(id, nrow(dyn)))
+  
+  # return results
+ return(dyn2)
+}
+```
+
+## run function to generate data
+```{r}
+## split si_opt into list
+si_opt.ls <- split(si_opt.df, seq(nrow(si_opt.df)))
+
+## get dynamics
+si_dyn <- mclapply(si_opt.ls, get_si_dyn, mc.cores = 8)
+
+## combine the dynamics file
+si_dyn.df <- do.call(rbind, si_dyn)
+
+## save
+write_parquet(si_dyn.df, here("code_repository/data/si_dyn_I0.parquet"))
+```
+
+

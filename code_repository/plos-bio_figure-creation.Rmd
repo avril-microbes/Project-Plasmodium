@@ -26,6 +26,7 @@ library(purrr)
 library(tidyr)
 library(splines2)
 library(splancs)
+library(ggnewscale)
 ```
 
 ## load variables
@@ -1000,6 +1001,7 @@ cue_cue_rn_pl.ls <- lapply(dual_cue_rn.ls,
           ## get names of columns used in the x and y axis
          axis_cols <- setdiff(names(x), c("time", "id", "id_b", "cr"))
          
+         options(scipen = -2)
          ## ggplot
          ggplot() +
            geom_path(data = x, aes_string(x = axis_cols[[1]], y = axis_cols[[2]], color = "cr"),
@@ -1010,13 +1012,15 @@ cue_cue_rn_pl.ls <- lapply(dual_cue_rn.ls,
            theme_classic() +
            scale_color_viridis_c(limits = c(0, 1)) +
            labs(color = "Conversion rate", x = gsub("_", " ", axis_cols[[1]]), y = gsub("_", " ", axis_cols[[2]])) +
-           scale_x_continuous(labels = label_scientific(digits = 2)) +
-           scale_y_continuous(labels = label_scientific(digits = 2))
+           #scale_x_continuous(labels = label_scientific(digits = 2),breaks= breaks_pretty(3)) +
+           #scale_y_continuous(labels = label_scientific(digits = 2),breaks= breaks_pretty(2)) 
+           scale_x_continuous(breaks= breaks_pretty(3)) +
+           scale_y_continuous(breaks= breaks_pretty(3)) d
        })
 
 ## arrange together
-cue_cue_rn.pl <- ggarrange(plotlist = cue_cue_rn_pl.ls, ncol = 5, nrow = 8, common.legend = T, align = "hv") 
-ggsave(here("code_repository/figures/sim_disease-curve.tiff"), units = "px", width = 2250, height = 2500, scale = 2.2, dpi=300,  bg = "white")
+cue_cue_rn.pl <- ggarrange(plotlist = cue_cue_rn_pl.ls, ncol = 4, nrow = 10, common.legend = T, align = "hv") 
+ggsave(here("code_repository/figures/sim_disease-curve.tiff"), units = "px", width = 2250, height = 2625, scale = 1.5, dpi=300,  bg = "white")
 ```
 
 #=================================#
@@ -1306,8 +1310,8 @@ par_det.df <- data.frame(
 
 ## make into long format
 posterior.long <- posterior.df %>% 
-  filter(id %in% seq(0,1000,1)) %>% 
-  tidyr::pivot_longer(-id, names_to = "parameter") %>% 
+  filter(iter %in% seq(0,1000,1)) %>% 
+  tidyr::pivot_longer(-iter, names_to = "parameter") %>% 
   left_join(par_det.df, by = "parameter") %>% ## add in the deterministic parameter values
   mutate(label = case_when(
     parameter == "rho" ~ "RBC replenishment (ρ)",
@@ -1317,6 +1321,7 @@ posterior.long <- posterior.df %>%
     parameter == "iota_N2" ~ "Activation targeted (ψw)",
     parameter == "burst" ~ "Burst size (β)"
   )) ## rename paramter values
+
 
 ```
 
@@ -1810,23 +1815,48 @@ summary(dual_lm) ## -3.185e-13
 # plot correlation
 ```{r}
 # single cue
-si_corr_area.plt <- ggplot() +
-  geom_point(data = si_opt_area.df, aes(x = area, y = fitness_norm, color = "Single cue", shape = "Single cue"), size = 3, alpha = 0.7) +
-  geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
+## top 4 cues
+si_opt_area.df_4 <- si_opt_area.df %>% filter(id %in% top_4_single_cue$id)
+si_opt_area.df_4$short_label <- factor(si_opt_area.df_4$short_label, c("Ig log", "I+Ig log", "G log", "I log"))
+
+si_corr_area.plt1 <- ggplot() +
+  geom_point(data = si_opt_area.df_4, aes(x = area, y = fitness_norm, color = short_label, shape = short_label), size = 3, alpha = 0.7) +
+       scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "black"), name = "Cues") 
+  
+si_corr_area.plt2 <- si_corr_area.plt1 + ggnewscale::new_scale_color()
+
+## the rest
+si_corr_area.plt3 <- si_corr_area.plt2+
+  geom_point(data = si_opt_area.df%>% filter(!id %in% top_4_single_cue$id), aes(x = area, y = fitness_norm), color = "grey", size = 3) +
+  geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, shape = "Time"), size = 3, color = "black") +
   geom_line(data = si_lm.ci, aes(x = area, fit)) +
   geom_ribbon(data = si_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
   annotate(geom = "text", label = "R^2=0.18; slope = -5.67e-13", x = 2*(10^11), y = 0.76) +
   annotate(geom = "text", label = "Time", x = 2.7*(10^11), y = 0.98) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
-  scale_color_manual(values = c(orange,"black")) +
+
   xlim(min(dual_cue_f_final_area.df$area), max(dual_cue_f_final_area.df$area)) +
   theme_classic() +
   theme(legend.position = "none")
+```
 
+
+```{r}
 # dual cue
-dual_corr_area.plt <- ggplot() +
-  geom_point(data = dual_cue_f_final_area.df, aes(x = area, y = fitness_norm, color = "Dual cue", shape = "Dual cue"), size = 3, alpha = 0.7) +
-  geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, color = "Time", shape = "Time"), size = 3) +
+dual_cue_f_final_area.df_4 <- dual_cue_f_final_area.df %>% filter(label_alt %in% top_4_dual_cue$label_alt)
+
+dual_cue_f_final_area.df_4$label_alt <- factor(dual_cue_f_final_area.df_4$label_alt, c("R log & I log", "R & I log", "R & Total I log", "R log & Total I log"))
+
+
+dual_corr_area.plt1 <- ggplot() +
+  geom_point(data = dual_cue_f_final_area.df_4, aes(x = area, y = fitness_norm, color = label_alt, shape = label_alt), size = 3, alpha = 0.7) +
+       scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "black"), name = "Cues") 
+
+dual_corr_area.plt2 <- dual_corr_area.plt1 + ggnewscale::new_scale_color()
+
+dual_corr_area.plt3 <- dual_corr_area.plt2 +
+  geom_point(data = dual_cue_f_final_area.df%>% filter(!label_alt %in% top_4_dual_cue$label_alt), aes(x = area, y = fitness_norm), size = 3, alpha = 0.7, color = "grey") +
+  geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602,  shape = "Time"), size = 3, color = "black") +
   geom_line(data = dual_lm.ci, aes(x = area, fit)) +
   geom_ribbon(data = dual_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
   annotate(geom = "text", label = "R^2=0.11; slope = -3.19e-13", x = 2*(10^11), y = 0.76) +
@@ -1840,8 +1870,8 @@ dual_corr_area.plt <- ggplot() +
 
 #---------assemble figure------------#
 ```{r}
-si_dc_area.plt <- ggarrange(si_dc.plt, si_corr_area.plt, ncol = 2, nrow = 1, align = "hv", common.legend = T, labels = c("A", "B"))
-dual_dc_area.plt <- ggarrange(dual_dc.plt, dual_corr_area.plt, ncol = 2, nrow = 1, align = "hv", common.legend = T, labels = c("C", "D"))
+si_dc_area.plt <- ggarrange(si_dc.plt, si_corr_area.plt3, ncol = 2, nrow = 1, align = "hv", common.legend = T, labels = c("A", "B"))
+dual_dc_area.plt <- ggarrange(dual_dc.plt, dual_corr_area.plt3, ncol = 2, nrow = 1, align = "hv", common.legend = T, labels = c("C", "D"))
 
 ggarrange(si_dc_area.plt, dual_dc_area.plt, nrow = 2, align = "v")
 
