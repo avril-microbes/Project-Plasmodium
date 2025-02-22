@@ -137,7 +137,7 @@ si_dyn <- mclapply(si_opt.ls, get_si_dyn, mc.cores = 8)
 si_dyn.df <- do.call(rbind, si_dyn)
 
 ## save
-# write_parquet(si_dyn.df, here("code_repository/data/si_dyn.parquet"))
+write_parquet(si_dyn.df, here("code_repository/data/si_dyn.parquet"))
 ```
 
 ## get 30 day simulation data (not used for fitness but for plotting purposes)
@@ -250,7 +250,7 @@ get_si_rn <- function(df){
   ## get cue range
   cue_range <- seq(df$low, df$high, by = df$by)
   ## nested function to convert parameter set into basis spline function
-  rn <- par_to_df(par = par, cue_range = cue_range)
+  rn <- par_to_df(par = par, cue_range = cue_range, max = df$high)
   
   # if parasite is sensing logged cue, we have to exponentiate it back so they are on the same scale! 
   rn2 <- rn
@@ -328,7 +328,7 @@ fitness_rn.plt <- ggplot() +
    geom_rug(data = si_rug_cue.df_none, aes(x = value), color = "black", sides = "t", length = unit(0.1, "npc")) +
   geom_rug(data = si_rug_cue.df_log, aes(x = value), color = "#D41159", sides = "b", length = unit(0.1, "npc")) +
   facet_wrap(~cue_label, scales = "free_x", ncol = 1) +
-  labs(x = "Cue range", y = "Transmission investment", color = "Cue status", shape = "Cue status") +
+  labs(x = "Cue range", y = "Transmission investment", color = "Cue", shape = "Cue") +
   ylim(0, 1) +
   scale_color_manual(values=c("#D41159", "black")) +
   scale_x_continuous(labels = function(x) format(x, scientific = T),
@@ -342,8 +342,8 @@ fitness_rn.plt <- ggplot() +
 
 #------------ Plotting fitness, dynamics, and rn together ------------#
 ```{r}
-ggarrange(fitness_rank_cr.plt, fitness_rn.plt, widths = c(2.7, 1), align = "h", ncol = 2, labels = c("A", "B"))
-ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("code_repository/figures/fitness_rn.tiff"), bg = "white", scale = 1.25)
+ggarrange(fitness_rank_cr.plt, fitness_rn.plt, widths = c(2.3, 1), align = "h", ncol = 2, nrow = 1, labels = c("A", "B"))
+ggsave(units = "px", dpi = 300, width = 2250/1.25, height = 1700/1.25, filename = here("code_repository/figures/fitness_rn.tiff"), bg = "white", scale = 1.25, compression = "lzw")
 ```
 
 #=================================#
@@ -633,7 +633,7 @@ ggplot(data = dual_cue_cr.df, aes(x = time, y = fct_reorder(label_comb, fitness)
   labs(x = "Time (days)", y = "Dual cue combination", fill = "Transmission\ninvestment") +
   theme_classic()
 
-ggsave(here("code_repository/figures/dual_cue_cr.tiff"), units = "px", width = 2000, height = 1500, dpi=300,  bg = "white")
+ggsave(here("code_repository/figures/dual_cue_cr.tiff"), units = "px", width = 2000, height = 1500, dpi=300,  bg = "white", compression = "lzw")
 ```
 
 #=================================#
@@ -678,7 +678,7 @@ ggplot() +
   theme(legend.position="right") +
   guides(color = guide_legend(nrow = 4, byrow = TRUE))
 
-ggsave(here("code_repository/figures/dual_taucum.tiff"), units = "px", width = 1600, height = 1000, dpi=300,  bg = "white", scale = 1.2)
+ggsave(here("code_repository/figures/dual_taucum.tiff"), units = "px", width = 1600, height = 1000, dpi=300,  bg = "white", scale = 1.2, compression = "lzw")
 
 ```
 
@@ -897,7 +897,7 @@ exp_xlogylog.pl_ls <- map2(exp_var.comb$x, exp_var.comb$y, ~ {
 ## plot together
 ggarrange(plotlist = c(exp_xy.pl_ls, exp_xlogy.pl_ls, exp_xylog.pl_ls, exp_xlogylog.pl_ls), 
           common.legend = T, align = "hv")
-ggsave(here("code_repository/figures/exp_disease-curve.tiff"), units = "px", width = 2250, height = 1500, scale = 1.4, dpi=300,  bg = "white")
+ggsave(here("code_repository/figures/exp_disease-curve.tiff"), units = "px", width = 2250, height = 1500, scale = 1.4, dpi=300,  bg = "white", compress = "lzw")
 ```
 
 #=================================#
@@ -1015,12 +1015,12 @@ cue_cue_rn_pl.ls <- lapply(dual_cue_rn.ls,
            #scale_x_continuous(labels = label_scientific(digits = 2),breaks= breaks_pretty(3)) +
            #scale_y_continuous(labels = label_scientific(digits = 2),breaks= breaks_pretty(2)) 
            scale_x_continuous(breaks= breaks_pretty(3)) +
-           scale_y_continuous(breaks= breaks_pretty(3)) d
+           scale_y_continuous(breaks= breaks_pretty(3)) 
        })
 
 ## arrange together
 cue_cue_rn.pl <- ggarrange(plotlist = cue_cue_rn_pl.ls, ncol = 4, nrow = 10, common.legend = T, align = "hv") 
-ggsave(here("code_repository/figures/sim_disease-curve.tiff"), units = "px", width = 2250, height = 2625, scale = 1.5, dpi=300,  bg = "white")
+ggsave(here("code_repository/figures/sim_disease-curve.tiff"), units = "px", width = 2250, height = 3000, scale = 1.5, dpi=300,  bg = "white", compression = "lzw")
 ```
 
 #=================================#
@@ -1352,7 +1352,7 @@ posterior_2.pl <- ggplot(posterior.long %>% filter(parameter %in% c("phi_N1", "p
 ggarrange(posterior_1.pl, posterior_2.pl, ncol = 1, align = "hv")
   
 ## save
-ggsave(units = "px", dpi = 300, width = 2000, height = 1300, filename = here("code_repository/figures/posterior.tiff"), bg = "white", scale = 1)
+ggsave(units = "px", dpi = 300, width = 2000, height = 1300, filename = here("code_repository/figures/posterior.tiff"), bg = "white", scale = 1, compression = "lzw")
 ```
 
 #==========================================#
@@ -1448,7 +1448,7 @@ for(i in seq(1,6,1)){
 ## arrange together
 ggarrange(plotlist = mc_single_plt.ls, common.legend = T, ncol = 3, nrow = 2, align = "hv")
 
-ggsave(units = "px", dpi = 300, width = 2500, height = 2000, filename = here("code_repository/figures/mc_single_fitness.tiff"), bg = "white", scale = 1)
+ggsave(units = "px", dpi = 300, width = 2500, height = 2000, filename = here("code_repository/figures/mc_single_fitness.tiff"), bg = "white", scale = 1,compression = "lzw")
 ```
 
 #==================================#
@@ -1906,7 +1906,7 @@ ggplot(validation.df_p) +
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()) 
 
-ggsave(units = "px", dpi = 300, width = 2550, height = 1500, filename = here("code_repository/figures/si_validation.tiff"), bg = "white", scale = 1)
+ggsave(units = "px", dpi = 300, width = 2550, height = 1500, filename = here("code_repository/figures/si_validation.tiff"), bg = "white", scale = 1,compression = "lzw")
 ```
 
 
