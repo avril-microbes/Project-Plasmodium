@@ -61,7 +61,8 @@ si_rug.df <- read_parquet(here("code_repository/data/si_rug.parquet")) ## data f
 mc_all_fitness.df <- read_parquet(here("code_repository/data/mc_all_fitness.parquet")) ## fitness values for mc when all parameters are varying
 mc_single_fitness.df <- read_parquet(here("code_repository/data/mc_single_fitness.parquet")) ## fitness values for mc when only one parameter is varying
 dual_cue_f_lc.df <- read.csv(here("code_repository/data/dual_cue_fitness_local.csv")) ## optimized dual cue strategy using L-BFGS-B
-dual_cue_f_glb.df <- read.csv(here("code_repository/data/dual_cue_fitness_global.csv")) ## optimized dual cue strategy using DEoptim + L-BFG
+dual_cue_f_glb.df <- read.csv(here("code_repository/data/dual_cue_fitness_global.csv")) ## optimized dual cue strategy using DEoptim + L-BFG-B
+dual_cue_f_init.df <- read.csv(here("code_repository/data/dual_cue_fitness_init.csv")) ## optimized dual cue strategy using optimized initial starting point + L-BFGS-B
 dual_cue_f_final.df <- read.csv(here("code_repository/data/dual_cue_fitness_final.csv")) ## final dataframe containing strategy that produced highest fitness (dual cue models)
 dual_selected_cr.df <- read_parquet(here("code_repository/data/dual_selected_cr.parquet")) ## cr dynamics of selected models
 cue_range_si_alt.df <- read.csv(here("code_repository/data/cue_range_si_alt.csv")) ## cue ranges for dual cue models
@@ -261,6 +262,7 @@ get_si_rn <- function(df){
   
   return(rn2)
 }
+
 ```
 
 ## run function to get reaction norms
@@ -353,31 +355,93 @@ ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("co
 ## Prepare dual cue dataset
 ```{r}
 ## For the dual cue models, we optimized each cue combinations in 2 ways, one with L-BFGS-B with 0.5X9 starting point and another with DEoptim + L-FGBS-B. For each cue combination, we are going to pick the strategy that gave us the higher fitness
-dual_cue_f_final.df <- dual_cue_f_glb.df %>% 
-  select(id, id_b, label, label_b, fitness_glb = fitness, 
+dual_cue_f_final.df <- dual_cue_f_init.df %>% 
+  select(id, id_b, label, label_b, fitness_init = fitness, 
+         par1_init = par1, par2_init = par2, par3_init = par3, par4_init = par4, par5_init = par5, par6_init = par6,
+         par7_init = par7, par8_init = par8, par9_init = par9) %>% 
+  left_join(
+  select(dual_cue_f_glb.df, id, id_b, label, label_b, fitness_glb = fitness, 
          par1_glb = par1, par2_glb = par2, par3_glb = par3, par4_glb = par4, par5_glb = par5, par6_glb = par6,
-         par7_glb = par7, par8_glb = par8, par9_glb = par9) %>% 
+         par7_glb = par7, par8_glb = par8, par9_glb = par9)) %>% 
   left_join(
     select(dual_cue_f_lc.df,
          id, id_b, fitness_lc = fitness, 
          par1_lc = par1, par2_lc = par2, par3_lc = par3, par4_lc = par4, par5_lc = par5, par6_lc = par6,
          par7_lc = par7, par8_lc = par8, par9_lc = par9), by = c("id", "id_b")
-  ) %>% ## rename columns and join global and local optimization fitness dataframes
+  ) %>% ## rename columns and join global and local optimization fitness dataframe
+  group_by(id, id_b) %>% 
   mutate(
-    fitness = ifelse(fitness_glb > fitness_lc, fitness_glb, fitness_lc),
-    par1 = ifelse(fitness_glb > fitness_lc, par1_glb, par1_lc),
-    par2 = ifelse(fitness_glb > fitness_lc, par2_glb, par2_lc),
-    par3 = ifelse(fitness_glb > fitness_lc, par3_glb, par3_lc),
-    par4 = ifelse(fitness_glb > fitness_lc, par4_glb, par4_lc),
-    par5 = ifelse(fitness_glb > fitness_lc, par5_glb, par5_lc),
-    par6 = ifelse(fitness_glb > fitness_lc, par6_glb, par6_lc),
-    par7 = ifelse(fitness_glb > fitness_lc, par7_glb, par7_lc),
-    par8 = ifelse(fitness_glb > fitness_lc, par8_glb, par8_lc),
-    par9 = ifelse(fitness_glb > fitness_lc, par9_glb, par9_lc)
+    fitness = max(fitness_glb, fitness_lc, fitness_init),
+    algo = case_when(
+      fitness_glb == fitness ~ "glb",
+      fitness_lc == fitness ~ "lc",
+      fitness_init == fitness ~ "init"
+    ),
+    par1 = case_when(algo == "glb" ~ par1_glb, algo == "lc" ~ par1_lc, algo == "init" ~ par1_init),
+    par2 = case_when(algo == "glb" ~ par2_glb, algo == "lc" ~ par2_lc, algo == "init" ~ par2_init),
+    par3 = case_when(algo == "glb" ~ par3_glb, algo == "lc" ~ par3_lc, algo == "init" ~ par3_init),
+    par4 = case_when(algo == "glb" ~ par4_glb, algo == "lc" ~ par4_lc, algo == "init" ~ par4_init),
+    par5 = case_when(algo == "glb" ~ par5_glb, algo == "lc" ~ par5_lc, algo == "init" ~ par5_init),
+    par6 = case_when(algo == "glb" ~ par6_glb, algo == "lc" ~ par6_lc, algo == "init" ~ par6_init),
+    par7 = case_when(algo == "glb" ~ par7_glb, algo == "lc" ~ par7_lc, algo == "init" ~ par7_init),
+    par8 = case_when(algo == "glb" ~ par8_glb, algo == "lc" ~ par8_lc, algo == "init" ~ par8_init),
+    par9 = case_when(algo == "glb" ~ par9_glb, algo == "lc" ~ par9_lc, algo == "init" ~ par9_init)
   ) ## the columns are assigned based on which strategy produced the highest fitness
+```
+
+# rerunning dual cue simulations to match single cue time step
+```{r}
+# function to rerun dual cue simulation
+get_dual_fitness <- function(df){
+  ## processing model input
+  par <- c(df$par1, df$par2, df$par3, df$par4, df$par5,df$par6,df$par7, df$par8, df$par9)## parameters
+  cue <- df$cue ## cue choice
+  cue_b <- df$cue_b
+  log <- ifelse(str_detect("log", df$log), "log10", "none")
+  log_b <- ifelse(str_detect("log", df$log_b), "log10", "none")
+  cue_range <- seq(df$low, df$high, length.out = 500) ## cue range
+  cue_range_b <- seq(df$low_b, df$high_b, length.out = 500)
+  id <- df$id ## id
+  id_b <- df$id_b ## id
+  
+  ## get dynamics data
+  fitness <- chabaudi_si_clean(
+            parameters_cr = par, 
+            parameters = parameters_tsukushi, 
+            time_range = seq(0, 20, 0.001),
+            immunity = "tsukushi",
+    cue = cue,
+    cue_b = cue_b,
+    cue_range = cue_range,
+    cue_range_b = cue_range_b,
+    log_cue = log,
+    log_cue_b = log_b,
+    solver = "vode",
+    gam = "te")
+  
+  # append id
+  res <- cbind.data.frame(id = id, id_b = id_b, fitness_0.001 = fitness)
+  
+  # return results
+ return(res)
+}
+
+# get running parameters
+dual_cue_f_final.df2 <- dual_cue_f_final.df %>% 
+  left_join(select(dual_cue.df3, id, id_b, cue, cue_b, log, log_b, low, low_b, high, high_b), by = c("id", "id_b"))
+
+# split and run
+dual_cue_f_final_df2.ls <-split(dual_cue_f_final.df2 , seq(nrow(dual_cue_f_final.df2)))
+dual_cue_rerun_fitness <- mclapply(dual_cue_f_final_df2.ls, get_dual_fitness, mc.cores = 8)
+
+# concatenate
+dual_cue_rerun_fitness.df <- do.call(rbind, dual_cue_rerun_fitness)
+
+# join back
+dual_cue_f_final.df3 <- left_join(dual_cue_f_final.df, dual_cue_rerun_fitness.df, by = c("id", "id_b"))
 
 ## write csv
-write.csv(dual_cue_f_final.df, here("code_repository/data/dual_cue_fitness_final.csv"))
+write.csv(dual_cue_f_final.df3, here("code_repository/data/dual_cue_fitness_final.csv"))
 ```
 
 ## Combine single cue and dual cue dataset
@@ -385,17 +449,23 @@ write.csv(dual_cue_f_final.df, here("code_repository/data/dual_cue_fitness_final
 dual_cue_f_final.df <- read.csv(here("code_repository/data/dual_cue_fitness_final.csv"))
 
 dual_si_fitness.df <- dual_cue_f_final.df %>% 
-  select(id, id_b, label, label_b, fitness_dual = fitness) %>% 
+  select(id, id_b, label, label_b, fitness_dual = fitness_0.001) %>% 
   left_join(select(si_opt.df, id, fitness_si = fitness_20), by = "id") %>% ## get fitness of single cue model based on first cue
   left_join(select(si_opt.df, id_b = id, fitness_si_b = fitness_20), by = "id_b") %>%  ## get fitness of single cue model based on second cue
   mutate(fitness_si_final = ifelse(fitness_si > fitness_si_b, fitness_si, fitness_si_b)/9.883602,
          label_comb = gsub("I\\+Ig", "Total I", paste(label, "&", label_b)), ## select the highest single cue model fitness
-         fitness_dual_norm = fitness_dual/9.883602)## normalize by time fitness
+         fitness_dual_norm = fitness_dual/9.883602) 
+
+# write csv
+write.csv(dual_si_fitness.df, here("code_repository/data/dual_cue_si_fitness_final.csv"))
+
+# filter to keep only cues with only 2 logs
+dual_si_fitness.df_f <-dual_si_fitness.df %>% filter(str_detect(id, "log") & str_detect(id_b, "log")) ## keep only cues that have two logs
 ```
 
 ## plot fitness rank
 ```{r}
-dual_fitness.pl <- ggplot(dual_si_fitness.df) +
+dual_fitness.pl <- ggplot(dual_si_fitness.df_f) +
   geom_segment(aes(y = fct_reorder(label_comb, fitness_dual_norm), yend = fct_reorder(label_comb, fitness_dual), x = fitness_dual_norm, xend = fitness_si_final)) + ## line segment connecting the cue values
   geom_point(aes(y = fct_reorder(label_comb, fitness_dual), x = fitness_dual_norm, color = "Dual cue", shape = "Dual cue"),
              size = 2.5) + ## dual cue fitness

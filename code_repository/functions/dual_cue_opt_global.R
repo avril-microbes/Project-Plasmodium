@@ -1,6 +1,6 @@
 # function to perform differential evolution optimziation (global optimization) of the dual-cue model
 
-dual_cue_opt_global <- function(df, itermax = 500, steptol = 50){
+dual_cue_opt_global <- function(df, itermax = 500, steptol = 50, initialpop = NULL){
   # process cues
   cue <- df$cue
   cue_b <- df$cue_b
@@ -18,13 +18,13 @@ dual_cue_opt_global <- function(df, itermax = 500, steptol = 50){
   global <- DEoptim::DEoptim(
     fn = chabaudi_si_clean, 
     control = list(trace = 1, parallelType = "parallel", itermax = itermax,
-                    NP = 90, F = 0.8, CR = 0.9,
+                    NP = 90, F = 0.8, CR = 0.9, initialpop = initialpop,
                    packages = c("crone", "splines2", "mgcv", "deSolve", "tidyr", "stringr", "dplyr")), # NP, F, CR values set according to rec by storn et al 2006
     lower = c(-10, -500, -1000, -1000, -250, -500, -1000, -500, -250), # lower and upper bound values are derived empirically based on spline space
     upper = c(10, 500, 1000, 1000, 250, 500, 1000, 500, 250),
     immunity = "tsukushi",
     parameters = parameters_tsukushi,
-    time_range = seq(0, 20, 0.05), # this is the largest time step we can do without convergence issues
+    time_range = seq(0, 20, 0.04), # this is the largest time step we can do without convergence issues
     cue = cue,
     cue_b = cue_b,
     cue_range = cue_range,
