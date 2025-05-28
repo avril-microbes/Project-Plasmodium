@@ -43,6 +43,7 @@ source(here("code_repository/functions/chabaudi_si_static.R"))
 source(here("code_repository/functions/dual_cue_opt.R"))
 source(here("code_repository/functions/dual_cue_opt_global.R"))
 source(here("code_repository/functions/dual_to_si.R"))
+source(here("code_repository/functions/dual_to_si_glb.R"))
 source(here("code_repository/functions/dual_cue_opt_2.R"))
 
 # for semi-stochastic single infection model
@@ -317,7 +318,8 @@ si_val.df %>% group_by(id) %>% summarise(max_fitness = max(V1)) %>%
   mutate(difference = fitness_20 - max_fitness)
 ```
 
-# Dual cue optimization
+# Dual cue optimization (round 1)
+This uses the L-BFGS-B optimization with a single starting point at (0.5*9)
 ```{r}
 # import in single infection optimization dataframe
 si_opt.csv <- read.csv(here("code_repository/data/si_opt.csv"))
@@ -342,13 +344,9 @@ dual_cue.ls <- split(dual_cue.df2, seq(nrow(dual_cue.df2)))
 
 # run optimization (local)
 lapply(dual_cue.ls, dual_cue_opt)
-
-# run optimization (global)
-source(here("code_repository/functions/dual_cue_opt_global.R"))
-lapply(dual_cue.ls, dual_cue_opt_global)
 ```
 
-# dual cue optimization round 3
+# dual cue optimization round 2
 For some of the cues, we noticed that the dual cue fitness is lower than that of the single cues,  indicating that the optimization is likely not successful. Here, we will perform optimization by finding a starting point that most resemble that of the best single cue, followed by a local optimization.
 ```{r}
 # for dual cues, join with single cue results
@@ -362,15 +360,9 @@ dual_cue.df3 <- dual_cue.df2 %>%
 dual_cue.ls3 <- split(dual_cue.df3, seq(nrow(dual_cue.df3)))
 
 # get good parameter initiation
-source(here("code_repository/functions/dual_to_si_glb.R"))
 dual_cue_init <- lapply(dual_cue.ls3, dual_to_si)
 dual_cue_init.df <- do.call(rbind, dual_cue_init)
 write.csv(dual_cue_init.df, here("code_repository/data/dual_cue_init.csv"))
-
-df <- dual_cue.ls3[[1]]
-
-
-dual_cue_init_glb <- lapply(dual_cue.ls3, dual_to_si_glb)
 
 # split dataset
 dual_cue_init.ls <- split(dual_cue_init.df, seq(nrow(dual_cue_init.df)))
@@ -384,43 +376,17 @@ write.csv(dual_cue_f_init.df, here("code_repository/data/dual_cue_fitness_init.c
 ```
 
 # Reoptimization of Rlog + Iglog
-This set gives us a lower fitness when compared to Ig log alone, indicating issues with optimization. Here, I will use global optimization, where one of the starting population has the initial parameter optimized to resemble Ig log (see round 3 for more details)
+This set gives us a lower fitness when compared to Ig log alone, indicating issues with optimization. Here, I will use the parameter sets from other Ig_log based cues as a starting point (R and Ig log used here).
 
 ```{r}
-dual_cue.ls3[[6]]
-dual_to_si(dual_cue.ls3[[6]] %>% mutate(fitness_si_b = 0))
-```
-
-```{r}
-source(here("code_repository/functions/dual_cue_opt_global.R"))
-
-
-# creating starting population matrix. Here,  we are sampling 89 (total population -1) random strategies from our defined parameter bounds in the dual cue optimization model!
-set.seed(137)
-rlog_iglog_init_pop <- rbind(cbind(
-  sample(-10:10,89, replace=T),
-  sample(-500:500,89, replace=T),
-  sample(-1000:1000,89, replace=T),
-  sample(-1000:1000,89, replace=T),
-  sample(-250:250,89, replace=T),
-  sample(-500:500,89, replace=T),
-  sample(-1000:1000,89, replace=T),
-  sample(-500:500,89, replace=T),
-  sample(-250:250,89, replace=T)
-  ),
-  c(0.001375478,	-1.33821661,	1.642795646	,1.885708906,	-2.724031203,	1.315704257	,1.876724443,	-1.132578883,	1.147012481 ## adding best parameter set
-))
-
-rlog_iglog_init_pop <- matrix(rep(t(c(0.001375478,	-1.33821661,	1.642795646	,1.885708906,	-2.724031203,	1.315704257	,1.876724443,	-1.132578883,	1.147012481)),90),ncol=9,byrow=TRUE)
-
-rlog_iglog_init_pop
-# run dual cue optimization
-dual_cue_opt_global(dual_cue.ls[[29]])
-
-dual_cue.ls[[29]]
-chabaudi_si_clean(
-            parameters_cr =rep(0.5,9), 
-            parameters = parameters_tsukushi, 
+# 9.662295
+# -6.889935 -10.052091  -6.647632   6.031720  -9.350555  20.779012   9.112599   7.429790   5.322424
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+rlog_iglog.reopt <- optimParallel(
+    par = c(-6.799269238,	-10.85493663,	-6.643303026,	5.640972734,	-7.252876616,	20.73928567,	9.61107803,	10.24408531,	-0.418108794),
+    fn = chabaudi_si_clean, 
+    control = list(trace = 6, fnscale = -1),
+    parameters = parameters_tsukushi, 
             time_range = seq(0, 20, 0.04),
             immunity = "tsukushi",
     cue = "R",
@@ -431,7 +397,28 @@ chabaudi_si_clean(
     log_cue_b = "log10",
     solver = "vode",
     gam = "te")
+stopCluster(cl)
 
+# reoptimize with proper time step
+## -6.889859 -10.052097  -6.647900   6.032022  -9.350612  20.779112   9.113192 7.429304   5.322353
+## 9.655237
+cl <- makeCluster(detectCores()); setDefaultCluster(cl = cl)
+rlog_iglog.reopt2 <- optimParallel(
+    par = c(-6.889935 ,-10.052091,  -6.647632 ,  6.031720 , -9.350555,  20.779012,   9.112599 ,  7.429790,   5.322424),
+    fn = chabaudi_si_clean, 
+    control = list(trace = 6, fnscale = -1),
+    parameters = parameters_tsukushi, 
+            time_range = seq(0, 20, 0.01),
+            immunity = "tsukushi",
+    cue = "R",
+    cue_b = "Ig",
+    cue_range = seq(6, 7, length.out = 500),
+    cue_range_b = seq(0, 6.778151, length.out = 500),
+    log_cue = "log10",
+    log_cue_b = "log10",
+    solver = "vode",
+    gam = "te")
+stopCluster(cl)
 ```
 
 
@@ -582,9 +569,9 @@ exp_ss_R.df <- exp_ss_dose.df %>% filter(strain != "AJ51")
 ```
 
 # Semi-stochastic single infection model
-Here, we are going to perform 5000 Monte Carlo simulations where the parasite is adopting the optimal single infection strategy with all six random variables. For each run, the values of these random variables is drawn from the posterior distribution of the variables. Thus, while the variable value remains constant through out the simulation, each run will likely have a different set of parameters describing host immunity, parasite burst size, and RBC regeneration speed. To partition the contribution of each random variable to the overall effect on infection outcomes, we will perform Monte Carlo simulations where only one random variable is present during each run. 
+Here, we are going to perform 1000 Monte Carlo simulations where the parasite is adopting the optimal single infection strategy with all six random variables. For each run, the values of these random variables is drawn from the posterior distribution of the variables. Thus, while the variable value remains constant through out the simulation, each run will likely have a different set of parameters describing host immunity, parasite burst size, and RBC regeneration speed. To partition the contribution of each random variable to the overall effect on infection outcomes, we will perform Monte Carlo simulations where only one random variable is present during each run. 
 
-### All six parameters vary
+### All six parameters vary (single cue model)
 ```{r}
 # import in posterior distribution. Note that id = 1 is the reference!
 posterior <- utils::read.csv(here("code_repository/data/posterior.csv"))
@@ -687,54 +674,45 @@ mc_R_log.res <- mclapply(posterior.ls, function(x){
                     log= "log10",
          rand_df = x)},
   mc.cores = 8)
+```
 
-# I log and R log (dual cue model)
-mc_R_log_I_log.res <- mclapply(posterior.ls, function(x){
-  mc_all_dual(par = c(4.446192033,	10.97518275,	1.38762817,	23.3059254,	-3.452052371,	-18.0070692	,39.66614226,	-3.545193141,	18.78350799),
-                    cue = "R",
-         cue_b = "I",
-                    cue_range = seq(log10(10^6), log10(10^7), length.out = 500),
-         cue_range_b = seq(0, log10(6*(10^6)), length.out = 500),
-                    log= "log10",
-                    log_b = "log10",
+### all six parameter vary (dual cue model)
+```{r}
+## wrapper to run across all dual cue models
+run_mc_all_dual <- function(df){
+  ## processing model input
+  par <- c(df$par1, df$par2, df$par3, df$par4, df$par5,df$par6,df$par7, df$par8, df$par9)## parameters
+  cue <- df$cue ## cue choice
+  cue_b <- df$cue_b
+  log <- ifelse(str_detect("log", df$log), "log10", "none")
+  log_b <- ifelse(str_detect("log", df$log_b), "log10", "none")
+  cue_range <- seq(df$low, df$high, length.out = 500) ## cue range
+  cue_range_b <- seq(df$low_b, df$high_b, length.out = 500)
+  id <- df$id ## id
+  id_b <- df$id_b ## id
+  
+  ## get dynamics data
+  res <- mclapply(posterior.ls, function(x){
+  mc_all_dual(par = par,
+              cue = cue,
+              cue_b = cue_b,
+              cue_range = cue_range,
+              cue_range_b = cue_range_b,
+              log= log,
+              log_b = log_b,
          rand_df = x)},
   mc.cores = 8)
+}
 
-# R and I log
-mc_R_I_log.res <- mclapply(posterior.ls[1201:length(posterior.ls)], function(x){
-  mc_all_dual(par = c(-9.518084898,	-439.4342135,	85.99834201,	118.6093975,	-244.108158,	33.24560006,	-30.89681964,	-24.84888061,	-88.60274223),
-                    cue = "R",
-         cue_b = "I",
-                    cue_range = seq((10^6), (10^7), length.out = 500),
-         cue_range_b = seq(0, log10(6*(10^6)), length.out = 500),
-                    log= "none",
-                    log_b = "log10",
-         rand_df = x)},
-  mc.cores = 8)
+# run across all
+source(here("code_repository/functions/mc_all_dual.R"))
+lapply(dual_cue_f_final_df2.ls, run_mc_all_dual)
 
-# R and I+Ig log
-mc_R_I_Ig_log.res <- mclapply(posterior.ls, function(x){
-  mc_all_dual(par = c(-0.123534059,	10.41243862,	-16.13098789,	28.09607529,	-12.49060926,	12.77524469,	36.77045332,	7.011182218,	6.680916699),
-                    cue = "R",
-         cue_b = "I+Ig",
-                    cue_range = seq((10^6), (10^7), length.out = 500),
-         cue_range_b = seq(0, log10(6*(10^6)), length.out = 500),
-                    log= "none",
-                    log_b = "log10",
-         rand_df = x)},
-  mc.cores = 8)
+posterior.df
+```
 
-# R log and I+Ig log
-mc_R_log_I_Ig_log.res <- mclapply(posterior.ls, function(x){
-  mc_all_dual(par = c(-7.687311702,	-497.7126667,	-1003.526906,	47.78563659,	-248.7360112,	-181.9755341,	27.71388409,	-22.55271948,	-52.13198563),
-                    cue = "R",
-         cue_b = "I+Ig",
-                    cue_range = seq(log10(10^6), log10(10^7), length.out = 500),
-         cue_range_b = seq(0, log10(6*(10^6)), length.out = 500),
-                    log= "log10",
-                    log_b = "log10",
-         rand_df = x)},
-  mc.cores = 8)
+```{r}
+
 ```
 
 ### Only one parameter vary

@@ -90,6 +90,63 @@ source(here("code_repository/functions/chabaudi_si_static.R"))
 orange <- "#fc8d59"
 blue <- "#4575b4"
 ```
+#=================================#
+Illustrating spline optimization
+#=================================#
+# function to extract basis spline and plot
+```{r}
+plot_basis_spline <- function(par){
+  # build dummy basis spline model
+  dummy_cr.mod <- lm(rep(0, 101)  ~ splines2::bSpline(x = seq(0,100,1), degree = 3))
+  
+  # assign parameters
+  dummy_cr.mod$coefficients <- par
+  
+  # get fit
+  cr_fit <- predict(dummy_cr.mod, newdata = data.frame(seq(0,100,1)))
+  
+  # get basis spline database
+  mod_bs <- dummy_cr.mod$model$`splines2::bSpline(x = seq(0, 100, 1), degree = 3)` %>% as.data.frame()
+  
+  # combine database
+  max <- max(mod_bs$`1`,mod_bs$`2`,mod_bs$`3`, cr_fit,na.rm = T)
+  mod_bs.p <- mod_bs %>% 
+    mutate(
+      cue_range = seq(0,100,1),
+      first_spline = ((`1`*par[2])+par[1])/max,
+       second_spline = ((`2`*par[3])+par[1])/max,
+       third_spline = ((`3`*par[4])+par[1])/max,
+      fit = cr_fit/max
+           )
+  
+  # plot
+  ggplot(mod_bs.p) +
+    geom_line(aes(x = cue_range, y = fit), color = "Black") +
+    geom_line(aes(x = cue_range, y = first_spline, color = "Spline 1"), linetype = "dashed") +
+    geom_line(aes(x = cue_range, y = second_spline, color = "Spline 2"), linetype = "dashed") +
+    geom_line(aes(x = cue_range, y = third_spline, color = "Spline 3"), linetype = "dashed") +
+    theme_bw() +
+    labs(x = "Cue range", y = "Transmission investment", color = "Legend") +
+    theme(
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+}
+```
+
+# plot for multiple parameters
+```{r}
+bspline.pl1 <- plot_basis_spline(c(0,0.5,0.5,0.5))
+bspline.pl2 <- plot_basis_spline(c(0, 2, 6, 5))
+bspline.pl3 <- plot_basis_spline(c(0 , 0, 20 , 10))
+
+# plot together
+ggarrange(bspline.pl1, bspline.pl2, bspline.pl3, common.legend = T, ncol = 3, legend = "right")
+ggsave(units = "px", dpi = 300, width = 2250, height = 600, filename = here("code_repository/figures/reaction_norm_opt.tiff"), bg = "white")
+```
+
 
 #=================================#
 # Cue perception mediates fitness
@@ -295,7 +352,8 @@ si_rn.df_p <- si_rn.df %>%
   left_join(select(si_opt.df, id, cue, log), by = "id") %>% ## get cue and log status from si_opt.df
   left_join(si_rug_lim.df, by = "cue") %>% ## via cue, get ranges we want to limit the rn to
   filter(cue_range <= max & cue_range >= min) %>% ## keep only cue values within range
-  left_join(select(ez_label, id, cue_label), by = "id") # get labels
+  left_join(select(ez_label, id, cue_label), by = "id") %>% # get labels
+  mutate(log2 = ifelse(log == "log", "log", "raw"))
 
 
 ## refactor to reorder the order at which the cues are presented
@@ -321,20 +379,14 @@ si_rug_cue.df_log <- si_rug_cue.df %>% filter(log == "log")
 ```{r}
 ## note that geom_point contains a set of scripts aimed at thinning the data points so they do not overcrowd!
 fitness_rn.plt <- ggplot() +
-  geom_line(data = si_rn.df_p, aes(x = cue_range, y = cr, color = log)) +
-  geom_point(data = si_rn.df_p %>% 
-  mutate(rel_cue = round(cue_range/(max-min)*100)) %>% 
-    distinct(id, rel_cue, .keep_all = T) %>% 
-    filter(rel_cue %% 10 ==1),
-             aes(x = cue_range, y = cr, color = log, shape = log), size = 2) +
-   geom_rug(data = si_rug_cue.df_none, aes(x = value), color = "black", sides = "t", length = unit(0.1, "npc")) +
-  geom_rug(data = si_rug_cue.df_log, aes(x = value), color = "#D41159", sides = "b", length = unit(0.1, "npc")) +
+  geom_line(data = si_rn.df_p, aes(x = log10(cue_range), y = cr, color = log2, linetype = log2)) +
+   geom_rug(data = si_rug_cue.df_none%>% filter(value>1), aes(x = log10(value)), color = "black", sides = "t", length = unit(0.1, "npc")) +
+  geom_rug(data = si_rug_cue.df_log%>% filter(value>1), aes(x = log10(value)), color = "#D41159", sides = "b", length = unit(0.1, "npc")) +
   facet_wrap(~cue_label, scales = "free_x", ncol = 1) +
-  labs(x = "Cue range", y = "Transmission investment", color = "Cue status", shape = "Cue status") +
-  ylim(0, 1) +
+  labs(x = "log10(Cue range)", y = "Transmission investment", color = "Cue status", shape = "Cue status", linetype = "Cue status") +
+  ylim(-0.2, 1) +
   scale_color_manual(values=c("#D41159", "black")) +
-  scale_x_continuous(labels = function(x) format(x, scientific = T),
-                     guide = guide_axis(check.overlap = TRUE)) + 
+  scale_x_continuous(guide = guide_axis(check.overlap = TRUE)) + 
   theme_bw() +
   theme(axis.text.x = element_text(size = 8), legend.position = "bottom",
         
@@ -483,7 +535,7 @@ Note that our dual cue models take 9 parameters. To ensure that any difference  
 ```{r}
 ## best dual cue model: I log and R log
 Rlog_Ilog.cr <- chabaudi_si_clean(
-  parameters_cr = c(4.446192033,	10.97518275,	1.38762817,	23.3059254,	-3.452052371,	-18.0070692,	39.66614226,	-3.545193141,	18.78350799),
+  parameters_cr = c(6.875066649,	1.746121145,	0.678992033,	25.27235333,	-29.39793239,	-15.10449299,	43.5303092,	-7.664658261,	11.64534955),
   immunity = "tsukushi",
   parameters = parameters_tsukushi,
   time_range = seq(0, 20, by = 1e-3),
@@ -566,7 +618,7 @@ dual_selected_cr.pl <- ggplot() +
 # Process data
 ```{r}
 # make heatmap data.frame
-Rlog_Ilog.hm <- par_to_hm_te(par = c(4.446192033,	10.97518275,	1.38762817,	23.3059254,	-3.452052371,	-18.0070692,	39.66614226,	-3.545193141,	18.78350799),
+Rlog_Ilog.hm <- par_to_hm_te(par = c(6.875066649,	1.746121145,	0.678992033,	25.27235333,	-29.39793239,	-15.10449299,	43.5303092,	-7.664658261,	11.64534955),
              cue_range = seq(6,	7, length.out = 500),
              cue_range_b = seq(0,	6.77815125, length.out = 500))
 
@@ -598,7 +650,7 @@ dual_main.BC <- ggarrange(dual_selected_cr.pl, Rlog_Ilog_rn.pl, align = "v", nco
 
 # assemble panel A
 ggarrange(dual_fitness.pl, dual_main.BC, ncol = 2, labels = c("A", ""), widths = c(1.1,1))
-ggsave(here("code_repository/figures/dual_main_intermediate.tiff"), units = "px", width = 2250, height = 1400, scale = 1.3, dpi=300,  bg = "white")
+ggsave(here("code_repository/figures/dual_main_intermediate.tiff"), units = "px", width = 2250, height = 1400, scale = 1.1, dpi=300,  bg = "white")
 ```
 
 #=================================#
@@ -681,7 +733,7 @@ write_parquet(dual_cue_dyn_30.df, here("code_repository/data/dual_cue_dyn_30.par
 ```{r}
 ## filter out only conversion rate and attach fitness values
 dual_cue_cr.df <- dual_cue_dyn.df %>% 
-  filter(variable == "cr") %>% 
+  filter(variable == "cr" & str_detect(id, "log") & str_detect(id_b, "log")) %>% 
   left_join(select(dual_cue_f_final.df, id, id_b, fitness), by = c("id", "id_b")) %>% 
   mutate(label_comb = gsub("I\\+Ig", "Total I", paste(label, "&", label_b)))
 
@@ -703,7 +755,7 @@ ggplot(data = dual_cue_cr.df, aes(x = time, y = fct_reorder(label_comb, fitness)
   labs(x = "Time (days)", y = "Dual cue combination", fill = "Transmission\ninvestment") +
   theme_classic()
 
-ggsave(here("code_repository/figures/dual_cue_cr.tiff"), units = "px", width = 2000, height = 1500, dpi=300,  bg = "white")
+ggsave(here("code_repository/figures/dual_cue_cr.tiff"), units = "px", width = 2000, height = 1000, dpi=300,  bg = "white")
 ```
 
 #=================================#
@@ -902,7 +954,7 @@ exp_var.comb <- tidyr::expand_grid(x = c("RBC", "iRBC", "Gametocyte"),
                    y = c("RBC", "iRBC", "Gametocyte")) %>% ## get all pairwise combinations of variables
   filter(x != y) %>% ## remove incidences where the 2 variables are the same
   mutate(tmp = paste0(pmin(x, y), pmax(x, y))) %>% ## eliminate same variable but different order
-  slice_head(n = 1, by = tmp) %>% 
+  distinct(tmp, .keep_all = T) %>% 
   select(-tmp) 
 ```
 
@@ -1085,7 +1137,7 @@ cue_cue_rn_pl.ls <- lapply(dual_cue_rn.ls,
            #scale_x_continuous(labels = label_scientific(digits = 2),breaks= breaks_pretty(3)) +
            #scale_y_continuous(labels = label_scientific(digits = 2),breaks= breaks_pretty(2)) 
            scale_x_continuous(breaks= breaks_pretty(3)) +
-           scale_y_continuous(breaks= breaks_pretty(3)) d
+           scale_y_continuous(breaks= breaks_pretty(3)) 
        })
 
 ## arrange together
@@ -1098,6 +1150,18 @@ ggsave(here("code_repository/figures/sim_disease-curve.tiff"), units = "px", wid
 # disease curves (main figure)
 #=================================#
 # plot
+```{r}
+cue_cue_rn_pl.ls[[31]] +
+    scale_x_continuous(labels = scales::number_format(accuracy = 0.1)) +
+    scale_y_continuous(labels = scales::number_format(accuracy = 1)) +
+    theme(legend.position = "none")
+
+cue_cue_rn_pl.ls[[37]] + 
+     scale_y_continuous(labels = scales::number_format(accuracy = 1)) +
+     theme(legend.position = "none",
+           axis.text.x=element_text(size=6.5))
+```
+
 ```{r}
 # main figure
 ggarrange(
@@ -1210,7 +1274,8 @@ write_parquet(mc_all_fitness.df, here("code_repository/data/mc_all_fitness.parqu
 mc_all_fitness.df_p <- mc_all_fitness.df %>% 
   filter(iter %in% seq(1,1000,1)) %>% 
   mutate(fitness_norm = max_fitness/9.883602,
-         short_label = gsub("I\\+Ig", "Total I", short_label))
+         short_label = gsub("I\\+Ig", "Total I", short_label)) %>% 
+  filter(!short_label %in% c("R & I log","R & I+Ig log"))
 
 ## get the reference fitness (default parameter variation), which is where iter = 1
 mc_all_fitness_ref.df <- mc_all_fitness.df_p %>% filter(iter == 1)
@@ -1226,9 +1291,8 @@ mc_all_fitness_sum.df <- mc_all_fitness_rand.df %>%
             median = median(fitness_norm),
             geom_mean = exp(mean(log(fitness_norm))),
             sd = sd(fitness_norm)) %>% 
-  left_join(select(mc_all_fitness_ref.df, short_label, max_fitness), by = "short_label")
-
-mc_all_fitness_sum.df
+  left_join(select(mc_all_fitness_ref.df, short_label, max_fitness), by = "short_label") %>% 
+  filter(!short_label %in% c("R & I log","R & I+Ig log"))
 ```
 
 ## plot fitness variation 
