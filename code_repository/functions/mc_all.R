@@ -18,7 +18,7 @@ mc_all <- function(par, cue, cue_range, log, rand_df){
   phiw_rand <- rand_df$phi_N2 # half-life for targeted immunity
   
   # id of the run
-  id <- rand_df$id
+  iter <- rand_df$iter
   
   # other parameters
   parameters_rand <- c(R1 = 8.89*10^6, 
@@ -71,14 +71,14 @@ mc_all <- function(par, cue, cue_range, log, rand_df){
   
   # keep only conversion rate and transmission potential and write it into MC_all_dyn
   dyn_f <- dyn %>% 
-    dplyr::filter(variable %in% c("cr", "tau")) %>% 
+    #dplyr::filter(variable %in% c("cr", "tau")) %>% 
     dplyr::group_by(variable) %>% 
     dplyr::arrange(time) %>% 
-   # filter(row_number() %% 10 == 1) %>% # keep only the 0.01th 
+    filter(row_number() %% 10 == 1) %>% # keep only the 0.01th 
     dplyr::mutate(cue = cue, 
            log = log) # add cue and log
 
   # write files
-  write.csv(fitness.df, here(paste0("code_repository/data/mc_all_fitness/", cue, "_", log, "_", id, ".csv")))
-  arrow::write_parquet(x = dyn_f, sink = here(paste0("code_repository/data/mc_all_dyn/", cue, "_", log, "_", id, ".parquet")))
+  #write.csv(fitness.df, here(paste0("code_repository/data/mc_all_fitness/", cue, "_", log, "_", id, ".csv")))
+  arrow::write_parquet(x = dyn_f, sink = here(paste0("code_repository/data/mc_all_dyn/", cue, "_", log, "_", iter, ".parquet")))
 }

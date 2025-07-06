@@ -48,22 +48,7 @@ mc_all_dual <- function(par, cue, cue_b, cue_range, cue_range_b, log, log_b, ran
   time_range <- seq(0, 20, by = 1e-2)
   
   # run dynamics
-  #dyn <- chabaudi_si_clean(
-  #  parameters_cr = par, 
-   # parameters = parameters_rand, 
-  #  immunity = "tsukushi",
-   # time_range = time_range, 
-  #  cue = cue, 
-  #  cue_b = cue_b,
-  #  cue_range = cue_range, 
- #   cue_range_b = cue_range_b,
-   # log_cue = log,
- #   log_cue_b = log_b,
-   # solver = "vode",
-   # gam = "te",
-  # dyn = TRUE)
-  
-  res <- chabaudi_si_clean(
+  dyn <- chabaudi_si_clean(
     parameters_cr = par, 
     parameters = parameters_rand, 
     immunity = "tsukushi",
@@ -75,29 +60,44 @@ mc_all_dual <- function(par, cue, cue_b, cue_range, cue_range_b, log, log_b, ran
     log_cue = log,
     log_cue_b = log_b,
     solver = "vode",
-    gam = "te")
+    gam = "te",
+   dyn = TRUE)
+  
+  #res <- chabaudi_si_clean(
+  #  parameters_cr = par, 
+  #  parameters = parameters_rand, 
+  #  immunity = "tsukushi",
+  #  time_range = time_range, 
+   # cue = cue, 
+   # cue_b = cue_b,
+  #  cue_range = cue_range, 
+  #  cue_range_b = cue_range_b,
+ #   log_cue = log,ß
+  #  log_cue_b = log_b,
+  #  solver = "vode",
+  #  gam = "te")
   
   
   # attach fitness to associated meta data and write and return it
-  fitness.df <- cbind(fitness  = res,
-                      cue = cue, 
-                      cue_b = cue_b,
-                      log = log,
-                      log_b = log_b,
-                      rand_df)
+ # fitness.df <- cbind(fitness  = res,
+  #                    cue = cue, 
+  #                    cue_b = cue_b,
+   #                   log = log,
+     #                 log_b = log_b,
+    #                  rand_df)
   
   # keep only conversion rate and transmission potential and write it into MC_all_dyn
- # dyn_f <- dyn %>% 
- #  dplyr::filter(variable %in% c("cr", "tau")) %>% 
-  #  dplyr::group_by(variable) %>% 
-  #  dplyr::arrange(time) %>% 
-    # filter(row_number() %% 10 == 1) %>% # keep only the 0.01th 
- #   dplyr::mutate(cue = cue, 
-   #               cue_b = cue_b,
-    #              log = log,
-   #               log_b = log_b) # add cue and log
+  dyn_f <- dyn %>% 
+   #ßdplyr::filter(variable %in% c("cr", "tau")) %>% 
+    dplyr::group_by(variable) %>% 
+    dplyr::arrange(time) %>% 
+   filter(row_number() %% 10 == 1) %>% # keep only the 0.01th 
+    dplyr::mutate(cue = cue, 
+                  cue_b = cue_b,
+                  log = log,
+                  log_b = log_b) # add cue and log
   #
   # write files
-  write.csv(fitness.df, here(paste0("code_repository/data/mc_all_fitness/", cue, "_", log, "-",cue_b, "_", log_b, "_", id, ".csv")))
- # arrow::write_parquet(x = dyn_f, sink = here(paste0("code_repository/data/mc_all_dyn/", cue, "_", log, "-",cue_b, "_", log_b, "_", id, ".parquet")))
+  #write.csv(fitness.df, here(paste0("code_repository/data/mc_all_fitness/", cue, "_", log, "-",cue_b, "_", log_b, "_", id, ".csv")))
+  arrow::write_parquet(x = dyn_f, sink = here(paste0("code_repository/data/mc_all_dyn/", cue, "_", log, "-",cue_b, "_", log_b, "_", id, ".parquet")))
 }

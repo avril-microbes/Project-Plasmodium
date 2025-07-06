@@ -706,13 +706,7 @@ run_mc_all_dual <- function(df){
 
 # run across all
 source(here("code_repository/functions/mc_all_dual.R"))
-lapply(dual_cue_f_final_df2.ls, run_mc_all_dual)
-
-posterior.df
-```
-
-```{r}
-
+lapply(dual_cue_f_final_df2.ls[c(8,9)], run_mc_all_dual)
 ```
 
 ### Only one parameter vary
@@ -743,10 +737,7 @@ mclapply(posterior.ls, function(x){
                     log= "none",
          rand_df = x)},
   mc.cores = 8)
-```
 
-
-```{r}
 mclapply(posterior.ls, function(x){
   mc_single(par = c(1.74633, -1.78582, -5.52834, 1.57344 ),
                     cue = "Ig",
@@ -805,55 +796,39 @@ mclapply(posterior.ls, function(x){
                     log= "log10",
          rand_df = x)},
   mc.cores = 8)
+```
 
-# R log and I log
-mclapply(posterior.ls, function(x){
-  mc_single_dual(par = c(4.446192033,	10.97518275,	1.38762817,	23.3059254,	-3.452052371,	-18.0070692	,39.66614226,	-3.545193141,	18.78350799),
-                    cue = "R",
-         cue_b = "I",
-                    cue_range = seq(log10(10^6), log10(10^7), length.out = 500),
-         cue_range_b = seq(0, log10(6*(10^6)), length.out = 500),
-                    log= "log10",
-                    log_b = "log10",
+# single parameter vary
+```{r}
+## wrapper to run across all dual cue models
+run_mc_single_dual <- function(df){
+  ## processing model input
+  par <- c(df$par1, df$par2, df$par3, df$par4, df$par5,df$par6,df$par7, df$par8, df$par9)## parameters
+  cue <- df$cue ## cue choice
+  cue_b <- df$cue_b
+  log <- ifelse(str_detect("log", df$log), "log10", "none")
+  log_b <- ifelse(str_detect("log", df$log_b), "log10", "none")
+  cue_range <- seq(df$low, df$high, length.out = 500) ## cue range
+  cue_range_b <- seq(df$low_b, df$high_b, length.out = 500)
+  id <- df$id ## id
+  id_b <- df$id_b ## id
+  
+  ## get dynamics data
+  res <- mclapply(posterior.ls, function(x){
+  mc_single_dual(par = par,
+              cue = cue,
+              cue_b = cue_b,
+              cue_range = cue_range,
+              cue_range_b = cue_range_b,
+              log= log,
+              log_b = log_b,
          rand_df = x)},
   mc.cores = 8)
+}
 
-# R and I log
-mclapply(posterior.ls, function(x){
-  mc_single_dual(par = c(-9.518084898,	-439.4342135,	85.99834201,	118.6093975,	-244.108158,	33.24560006,	-30.89681964,	-24.84888061,	-88.60274223),
-                    cue = "R",
-         cue_b = "I",
-                    cue_range = seq((10^6), (10^7), length.out = 500),
-         cue_range_b = seq(0, log10(6*(10^6)), length.out = 500),
-                    log= "none",
-                    log_b = "log10",
-         rand_df = x)},
-  mc.cores = 8)
-
-# R and I+Ig log
-mclapply(posterior.ls, function(x){
-  mc_single_dual(par = c(-0.123534059,	10.41243862,	-16.13098789,	28.09607529,	-12.49060926,	12.77524469,	36.77045332,	7.011182218,	6.680916699),
-                    cue = "R",
-         cue_b = "I+Ig",
-                    cue_range = seq((10^6), (10^7), length.out = 500),
-         cue_range_b = seq(0, log10(6*(10^6)), length.out = 500),
-                    log= "none",
-                    log_b = "log10",
-         rand_df = x)},
-  mc.cores = 8)
-
-# R log and I+Ig log
-mclapply(posterior.ls, function(x){
-  mc_single_dual(par = c(-7.687311702,	-497.7126667,	-1003.526906,	47.78563659,	-248.7360112,	-181.9755341,	27.71388409,	-22.55271948,	-52.13198563),
-                    cue = "R",
-         cue_b = "I+Ig",
-                    cue_range = seq(log10(10^6), log10(10^7), length.out = 500),
-         cue_range_b = seq(0, log10(6*(10^6)), length.out = 500),
-                    log= "log10",
-                    log_b = "log10",
-         rand_df = x)},
-  mc.cores = 8)
-
+# run across all
+source(here("code_repository/functions/mc_single_dual.R"))
+lapply(dual_cue_f_final_df2.ls, run_mc_single_dual)
 ```
 
 #=================================#
