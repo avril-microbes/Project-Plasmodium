@@ -1082,6 +1082,149 @@ ggsave(here("code_repository/figures/exp_disease-curve.tiff"), units = "px", wid
 #=================================#
 # Simulated disease curve graph
 #=================================#
+# process data
+```{r}
+time_high.dyn_wide <- time_high.dyn %>% 
+  filter(time<=20) %>% 
+  pivot_wider(id = "time", names_from = variable, values_from = value)
+```
+
+# plot
+```{r}
+ggarrange(
+  ggplot() +
+  geom_path(data = time_high.dyn_wide, aes(x = log10(I), y = log10(R), color = cr), size = 1.5, alpha = 1) +
+  geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
+                      aes(x = log10(I), y = log10(R)), size = 1.5, shape = 1) +
+  scale_color_viridis_c(limits = c(0, 1.01)) +
+  labs(x = "Asexual iRBC log", y = "RBC log", color = "Transmission investment") +
+  xlim(0,NA) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  ),
+  
+  ggplot() +
+  geom_path(data = time_high.dyn_wide, aes(x = log10(I+Ig), y = log10(R), color = cr), size = 1.5, alpha = 1) +
+  geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
+                      aes(x = log10(I+Ig), y = log10(R)), size = 1.5, shape = 1) +
+  scale_color_viridis_c(limits = c(0, 1.01)) +
+    xlim(0,NA) +
+  labs(x = "Total iRBC log", y = "RBC log", color = "Transmission investment") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  ),
+  
+  ggplot() +
+  geom_path(data = time_high.dyn_wide, aes(x = log10(I), y = log10(G), color = cr), size = 1.5, alpha = 1) +
+  geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
+                      aes(x = log10(I), y = log10(G)), size = 1.5, shape = 1) +
+  scale_color_viridis_c(limits = c(0, 1.01)) +
+    xlim(0,NA) +
+    ylim(0,NA) +
+  labs(x = "Asexual iRBC log", y = "Gametocyte log", color = "Transmission investment") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  ),
+  
+  ggplot() +
+  geom_path(data = time_high.dyn_wide, aes(x = log10(Ig), y = log10(G), color = cr), size = 1.5, alpha = 1) +
+  geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
+                      aes(x = log10(Ig), y = log10(G)), size = 1.5, shape = 1) +
+  scale_color_viridis_c(limits = c(0, 1.01)) +
+    ylim(0,NA) +
+    xlim(0,NA) +
+  labs(x = "Sexual iRBC log", y = "Gametocyte log", color = "Transmission investment") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  ),
+  
+  ggplot() +
+  geom_path(data = time_high.dyn_wide, aes(x = log10(Ig), y = log10(R), color = cr), size = 1.5, alpha = 1) +
+  geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
+                      aes(x = log10(Ig), y = log10(R)), size = 1.5, shape = 1) +
+  scale_color_viridis_c(limits = c(0, 1.01)) +
+    xlim(0,NA) +
+  labs(x = "Sexual iRBC log", y = "RBC log", color = "Transmission investment") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  ),
+  
+  ggplot() +
+  geom_path(data = time_high.dyn_wide, aes(x = log10(Ig), y = log10(I), color = cr), size = 1.5, alpha = 1) +
+  geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
+                      aes(x = log10(Ig), y = log10(I)), size = 1.5, shape = 1) +
+  scale_color_viridis_c(limits = c(0, 1.01)) +
+    xlim(0,NA) +
+    ylim(0,NA) +
+  labs(x = "Sexual iRBC log", y = "Asexual iRBC log", color = "Transmission investment") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  ),
+  
+  ggplot() +
+  geom_path(data = time_high.dyn_wide, aes(x = log10(I+Ig), y = log10(Ig), color = cr), size = 1.5, alpha = 1) +
+  geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
+                      aes(x = log10(I+Ig), y = log10(Ig)), size = 1.5, shape = 1) +
+  scale_color_viridis_c(limits = c(0, 1.01)) +
+    xlim(0,NA) +
+    ylim(0,NA) +
+  labs(x = "Total iRBC log", y = "Sexual iRBC log", color = "Transmission investment") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  ),
+  
+  ggplot() +
+  geom_path(data = time_high.dyn_wide, aes(x = log10(R), y = log10(G), color = cr), size = 1.5, alpha = 1) +
+  geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
+                      aes(x = log10(R), y = log10(G)), size = 1.5, shape = 1) +
+  scale_color_viridis_c(limits = c(0, 1.01)) +
+    ylim(0,NA) +
+  labs(x = "RBC log", y = "Gametocyte log", color = "Transmission investment") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  ),
+  
+  ggplot() +
+  geom_path(data = time_high.dyn_wide, aes(x = log10(I+Ig), y = log10(I), color = cr), size = 1.5, alpha = 1) +
+  geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
+                      aes(x = log10(I+Ig), y = log10(I)), size = 1.5, shape = 1) +
+  scale_color_viridis_c(limits = c(0, 1.01)) +
+  labs(x = "Total iRBC log", y = "Asexual iRBC log", color = "Transmission investment") +
+  theme_bw() +
+    xlim(0,NA) +
+    ylim(0,NA) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  ),
+  
+  ggplot() +
+  geom_path(data = time_high.dyn_wide, aes(x = log10(I+Ig), y = log10(G), color = cr), size = 1.5, alpha = 1) +
+  geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
+                      aes(x = log10(I+Ig), y = log10(G)), size = 1.5, shape = 1) +
+  scale_color_viridis_c(limits = c(0, 1.01)) +
+    xlim(0,NA) +
+    ylim(0,NA) +
+  labs(x = "Total iRBC log", y = "Gametocyte log", color = "Transmission investment") +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  ),
+  common.legend = T, align = "hv", ncol =3, nrow = 4
+)
+
+ggsave(here("code_repository/figures/sim_disease-curve.tiff"), units = "px", width = 2250, height = 2000, scale = 1, dpi=300,  bg = "white")
+
+```
+
+
 ## Function to obtain dynamics data based on the dual cue input
 ```{r}
 get_dual_rn <- function(df){
@@ -1210,7 +1353,7 @@ ggsave(here("code_repository/figures/sim_disease-curve.tiff"), units = "px", wid
 ```{r}
 # filter dataset and make wide
 time_high_sel.dyn <- time_high.dyn %>% 
-  filter(variable %in% c("R", "I", "G","cr")) %>% 
+  filter(variable %in% c("R", "I", "G","cr") & time<=20) %>% 
   pivot_wider(id = "time", names_from = variable, values_from = value) 
 ```
 
@@ -1258,22 +1401,22 @@ ggplot() +
         panel.grid.minor = element_blank()
   ),
   
-  # G lot vs I log
- ggplot() +
-  geom_path(data = time_high_sel.dyn,aes(x = log10(I), y = log10(G), color = cr), size = 1.5) +
+ # RBC log vs G log
+  ggplot() +
+  geom_path(data = time_high_sel.dyn, aes(x = log10(G), y = log10(R), color = cr), size = 1.5) +
   geom_point(data = time_high_sel.dyn %>% filter(time %% 1 == 0), 
-                      aes(x = log10(I), y = log10(G)), size = 1.5, shape = 1) +
-  xlim(0,NA) +
-  ylim(0,NA) +
+                      aes(x = log10(G), y = log10(R)), size = 1.5, shape = 1) +
   scale_color_viridis_c(limits = c(0, 1.01)) +
-  labs(x = "Asexual iRBC log", y = "Gametocyte log", color = "Transmission investment") +
+  xlim(0, NA) +
+  labs(x = "Gametocyte log", y = "RBC log", color = "Transmission investment") +
   theme_bw() +
-  theme(legend.position = "none",
+  theme(
+    legend.position = "none",
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()
-  ) ,
+  ),
   
-    exp_xlogylog.pl_ls[[3]] +ylim(0,NA) + theme_bw() +
+    exp_xlogylog.pl_ls[[2]] + coord_flip() + ylim(0,NA) + theme_bw() +
   theme(legend.position = "none",
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()
@@ -1295,6 +1438,7 @@ ggarrange(
           
    exp_xlogylog.pl_ls[[1]] + theme(legend.position = "top"))
 ggsave(here("code_repository/figures/sim_exp_disease_curve_legend.tiff"), units = "px", width = 1500, height = 500, scale = 1.25, dpi=300,  bg = "white")
+
 
 ```
 
