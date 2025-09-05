@@ -1,0 +1,1119 @@
+\documentclass[10pt,letterpaper]{article}
+\usepackage[top=0.85in,left=2.75in,footskip=0.75in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{changepage}
+\usepackage[utf8x]{inputenc}
+\usepackage{textcomp,marvosym}
+\usepackage{cite}
+\usepackage{nameref,hyperref}
+\usepackage[right]{lineno}
+\usepackage{microtype}
+\DisableLigatures[f]{encoding = *, family = * }
+\usepackage[table]{xcolor}
+\usepackage{array}
+\newcolumntype{+}{!{\vrule width 2pt}}
+\newlength\savedwidth
+\newcommand\thickcline[1]{%
+  \noalign{\global\savedwidth\arrayrulewidth\global\arrayrulewidth 2pt}%
+  \cline{#1}%
+  \noalign{\vskip\arrayrulewidth}%
+  \noalign{\global\arrayrulewidth\savedwidth}%
+}
+\newcommand\thickhline{\noalign{\global\savedwidth\arrayrulewidth\global\arrayrulewidth 2pt}%
+\hline
+\noalign{\global\arrayrulewidth\savedwidth}}
+\raggedright
+\setlength{\parindent}{0.5cm}
+\textwidth 5.25in 
+\textheight 8.75in
+\usepackage[aboveskip=1pt,labelfont=bf,labelsep=period,justification=raggedright,singlelinecheck=off]{caption}
+\renewcommand{\figurename}{Fig}
+\bibliographystyle{plos2015}
+\makeatletter
+\renewcommand{\@biblabel}[1]{\quad#1.}
+\makeatother
+\usepackage{lastpage,fancyhdr,graphicx}
+\usepackage{epstopdf}
+\pagestyle{fancy}
+\fancyhf{}
+\rfoot{\thepage/\pageref{LastPage}}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrule}{\hrule height 2pt \vspace{2mm}}
+\fancyheadoffset[L]{2.25in}
+\fancyfootoffset[L]{2.25in}
+\lfoot{\today}
+\newcommand{\lorem}{{\bf LOREM}}\newcommand{\ipsum}{{\bf IPSUM}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%COMMANDS NICOLE ADDED
+% for ease of commenting/tracking changes
+\newcommand{\ignore}[1]{} %Stuff in brackets doesn't get formatted. Like %
+\newcommand{\mcom}[1]{\marginpar{{\small \textit{\small \color{red} #1}}}} %comments in margin
+\usepackage{soul}
+\setstcolor{red}
+
+\begin{document}
+\vspace*{0.2in}
+
+\begin{flushleft}
+{\Large
+\textbf\newline{Optimal cues for transmission investment in malaria parasites} 
+}
+\newline
+
+Avril L. Wang\textsuperscript{1\textcurrency}*,
+Megan A. Greischar\textsuperscript{2},
+Nicole Mideo\textsuperscript{1}
+\\
+\bigskip
+\textbf{1} Department of Ecology and Evolutionary Biology, University of Toronto, Toronto, Ontario, Canada
+\\
+\textbf{2} Department of Ecology and Evolutionary Biology, Cornell University, Ithaca, New York, United States
+\\
+\bigskip
+
+% Current address notes
+\textcurrency Current Address: Department of Biology, Massachusetts Institute of Technology, Cambridge, Massachusetts, United States
+
+* avril137@mit.edu
+
+\end{flushleft}
+% Please keep the abstract below 300 words
+\section*{Abstract}
+The timing of investment into reproduction is a key determinant of lifetime reproductive success (fitness). Many organisms exhibit plastic, i.e., environmentally-responsive, investment strategies, raising the questions of what environmental cues trigger responses and why organisms have evolved to respond to those particular cues. For malaria parasites (\emph{Plasmodium spp.}), investment into the production of specialized transmission stages (versus stages that replicate asexually within the host) is synonymous with reproductive investment and also plastic, responding to host- and parasite-derived factors. Previous theory has identified optimal plastic transmission investment strategies for the rodent malaria parasite, \textit{Plasmodium chabaudi}, as a function of the time since infection, implicitly assuming that parasites have perfect information about the within-host environment and how it is changing. We extend that theory to ask which cue(s) \textit{should} parasites use? Put another way, which cue(s) maximize parasite fitness, quantified as host infectiousness during acute infection? Our results show that sensing a parasite-associated cue, e.g., the abundance of infected red blood cells or transmission stages, allows parasites to achieve fitness approaching that of the optimal time-varying strategy, but only when parasites perceive the cue non-linearly, responding more sensitively to changes at low densities. However, no single cue can recreate the best time-varying strategy or allow parasites to adopt terminal investment as the infection ends, a classic expectation for reproductive investment. Sensing two cues---log-transformed infected and uninfected red blood cell abundance---enables parasites to accurately track the progression of the infection, permits terminal investment, and recovers the fitness of the optimal time-varying investment strategy. Importantly, parasites that detect two cues more efficiently exploit hosts, resulting in higher virulence compared with those sensing only one cue. Finally, our results suggest a potential tradeoff between achieving an optimal transmission investment strategy in a given host environment and robustness in the face of environmental or developmental fluctuations.
+
+\linenumbers
+
+\section*{Introduction}
+A key goal of life history theory is to understand how organisms should invest in reproduction over the course of their lives and explaining the substantial variation in patterns observed (e.g., \cite{jones_diversity_2014}). Reproductive investment entails a resource allocation tradeoff: resources allocated to growth cannot, generally, also be allocated to reproduction. Classic work predicts that reproductive investment will increase with age \cite{gadgil_life_1970, clutton-brock_maternal_1984}. Additionally, reproductive investment is expected to depend on the state of an organism, a product of intrinsic, physiological factors and external, environmental ones \cite{mcnamara_state-dependent_1996}. Experimental data have shown that investment can be plastic, with age and state both shaping an organism's reproductive efforts to maximize lifetime fitness (e.g., \cite{cotter_age-specific_2011,velando_senescent_2006}). How organisms estimate the time remaining for reproduction---that is, what cues they utilize from their own physiology and the environment---remains an open question for many systems.\newline
+
+For sexually-reproducing parasites, patterns of reproductive investment can have clinical and epidemiological consequences. Protozoan parasites of \emph{Plasmodium} spp. \textemdash the etiological agents of malaria \textemdash infect red blood cells of their host, and a given infected cell will either produce more asexual, cell-infecting stages (``growth" of an infection) or produce a single gametocyte, a sexually-differentiated stage that can be transmitted to mosquito vectors (potentially ``reproducing" an infection). The proportion of infected cells that produce transmissible gametocytes, known in the malaria literature as the ``conversion rate," is a measure of investment in reproduction/transmission \cite{carter_stress_2013}. This trait has a direct link to infectiousness, since more gametocytes mean greater chance of onward transmission to a biting mosquito \cite{churcher_predicting_2013,bell_enhanced_2012, huijben_chemotherapy_2010} and can influence the virulence or severity of infection, since all else equal, lower transmission investment means more host-damaging asexual parasites are produced \cite{carter_stress_2013}. \newline 
+
+Importantly, transmission investment in \emph{Plasmodium} spp. is plastic, changing in response to conspecific density \cite{pollitt_competition_2011,cameron_plasticity_2013}, replication rate \cite{schneider_adaptive_2018}, parasite-conditioned media \cite{williams_stimulation_1999, dyer_regulation_2003} (which could contain infected red blood cell (iRBC)-derived vesicles \cite{mantel_malaria-infected_2013}), RBC age structure/availability \cite{trager_enhanced_1992, trager_plasmodium_1999, reece_host_2005, schneider_adaptive_2018}, and antimalarial exposure (e.g., \cite{buckling_plasmodium_1999, schneider_adaptive_2018}). Understanding why transmission investment is plastic and what the optimal plastic strategy is has been the subject of several prior studies \cite{koella_optimal_1995,reece_synthesis_2009, carter_stress_2013, greischar_predicting_2016, birget_phenotypic_2017,schneider_adaptive_2018}. In one example, using the experimentally tractable rodent malaria system, \emph{Plasmodium chabaudi}, and different doses of antimalarial drugs, Schneider \emph{et al.} \cite{schneider_adaptive_2018} showed that intermediate reductions in parasite density led to reduced investment in transmission while strong reductions had the opposite effect. These results are in line with standard predictions from life history theory for malaria parasites, where mild stressors should promote reproductive restraint and strong stressors that signal imminent clearance of an infection should lead to complete investment in transmission \cite{carter_stress_2013}, i.e., terminal investment \cite{clutton-brock_reproductive_2015}. But ``stress’’ will vary over the course of infection---even in the absence of drug treatment--- as parasites deplete host resources and hosts respond via immunity. These dynamics are thought to explain why transmission investment in malaria parasites is variable over the lifespan of infections (i.e., plastic) \cite{eichner_genesis_2001,reece_synthesis_2009, pollitt_competition_2011,cameron_plasticity_2013,greischar_quantifying_2016, schneider_adaptive_2018}. \newline
+
+Mathematical modelling provides another route to understanding and predicting adaptive plasticity in parasite traits. Models assessing the fitness consequences of different patterns of transmission investment demonstrate that the best strategy involves initial reproductive restraint that facilitates within-host parasite population growth (rather than early investment in gametocytes that would have very low likelihood of onward transmission due to low densities), followed by an increase in investment once parasite densities have risen, culminating in terminal investment as the infection is ending \cite{koella_optimal_1995,greischar_predicting_2016}. This work derived the optimal transmission investment strategy by assuming that investment is a function of infection age, about which parasites have perfect knowledge. In addition to assuming that parasites can, in effect, ``tell time,'' this work also assumes all infections proceed identically, a limitation common to models of age-specific reproductive investment \cite{pianka_age-specific_1975}. In reality, time would be a poor proxy for environmental conditions since the pace of infection changes with parasite dose \cite{timms_effect_2001, metcalf_partitioning_2011}, host immunity \cite{barclay_cd4t_2008, metcalf_partitioning_2011}, and myriad other factors. Therefore, understanding the links between transmission investment and within-host environmental cues will result in more biologically relevant models that can inform empirical observation of \emph{Plasmodium spp.} transmission investment. Currently, it is unclear whether observed deviations from the theoretical optimal strategy are due to faulty theories or limitations in the cues that parasites perceive. Understanding the fitness consequences of sensing different cues can delineate those possibilities. Additionally, understanding what cues parasites should sense will enable better predictions on the influence of novel perturbations, like vaccination, on infection dynamics and outcomes.\newline
+
+In this study, we extend a previously-published model of within-host rodent malaria infection dynamics \cite{greischar_predicting_2016} to include transmission investment as a function of environmental cues, i.e., components of state. In our model, different cues may give rise to different early patterns of transmission investment, which will alter the trajectory of infections and feedback to influence the subsequent expression of the trait. We use numerical optimization to investigate which within-host environmental cue or cues malaria parasites ``should" sense for determining transmission investment (i.e., which cues give rise to the highest parasite fitness) and the optimal shape of the relationship between each cue and transmission investment (i.e., the optimal reaction norms). We assess the consequences of perceiving different cues on infection dynamics and disease severity and quantify the robustness of different transmission investment strategies in the face of environmental and developmental stochasticity. Collectively, our study further characterizes plasticity in \emph{P. chabaudi} life history, identifies the cues we expect parasites to be using, and introduces a mathematical framework that explicitly incorporates cue perception that could be used to generate testable hypotheses and broadly applied to other organisms.
+
+\section*{Results}
+Our mathematical model tracks within-host dynamics of infection with the rodent malaria parasite \emph{P. chabaudi} (Fig \ref{fig1}A). Asexual parasites, called merozoites ($M$), invade uninfected red blood cells (RBCs; $R$). The resulting infected RBC (iRBC; $I$) can go on to produce more merozoites that are either asexually-committed ($M$; producing more merozoites if they infect an RBC) or sexually-committed ($M_g$; producing a single gametocyte, $G$, if they infect an RBC). RBCs infected with these different types of merozoites are denoted as $I$ and $I_g$, respectively. Importantly, the proportion of iRBCs that follow these different developmental routes (\emph{i.e.,} producing $M_g$) defines transmission investment. While previous approaches have treated transmission investment as either fixed or time-dependent (e.g., \cite{koella_optimal_1995,mckenzie_integrated_2005,bousema_epidemiology_2011, greischar_predicting_2016,cao_modeling_2019,greischar_partitioning_2019, early_declines_2022}), here we explicitly model it as a function of within-host environmental cues (see Materials and Methods). We select as plausible cues various measures of the density of parasites and host resources for which there is some experimental evidence to impact transmission investment in \emph{Plasmodium} spp. (Table \ref{table1}). We quantify the fitness of parasites sensing various cues using the cumulative transmission potential, which measures the summed probability of infecting mosquito vectors across a 20-day infection period, assuming a constant biting rate and mosquito abundance \cite{greischar_predicting_2016}.\newline
+
+\begin{figure}[!h]
+\caption{{\bf Schematic of \emph{P. chabaudi} within-host infection dynamics and fitness optimization.}
+(A) Flow diagram of model tracking the dynamics of red blood cells ($R$; RBCs), RBCs infected with asexual parasites ($I$), RBCs infected with sexual\textemdash but not yet mature
+\textemdash parasites ($I\textsubscript{g}$), asexually-committed merozoites ($M$), sexually-committed merozoites ($M\textsubscript{g}$), and gametocytes ($G$). (B) Temporal dynamics of cue perception. Cue perception occurs one day before the production of asexual/sexual merozoites, thereby introducing a delay between cue perception and the consequences of cue perception (i.e., production of more asexual infected RBCs or gametocytes). A further delay occurs in the sexual cycle since gametocytes of \emph{P. chabaudi} take two days to mature \cite{lensen_plasmodium_1999}. Dashed circles indicate the bursting/maturation of a particular cohort of iRBCs. (C) Modeling reaction norm evolution. We model the relationship between the perceived cue and transmission investment (i.e., the reaction norm) as a flexible spline (black lines). Specifically, a cubic spline can specify any third order polynomial at a given x value as a linear combination of the columns in its basis matrix \cite{de_boor_practical_2001} (exemplified by the red, green, and blue dashed lines; combined they produce the solid, black line). For local optimization, an arbitrary starting spline is picked (left panel) and an optimization algorithm is used to adjust the relative weights of the basis functions until a fitness maximum is achieved (going from left to right). The small coloured arrows depict how the weight of a given basis function has changed from the previous panel.}
+\label{fig1}
+\end{figure}
+
+In our model, cue perception occurs at the beginning of asexual iRBC development (Fig \ref{fig1}B), determining the proportion of asexual iRBCs that produces sexually-committed merozoites. Note that this modeling choice introduces a time lag between sexual commitment (as a result of cue perception) and gametocyte production, which is a departure from previous modeling work \cite{greischar_predicting_2016}, but reflects empirical data on the canonical timeline of sexual commitment from the best studied system (\emph{Plasmodium falciparum} \cite{dixon_sex_2008}). For each putative cue, we define its associated reaction norm using flexible splines (Fig \ref{fig1}C). Specifically, the shape of the reaction norm is determined by a linear combination of three basis functions comprising a cubic spline. Adjusting the spline coefficients (i.e., the weights associated with each column of the spline basis matrix) changes the shape of the reaction norm. We used a combination of local and global numerical optimization algorithms (see Materials and Methods) to adjust the spline coefficients and find the reaction norm that maximizes parasite fitness over a 20-day infection, as in previous work \cite{greischar_predicting_2016, birget_altered_2018} (Fig \ref{fig1}C). We test both raw densities and logged densities as cues to expand the range of reaction norm shapes explored and because changes in infection dynamics are observed in this system when doses change by orders of magnitude \cite{timms_effect_2001}. For parasites sensing time, we used the same optimization process, except setting the cue range to time since infection (day 0 to 20). Finally, following \cite{kamiya_uncovering_2020}, our within-host model includes two forms of immunity, one targeting specifically infected cells ($I$ and $I_g$) and one targeting all red blood cells ($I$, $I_g$ and $R$). Thus, while resource limitation plays some role in driving infection dynamics in this model, immunity allows for the clearance of the infection.
+
+\begin{table}[!ht]
+
+\begin{adjustwidth}{-0.5in}{0in} % Comment out/remove adjustwidth environment if table fits in text column.
+\centering
+\centering\captionsetup{width=0.75\linewidth}
+\caption{{\bf Putative within-host environmental cues}}
+\begin{tabular}{lll}
+\toprule
+Cue & Abbreviation & Experimental Evidence \\
+\midrule
+Infected RBC (iRBC) density && \cite{mantel_malaria-infected_2013,cameron_plasticity_2013, birget_phenotypic_2017, schneider_adaptive_2018}\\
+\phantom{XXX} Asexually-committed & I & \\
+\phantom{XXX} Asexually-committed, log$_{10}$ & I log & \\
+\phantom{XXX} Sexually-committed & Ig & \\
+\phantom{XXX} Sexually-committed, log$_{10}$ & Ig log & \\
+\phantom{XXX} Total (I+Ig) & Total I & \\
+\phantom{XXX} Total (I+Ig) , log$_{10}$ & Total I log & \\
+Gametocyte density & &\cite{mantel_malaria-infected_2013,cameron_plasticity_2013, birget_phenotypic_2017}\\
+\phantom{XXX}Gametocytes&G&\\
+\phantom{XXX}Gametocytes, log$_{10}$ & G log & \\
+Resource density & & \cite{cameron_plasticity_2013,birget_phenotypic_2017, schneider_adaptive_2018}\\
+\phantom{XXX} Uninfected RBC & R & \\
+\phantom{XXX} Uninfected RBC, log$_{10}$ & R log\\ 
+\bottomrule
+\end{tabular}
+\label{table1}
+\end{adjustwidth}
+\end{table}
+
+\subsection*{Cue perception mediates parasite life history and fitness}
+Based on previous work modeling \emph{P. chabaudi} transmission investment as a function of time \cite{greischar_predicting_2016}, we expect the following as the best strategy over a 20-day infection: parasites should delay investment early on, display a rapid increase in investment when sufficient gametocytes can be produced to ensure transmission, subtly reduce investment in the face of declining resources, and ultimately rise to the highest levels of investment shortly before the end of infection (roughly, ``terminal investment'' \cite{carter_stress_2013,greischar_predicting_2016}). Although the model we employ here has a few key differences from that work (see Materials and Methods), we find a similar optimal transmission investment pattern as in \cite{greischar_predicting_2016} when we assume that investment is a function of time (Fig \ref{fig2}A). When parasites instead respond to their environment and are constrained to perceive a single within-host cue, these same patterns of transmission investment cannot be fully recapitulated. Consequently, parasite fitness is lower in every case than when the cue is time (Fig \ref{fig2}A, left panel). \newline
+
+The environmental cues that result in the highest parasite fitness include logged parasite-centric cues (e.g., log$_{10}$ densities of sexually-committed iRBCs). Perceiving these cues is sufficient to produce the initial delay in transmission investment, but the delay is longer than parasites sensing time as the cue, and there is no increase in investment near the end of infection (Fig \ref{fig2}A, right panel). Given that parasite densities rise non-linearly at the start of infections (both simulated and real \cite{pollitt_competition_2011,huijben_data_2011, huijben_data_2013, huijben_data_2014, huijben_data_2018}), sensing logged rather than raw densities results in reaction norms that are more sensitive to those early changes (Fig \ref{fig2}B), enabling parasites to increase transmission investment after the densities have reached a rough threshold. In contrast, sensing raw parasite densities results in reaction norms that essentially ignore changes at the low parasite densities characteristic of early infections (Fig \ref{fig2}B). The density of host resources (RBCs; raw or logged) is also a poor cue for initial stages of infection, since they change very little early on and, therefore, do not allow parasites to engage in delayed transmission investment (Fig \ref{fig2}A). Overall, our results broadly suggest that early transmission delay necessitates sensitivity to changes at low parasite density.
+
+\begin{figure}[!h]
+\caption{{\bf Cue perception mediates parasite fitness and dynamics of transmission investment.}
+(A) On the left, fitness values achieved by parasites adopting the optimal transmission investment strategy for each cue, normalized with respect to the time-varying strategy, are displayed in descending order. On the right, the dynamics of transmission investment, given the optimal reaction norms, are plotted. Investment varies from dark blue (low values) to yellow (high values). The first four cues after time, which include measures of parasite density on a log$_{10}$ scale, enable parasites to obtain the highest fitness and delay in transmission investment. (B) Optimal reaction norms for different cues. Each facet displays the reaction norms for raw (black, dotted lines) or log-transformed (red, solid lines) cues. The ranges of cue values ``experienced" by a parasite adopting the optimal reaction norm are displayed above (raw) or below (log-transformed) the reaction norms as rug plots (horizontal bars). Based on the shape of the reaction norms, we conclude that sensing log-transformed parasite-centric cues enables more sensitive detection of (and responses to) the initial rise in parasite abundance.}
+\label{fig2}
+\end{figure}
+
+\subsection*{Dual cue perception is necessary for terminal investment}
+We found that parasites sensing a single cue cannot reproduce the expected optimal transmission investment strategy, particularly the rapid increase in transmission investment during late infection (i.e., terminal investment). Achieving terminal investment presumably requires sensing a cue that provides a unique signal at the later stages of infection. Inspecting infection dynamics produced by parasites that sense time revealed that only RBC density provides such a distinctive late-stage signal (Fig~\ref{fig3}A). Given the poor performance of this cue in early stages of infection, these results suggest that simultaneous perception of RBC and a parasite-centric cue could provide infection stage-specific information that enables both early reproductive restraint and terminal investment. Consistent with this expectation, in a rodent malaria experiment, including variables that reflect parasite density and host resources (specifically, replication rate and changes in RBC density) in statistical models explained substantially more variation in transmission investment than the parasite-centric variable alone \cite{schneider_adaptive_2018}.\newline
+
+\begin{figure}
+\caption{{\bf Dual cue perception increases parasite fitness and enables terminal investment.}
+(A) RBC density uniquely marks the onset of terminal investment. In the left panel, we plot transmission investment of parasites sensing time (i.e., the ideal dynamics) and mark its key features: transmission delay (purple) and terminal investment (red). We then plot the dynamics of single cues on the right and mark the range of cue values reached during terminal investment with two red, dashed lines. The overlap of the red dashed lines with earlier cue values indicates that parasites may not be able to uniquely recognize the end of the infection. (B) The fitness of parasites (normalized with respect to the time-varying strategy) adopting the optimal strategy for each dual cue combination is indicated with a blue triangle, while the fitness obtained when perceiving the best performing single cue (of the combination) is represented with an orange circle. To obtain the fitness of a fair comparator time-varying strategy, we optimized transmission investment as a function of time using a spline with nine degrees of freedom (the same degrees of freedom used in the dual cue model), rather than the three degrees of freedom used above and previously \cite{greischar_predicting_2016}. (Note that the marginal fitness gains of using more flexible splines are small \cite{greischar_predicting_2016}, but tracking two environmental cues necessitates more degrees of freedom.) (C) The pattern of transmission investment over time for parasites sensing the best dual cue combination (R log \& I log, blue square) along with individual components of the cue (I log, orange circle; R log, yellow triangle; each optimized with nine degrees of freedom) and the ideal dynamic (Time, black cross) are plotted together. Parasites sensing the combination of logged asexual iRBC and logged RBC best approximate the time-varying strategy. (D) Transmission investment (colour of heatmap) is plotted as a two-dimensional reaction norm, with logged RBC and logged asexual iRBC as cues. The white line indicates the trajectory of infection, starting at the top left, for parasites adopting this optimal reaction norm, with each point representing a single day. The arrow on the white line indicates the passage of time. For (C-D), the four stages outlined in the results section are annotated with I, II, III, and IV.}
+\label{fig3}
+\end{figure}
+
+To investigate the fitness consequences of sensing two cues, we optimized the transmission investment strategy of parasites sensing all pairwise combinations of log-transformed cues, using two-dimensional spline surfaces and focusing on combinations of log-transformed cues given their higher performance in the single cue optimizations. Our results suggest that sensing dual cue combinations improves parasite fitness relative to sensing a single cue (Fig \ref{fig3}B), with parasites sensing logged RBC and logged iRBC (asexual or total) exhibiting notably higher fitness (Fig \ref{fig3}B). This higher fitness is conferred by transmission investment patterns that are close to the time-varying ideal, with an initial delay in transmission investment and a late infection (nearly) terminal investment before returning to a low transmission investment (Fig \ref{fig3}C, \nameref{S2_Fig}). Increasing the spline flexibility of the single cue models (to match the degrees of freedom in dual cue models) could not reproduce this same pattern (Fig \ref{fig3}C), confirming that dual cue perception specifically enables terminal investment and its associated fitness benefits (\nameref{S3_Fig}).\newline
+
+To better understand the optimal patterns of transmission investment, we next analyzed the reaction norm of the dual cue combination that conferred the highest fitness: logged asexual iRBC and logged RBC. The pattern of transmission investment is defined by a looping journey through the reaction norm surface (Fig \ref{fig3}D), confirming that the cue combination traces a unique path over the course of an infection. We categorized the reaction norm into four distinct sections/stages (Fig \ref{fig3}D). Stage I corresponds to the initial phase of infection, characterized by low transmission investment, low parasite density, and high RBC density (Fig \ref{fig3}C-D). As the infection progresses, the reaction norm enters stage II, characterized by asexual iRBC production and RBC decline. During this stage, the optimal transmission investment increases considerably, followed by subtle declines as the iRBC population continues to increase (Fig \ref{fig3}C-D). The transition from a low to high transmission investment observed as stage I transitions into stage II constitutes delayed transmission investment. Following peak parasite density, the reaction norm enters stage III, which is marked by decreasing iRBC population and gradual replenishment of RBCs, signaling imminent infection clearance. At this stage, transmission investment increases to peak levels (i.e., terminal investment). Finally, as the infection nears clearance and the reaction norm enters stage IV, transmission investment sharply drops as the host heads towards recovery (Fig \ref{fig3}C-D). We note that this drop in predicted transmission investment is likely a consequence of the constraints of the spline surface, and different strategies during this stage would have negligible impact on fitness \cite{greischar_predicting_2016}. Overall, our results suggest that each cue in this combination plays a crucial role in defining progression through infection stages I to III, with asexual iRBC density exhibiting the largest variation in early and late infection (stages I and III), and logged RBC density exhibiting the largest variation during mid-infection (Stage II; Fig \ref{fig3}D). This temporal staggering of iRBC and RBC dynamics (i.e., their hysteretic relationship) ensures that these infection stages can be tracked. As a result, dual cue perception provides parasites with the ability to ``state differentiate," to accurately monitor the progress of the infection and adjust transmission investment accordingly.\newline
+
+Intriguingly, the dual cue combinations that are most informative for parasites making life history decisions (top two in Fig \ref{fig3}B) are also the most informative for predicting patient outcomes in clinical malaria infections \cite{torres_tracking_2016}. In both cases, two slightly out-of-phase within-host measures can uniquely define a patient’s (or simulated host's) position on the path from health through sickness to recovery. Plotting this trajectory through disease maps (i.e., the two measures plotted against each other, as in Fig \ref{fig3}D) produces a looping, or hysteretic, pattern, with each infection stage occupying a unique coordinate in this two-dimensional space \cite{torres_tracking_2016}. To further validate that forming the characteristic looping pattern is a unique feature of our identified best cue combinations, we constructed disease maps using experimental data from laboratory mice infected by a single strain of \emph{P. chabaudi} \cite{huijben_data_2011,huijben_data_2013,huijben_data_2014,huijben_data_2018, pollitt_competition_2011, reece_sex_2008} and simulated data from our models where parasite senses time. Both experimental and simulated data indicate that raw or logged RBC with logged iRBC (asexual or total in the model; only total is available in the experimental data) are the only cue combinations that generate fully separated loops (e.g., Fig \ref{fig4}A), while other cue combinations do not (e.g., Fig \ref{fig4}B and C; full data shown in \nameref{S4_Fig} and \nameref{S5_Fig}). When early and late infection stages are ``condensed" in space, simulated parasites fail to state differentiate and do not delay transmission investment or terminally invest (\nameref{S2_Fig}). In summary, our results demonstrate that optimal transmission investment requires parasites to unambiguously state differentiate, track infection stages, and dynamically adjust investment in response to changing conditions. Our data suggest that perceiving hysteretic cues --- of which a combination of RBC and logged iRBC provides a clean delineation of different infection stages --- is a viable method of attaining state differentiation.
+
+\begin{figure}[!h]
+\caption{{\bf Trajectories of log-transformed RBC and iRBC densities form a looping pattern \emph{in silico} and \emph{in vivo}.}
+Simulated (left) and experimental (right) trajectories of cues that (A) enable transmission delay and terminal investment or (B-C) fail to achieve these patterns. For each panel, the left graph displays the results from our simulations where parasite senses time with nine degrees of freedom, with the distance between each circle representing a single day and the colour of the line representing the observed transmission investment. The right graph displays the infection trajectory of laboratory \emph{P. chabaudi} infections in mice, with the colour of the lines indicating the day post-infection. Note that asexually- and sexually-committed iRBCs were not distinguished in the experimental data. For the simulated trajectories, the first 3 days correspond to the period of delayed transmission investment and the last 5 days correspond to when terminal investment is expected. In (B), early changes in asexual iRBC density cannot be clearly separated (see the red, dotted box), therefore preventing a delayed transmission investment strategy. Similarly, in (C), late state infection stages cannot be separated from earlier time points, preventing parasites from terminally investing.
+}
+\label{fig4}
+\end{figure}
+
+\subsection*{Dual cue perception exacerbates the fitness loss incurred by environmental and developmental stochasticity }
+The benefits of plasticity depend on the quality of information organisms obtain from environmental cues. Adaptive phenotypic plasticity is contingent on proper phenotype–environment matching, where the perceived cue is a reliable predictor of the optimal phenotype \cite{moran_evolutionary_1992, scheiner_genetics_1998, de_jong_unpredictable_1999, schlaepfer_ecological_2002, reed_phenotypic_2010}. Theory suggests that a weak correlation between cue(s) and the optimal phenotype (i.e., low cue reliability) could disfavour plasticity relative to other strategies (i.e., local adaptation \cite{scheiner_genetics_1998, de_jong_unpredictable_1999,tufto_evolution_2000}, canalization \cite{reed_phenotypic_2010}, bet-hedging \cite{tufto_evolution_2000}). For malaria parasites, there may be unpredictable variation in the environment (e.g., RBC availability \cite{antia_dynamics_2008, birget_plasticity_2019, kamiya_uncovering_2020}, immunity \cite{haydon_top-down_2003, miller_quantitative_2010, kamiya_uncovering_2020, kamiya_linking_2021}) or in traits governing parasite development within the host \cite{kamiya_uncovering_2020}. Such environmental and developmental stochasticity could preclude evolution towards the strategies we predict above. Although our model allows parasites to sense components of their state, and their resulting level of transmission investment will feedback to influence that state, the results above assume that all else is equal between hosts. Specifically, the optimal reaction norms identified above are associated with a 
+particular set of model parameters (the median estimates from posterior distributions in \cite{kamiya_uncovering_2020}; we refer to this as the deterministic model). This implicitly assumes that hosts are all the same or that parasites  are moving between hosts sufficiently quickly that they adapt to an ``average'' environment.\newline
+
+To investigate how biologically relevant variation affects cue performance, we built a semi-stochastic model based on the work of Kamiya \emph{et al.} \cite{kamiya_uncovering_2020}, which employed a hierarchical Bayesian method to quantify inter-host variation in parasite burst size, erythropoiesis (RBC replenishment), and immune strengths. For all log-transformed single cues and dual cues, we performed 1000 20-day simulations, holding the reaction norm at the optimum from the relevant deterministic simulation, and simultaneously varying the RBC replenishment rate ($\rho$), parasite burst size ($\beta$), immune activation strengths ($\psi_{n}$ and $\psi_{w}$) and immunity half-lives ($\phi_{n}$ and $\phi_{w}$), sampling parameter values from the reported posterior distributions\cite{kamiya_uncovering_2020}(\nameref{S6_Fig}). Each choice of parameter set will influence the within-host infection dynamics, potentially altering the trajectory of the perceived cue(s), resulting in different, expressed patterns of transmission investment and, thus, fitness. Here we are asking, if parasites are ``optimized'' to the average host, does environmental and developmental variation change inferences about which cues are best? We quantified the effect of variation on cue performance using the geometric mean fitness, commonly used to assess fitness in fluctuating environments \cite{lewontin_population_1969, gillespie_polymorphism_1973}. \newline
+
+We find that the geometric mean fitness of parasites responding to a given cue, in the face of this variation, is largely uncoupled from fitness in the deterministic model (i.e., the environment in which the strategy was optimized; Fig \ref{fig5}A), emphasizing that the ``best'' reaction norm for a certain environment does not always confer the best phenotype in another. Interestingly, all dual cues have a lower geometric mean fitness than the best-performing single cue (I log, Fig \ref{fig5}A). Furthermore, this result emphasizes the challenge of using time as an environmental proxy, since its geometric mean fitness in the semi-stochastic model is among the bottom half of cues. Allowing only one parameter to vary similarly tends to reduce the fitness of the best dual cue strategies disproportionately  (\nameref{S7_Fig}). These results indicate a potential tradeoff between fine-tuning fitness in a given environment and susceptibility towards environmental and developmental stochasticity.\newline
+
+While sensing two cues provides more information about ``where" an infection is, it could also increase the amount of perceived noise and exacerbate the negative effects of environmental/developmental stochasticity. To test whether increased noise perception reduces the fitness of dual cue-sensing parasites, we compared the trajectories of the most ``robust" single cue (I log; Fig \ref{fig5}B left panel) and the dual cue combination with the highest deterministic model fitness (R log \& I log; Fig \ref{fig5}B right panel). As expected, the variation in asexual iRBC density across our simulations is much lower than that of both asexual iRBC and RBC (Fig \ref{fig5}B top panels). While parasites sensing both types of cues delay transmission, those sensing logged RBC and iRBC display highly variable transmission investment dynamics (Fig \ref{fig5}B bottom right). In contrast, the transmission investment pattern of parasites sensing only logged asexual iRBC resembles that of the deterministic model (Fig \ref{fig5}B bottom left). These results suggest that sensing certain dual cue combinations can reduce parasite fitness by increasing noise perception that induces suboptimal transmission investment.
+
+\begin{figure}[!h]
+\caption{{\bf Optimal transmission investment strategies do not always translate effectively across different environmental and developmental conditions.} 
+(A) Fitness of parasite strategies in the deterministic model is largely uncoupled from the geometric fitness of those same strategies in the semi-stochastic model. Plotted on the y axis is the geometric mean fitness of 1000 simulations of parasites adopting the optimal transmission investment strategy (sensing time from the deterministic model) using a semi-stochastic model where six parameters are randomly drawn from posterior distributions derived by Kamiya \emph{et al.} \cite{kamiya_uncovering_2020}. The fitness from the deterministic model is plotted on the x-axis and all values are normalized with respect to the time-varying strategy with nine degrees of freedom (i.e., the dual cue comparator shown in Fig \ref{fig3}C). Note we also plot the fitness of the time-varying strategy with three degrees of freedom. Overall, dual cue-sensing parasites tend to perform worse than single cue-sensing parasites in the face of variation. The cue with the highest geometric fitness (I log) is indicated by a dotted orange box, while the cue combination with the highest deterministic model fitness (R log \& I log) is bound by a blue dotted box. (B) Sensing dual cues can increase noise perception and lead to highly variable transmission investment dynamics. The top two graphs display the cue trajectories for parasites sensing the best performing cue in the semi-stochastic simulations (logged asexual iRBC density, plotted against time; left) or dual cues (logged asexual iRBC and logged RBC density, plotted against each other; right). The red lines represent individual semi-stochastic simulation results, while the thicker white line represents the dynamics from the deterministic model. The background colour indicates the optimal reaction norm: on the right, this is the same as what is plotted in Fig \ref{fig3}D. The bottom two graphs display the transmission investment dynamics of the same parasites. The thicker orange/blue line represents the transmission investment trajectory from the deterministic model, while the thinner grey lines represent individual semi-stochastic simulation results.
+}
+\label{fig5}
+\end{figure}
+
+\subsection*{Dual cue perception leads to higher virulence}
+Given that cue perception mediates infection dynamics, it could also influence the severity of infections, or virulence. We estimated virulence using the methods described in Torres \emph{et al.} \cite{torres_tracking_2016}, where infection dynamics are mapped in disease space, with the y-axis quantifying host health (RBC density) and the x-axis quantifying parasite load (total iRBC density). A more virulent infection is expected to produce a higher parasite load while consuming more host resources, tracing a larger loop through disease space. To evaluate the effects of cue perception on virulence, we generated 30-day disease maps of infections, allowing sufficient time for the infection to fully resolve in our model. We use the area enclosed by each disease map as a proxy for virulence, with larger areas indicating higher virulence. We note that we are using ``virulence'' as synonymous with infection severity and not host mortality, thus we assume no link between virulence and the duration of infection. Recent modeling suggests that resource limitation imposes a more important constraint on the evolution of transmission investment in \textit{P. chabaudi} than does host mortality due to infection \cite{pak_proliferation_2024}.
+\newline
+
+Parasites perceiving only a single cue trace smaller disease maps than parasites that adopt the ideal pattern of transmission investment (by sensing time; Fig \ref{fig7}A). Additionally, the area of the disease map is negatively correlated with parasite fitness across all single cues (Fig \ref{fig7}B), suggesting that if parasites are constrained to perceive a single within-host cue, strategies that result in lower virulence would be favoured. Parasites sensing the top two dual cue combinations produce disease maps that are similar to the map traced by parasites adopting the time-varying strategy (Fig \ref{fig7}C) and result in higher virulence relative to parasites sensing a single cue (Fig \ref{fig7}D; compare x-axis values of points in B and D). Overall, these findings suggest that if parasites have limited information or have evolved to respond to only one cue (e.g., because of physiological constraints or high environmental/developmental variation), virulence will be lower, while if parasites are favoured to more finely track infection stages through dual cue perception, they will exploit host resources to a greater extent and infections will be more virulent.\newline
+
+\begin{figure}[!h]
+\caption{{\bf Cue perception mediates infection severity (virulence).}
+(A, C) display the 30-day disease maps of infections where parasites adopt the top two optimal transmission investment strategies when sensing (A) a single cue or (C) dual cues. We use the area of the map traced as a proxy for virulence \cite{torres_tracking_2016}. The trajectory of parasites that adopt the ideal transmission investment strategy (sensing time) is shown in black. (B, D) Relationship between disease map area and fitness (normalized with respect to the time-varying strategy) for parasites that sense (B) only one cue or (D) dual cues. The top two cues for single and dual cue perceiving parasites are coloured, while the grey points represent the other (B) single or (D) dual cues. Overall, these results suggest that perceiving only a single cue generates selection for strategies that lead to lower virulence while perceiving two cues generates selection for strategies that lead to higher virulence.}
+\label{fig7}
+\end{figure}
+
+\section*{Discussion}
+Just as with any sexually-reproducing species, investing in reproduction by producing gametocytes is critical for the fitness of \emph{Plasmodium} spp., as this is the only parasite stage capable of being transmitted to mosquito vectors. As for other species, this investment comes with tradeoffs for malaria parasites: a given infected host cell can either produce multiple asexual progeny that can infect new host cells and have the potential to grow or maintain a given infection, or a single, sexually-differentiated gametocyte with the potential to ``reproduce" an infection \cite{schneider_private_2021}. Thus, maximizing parasite fitness requires balancing these competing demands, the relative importance of which is likely to shift over the course of infection, as the within-host environment changes in response to parasites exploiting the host. Indeed, data show that transmission investment varies throughout infections \cite{eichner_genesis_2001,pollitt_competition_2011,cameron_plasticity_2013} and appears to change in response to drug treatment in ways predicted to be beneficial for parasites (e.g., \cite{birget_altered_2018,schneider_adaptive_2018}). While adaptive plasticity is a well-known solution to the challenge of living in a changing environment (e.g., \cite{pigliucci_evolution_2005}), there has been skepticism about the fitness benefits of observed parasite plasticity \cite{kochin_parasite_2010}, in part because knowledge of parasite environmental sensing mechanisms remains limited. Previous mathematical modeling has treated parasites as either insensitive to environmental change (i.e., constant transmission investment \cite{koella_optimal_1995,mckenzie_optimal_1998,mckenzie_integrated_2005, mideo_evolution_2008,bousema_epidemiology_2011, cao_modeling_2019,greischar_partitioning_2019, early_declines_2022}) or as perfectly informed (time-varying investment \cite{koella_optimal_1995, greischar_predicting_2016,birget_phenotypic_2017}). We instead asked what environmental cues malaria parasites \textit{should} use to set transmission investment, demonstrating that no single cue allows parasites to achieve the best time-varying strategy \cite{greischar_predicting_2016}. Parasites must sense two cues to recapitulate the optimal strategy but that strategy enhances the risk of parasites being ``tricked" by environmental and developmental stochasticity into expressing suboptimal phenotypes. We further show that if parasites have the capacity to sense more aspects of their within-host environment, then this has negative consequences for host health.\newline
+
+Previous theoretical work identifies two key features of optimal transmission investment strategies for \emph{P. chabaudi}\cite{greischar_predicting_2016}. First, there should be no investment at the start of infections, when densities are too low to permit successful infection of vectors (\emph{i.e.,} transmission investment delay). Second, parasites should invest all resources into transmission just before an infection ends, a ``terminal investment'' strategy from life history theory \cite{carter_stress_2013}. Our results delineate the environmental cues that can recapitulate these features. Transmission delay requires a sharp, threshold-dependent transition from no investment to an intermediate investment level as the parasite population grows. Making clear-cut decisions in response to continuous cues is common in biological systems (e.g., cell cycle commitment \cite{charvin_origin_2010} and developmental patterning \cite{melen_threshold_2005}) and often relies on ultrasensitivity, characterized by a steep response curve. Our results demonstrate that an ultrasensitive reaction norm where transmission investment rises sharply after a certain population size threshold--- a pattern enabled by sensing parasite-centric cues on a logarithmic scale---is sufficient for transmission delay. Prior empirical studies have found that \emph{Plasmodium} transmission investment varies in response to conspecific density \cite{pollitt_competition_2011,cameron_plasticity_2013}, parasite-conditioned media \cite{williams_stimulation_1999, dyer_regulation_2003}, and infected red blood cell (iRBC)-derived vesicles \cite{mantel_malaria-infected_2013}, suggesting that parasites possess the ability to sense iRBC density. Our results support these responses being part of an adaptive strategy. \newline
+
+In addition to parasite density, \emph{P. chabaudi} has been shown to modulate its transmission investment based on RBC availability and age structure \cite{trager_enhanced_1992, trager_plasmodium_1999, reece_host_2005, birget_phenotypic_2017, schneider_adaptive_2018}. Our results suggest that this is also part of an adaptive strategy, with the combination of iRBC and RBC cues allowing parasites to distinguish between early and late infection. Since most within-host variables go up and down, or vice versa, over time (e.g., iRBC densities rise and then fall due to resource limitation or immunity), one cue cannot provide enough detail to unambiguously establish ``where'' a parasite is in the course of infection. Combining cues solves this problem. In line with this logic, researchers seeking to define a host’s trajectory over time from health through sickness and on to recovery \cite{schneider_tracing_2011} found a combination of two within-host measures (e.g., parasite density and resource abundance) that are slightly out of phase with each other can uniquely determine a patient’s position on their path for malaria infection \cite{torres_tracking_2016}. Remarkably, though perhaps predictably, we found that the information desired by medical professionals seeking to predict patient outcomes is also the most informative for parasite life history decisions.\newline
+
+There is a growing appreciation that, across diverse organisms, plasticity is often expressed in response to multiple cues that allow for more finely-tuned strategies \cite{kasumovic_multidimensional_2013,dore_role_2018, westneat_causes_2019}. Our work adds support to theories suggesting that the adaptive benefits of phenotypic plasticity are enhanced when cues provide non-redundant information \cite{moller_why_1993} and enable organisms to sense distinct states that correspond to specific optimal phenotypes \cite{getty_maintenance_1996}. Yet it is also widely appreciated that integrating multiple cues presents challenges, including the additional metabolic burden of sensing another cue \cite{dewitt_costs_1998} and the multiplicative effect of noise when cues are non-additive \cite{westneat_causes_2019}. Our complex (decidedly non-additive) dual cue reaction norms present a trade-off: they allow parasites to more accurately recreate optimal strategies in a given environment while rendering them more susceptible to stochastic environmental and developmental change, i.e., host-to-host variability. Such tradeoffs may represent important constraints on the evolution of plastic reproductive investment strategies, perhaps explaining why \emph{P. chabaudi} rarely exhibits \emph{true} terminal investment \emph{in vivo} (displaying only modest increases in transmission investment near infection resolution; \cite{buckling_plasmodium_1999, schneider_adaptive_2018}), and on the evolution of cue perception more broadly.\newline
+
+The tradeoff hypothesis for virulence evolution stipulates that pathogen transmission inevitably harms the host \cite{anderson_coevolution_1982}. While the generality of this framework has been contested (see \cite{alizon_virulence_2009} and references within), empirical data from \emph{Plasmodium} spp. have generally supported a positive relationship between virulence and transmissibility \cite{mackinnon_genetic_1999,mackinnon_virulence_2002,mackinnon_effects_2003, paul_experimental_2004}. Here, we demonstrate that if parasites are limited to sensing a single cue for setting transmission investment, then the strategies that result in the most onward transmission actually result in less host exploitation. Allowing parasites to sense two cues reverses this relationship and produces the expected pattern of the most onward transmission being achieved by the strategies that also produce the most virulent infections. Importantly, previous work has shown that host heterogeneity can constrain parasite virulence evolution \cite{regoes_evolution_2000,williams_new_2012, white_host_2020} and our results suggest another mechanism by which this may be true: responding to two cues---while allowing for state differentiation in one host environment---can dramatically reduce fitness in the face of heterogeneity, potentially favouring single cue (hence, lower virulence) strategies.\newline
+
+Mathematical modeling has enabled us to explore the fitness consequences of cue perception in \emph{P. chabaudi}, and our results suggest where greater model complexity would be most or least informative. For example, incorporating variation in gametocyte circulation time \cite{eichner_genesis_2001} would undercut the reliability of gametocytes as a cue, further supporting our results that it is unlikely to represent the optimal cue. The human malaria parasite \emph{P. falciparum} has a longer sexual development period of 9-12 days \cite{hawking_evidence_1971} and this longer lag between cue perception and phenotype expression will reduce cue reliability \cite{padilla_plastic_1996}. Thus, we anticipate the value of sensing gametocytes to decrease even further in this species. While we have ignored parasite developmental processes that occur in the vector, recent theory suggests they have little qualitative impact on optimal transmission investment strategies \cite{hoi_limited_2024}. In contrast, the impact of previous exposure on host immunity represents one area where more complexity could qualitatively alter predictions. Our models depict immunologically naive hosts, but where malaria is endemic, parasites will often find themselves in a host with a prior history of infection. Understanding how immune memory influences the quality and reliability of potential within-host cues represents an important area for future research. Our selection of cues assumes that parasites sense only the magnitude of a cue, without detecting temporal changes in that magnitude. Schneider \emph{et al.} \cite{schneider_adaptive_2018}, in their empirical demonstration of \emph{P. chabaudi} adaptively altering transmission investment, found that replication rate, i.e., the proportional change in parasite densities, had better explanatory power than absolute densities. Broadly speaking, they found transmission investment increased with replication rate, a pattern that is not found with our model since replication rate is highest at the start of infections, before resource or immune limitation kicks in, and not investing in transmission at this point is best. We note that a direct comparison of results is tricky since estimates of transmission investment underlying their observed pattern come from day nine of infections or later. Nonetheless, we identified sensitivity to changes at low population density as a key feature of a ``useful" cue and the proportional changes captured by replication rate will similarly share this feature. Another important model assumption is that all parasites perceive the same cue at the same strength, but cues may not be spatially uniform. Variation in signal strength and imperfect cue sensing could lead to heterogeneity in transmission investment in a genotypically uniform parasite population, similar to the dynamics observed in bacterial biofilms \cite{mukherjee_bacterial_2019}. Extrapolating from our results, we hypothesize that if the variation in signal strength is large enough, selection may favour single cue sensing due to the relative robustness to stochastic variation. We note that the variation we incorporated in our semi-stochastic simulations likely underestimates that which would be observed in natural infections, since the dataset fitted by Kamiya \emph{et al.} \cite{kamiya_uncovering_2020} includes only a single mouse host genetic background studied in a highly controlled experimental system \cite{timms_effect_2001}. Thus, environment-phenotype mismatching could be an even larger problem in nature than we have estimated. Additionally, given the variation in burst size and developmental timing across \emph{Plasmodium spp.,} there is a great need to quantify the extent of variation across infection parameters to better understand the role of environmental/developmental heterogeneity on parasite evolution. \newline
+
+Beyond malaria, our work presents a generalizable computational approach to study phenotypic plasticity. By defining plastic traits as an optimizable reaction norm, it is possible to explore the fitness consequences of sensing different cues and generate hypotheses regarding why organisms respond to certain cues and not others. Mechanistic models of plasticity that capture feedbacks between traits and the environments that shape them will allow for predicting the consequences of perturbations, which is relevant for understanding not only disease dynamics in the face of control measures, but also the fate of organisms whose environment is rapidly altered by climate change.\newline
+
+\section*{Materials and methods}
+\subsection*{Within-host model of \emph{P. chabaudi} infection dynamics}
+We modified and extended a previously published mathematical model describing the within-host infection dynamics of the rodent malaria parasite, \emph{P. chabaudi} \cite{greischar_predicting_2016} (Fig~\ref{fig1}). The original model consists of ordinary and delay differential equations representing the interactions between the parasite, host red blood cells (RBCs), and host immunity over a 20-day infection. There are three key differences in our model from that previous work. First, we include the activity of two forms of immunity to better capture host defense mechanisms: a targeted immune response that only kills infected RBCs (iRBCs) and an indiscriminate response that kills any RBC, as in \cite{kamiya_uncovering_2020}. Second, we revised the model to account for the observation that sexually-committed parasites do not engage in gametocytogenesis until the next infection cycle (Next Cycle Conversion; \cite{dixon_sex_2008}). This necessitated separately tracking the production of sexual merozoites ($M\textsubscript{g}$) and asexual merozoites ($M$) from infected cells and consequently introduced a delay between sexual commitment and the outcome of sexual commitment (i.e., production of an iRBC that will produce a gametocyte, $I\textsubscript{g}$). Third, we modeled transmission investment as a function of one or two within-host cues, instead of time as in \cite{greischar_predicting_2016}, to better capture the mechanism of phenotypic plasticity, since there is no evidence malaria parasites track time across multiple generations. We further describe the implications of these changes on the model below.\newline
+
+We depict an immunologically naive host given the availability of experimentally derived parameters. Throughout an infection, we assume indiscriminate immunity eliminates all RBCs ($R$, $I$, $I_g$) whereas targeted immunity eliminates only iRBC ($I$, $I_g$). As in \cite{kamiya_uncovering_2020}, we define $N$ and $W$ as the proportion of cells cleared per day by indiscriminate and targeted responses, respectively. The magnitude of this activity is dependent on the total abundance of iRBC ($I+I_g$):
+
+\begin{eqnarray}
+\label{eq:scheme13}
+    \frac{dN}{dt}=\underbrace{\psi_{n}\frac{I(t)+I_{g}(t)}{\iota}(1-N(t))}_{\text{Immune activation}}-\underbrace{\frac{N(t)}{\phi_{n}}}_{\text{Immune decay}}
+\end{eqnarray}
+
+\begin{eqnarray}
+\label{eq:scheme14}
+    \frac{dW}{dt}=\underbrace{\psi_{w}\frac{I(t)+I_{g}(t)}{\iota}(1-W(t))}_{\text{Immune activation}}-\underbrace{\frac{W(t)}{\phi_{w}}}_{\text{Immune decay}},
+\end{eqnarray}
+where $\psi_n$ and $\psi_w$ denote the immune activation strengths, $\phi_n$ and $\phi_w$ represent the immune activity half-lives, and $\iota$ represents the theoretical maximum total iRBC density, which determines the threshold at which immunity saturates. Experimental data from mouse infections indicate that indiscriminate immunity is quickly activated but short-lived, whereas targeted immunity has a longer activation period but a longer half-life \cite{kamiya_uncovering_2020}. Because $N$ and $W$ have been defined as proportions of cells cleared, they can be rewritten to reflect daily rates of clearance. For example, $N=1-e^{-x_N}$, where $x_N$ is equal to the rate of clearance on a given day, and is defined as $-\mathrm{ln}\left(1-N\right)$, with some rearranging of terms. A similar expression provides the daily clearance rate for targeted killing, $-\mathrm{ln}\left(1-W\right)$. \newline
+
+Mimicking an experimental \emph{P. chabaudi} infection, the host receives an initial dose of asexually-committed iRBC ($I\textsubscript{0}$) to start the infection. We assume no parasites in this initial dose commit to gametocytogenesis and all produce asexual merozoites ($M$). Therefore, before the end of the first asexual development period ($t\le\alpha$, where $\alpha$ is the development period of one day for this species), the dynamics of asexual iRBC ($I$) in the host are determined solely by the invasion of RBC by asexual merozoites, natural RBC death, maturation of the initial cohort of infected cells, and immune-mediated killing such that
+\begin{eqnarray}
+\label{eq:scheme1}
+    \frac{dI}{dt} = \underbrace{\epsilon R(t)M(t)}_{\text{RBC invasion}}-\underbrace{\mu I(t)}_{\text{Natural death}}-\underbrace{I_{0}Beta(sp,sp)S}_{\text{iRBC maturation}}-\underbrace{[-ln(1-N(t))-ln(1-W(t))]I(t)}_{\text{Indiscriminate and targeted immunity}}. 
+\end{eqnarray}
+The first term, $\epsilon R(t)M(t)$, represents the production of iRBC through asexual merozoite invasion of RBCs, which occurs at a rate of $\epsilon$ per day, given contact. Infected RBCs die at a background rate of $\mu$, while $-ln(1-N(t))$ and \(-ln(1-W(t))\) describe their rate of death due to indiscriminate and targeted immunity, respectively. The infection-age structure of the initial cohort of asexual iRBCs, denoted as \(Beta(sp,sp)\), is modeled using a Beta distribution with a shape parameter $sp=1$, allowing iRBC maturation to occur with a uniform probability throughout the development period \cite{greischar_synchrony_2014}. The uniform probability of maturation for the initial cohort is computationally efficient and provided extremely similar results to more narrow age distributions in a previous modeling study \cite{greischar_predicting_2016}. The rate of asexual iRBC maturation depends on an exponential survival function $S$, which describes the proportion of iRBC that survives until maturation. $S$ is defined by a cumulative hazard function that is calculated by integrating the total rate of death across the development period:
+\begin{eqnarray}
+\label{eq:scheme2}
+    S = exp[-\int_{t-\alpha}^{t} \underbrace{\mu}_{\text{Natural death}}\underbrace{-ln(1-N(\omega))-ln(1-W(\omega))}_{\text{Indiscriminate and targeted immunity}}d\omega].
+\end{eqnarray}
+
+During the period $t\le\alpha$, asexual merozoite production is described by
+\begin{eqnarray}
+\label{eq:scheme3}
+    \frac{dM}{dt}=\underbrace{\beta I_{0}Beta(sp,sp)S}_{\text{iRBC maturation}}-\underbrace{\mu _{m}M(t)}_{\text{Natural death}}-\underbrace{\epsilon R(t)M(t)}_{\text{RBC invasion}},
+\end{eqnarray}
+where the first term represents the production of asexually-committed merozoites by asexual iRBC that have survived the duration of the developmental cycle and burst to produce $\beta$ merozoites each. Asexual merozoites are lost by natural death at a rate of $\mu_{m}$ and are removed by their invasion of susceptible RBC.\newline
+
+After all the initially injected iRBC have matured or died ($t>\alpha$), the next cohort of asexual iRBC starts to reach maturity. Transmission investment is defined as the proportion,  $c$, of this new generation that commits to gametocytogenesis, resulting in the production of $\beta$ sexually-committed merozoites ($M_{g}$) per cell. These sexual merozoites invade susceptible RBCs to produce sexual iRBCs ($I_{g}$). We assume that sexually-committed merozoites have the same death rate ($\mu_{m}$) and rate of RBC invasion ($\epsilon$) as asexual merozoites. The remaining proportion ($1-c$) of iRBC produces asexual merozoites and continues the asexual replication cycle. Altogether, when $t>\alpha$, the dynamics of iRBC and merozoites are as follows:
+\begin{equation}
+\label{eq:scheme4}
+\begin{split}
+\frac{dI}{dt}=& \underbrace{\epsilon R(t)M(t)}_{\text{RBC invasion}}-\underbrace{\mu I(t)}_{\text{Natural death}}-\underbrace{[-ln(1-N(t))-ln(1-W(t))]I(t)}_{\text{Indiscriminate and targeted immunity}}\\ 
+& -\underbrace{\epsilon R(t-\alpha)M(t-\alpha)S}_{\text{iRBC maturation}}
+\end{split}
+\end{equation}
+
+\begin{eqnarray}
+\label{eq:scheme5}
+    \frac{dM}{dt}=\underbrace{\beta (1-c)\epsilon R(t-\alpha)M(t-\alpha)S}_{\text{iRBC maturation (asexual)}}-\underbrace{\mu_{m}M(t)}_{\text{Natural death}}-\underbrace{\epsilon R(t)M(t)}_{\text{RBC invasion}}
+\end{eqnarray}
+
+\begin{eqnarray}
+\label{eq:scheme6}
+    \frac{dM_{g}}{dt}=\underbrace{\beta c\epsilon R(t-\alpha)M(t-\alpha)S}_{\text{iRBC maturation (sexual)}}-\underbrace{\mu_{m}M_{g}(t)}_{\text{Natural death}}-\underbrace{\epsilon R(t)M_{g}(t)}_{\text{RBC invasion}}.
+\end{eqnarray} 
+The parameter governing transmission investment ($c$) represents the proportion of iRBCs that produce sexually-committed merozoites and is further defined in the next section. \newline
+
+Before the first cohort of sexual iRBC matures (\(\alpha < t \leq \alpha +\alpha_{g}\)), the dynamics of sexual iRBC is governed solely by the rate of RBC invasion by sexually-committed merozoites, natural RBC death, and immunity:
+
+\begin{eqnarray}
+\label{eq:scheme9}
+    \frac{dI_{g}}{dt}=\underbrace{\epsilon R(t)M_{g}(t)}_{\text{RBC invasion}}-\underbrace{\mu I_{g}(t)}_{\text{Natural death}}-\underbrace{[-ln(1-N(t))-ln(1-W(t))]I_{g}(t)}_{\text{Indiscriminate and targeted immunity}}.
+\end{eqnarray}
+When the first cohort of sexual iRBC matures ($t>\alpha+\alpha_{g}$), each sexual iRBC produces a single gametocyte, $G$, such that
+
+\begin{equation}
+\label{eq:scheme10}
+    \begin{split}
+    \frac{dI_{g}}{dt}=& \underbrace{\epsilon R(t)M_{g}(t)}_{\text{RBC invasion}}-\underbrace{\mu I_{g}(t)}_{\text{Natural death}}-\underbrace{[-ln(1-N(t))-ln(1-W(t))]I_{g}(t)}_{\text{Indiscriminate and targeted immunity}}\\
+    & -\underbrace{\epsilon R(t-\alpha_{g})M_{g}(t-\alpha_{g})S_{g}}_{\text{iRBC maturation (sexual)}},
+    \end{split}
+\end{equation}
+
+\begin{eqnarray}
+\label{eq:scheme11}
+    \frac{dG}{dt}=\underbrace{\epsilon R(t-\alpha_{g})M_{g}(t-\alpha_{g})S_{g}}_{\text{iRBC maturation (sexual)}}-\underbrace{\mu_{g}G(t)}_{\text{Natural death}},
+\end{eqnarray}
+where $\mu_{g}$ is the background death rate of gametocytes. The survival probability of sexual iRBCs during their development cycle is defined by the exponential survival function $S_{g}$, which is similar to that of asexual iRBC ($S$), except the cumulative hazard function is integrated over the length of sexual iRBC development, $\alpha_{g}$:
+
+\begin{eqnarray}
+\label{eq::co_sg}
+    S_{g}=exp[-\int_{t-\alpha_{g}}^{t} \underbrace{\mu}_{\text{Natural death}} \underbrace{-ln(1-N(\omega))-ln(1-W(\omega))}_{\text{Indiscriminate and targeted immunity}}d\omega].
+\end{eqnarray}
+
+Throughout the infection, the density of uninfected RBCs, $R$, is affected by erythropoiesis, natural death, indiscriminate immunity, and merozoite invasion,  such that:
+
+\begin{equation}
+\label{eq:scheme15}
+\begin{split}
+    \frac{dR}{dt}=& \underbrace{\mu R_{0}}_{\text{Erythropoiesis}}+\underbrace{\rho(R_{0}-R(t))}_{\text{ Erythropoiesis upregulation}}-\underbrace{\mu R(t)}_{\text{Natural death}}\\ & -\underbrace{[-ln(1-N(t))R(t)]}_{\text{Indiscriminate immunity}}-\underbrace{\epsilon R(t)[M(t)+M_{g}(t)]}_{\text{Merozoite invasion}}.
+    \end{split}
+\end{equation}
+In the absence of parasites, RBCs are replenished at a baseline rate, $\mu$, that maintains a homeostatic equilibrium RBC concentration ($R_{0}$). During infection, the rate of erythropoiesis increases, and the extent of this upregulation is proportional to the deviation of RBC concentration from equilibrium \cite{chang_modulation_2004}, where $\rho$ represents the maximum proportion of the RBC deficit recovered per day. RBCs are eliminated at a natural death rate of $\mu$ (which balances new production in the absence of infection), removed through indiscriminate immunity ($-ln(1-N(t))$), or converted to iRBC via invasion by merozoites.\newline 
+
+We parameterized our model based on prior work on malaria intrahost dynamics \cite{greischar_predicting_2016, kamiya_uncovering_2020} (Table \ref{table2}). Because parameter values in Kamiya \emph{et al.} \cite{kamiya_uncovering_2020} depend on initial dosage ($I_{0}$), we estimated our starting dose using the same method, which corresponds to approximately $10^4$-$10^5$ iRBCs. Preliminary investigations indicate that varying the initial iRBC dose did not lead to quantitative differences in parasite relative fitness. Consequently, we parameterized $\psi_{n},\psi_{w},\phi_{n},\phi_{w}$ and $\rho$ using the median posterior estimates from \cite{kamiya_uncovering_2020} assuming an initial dosage of $10^4$ iRBCs.
+
+\begin{table}[!ht]
+\begin{adjustwidth}{-2.25in}{0in} % Comment out/remove adjustwidth environment if table fits in text column.
+\centering
+\caption{
+{\bf Parameter values used in the intrahost \emph{P. chabaudi} model.}}
+\begin{tabular}{@{}lllll@{}}
+\toprule
+Parameter    & Definition                                             & Value     & Unit       & Source \\ \midrule
+$R_{0}$    & Equilibrium RBC concentration                          & $8.89 \times 10^6$ & RBC/$\mu$L & \cite{timms_effect_2001}      \\
+$\mu$        & Background RBC production and RBC/iRBC mortality rate                     & 0.025                         & $\text{day}^{-1}$   & \cite{miller_quantitative_2010}      \\
+\(p\)   & Infection probability of RBC by merozoite invasion                             & $8 \times 10^{-6}$ & $\text{day}^{-1}$       & \cite{mideo_understanding_2008} \\
+$\alpha$     & Asexual iRBC development period                        & 1                             & day        & \cite{landau_life_1978}      \\
+$\alpha_{g}$ & Sexual iRBC development period                         & 2                             & day        & \cite{gautret_enhanced_1996}      \\
+$\beta$      & Burst size; number of merozoites produced per iRBC & 5.721                         & merozoites & \cite{mideo_causes_2011}      \\
+$\mu_{m}$    & Background merozoite mortality rate                    & 48                            & $\text{day}^{-1}$   & \cite{mideo_understanding_2008}      \\
+$\mu_{g}$    & Background gametocyte mortality rate                   & 4                             & $\text{day}^{-1}$   & \cite{gautret_enhanced_1996}      \\
+\(I_{0}\)    & Initial iRBC inoculum size                             & 43.860                      & $\text{iRBC}/\mu$L     & \cite{greischar_predicting_2016}      \\
+\(sp\)       & Shape parameter dictating iRBC synchrony               & 1                             & NA         & \cite{greischar_synchrony_2014}    \\
+$\psi_{n}$   & Activation strength for indiscriminate immunity        & 16.692                      & NA         & \cite{kamiya_uncovering_2020}      \\
+$\psi_{w}$   & Activation strength for targeted immunity              & 0.843                     & NA         & \cite{kamiya_uncovering_2020}      \\
+$\phi_{n}$   & Half-life of indiscriminate immunity                   & 0.035                    & day        & \cite{kamiya_uncovering_2020}      \\
+$\phi_{w}$   & Half-life of targeted immunity                         & 550.842                       & day        & \cite{kamiya_uncovering_2020}      \\
+$\iota$ & Minimum iRBC concentration to induce maximum immunity                 & $2.18\times10^6$ & RBC/$\mu$L     & \cite{timms_effect_2001} \\
+$\rho$  & Maximum proportion of RBC recovered per day & 0.263                    & NA & \cite{kamiya_uncovering_2020} \\ \bottomrule
+\end{tabular}
+\begin{flushleft}
+\end{flushleft}
+\label{table2}
+\end{adjustwidth}
+\end{table}
+
+\subsection*{Modeling transmission investment}
+In our model, transmission investment ($c$) is determined by a transformed cue variable, $f_{t}$, perceived $\alpha$ days ago by a parasite infecting a cell, to account for NCC ($f_{t}(t-\alpha)$). Following the approach taken by Greischar \emph{et al.} \cite{greischar_predicting_2016}, we modeled the transmission investment reaction norm as the complementary log-log basis-spline with three degrees of freedom ($B_{3}$). Briefly, this method models the reaction norm as a linear combination of basis function, generating a continuous, smooth cubic curve. The relative contribution of each basis function (also known as the model coefficient) defines the overall shape of the reaction norm (see Figure \ref{fig1}C). We further modify the basis-spline by applying a complementary log-log transformation to constrain the transmission investment value to be between zero and one. This method allows us to use numerical optimization to search for the set of model parameters (i.e., reaction norm shape) that maximizes parasite fitness. Because cubic splines are fundamentally smooth, the resultant reaction norms may have difficulty representing sharp transitions. For that reason, we used untransformed and log-transformed cue values to build our models and capture greater variation in putative reaction norms. \newline
+
+For numerical optimization, the perceived cue must be within the bounds of the reaction norm. To achieve this, the perceived cue variable $f(t-\alpha)$ governing transmission investment is transformed via a linear combination of Heaviside step functions ($H$) from the R package \emph{CRONE} \cite{smith_effective_2017} that constrains the cue value to be between zero and the maximum value (max) defined in Table 3. In summary, the transmission investment function is defined as
+\begin{eqnarray}
+\label{eq:scheme7}
+    c[f_{t}(t-\alpha)]=exp(-exp(B_{3}[f_{t}(t-\alpha)])),
+\end{eqnarray}
+where the Heaviside-transformed environmental cue $f_{t}(t-\alpha)$ is given by
+\begin{eqnarray}
+\label{eq:scheme8}
+    f_{t}(t-\alpha)=H[f(t-\alpha)]f(t-\alpha)+H[f(t-\alpha)-\text{max}][\text{max}-f(t-\alpha)].
+\end{eqnarray}
+
+For the best time-varying reaction norm, we defined the perceived cue as the time since infection, which has a range of 0-20 days and a step size of 0.001 (same as the simulation time step). In this case, 
+\begin{equation}
+c(t)=exp(-exp(B_{3}(t))).
+\end{equation}
+
+To incorporate dual cue perception, we used the \emph{mgcv} package \cite{wood_mgcv_2001} to model transmission investment as the response variable of a generalized additive model. This model incorporates a full tensor product smooth of two environmental cues with nine degrees of freedom, represented as follows:
+\begin{eqnarray}
+\label{eq::dual_cue}
+    c[f_{t1}(t-\alpha),f_{t2}(t-\alpha)]=exp(-exp(\sum_{i=1}^{3}\sum_{j=1}^{3}\zeta_{ij}B_{3,1}[f_{t1}(t-\alpha)]B_{3,2}[f_{t2}(t-\alpha)])),
+\end{eqnarray}
+where transmission investment is governed by two Heaviside-transformed cues, $f_{t1}$ and $f_{t2}$, perceived $\alpha$ days ago. The transmission investment surface (i.e., 2-dimensional reaction norm) is generated by taking the tensor product of the basis-splines of two cues ($B_{3,1}$ and $B_{3,2}$). The shape of this spline surface is defined by the model coefficients $\zeta_{ij}$.\newline
+
+\subsection*{Quantifying parasite fitness}
+To quantify parasite fitness, we calculated the cumulative transmission potential of different transmission investment strategies, following the method described by Greischar \emph{et al.} \cite{greischar_predicting_2016}. For a given time step, transmission potential, $\tau(t)$, is defined as the probability that a mosquito vector becomes infected after biting an infected host and has been shown empirically to be a sigmoid function of gametocyte density in this parasite species \cite{huijben_chemotherapy_2010},
+
+\begin{eqnarray}
+\label{eq:scheme16}
+\tau(t) = \frac{3.08 \times 10^{-6}G(t)^ {1.56}}{1+3.08 \times 10^{-6}G(t)^ {1.56}}.
+\end{eqnarray}
+The cumulative transmission potential, or overall fitness of the parasite, is calculated by integrating transmission potential over the entire infection duration of $\delta$ days: 
+\begin{eqnarray}
+\label{eq:scheme17}
+    \mathrm{fitness} = \int_{0}^{\delta}\tau(\omega)d\omega.
+\end{eqnarray}
+This fitness metric assumes that the mosquito population is at a constant abundance and continuously biting, for the duration of the infection. Although this is a simplification of the evolutionary pressures faced by malaria parasites \cite{greischar_partitioning_2019}, it enables us to focus our investigation at the within-host level, where transmission investment ``decisions" are being made and environmental cues are being perceived by parasites. In our numerical simulations, we estimated fitness with a step size of 0.001 days unless stated otherwise.
+
+
+\subsection*{Cue choice and perception}
+Transmission investment has been shown to vary in response to within-host competition \cite{pollitt_competition_2011,cameron_plasticity_2013} and RBC age structure and availability \cite{trager_enhanced_1992, trager_plasmodium_1999, reece_host_2005, birget_phenotypic_2017, schneider_adaptive_2018}, lysophosphatidylcholine level (a key component of the RBC plasma membrane) and exosome-like particles \cite{brancucci_lysophosphatidylcholine_2017, regev-rudzki_cell-cell_2013}. Whether parasites are responding to these cues directly, or if they are instead a proxy for changes in some other within-host environmental factor is unclear. To capture some of the diversity of putative cues, we defined transmission investment as a function of one of ten different host and parasite-centric measures (Table ~\ref{table3}). Additionally, we implemented dual cue models, allowing parasites to simultaneously perceive two different cues. As transmission investment in \emph{P. falciparum} varies non-linearly with cue strength (e.g., \emph{P. falciparum} in response to lysophosphatidylcholine concentration \cite{brancucci_lysophosphatidylcholine_2017}), and within-host dynamics are known to vary only when infectious dose changes by orders of magnitude \cite{timms_effect_2001}, we introduced non-linear cue perception, enabling parasites to perceive cues either unaltered or log$_{10}$-transformed. We excluded merozoite density as a cue due to its short half-life and the rapid pace of RBC invasion \cite{boyle_isolation_2010}. We also did not include measurements of immunity as cues, given that our model does not track individual components of immunity (rather, it tracks immune killing, phenomenologically), nor do we have sufficient empirical evidence detailing the relationship between different immunity components and transmission investment.\newline 
+\begin{table}[!ht]
+%\begin{adjustwidth}{-2.25in}{0in} % Comment out/remove adjustwidth environment if table fits in text column.
+\centering
+\caption{
+{\bf Within-host environmental cues tested and their range.}}
+\begin{tabular}{@{}llll@{}}
+\toprule
+Cue (density per $\mu$L)& Abbreviation & Min. value & Max. value\\ \midrule
+Asexual iRBC & I & 0 &$6 \times 10^6$\\
+Asexual iRBC log$_{10}$ & I log&0&6.78\\
+Sexual iRBC &Ig&0&$6 \times 10^6$\\
+Sexual iRBC log$_{10}$ &Ig log&0&6.78\\
+Asexual iRBC $+$ sexual iRBC & Total I&0&$6 \times 10^6$\\
+Asexual iRBC log$_{10}$ $+$ sexual iRBC log$_{10}$ &Total I log&0&6.78\\
+Gametocyte & G&0&$6 \times 10^4$\\
+Gametocyte log$_{10}$ & G log&0&4.78\\
+RBC &R&10$^6$&10$^7$        \\
+RBC log$_{10}$ & R log&6&7     \\ 
+\bottomrule
+\end{tabular}
+%begin{flushleft} The full name of each cue is followed by a bracket containing its abbreviation as appeared in figures. For each single infection cue, its corresponding co-infection cue is listed in the adjacent column. The first co-infection cue pertains to when parasites can kin discriminate and perceives the cue value of clone-mates (same strain) only. The second co-infection cue pertains to when kin discrimination is absent, meaning that the parasite's transmission investment strategy is affected by the total cue value, regardless of strain identity. 
+%\end{flushleft}
+\label{table3}
+%\end{adjustwidth}
+\end{table}
+
+For all cues, we adopt a standardized range that spans the values typically observed when infecting immunologically naive mice with \emph{P. chabaudi} \cite{pollitt_competition_2011}, given by the minimum and maximum values in Table \ref{table3}. All values that exceed the maximum bounds are ``perceived" by the parasite as the maximum bound via the modified Heaviside transformation function.
+
+\subsection*{Fitness optimization}
+Acute \emph{P. chabaudi} infection tends to resolve within 20 days \cite{stephens_contribution_2012}. For all models, we therefore confined our simulations and optimizations to a 20-day infection period using the parameters detailed in Table 2 and using the \emph{deSolve} package in R \cite{soetaert_solving_2020}. To ensure the convergence and continuity of output dynamics, we simulated the models with a small time step size of 0.001 days using the vode solver \cite{brown_vode_2006}. For the dual cue model, we used a larger time step of 0.01 days (which does not greatly alter parasite dynamics but improves computational speed immensely).\newline
+
+To investigate how transmission investment strategies affect parasite fitness, we performed numerical optimization of the basis-spline (single cue) or generalized additive model coefficients (dual cue) to maximize the cumulative transmission potential. We optimized the models using two methods to increase the chances of obtaining the global fitness optima. First, we performed local optimization following the methodology outlined by Greischar \emph{et al.} \cite{greischar_predicting_2016} with the same arbitrary initial values of 0.5 for all spline coefficients, but using the more efficient parallelized L-BFGS-B algorithm (Limited-Memory Broyden–Fletcher–Goldfarb–Shanno algorithm-B) implemented in the \emph{OptimParallel} package \cite{gerber_optimparallel_2019}. Second, we optimized each model using a hybrid approach to avoid convergence to a local fitness maximum. This technique involved initial global optimization using the Differential Evolution (DE) algorithm from the \emph{DEoptim} package \cite{mullen_deoptim_2011} (maximum iterations = 500, step tolerance = 50, differential weighting factor = 0.8, cross-over constant = 0.5 (single cue) or 0.9 (dual cue), population size = 40 (single cue) or 90 (dual cue), time step = 0.01 (single cue) or 0.05 (dual cue)). DE is an efficient and robust algorithm with comparable/better performance relative to other stochastic optimization algorithms \cite{lampinen_differential_2004}. Following optimization by the Differential Evolution algorithm, we further optimized the objective function using the L-BFGS-B algorithm to pinpoint a probable fitness maximum. For the differential Evolution algorithm, we used a parameter bound of  (\(-5, -500, -500, -500\)) and (\(5, 500, 5000, 500\)) for the single cue model and $(-10, -500, -1000, -1000, -250, -500, -1000, -500, -250)$ and $(10, 500, 1000, 1000, 250, 500, 1000, 500, 250)$ for the dual cue model. These bounds effectively encompass the majority of basis-spline flexibility. From the two optimization results, we selected the parameter sets that resulted in the highest fitness. \newline
+
+For dual cue models, we implemented an additional optimization method that relies on the single cue models to inform the initial starting point. For dual cue models, we reasoned that the best single cue strategy out of the two provides a theoretical baseline fitness. In other words, the worst a dual-cue strategy should do is as good as the best single cue (out of the two cues), while being unresponsive to the second cue. As such, we applied the L-BFGS-B algorithm to derive a dual cue strategy that ``resembles" the best single cue strategy, specifically by minimizing an objective function with two terms: (i) the summed absolute difference between the dual and single cue reaction norms, and (ii) the total standard deviation in transmission investment across the worse cue. Inclusion of the second term ensures that transmission investment is not affected by variations in the worse cue. Together, the objective function is represented by:
+
+\begin{eqnarray}
+\label{eq:init_objective_function}
+    \sum_{i=1}^{500} \left|\overline{c_{i}}_\text{ dual}- c_{i \text{ single}}\right|+\sum_{i=1}^{500}\sum_{j=1}^{500}\sigma_{c_{ij \text{ dual}}}.
+\end{eqnarray}
+
+ We first discretized the cue ranges into 500 evenly spaced values ($i=1{\ldots}500$, better performing cue; $j=1{\ldots}500$, worse performing cue). For each cue value with the index $i$, we calculate the deviation of the dual cue model using the absolute difference between $\overline{c_i}_ \text{ dual}$, the dual cue transmission investment averaged over the worse cue, and ${c_i}_ \text{ single}$, the corresponding transmission investment in the single cue model. The objective function also quantified the extent to which the worse cue affects transmission investment, specifically by summing the standard deviation across the worse cue value $\sum_{j=1}^{500}\sigma_{c_{ij \text{ dual}}}$ for each cue value indexed $i$.\newline
+
+
+Following this initial optimization, the resultant parameter is set as the starting point for an additional round of local optimization using the L-BFGS-B algorithm to maximize parasite fitness (same parameters as mentioned above).\newline
+
+
+As a further validation step, we compared the fitness of each putative single cue optimal strategy to the fitness obtained by 1000 randomly generated strategies. These random strategies were generated within the predefined bounds of  (\(-5, -500, -500, -500\)) and (\(5, 500, 5000, 500\)), established previously to encompass much of the spline space. In no case was the putative best strategy outperformed by a random one (\nameref{S1_Fig}). %Optimization of models with different burst size values (\(3.98,4.7,5.53, 6.08\)) is performed with the L-BFGS-B algorithm using two starting points: the optimized strategy when parasite burst size is $5.721$ or all coefficients $=0.5$.
+
+\subsection*{Semi-stochastic infection model}
+In order to explore the impact of individual infection-level variation on putative optimal transmission investment strategies, we incorporated the following random variables in the within-host model: maximum proportion of RBC deficit recovered per day ($\rho$), parasite burst size ($\beta$), immunity activation strengths ($\psi_{n}$ and $\psi_{w}$), and immunity half-lives ($\phi_{n}$ and $\phi_{w}$). For each iteration, random variables were drawn from 167 Markov chains (selected at regular intervals from a pool of 16,000 chains) used to estimate the posterior distribution in \cite{kamiya_uncovering_2020}. For the maximum proportion of RBC recovered per day and parasite burst size, the posterior distributions (originally centered at zero) are re-centered at the deterministic model values of 0.263 and 5.721, respectively. Since the paper from which we draw parameters explored the impact of dose \cite{kamiya_uncovering_2020}, we only considered estimates pertaining to hosts infected with an initial dose of $10^4$ parasites (constituting around 1000 parameter values), which corresponds to our choice for this model parameter (Table \ref{table2}). \newline
+
+For each optimal transmission investment strategy (i.e., the best strategy for each cue or dual cue combination), we performed 20-day simulations with (i) all parameters allowed to vary from their deterministic default and (ii) only a single parameter varying. Here, we used a time step of 0.01 days, which does not change fitness substantially relative to performing the simulation with a time step of 0.001 days. 
+
+\subsection*{Disease mapping of laboratory mice infections}
+To explore the dynamics of host and parasite-centric cues in an \emph{in vivo} setting, we curated data from publicly available sources of \emph{P. chabaudi} infection dynamics in mice \cite{huijben_data_2011, huijben_data_2013, huijben_data_2014, huijben_data_2018, pollitt_competition_2011,reece_sex_2008}. The curated dataset includes experiments that met the following criteria: a) single parasite strain infection, b) no administration of anti-malarial drugs, and c) availability of data on iRBC, RBC, and gametocyte densities. We then visualized two-dimensional disease maps (e.g., iRBC vs. RBC path plots) using the R package \emph{ggplot2} \cite{wickham_ggplot2_2016}.
+
+\subsection*{Quantifying parasite virulence}
+We used the area encompassed within a disease map (where the x-axis displays total iRBC density and the y-axis displays uninfected RBC density, as in \cite{torres_tracking_2016}) as a proxy for parasite virulence. To calculate this area, we first used the \emph{chull} function \cite{r_core_team_r_2021} to define the convex hull, the smallest set of coordinates that encloses the points within the infection trajectory. We then used the \emph{areapl} function from the \emph{splancs} package \cite{bivand_splancs_2024} to quantify the area of the convex hull.
+
+\section*{Supporting information}
+\paragraph*{S1 Fig.}
+\label{S1_Fig}
+{\bf Validation of transmission investment optimization.} We conducted 1000 infection simulations for parasites sensing different cues, with each simulation using randomly generated transmission investment strategies. The fitness values of these simulations were compared to the fitness of parasites adopting the optimal transmission investment strategy. Each histogram represents the difference between the optimized fitness and the fitness obtained from the randomly generated strategy. The fitness of the random strategies is always lower.\newline 
+
+\paragraph*{S2 Fig.}
+\label{S2_Fig}
+{\bf Transmission investment dynamics produced by parasites sensing different dual cue combinations.} Transmission investment is plotted for all possible dual cue combinations, with heatmaps ranked in descending order (from top to bottom) based on their associated cumulative transmission potential.\newline 
+
+ \paragraph*{S3 Fig.}
+\label{S3_Fig}
+{\bf Terminal investment increases the fitness of dual cue-perceiving parasites.} The cumulative transmission potential of parasites sensing time, the best performing dual cue combination (R log \& I log), or the individual single cues (I log, R log) are indicated with a black cross, blue square, orange circle, and yellow triangle, respectively. The cumulative transmission potential is normalized with respect to the fitness of the best time-varying strategy. Note that time, the dual cue combination, and I log all permit an initial delay in transmission investment, while R log does not; the fitness advantage of this delayed strategy can be clearly viewed on these plots as fitness accrues faster. Only time and the dual cue combination lead to terminal investment, leading to additional fitness gains from day 18 onward. \newline 
+
+\paragraph*{S4 Fig.}
+\label{S4_Fig}
+{\bf Logged RBC and logged iRBC form a looping trajectory \emph{in silico}.} Graphs display the two-dimensional reaction norm and infection trajectories for parasite sensing time with  nine degrees of freedom. The trajectories depict the dynamics of the cues (indicated on the x- and y-axes) along with the corresponding transmission investment (represented by the colour of the line). Note that the dynamics of gametocytes and sexual iRBC are hard to display completely given that these densities start off at zero. The distance between each hollow circle represents one day.\newline 
+
+\paragraph*{S5 Fig.}
+\label{S5_Fig}
+{\bf RBC/logged RBC and logged iRBC form a looping trajectory \emph{in vivo}.} To identify combinations of within-host variables that exhibit a looping relationship, we plotted all possible permutations of experimentally derived \emph{P. chabaudi} variables. Each line represents the dynamics of a single strain of infecting parasite. The line colour indicates the progression of time.\newline 
+
+\paragraph*{S6 Fig.}
+\label{S6_Fig}
+{\bf Posterior distribution of parameter values used for the semi-stochastic model.} The histograms display the distribution of 1000 parameter values drawn from 167 Markov chains derived by Kamiya \emph{et al} \cite{kamiya_uncovering_2020}. The parameter values used in the deterministic model are indicated by the dotted line.\newline
+
+\paragraph*{S7 Fig.}
+\label{S7_Fig}
+{\bf Perceiving the optimal dual cue combinations increases parasite susceptibility to environmental and developmental stochasticity.} We conducted 1000 simulations, each lasting 20 days, in which parasites adopted the optimal transmission investment strategy (from the deterministic model) using a semi-stochastic model where only one parameter was randomly drawn from the posterior distributions (see \nameref{S6_Fig}). For each parameter that is varied (indicated in the facet panels), we plot the geometric mean of the fitness on the y-axis and the fitness from the deterministic model on the x-axis. All fitness values are normalized with respect to the best time-varying strategy. The dashed line represents a 1:1 relationship between the x-axis and the y-axis; the line is not visible on the plot for burst size, since variation in this parameter has the greatest negative influence on fitness.
+
+\section*{Acknowledgments}
+We thank members of the Mideo Lab for useful feedback on the project.
+
+\nolinenumbers
+
+\bibliographystyle{plos2015.bst}
+\begin{thebibliography}{100}
+
+\bibitem{jones_diversity_2014}
+Jones OR, Scheuerlein A, Salguero-Gómez R, Camarda CG, Schaible R, Casper BB, et~al.
+\newblock Diversity of ageing across the tree of life.
+\newblock Nature. 2014;505(7482):169--173.
+\newblock doi:{10.1038/nature12789}.
+
+\bibitem{gadgil_life_1970}
+Gadgil M, Bossert WH.
+\newblock Life {Historical} {Consequences} of {Natural} {Selection}.
+\newblock The American Naturalist. 1970;104(935):1--24.
+\newblock doi:{10.1086/282637}.
+
+\bibitem{clutton-brock_maternal_1984}
+Clutton-Brock TH, Albon SD, Guinness FE.
+\newblock Maternal dominance, breeding success and birth sex ratios in red deer. 1984;308(5957):358--360.
+\newblock doi:{https://doi.org/10.1038/308358a0}.
+
+\bibitem{mcnamara_state-dependent_1996}
+McNamara JM, Houston AI.
+\newblock State-dependent life histories.
+\newblock Nature. 1996;380(6571):215--221.
+\newblock doi:{10.1038/380215a0}.
+
+\bibitem{cotter_age-specific_2011}
+Cotter SC, Ward RJS, Kilner RM.
+\newblock Age-specific reproductive investment in female burying beetles: independent effects of state and risk of death.
+\newblock Functional Ecology. 2011;25(3):652--660.
+\newblock doi:{10.1111/j.1365-2435.2010.01819.x}.
+
+\bibitem{velando_senescent_2006}
+Velando A, Drummond H, Torres R.
+\newblock Senescent birds redouble reproductive effort when ill: confirmation of the terminal investment hypothesis.
+\newblock Proceedings of the Royal Society B: Biological Sciences. 2006;273(1593):1443--1448.
+\newblock doi:{10.1098/rspb.2006.3480}.
+
+\bibitem{carter_stress_2013}
+Carter LM, Kafsack BFC, Llinás M, Mideo N, Pollitt LC, Reece SE.
+\newblock Stress and sex in malaria parasites: {Why} does commitment vary?
+\newblock Evolution, Medicine, and Public Health. 2013;2013(1):135--147.
+\newblock doi:{10.1093/EMPH/EOT011}.
+
+\bibitem{churcher_predicting_2013}
+Churcher TS, Bousema T, Walker M, Drakeley C, Schneider P, Ouédraogo AL, et~al.
+\newblock Predicting mosquito infection from \textit{{Plasmodium} falciparum} gametocyte density and estimating the reservoir of infection.
+\newblock eLife. 2013;2:e00626.
+\newblock doi:{10.7554/eLife.00626}.
+
+\bibitem{bell_enhanced_2012}
+Bell AS, Huijben S, Paaijmans KP, Sim DG, Chan BHK, Nelson WA, et~al.
+\newblock Enhanced {Transmission} of {Drug}-{Resistant} {Parasites} to {Mosquitoes} following {Drug} {Treatment} in {Rodent} {Malaria}.
+\newblock PLOS ONE. 2012;7(6):e37172.
+\newblock doi:{10.1371/journal.pone.0037172}.
+
+\bibitem{huijben_chemotherapy_2010}
+Huijben S, Nelson WA, Wargo AR, Sim DG, Drew DR, Read AF.
+\newblock Chemotherapy, within-host ecology and the fitness of drug-resistant malaria parasites.
+\newblock Evolution. 2010;64(10):2952--2968.
+\newblock doi:{10.1111/J.1558-5646.2010.01068.X}.
+
+\bibitem{pollitt_competition_2011}
+Pollitt LC, Mideo N, Drew DR, Schneider P, Colegrave N, Reece SE.
+\newblock Competition and the {Evolution} of {Reproductive} {Restraint} in {Malaria} {Parasites}.
+\newblock The American Naturalist. 2011;177(3):358--367.
+\newblock doi:{10.1086/658175}.
+
+\bibitem{cameron_plasticity_2013}
+Cameron A, Reece SE, Drew DR, Haydon DT, Yates AJ.
+\newblock Plasticity in transmission strategies of the malaria parasite, \textit{{Plasmodium} chabaudi}: environmental and genetic effects.
+\newblock Evolutionary Applications. 2013;6(2):365.
+\newblock doi:{10.1111/EVA.12005}.
+
+\bibitem{schneider_adaptive_2018}
+Schneider P, Greischar MA, Birget PLG, Repton C, Mideo N, Reece SE.
+\newblock Adaptive plasticity in the gametocyte conversion rate of malaria parasites.
+\newblock PLOS Pathogens. 2018;14(11):e1007371.
+\newblock doi:{10.1371/JOURNAL.PPAT.1007371}.
+
+\bibitem{williams_stimulation_1999}
+Williams JL.
+\newblock Stimulation of \textit{{Plasmodium} falciparum} gametocytogenesis by conditioned medium from parasite cultures.
+\newblock The American Journal of Tropical Medicine and Hygiene. 1999;60(1):7--13.
+\newblock doi:{10.4269/ajtmh.1999.60.7}.
+
+\bibitem{dyer_regulation_2003}
+Dyer M, {Day Karen P }.
+\newblock Regulation of the rate of asexual growth and commitment to sexual development by diffusible factors from in vitro cultures of \textit{{Plasmodium} falciparum}.
+\newblock The American Journal of Tropical Medicine and Hygiene. 2003;68(4):403--409.
+\newblock doi:{10.4269/AJTMH.2003.68.403}.
+
+\bibitem{mantel_malaria-infected_2013}
+Mantel PY, Hoang A, Goldowitz I, Potashnikova D, Hamza B, Vorobjev I, et~al.
+\newblock Malaria-{Infected} {Erythrocyte}-{Derived} {Microvesicles} {Mediate} {Cellular} {Communication} within the {Parasite} {Population} and with the {Host} {Immune} {System}.
+\newblock Cell Host \& Microbe. 2013;13(5):521--534.
+\newblock doi:{10.1016/J.CHOM.2013.04.009}.
+
+\bibitem{trager_enhanced_1992}
+Trager W, Gill GS.
+\newblock Enhanced {Gametocyte} {Formation} in {Young} {Erythrocytes} by {Plasmodium} falciparum {In} {Vitro}.
+\newblock The Journal of Protozoology. 1992;39(3):429--432.
+\newblock doi:{10.1111/j.1550-7408.1992.tb01476.x}.
+
+\bibitem{trager_plasmodium_1999}
+Trager W, Gill GS, Lawrence C, Nagel RL.
+\newblock \textit{{Plasmodium} falciparum}: {Enhanced} {Gametocyte} {Formation}\textit{in {Vitro}}in {Reticulocyte}-{Rich} {Blood}.
+\newblock Experimental Parasitology. 1999;91(2):115--118.
+\newblock doi:{10.1006/expr.1998.4347}.
+
+\bibitem{reece_host_2005}
+Reece SE, Duncan AB, West SA, Read AF.
+\newblock Host cell preference and variable transmission strategies in malaria parasites.
+\newblock Proceedings of the Royal Society B: Biological Sciences. 2005;272(1562):511--517.
+\newblock doi:{10.1098/rspb.2004.2972}.
+
+\bibitem{buckling_plasmodium_1999}
+Buckling A, Crooks L, Read A.
+\newblock \textit{{Plasmodium} chabaudi:} {Effect} of {Antimalarial} {Drugs} on {Gametocytogenesis}.
+\newblock Experimental Parasitology. 1999;93(1):45--54.
+\newblock doi:{10.1006/expr.1999.4429}.
+
+\bibitem{koella_optimal_1995}
+Koella JC, Antia R.
+\newblock Optimal {Pattern} of {Replication} and {Transmission} for {Parasites} with {Two} {Stages} in {Their} {Life} {Cycle}.
+\newblock Theoretical Population Biology. 1995;47(3):277--291.
+\newblock doi:{10.1006/tpbi.1995.1012}.
+
+\bibitem{reece_synthesis_2009}
+Reece SE, Ramiro RS, Nussey DH.
+\newblock Synthesis: {Plastic} parasites: sophisticated strategies for survival and reproduction?
+\newblock Evolutionary Applications. 2009;2(1):11--23.
+\newblock doi:{10.1111/j.1752-4571.2008.00060.x}.
+
+\bibitem{greischar_predicting_2016}
+Greischar MA, Mideo N, Read AF, Bjørnstad ON.
+\newblock Predicting optimal transmission investment in malaria parasites.
+\newblock Evolution. 2016;70(7):1542--1558.
+\newblock doi:{10.1111/EVO.12969}.
+
+\bibitem{birget_phenotypic_2017}
+Birget PLG, Repton C, O’Donnell AJ, Schneider P, Reece SE.
+\newblock Phenotypic plasticity in reproductive effort: malaria parasites respond to resource availability.
+\newblock Proceedings of the Royal Society B: Biological Sciences. 2017;284(1860).
+\newblock doi:{10.1098/RSPB.2017.1229}.
+
+\bibitem{clutton-brock_reproductive_2015}
+Clutton-Brock TH.
+\newblock Reproductive {Effort} and {Terminal} {Investment} in {Iteroparous} {Animals}.
+\newblock https://doiorg/101086/284198. 2015;123(2):212--229.
+\newblock doi:{10.1086/284198}.
+
+\bibitem{eichner_genesis_2001}
+Eichner M, Diebner HH, Molineaux L, Collins WE, Jeffery GM, Dietz K.
+\newblock Genesis, sequestration and survival of \textit{{Plasmodium} falciparum} gametocytes: parameter estimates from fitting a model to malariatherapy data.
+\newblock Transactions of The Royal Society of Tropical Medicine and Hygiene. 2001;95(5):497--501.
+\newblock doi:{10.1016/S0035-9203(01)90016-1}.
+
+\bibitem{greischar_quantifying_2016}
+Greischar MA, Mideo N, Read AF, Bjørnstad ON.
+\newblock Quantifying {Transmission} {Investment} in {Malaria} {Parasites}.
+\newblock PLOS Computational Biology. 2016;12(2):e1004718.
+\newblock doi:{10.1371/JOURNAL.PCBI.1004718}.
+
+\bibitem{pianka_age-specific_1975}
+Pianka ER, Parker WS.
+\newblock Age-{Specific} {Reproductive} {Tactics}.
+\newblock The American Naturalist. 1975;109(968):453--464.
+\newblock doi:{10.1086/283013}.
+
+\bibitem{timms_effect_2001}
+Timms R, Colegrave N, Chan BHK, Read AF.
+\newblock The effect of parasite dose on disease severity in the rodent malaria \textit{{Plasmodium} chabaudi}.
+\newblock Parasitology. 2001;123(Pt 1):1--11.
+\newblock doi:{10.1017/S0031182001008083}.
+
+\bibitem{metcalf_partitioning_2011}
+Metcalf CJE, Graham AL, Huijben S, Barclay VC, Long GH, Grenfell BT, et~al.
+\newblock Partitioning regulatory mechanisms of within-host malaria dynamics using the effective propagation number.
+\newblock Science. 2011;333(6045):984--988.
+\newblock doi:{10.1126/SCIENCE.1204588}.
+
+\bibitem{barclay_cd4t_2008}
+Barclay VC, Råberg L, Chan BHK, Brown S, Gray D, Read AF.
+\newblock {CD4}+{T} cells do not mediate within-host competition between genetically diverse malaria parasites.
+\newblock Proceedings of the Royal Society B: Biological Sciences. 2008;275(1639):1171--1179.
+\newblock doi:{10.1098/rspb.2007.1713}.
+
+\bibitem{mckenzie_integrated_2005}
+McKenzie FE, Bossert WH.
+\newblock An integrated model of \textit{{Plasmodium} falciparum} dynamics.
+\newblock Journal of Theoretical Biology. 2005;232(3):411--426.
+\newblock doi:{10.1016/j.jtbi.2004.08.021}.
+
+\bibitem{bousema_epidemiology_2011}
+Bousema T, Drakeley C.
+\newblock Epidemiology and infectivity of \textit{{Plasmodium} falciparum} and \textit{{Plasmodium} vivax} gametocytes in relation to malaria control and elimination.
+\newblock Clinical Microbiology Reviews. 2011;24(2):377--410.
+\newblock doi:{10.1128/CMR.00051-10}.
+
+\bibitem{cao_modeling_2019}
+Cao P, Collins KA, Zaloumis S, Wattanakul T, Tarning J, Simpson JA, et~al.
+\newblock Modeling the dynamics of \textit{{Plasmodium} falciparum} gametocytes in humans during malaria infection.
+\newblock eLife. 2019;8:e49058.
+\newblock doi:{10.7554/eLife.49058}.
+
+\bibitem{greischar_partitioning_2019}
+Greischar MA, Beck-Johnson LM, Mideo N.
+\newblock Partitioning the influence of ecology across scales on parasite evolution.
+\newblock Evolution. 2019;73(11):2175--2188.
+\newblock doi:{10.1111/EVO.13840}.
+
+\bibitem{early_declines_2022}
+Early AM, Camponovo F, Pelleau S, Cerqueira GC, Lazrek Y, Volney B, et~al.
+\newblock Declines in prevalence alter the optimal level of sexual investment for the malaria parasite \textit{{Plasmodium} falciparum}.
+\newblock Proceedings of the National Academy of Sciences. 2022;119(30):e2122165119.
+\newblock doi:{10.1073/pnas.2122165119}.
+
+\bibitem{lensen_plasmodium_1999}
+Lensen A, Bril A, van~de Vegte M, van Gemert GJ, Eling W, Sauerwein R.
+\newblock \textit{{Plasmodium} falciparum}: infectivity of cultured, synchronized gametocytes to mosquitoes.
+\newblock Experimental Parasitology. 1999;91(1):101--103.
+\newblock doi:{10.1006/expr.1998.4354}.
+
+\bibitem{de_boor_practical_2001}
+de~Boor C.
+\newblock A {Practical} {Guide} to {Splines}.
+\newblock 1st ed. No.~27 in Applied {Mathematical} {Sciences}. Springer New York; 2001.
+
+\bibitem{dixon_sex_2008}
+Dixon MWA, Thompson J, Gardiner DL, Trenholme KR.
+\newblock Sex in \textit{{Plasmodium}}: a sign of commitment.
+\newblock Trends in Parasitology. 2008;24(4):168--175.
+\newblock doi:{10.1016/J.PT.2008.01.004}.
+
+\bibitem{birget_altered_2018}
+Birget PLG, Greischar MA, Reece SE, Mideo N.
+\newblock Altered life history strategies protect malaria parasites against drugs.
+\newblock Evolutionary Applications. 2018;11(4).
+\newblock doi:{10.1111/eva.12516}.
+
+\bibitem{kamiya_uncovering_2020}
+Kamiya T, Greischar MA, Schneider DS, Mideo N.
+\newblock Uncovering drivers of dose-dependence and individual variation in malaria infection outcomes.
+\newblock PLOS Computational Biology. 2020;16(10):e1008211.
+\newblock doi:{10.1371/JOURNAL.PCBI.1008211}.
+
+\bibitem{huijben_data_2011}
+Huijben S, Sim DG, Nelson WA, Read AF.
+\newblock Data from: {The} fitness of drug-resistant malaria parasites in a rodent model: multiplicity of infection.
+\newblock Dryad. 2011;.
+
+\bibitem{huijben_data_2013}
+Huijben S, Nelson WA, Wargo AR, Sim DG, Drew DR, Read AF.
+\newblock Data from: {Chemotherapy}, within-host ecology and the fitness of drug-resistant malaria parasites.
+\newblock Dryad. 2013;.
+
+\bibitem{huijben_data_2014}
+Huijben S, Bell AS, Sim DG, Tomasello D, Mideo N, Day T, et~al.
+\newblock Data from: {Aggressive} chemotherapy and the selection of drug resistant pathogens.
+\newblock Dryad. 2014;.
+
+\bibitem{huijben_data_2018}
+Huijben S, Chan BHK, Nelson WA, Read AF.
+\newblock Data from: {The} impact of within-host ecology on the fitness of a drug-resistant parasite.
+\newblock Dryad. 2018;.
+
+\bibitem{torres_tracking_2016}
+Torres BY, Oliveira JHM, Thomas~Tate A, Rath P, Cumnock K, Schneider DS.
+\newblock Tracking {Resilience} to {Infections} by {Mapping} {Disease} {Space}.
+\newblock PLOS Biology. 2016;14(4):e1002436.
+\newblock doi:{10.1371/JOURNAL.PBIO.1002436}.
+
+\bibitem{reece_sex_2008}
+Reece SE, Drew DR, Gardner A.
+\newblock Sex ratio adjustment and kin discrimination in malaria parasites.
+\newblock Nature. 2008;453(7195).
+\newblock doi:{10.1038/nature06954}.
+
+\bibitem{moran_evolutionary_1992}
+Moran NA.
+\newblock The {Evolutionary} {Maintenance} of {Alternative} {Phenotypes}.
+\newblock The American Naturalist. 1992;139(5):971--989.
+\newblock doi:{10.1086/285369}.
+
+\bibitem{scheiner_genetics_1998}
+Scheiner SM.
+\newblock The genetics of phenotypic plasticity. {VII}. {Evolution} in a spatially-structured environment.
+\newblock Journal of Evolutionary Biology. 1998;11(3):303--320.
+\newblock doi:{10.1046/j.1420-9101.1998.11030303.x}.
+
+\bibitem{de_jong_unpredictable_1999}
+De~Jong G.
+\newblock Unpredictable selection in a structured population leads to local genetic differentiation in evolved reaction norms.
+\newblock Journal of Evolutionary Biology. 1999;12(5).
+\newblock doi:{10.1046/j.1420-9101.1999.00118.x}.
+
+\bibitem{schlaepfer_ecological_2002}
+Schlaepfer MA, Runge MC, Sherman PW.
+\newblock Ecological and evolutionary traps.
+\newblock Trends in Ecology \& Evolution. 2002;17(10):474--480.
+\newblock doi:{10.1016/S0169-5347(02)02580-6}.
+
+\bibitem{reed_phenotypic_2010}
+Reed TE, Robin SW, Schindler DE, Hard JJ, Kinnison MT.
+\newblock Phenotypic plasticity and population viability: {The} importance of environmental predictability.
+\newblock Proceedings of the Royal Society B: Biological Sciences. 2010;277(1699).
+\newblock doi:{10.1098/rspb.2010.0771}.
+
+\bibitem{tufto_evolution_2000}
+Tufto J.
+\newblock The evolution of plasticity and nonplastic spatial and temporal adaptations in the presence of imperfect environmental cues.
+\newblock American Naturalist. 2000;156(2).
+\newblock doi:{10.1086/303381}.
+
+\bibitem{antia_dynamics_2008}
+Antia R, Yates A, de~Roode JC.
+\newblock The dynamics of acute malaria infections. {I}. {Effect} of the parasite's red blood cell preference.
+\newblock Proceedings of the Royal Society B: Biological Sciences. 2008;275(1641):1449--1458.
+\newblock doi:{10.1098/rspb.2008.0198}.
+
+\bibitem{birget_plasticity_2019}
+Birget PLG, {Kimberley F  Prior}, Savill NJ, Steer L, Reece SE.
+\newblock Plasticity and genetic variation in traits underpinning asexual replication of the rodent malaria parasite, \textit{{Plasmodium} chabaudi}.
+\newblock Malaria Journal. 2019;18(1):222.
+\newblock doi:{10.1186/s12936-019-2857-0}.
+
+\bibitem{haydon_top-down_2003}
+Haydon DT, Matthews L, Timms R, Colegrave N.
+\newblock Top-down or bottom-up regulation of intra-host blood-stage malaria: do malaria parasites most resemble the dynamics of prey or predator?
+\newblock Proceedings of the Royal Society B: Biological Sciences. 2003;270(1512):289--298.
+\newblock doi:{10.1098/rspb.2002.2203}.
+
+\bibitem{miller_quantitative_2010}
+Miller MR, Råberg L, Read AF, Savill NJ.
+\newblock Quantitative {Analysis} of {Immune} {Response} and {Erythropoiesis} during {Rodent} {Malarial} {Infection}.
+\newblock PLOS Computational Biology. 2010;6(9):e1000946.
+\newblock doi:{10.1371/JOURNAL.PCBI.1000946}.
+
+\bibitem{kamiya_linking_2021}
+Kamiya T, Davis NM, Greischar MA, Schneider D, Mideo N.
+\newblock Linking functional and molecular mechanisms of host resilience to malaria infection.
+\newblock eLife. 2021;10.
+\newblock doi:{10.7554/ELIFE.65846}.
+
+\bibitem{lewontin_population_1969}
+Lewontin RC, Cohen D.
+\newblock On population growth in a randomly varying environment.
+\newblock Proceedings of the National Academy of Sciences of the United States of America. 1969;62(4):1056--1060.
+\newblock doi:{10.1073/pnas.62.4.1056}.
+
+\bibitem{gillespie_polymorphism_1973}
+Gillespie J.
+\newblock Polymorphism in random environments.
+\newblock Theoretical Population Biology. 1973;4(2):193--195.
+\newblock doi:{10.1016/0040-5809(73)90028-2}.
+
+\bibitem{pak_proliferation_2024}
+Pak D, Kamiya T, Greischar MA.
+\newblock Proliferation in malaria parasites: {How} resource limitation can prevent evolution of greater virulence.
+\newblock Evolution. 2024;78(7):1287--1301.
+\newblock doi:{10.1093/evolut/qpae057}.
+
+\bibitem{schneider_private_2021}
+Schneider P, Reece SE.
+\newblock The private life of malaria parasites: {Strategies} for sexual reproduction.
+\newblock Molecular and Biochemical Parasitology. 2021;244:111375.
+\newblock doi:{10.1016/J.MOLBIOPARA.2021.111375}.
+
+\bibitem{pigliucci_evolution_2005}
+Pigliucci M.
+\newblock Evolution of phenotypic plasticity: where are we going now?
+\newblock Trends in Ecology \& Evolution. 2005;20(9):481--486.
+\newblock doi:{10.1016/j.tree.2005.06.001}.
+
+\bibitem{kochin_parasite_2010}
+Kochin BF, Bull JJ, Antia R.
+\newblock Parasite {Evolution} and {Life} {History} {Theory}.
+\newblock PLOS Biology. 2010;8(10):e1000524.
+\newblock doi:{10.1371/journal.pbio.1000524}.
+
+\bibitem{mckenzie_optimal_1998}
+McKenzie FE, Bossert WH.
+\newblock The {Optimal} {Production} of {Gametocytes} by \textit{{Plasmodium} falciparum}.
+\newblock Journal of Theoretical Biology. 1998;193(3):419--428.
+\newblock doi:{10.1006/jtbi.1998.0710}.
+
+\bibitem{mideo_evolution_2008}
+Mideo N, Day T.
+\newblock On the evolution of reproductive restraint in malaria.
+\newblock Proceedings of the Royal Society B: Biological Sciences. 2008;275(1639):1217--1224.
+\newblock doi:{10.1098/RSPB.2007.1545}.
+
+\bibitem{charvin_origin_2010}
+Charvin G, Oikonomou C, Siggia ED, Cross FR.
+\newblock Origin of {Irreversibility} of {Cell} {Cycle} {Start} in {Budding} {Yeast}.
+\newblock PLOS Biology. 2010;8(1):e1000284.
+\newblock doi:{10.1371/journal.pbio.1000284}.
+
+\bibitem{melen_threshold_2005}
+Melen GJ, Levy S, Barkai N, Shilo B.
+\newblock Threshold responses to morphogen gradients by zero-order ultrasensitivity.
+\newblock Molecular Systems Biology. 2005;1(1):2005.0028.
+\newblock doi:{10.1038/msb4100036}.
+
+\bibitem{schneider_tracing_2011}
+Schneider DS.
+\newblock Tracing {Personalized} {Health} {Curves} during {Infections}.
+\newblock PLOS Biology. 2011;9(9):e1001158.
+\newblock doi:{10.1371/journal.pbio.1001158}.
+
+\bibitem{kasumovic_multidimensional_2013}
+Kasumovic MM.
+\newblock The multidimensional consequences of the juvenile environment: towards an integrative view of the adult phenotype.
+\newblock Animal Behaviour. 2013;85(5):1049--1059.
+\newblock doi:{10.1016/j.anbehav.2013.02.009}.
+
+\bibitem{dore_role_2018}
+Dore AA, McDowall L, Rouse J, Bretman A, Gage MJG, Chapman T.
+\newblock The role of complex cues in social and reproductive plasticity.
+\newblock Behavioral Ecology and Sociobiology. 2018;72(8):124.
+\newblock doi:{10.1007/s00265-018-2539-x}.
+
+\bibitem{westneat_causes_2019}
+Westneat DF, Potts LJ, Sasser KL, Shaffer JD.
+\newblock Causes and {Consequences} of {Phenotypic} {Plasticity} in {Complex} {Environments}.
+\newblock Trends in Ecology \& Evolution. 2019;34(6):555--568.
+\newblock doi:{10.1016/j.tree.2019.02.010}.
+
+\bibitem{moller_why_1993}
+Moller AP, Pomiankowski A.
+\newblock Why have birds got multiple sexual ornaments?
+\newblock Behavioral Ecology and Sociobiology. 1993;32(3):167--176.
+\newblock doi:{10.1007/BF00173774}.
+
+\bibitem{getty_maintenance_1996}
+Getty T.
+\newblock The maintenance of phenotypic plasticity as a signal detection problem.
+\newblock The American Naturalist. 1996;148(2):378--385.
+
+\bibitem{dewitt_costs_1998}
+DeWitt TJ.
+\newblock Costs and limits of phenotypic plasticity: {Tests} with predator-induced morphology and life history in a freshwater snail.
+\newblock Journal of Evolutionary Biology. 1998;11(4).
+\newblock doi:{10.1007/s000360050100}.
+
+\bibitem{anderson_coevolution_1982}
+Anderson RM, May RM.
+\newblock Coevolution of hosts and parasites.
+\newblock Parasitology. 1982;85(2):411--426.
+\newblock doi:{10.1017/S0031182000055360}.
+
+\bibitem{alizon_virulence_2009}
+Alizon S, Hurford A, Mideo N, Van~Baalen M.
+\newblock Virulence evolution and the trade-off hypothesis: history, current state of affairs and the future.
+\newblock Journal of Evolutionary Biology. 2009;22(2):245--259.
+\newblock doi:{10.1111/j.1420-9101.2008.01658.x}.
+
+\bibitem{mackinnon_genetic_1999}
+Mackinnon MJ, Read AF.
+\newblock Genetic {Relationships} between {Parasite} {Virulence} and {Transmission} in the {Rodent} {Malaria} \textit{{Plasmodium} chabaudi}.
+\newblock Evolution. 1999;53(3):689--703.
+\newblock doi:{10.1111/j.1558-5646.1999.tb05364.x}.
+
+\bibitem{mackinnon_virulence_2002}
+Mackinnon MJ, Gaffney DJ, Read AF.
+\newblock Virulence in rodent malaria: host genotype by parasite genotype interactions.
+\newblock Infection, Genetics and Evolution. 2002;1(4):287--296.
+\newblock doi:{10.1016/S1567-1348(02)00039-4}.
+
+\bibitem{mackinnon_effects_2003}
+Mackinnon MJ, Read AF.
+\newblock The effects of host immunity on virulence–transmissibility relationships in the rodent malaria parasite \textit{{Plasmodium} chabaudi}.
+\newblock Parasitology. 2003;126(2):103--112.
+\newblock doi:{10.1017/S003118200200272X}.
+
+\bibitem{paul_experimental_2004}
+Paul R, Lafond T, Müller-Graf C, Nithiuthai S, Brey P, Koella J.
+\newblock Experimental evaluation of the relationship between lethal or non-lethal virulence and transmission success in malaria parasite infections.
+\newblock BMC Evolutionary Biology. 2004;4(1):30.
+\newblock doi:{10.1186/1471-2148-4-30}.
+
+\bibitem{regoes_evolution_2000}
+Regoes RR, Nowak MA, Bonhoeffer S.
+\newblock Evolution of {Virulence} in a {Heterogeneous} {Host} {Population}.
+\newblock Evolution. 2000;54(1):64--71.
+\newblock doi:{10.1111/j.0014-3820.2000.tb00008.x}.
+
+\bibitem{williams_new_2012}
+Williams PD.
+\newblock New {Insights} into {Virulence} {Evolution} in {Multigroup} {Hosts}.
+\newblock The American Naturalist. 2012;179(2):228--239.
+\newblock doi:{10.1086/663690}.
+
+\bibitem{white_host_2020}
+White PS, Choi A, Pandey R, Menezes A, Penley M, Gibson AK, et~al.
+\newblock Host heterogeneity mitigates virulence evolution.
+\newblock Biology Letters. 2020;16(1):20190744.
+\newblock doi:{10.1098/rsbl.2019.0744}.
+
+\bibitem{hawking_evidence_1971}
+Hawking F, Wilson ME, Gammage K.
+\newblock Evidence for cyclic development and short-lived maturity in the gametocytes of \textit{{Plasmodium} falciparum}.
+\newblock Transactions of The Royal Society of Tropical Medicine and Hygiene. 1971;65(5):549--559.
+\newblock doi:{10.1016/0035-9203(71)90036-8}.
+
+\bibitem{padilla_plastic_1996}
+Padilla DK, Adolph SC.
+\newblock Plastic inducible morphologies are not always adaptive: {The} importance of time delays in a stochastic environment.
+\newblock Evolutionary Ecology. 1996;10(1):105--117.
+\newblock doi:{10.1007/BF01239351}.
+
+\bibitem{hoi_limited_2024}
+Hoi AG, Greischar MA, Mideo N.
+\newblock Limited impact of within-vector ecology on the evolution of malaria parasite transmission investment.
+\newblock Frontiers in Malaria. 2024;2.
+\newblock doi:{10.3389/fmala.2024.1392060}.
+
+\bibitem{mukherjee_bacterial_2019}
+Mukherjee S, Bassler BL.
+\newblock Bacterial quorum sensing in complex and dynamically changing environments.
+\newblock Nature reviews Microbiology. 2019;17(6):371--382.
+\newblock doi:{10.1038/s41579-019-0186-5}.
+
+\bibitem{greischar_synchrony_2014}
+Greischar MA, Read AF, Bjørnstad ON.
+\newblock Synchrony in malaria infections: {How} intensifying within-host competition can be adaptive.
+\newblock American Naturalist. 2014;183(2).
+\newblock doi:{10.1086/674357}.
+
+\bibitem{chang_modulation_2004}
+Chang KH, Tam M, Stevenson MM.
+\newblock Modulation of the {Course} and {Outcome} of {Blood}-{Stage} {Malaria} by {Erythropoietin}-{Induced} {Reticulocytosis}.
+\newblock The Journal of Infectious Diseases. 2004;189(4):735--743.
+\newblock doi:{10.1086/381458}.
+
+\bibitem{mideo_understanding_2008}
+Mideo N, Barclay VC, Chan BHK, Savill NJ, Read AF, Day T.
+\newblock Understanding and predicting strain-specific patterns of pathogenesis in the rodent malaria \textit{{Plasmodium} chabaudi}.
+\newblock American Naturalist. 2008;172(5):214--238.
+\newblock doi:{doi/10.1086/591684}.
+
+\bibitem{landau_life_1978}
+Landau I, Boulard Y.
+\newblock Life {Cycles} and {Morphology}.
+\newblock In: Killick-Kendrick R, Peters W, editors. Rodent {Malaria}. Academic Press; 1978. p. 53--84.
+
+\bibitem{gautret_enhanced_1996}
+Gautret P, Miltgen F, Gantier JC, Chabaud AG, Landau I.
+\newblock Enhanced gametocyte formation by \textit{{Plasmodium} chabaudi} in immature erythrocytes: {Pattern} of production, sequestration, and infectivity to mosquitoes.
+\newblock Journal of Parasitology. 1996;82(6).
+\newblock doi:{10.2307/3284196}.
+
+\bibitem{mideo_causes_2011}
+Mideo N, Savill NJ, Chadwick W, Schneider P, Read AF, Day T, et~al.
+\newblock Causes of variation in malaria infection dynamics: {Insights} from theory and data.
+\newblock American Naturalist. 2011;178(6).
+\newblock doi:{10.1086/662670}.
+
+\bibitem{smith_effective_2017}
+Smith E, Evans G, Foadi J.
+\newblock An effective introduction to structural crystallography using {1D} {Gaussian} atoms.
+\newblock European Journal of Physics. 2017;38(6):065501.
+\newblock doi:{10.1088/1361-6404/AA8188}.
+
+\bibitem{wood_mgcv_2001}
+Wood SN.
+\newblock mgcv: {GAMs} and generalized ridge regression for {R}.
+\newblock R News. 2001;1.
+
+\bibitem{brancucci_lysophosphatidylcholine_2017}
+Brancucci NMB, Gerdt JP, Wang C, Niz MD, Philip N, Adapa SR, et~al.
+\newblock Lysophosphatidylcholine {Regulates} {Sexual} {Stage} {Differentiation} in the {Human} {Malaria} {Parasite} \textit{{Plasmodium} falciparum}.
+\newblock Cell. 2017;171(7):1532--1544.e15.
+\newblock doi:{10.1016/J.CELL.2017.10.020}.
+
+\bibitem{regev-rudzki_cell-cell_2013}
+Regev-Rudzki N, Wilson DW, Carvalho TG, Sisquella X, Coleman BM, Rug M, et~al.
+\newblock Cell-{Cell} {Communication} between {Malaria}-{Infected} {Red} {Blood} {Cells} via {Exosome}-like {Vesicles}.
+\newblock Cell. 2013;153(5):1120--1133.
+\newblock doi:{10.1016/J.CELL.2013.04.029}.
+
+\bibitem{boyle_isolation_2010}
+Boyle MJ, Wilson DW, Richards JS, Riglar DT, Tetteh KKA, Conway DJ, et~al.
+\newblock Isolation of viable \textit{{Plasmodium} falciparum} merozoites to define erythrocyte invasion events and advance vaccine and drug development.
+\newblock Proceedings of the National Academy of Sciences of the United States of America. 2010;107(32).
+\newblock doi:{10.1073/pnas.1009198107}.
+
+\bibitem{stephens_contribution_2012}
+Stephens R, Culleton RL, Lamb TJ.
+\newblock The contribution of \textit{{Plasmodium} chabaudi} to our understanding of malaria.
+\newblock Trends in Parasitology. 2012;28(2).
+\newblock doi:{10.1016/j.pt.2011.10.006}.
+
+\bibitem{soetaert_solving_2020}
+Soetaert K, Petzoldt T, Setzer RW.
+\newblock Solving {Differential} {Equations} in {R}: {Package} {deSolve}.
+\newblock Journal of Statistical Software. 2020;33(9):1--25.
+\newblock doi:{10.18637/jss.v033.i09}.
+
+\bibitem{brown_vode_2006}
+Brown PN, Byrne GD, Hindmarsh AC.
+\newblock {VODE}: {A} {Variable}-{Coefficient} {ODE} {Solver}.
+\newblock http://dxdoiorg/101137/0910062. 2006;10(5):1038--1051.
+\newblock doi:{10.1137/0910062}.
+
+\bibitem{gerber_optimparallel_2019}
+Gerber F, Furrer R.
+\newblock {optimParallel}: {An} {R} {Package} {Providing} a {Parallel} {Version} of the {L}-{BFGS}-{B} {Optimization} {Method}.
+\newblock The R Journal. 2019;11(1):352--358.
+\newblock doi:{10.32614/RJ-2019-030}.
+
+\bibitem{mullen_deoptim_2011}
+Mullen KM, Ardia D, Gil DL, Windover D, Cline J.
+\newblock {DEoptim}: {An} {R} package for global optimization by differential evolution.
+\newblock Journal of Statistical Software. 2011;40(6).
+\newblock doi:{10.18637/jss.v040.i06}.
+
+\bibitem{lampinen_differential_2004}
+Lampinen J, Storn R.
+\newblock Differential {Evolution}.
+\newblock In: Onwubolu GC, Babu BV, editors. New {Optimization} {Techniques} in {Engineering}. Studies in {Fuzziness} and {Soft} {Computing}. Berlin, Heidelberg: Springer; 2004. p. 123--166.
+\newblock Available from: \url{https://doi.org/10.1007/978-3-540-39930-8_6}.
+
+\bibitem{wickham_ggplot2_2016}
+Wickham H.
+\newblock ggplot2: {Elegant} {Graphics} for {Data} {Analysis}.
+\newblock Springer-Verlag New York; 2016.
+\newblock Available from: \url{https://ggplot2.tidyverse.org}.
+
+\bibitem{r_core_team_r_2021}
+{R Core Team}. R: {A} language and environment for statistical computing; 2021.
+\newblock Available from: \url{https://www.r-project.org/}.
+
+\bibitem{bivand_splancs_2024}
+Bivand R, Rowlingson B, Diggle P, Petris G, Eglen S. splancs: {Spatial} and {Space}-{Time} {Point} {Pattern} {Analysis}; 2024.
+\newblock Available from: \url{https://CRAN.R-project.org/package=splancs}.
+
+\end{thebibliography}
+
+
+\end{document}
+
