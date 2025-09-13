@@ -609,6 +609,8 @@ dual_selected_cr.pl <- ggplot() +
   theme(legend.position="right",
         plot.margin = margin(t = 40, r = 0, b = 0, l = 0, unit = "pt")) +
   guides(color = guide_legend(nrow = 4, byrow = TRUE))
+
+time_high.cr
 ```
 
 #-------- Reaction norm heatmap of R log10 + I log10 ------------#
@@ -1086,6 +1088,7 @@ ggsave(here("code_repository/figures/exp_disease-curve.tiff"), units = "px", wid
 ```{r}
 time_high.dyn_wide <- time_high.dyn %>% 
   filter(time<=20) %>% 
+  mutate(value = ifelse(variable != "cr", value+1, value)) %>% 
   pivot_wider(id = "time", names_from = variable, values_from = value)
 ```
 
@@ -1135,7 +1138,7 @@ ggarrange(
                       aes(x = log10(Ig), y = log10(G)), size = 1.5, shape = 1) +
   scale_color_viridis_c(limits = c(0, 1.01)) +
     ylim(0,NA) +
-    xlim(0,NA) +
+    xlim(-1,NA) +
   labs(x = "Sexual iRBC log", y = "Gametocyte log", color = "Transmission investment") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
@@ -1147,7 +1150,7 @@ ggarrange(
   geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
                       aes(x = log10(Ig), y = log10(R)), size = 1.5, shape = 1) +
   scale_color_viridis_c(limits = c(0, 1.01)) +
-    xlim(0,NA) +
+    xlim(-1,NA) +
   labs(x = "Sexual iRBC log", y = "RBC log", color = "Transmission investment") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),
@@ -1159,7 +1162,7 @@ ggarrange(
   geom_point(data = time_high.dyn_wide %>% filter(time %% 1 == 0), 
                       aes(x = log10(Ig), y = log10(I)), size = 1.5, shape = 1) +
   scale_color_viridis_c(limits = c(0, 1.01)) +
-    xlim(0,NA) +
+    xlim(-1,NA) +
     ylim(0,NA) +
   labs(x = "Sexual iRBC log", y = "Asexual iRBC log", color = "Transmission investment") +
   theme_bw() +
@@ -1173,7 +1176,7 @@ ggarrange(
                       aes(x = log10(I+Ig), y = log10(Ig)), size = 1.5, shape = 1) +
   scale_color_viridis_c(limits = c(0, 1.01)) +
     xlim(0,NA) +
-    ylim(0,NA) +
+    ylim(-1,NA) +
   labs(x = "Total iRBC log", y = "Sexual iRBC log", color = "Transmission investment") +
   theme_bw() +
   theme(panel.grid.major = element_blank(),

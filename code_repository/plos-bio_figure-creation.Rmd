@@ -636,6 +636,7 @@ ggplot(data = dual_cue_cr.df, aes(x = time, y = fct_reorder(label_comb, fitness)
 ggsave(here("code_repository/figures/dual_cue_cr.tiff"), units = "px", width = 2000, height = 1500, dpi=300,  bg = "white", compression = "lzw")
 ```
 
+
 #=================================#
 # Cumulative transmission plot of dual and single cue models
 #=================================#
@@ -1908,6 +1909,79 @@ ggplot(validation.df_p) +
 
 ggsave(units = "px", dpi = 300, width = 2550, height = 1500, filename = here("code_repository/figures/si_validation.tiff"), bg = "white", scale = 1,compression = "lzw")
 ```
+
+#----------------------------------------#
+# Further plots for revision
+#----------------------------------------#
+# Differences in dynamics between different transformations
+```{r}
+# keep only relevant variables
+time_high.cr_f <- time_high.cr %>% 
+  filter(variable %in% c("I") &
+           time<8 & time>0)
+
+# plot different transformations
+## untransformed
+time_dyn_pl.1 <- ggplot(time_high.cr_f, aes(x = time, y = value)) +
+  geom_line() +
+  #facet_wrap(~variable, scales = "free_y") +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  labs(x = "Time (days)", y = "Density\n(cells/µL)")
+
+
+## log transformed
+time_dyn_pl.2 <- ggplot(time_high.cr_f %>% mutate(log_value = log10(value),
+                                 log_value_2 = ifelse(log_value<0, 0, log_value)), aes(x = time, y = log_value_2)) +
+  geom_line() +
+ # facet_wrap(~variable, scales = "free_y") +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  labs(x = "Time (days)", y = "log10 Density\n(cells/µL)")
+
+## sqrt transformed
+time_dyn_pl.3 <- ggplot(time_high.cr_f %>% mutate(sqrt_value = sqrt(value)), aes(x = time, y = sqrt_value)) +
+  geom_line() +
+ # facet_wrap(~variable, scales = "free_y") +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  labs(x = "Time (days)", y = "sqrt Density\n(cells/µL)")
+
+## arcsine
+time_dyn_pl.4 <- ggplot(time_high.cr_f %>% 
+         group_by(variable) %>% 
+         mutate(max= max(value, na.rm = T)) %>% 
+         ungroup() %>% 
+         mutate(arcsine_value = asin(sqrt(value/max))), 
+       aes(x = time, y = arcsine_value)) +
+  geom_line() +
+  #facet_wrap(~variable, scales = "free_y") +
+  theme_bw() +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()) +
+  labs(x = "Time (days)", y = "Arcsine Density\n(cells/µL)")
+
+# plot together
+ggarrange(time_dyn_pl.1, time_dyn_pl.2, time_dyn_pl.3, ncol = 1, nrow = 3, heights = c(1,1,1.3), align = "v",
+           labels = c("Raw", "Log10", "Sqrt", "Arcsine"), hjust = 0, vjust = 1)
+
+ggsave(here("code_repository/figures/time_dynamics_transformation.png"), height = 5, width = 3)
+```
+
+
 
 
 
