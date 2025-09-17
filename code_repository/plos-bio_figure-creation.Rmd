@@ -27,6 +27,7 @@ library(tidyr)
 library(splines2)
 library(splancs)
 library(ggnewscale)
+library(openxlsx)
 ```
 
 ## load variables
@@ -166,6 +167,15 @@ si_dyn_cr_fitness.df <- si_dyn_cr.df %>%
 ## normalize fitness by dividing all values by the fitness values we get when cue = time
 si_opt.df <- si_opt.df %>% 
   mutate(fitness_norm = fitness_20 / si_opt.df[si_opt.df$cue == "t",]$fitness_20)
+
+## save data
+si_opt.df %>% 
+  select(long_label, fitness = fitness_20, fitness_normalized = fitness_norm) %>% 
+  write.csv(here("code_repository/supplementary_data/fig2A_1.csv"), row.names = F)
+
+si_dyn_cr_fitness.df %>% 
+  select(long_label, time, transmission_investment = value) %>% 
+  write.csv(here("code_repository/supplementary_data/fig2A_2.csv"), row.names = F)
 ```
 
 ## plot
@@ -313,6 +323,13 @@ si_rug_cue.df$cue_label <- factor(si_rug_cue.df$cue_label,
 ### split
 si_rug_cue.df_none <- si_rug_cue.df %>% filter(log == "none")
 si_rug_cue.df_log <- si_rug_cue.df %>% filter(log == "log")
+
+
+## write data
+si_rn.df_p %>% 
+  mutate(long_label = paste(cue_label, log)) %>% 
+  select(long_label, cue_value = cue_range, transmission_investment = cr) %>% 
+  write.csv(here("code_repository/supplementary_data/fig2B.csv"))
 ```
 
 ## plot reaction norms and associated rug plots
@@ -391,6 +408,11 @@ dual_si_fitness.df <- dual_cue_f_final.df %>%
   mutate(fitness_si_final = ifelse(fitness_si > fitness_si_b, fitness_si, fitness_si_b)/9.883602,
          label_comb = gsub("I\\+Ig", "Total I", paste(label, "&", label_b)), ## select the highest single cue model fitness
          fitness_dual_norm = fitness_dual/9.883602)## normalize by time fitness
+
+## write data
+dual_si_fitness.df %>% 
+  select(label = label_comb, dual_cue_fitness_normalized = fitness_dual_norm, best_single_cue_fitness_normalized = fitness_si_final) %>% 
+  write.csv(here("code_repository/supplementary_data/fig3B.csv"))
 ```
 
 ## plot fitness rank
@@ -474,6 +496,11 @@ Rlog_Ilog.cr_p <- Rlog_Ilog.cr %>% filter(variable == "cr") %>% mutate(label_new
 ## combine
 dual_selected_cr.df <- rbind(I_high.cr_p, R_high.cr_p, time_high.cr_p, Rlog_Ilog.cr_p)
 write_parquet(dual_selected_cr.df, here("code_repository/data/dual_selected_cr.parquet"))
+
+## write data
+dual_selected_cr.df %>% 
+  select(label = label_new, time, transmission_investment = value) %>% 
+  write.csv(here("code_repository/supplementary_data/fig3C.csv"))
 ```
 
 ## plot
@@ -499,6 +526,11 @@ dual_selected_cr.pl <- ggplot() +
 Rlog_Ilog.hm <- par_to_hm_te(par = c(4.446192033,	10.97518275,	1.38762817,	23.3059254,	-3.452052371,	-18.0070692,	39.66614226,	-3.545193141,	18.78350799),
              cue_range = seq(6,	7, length.out = 500),
              cue_range_b = seq(0,	6.77815125, length.out = 500))
+
+## write data
+Rlog_Ilog.hm %>% 
+  select(asexual_iRBC_log = cue_range_b, RBC_log = cue_range, transmssion_investment = cr) %>%
+  write.csv(here("code_repository/supplementary_data/fig3D.csv"))
 
 # process dynamics
 Rlog_Ilog.dyn <- Rlog_Ilog.cr %>% 
@@ -622,6 +654,11 @@ dual_cue_dyn.df %>%
   distinct(id, id_b, value) %>% 
   left_join(select(dual_cue_f_final.df, id, id_b, fitness), by = c("id", "id_b")) %>% 
   mutate(diff = value-fitness)
+
+## write csv
+dual_cue_cr.df %>% 
+  select(label = label_comb, time, transmission_investment = value) %>% 
+  write.csv(here("code_repository/supplementary_data/S7_Data.csv"), row.names = F)
 ```
 
 ## Plot
@@ -635,7 +672,6 @@ ggplot(data = dual_cue_cr.df, aes(x = time, y = fct_reorder(label_comb, fitness)
 
 ggsave(here("code_repository/figures/dual_cue_cr.tiff"), units = "px", width = 2000, height = 1500, dpi=300,  bg = "white", compression = "lzw")
 ```
-
 
 #=================================#
 # Cumulative transmission plot of dual and single cue models
@@ -667,6 +703,8 @@ dual_selected_taucum.df <- read_parquet(here("code_repository/data/dual_selected
 # normalize fitness
 dual_selected_taucum.df_p <- dual_selected_taucum.df %>% mutate(fitness_norm = value/9.883602)
 
+# write data
+dual_selected_taucum.df_p %>% select(label = label_new, time, cumulative_fitness_normalized = fitness_norm) %>% write.csv(here("code_repository/supplementary_data/S8_Data.csv"), row.names = F)
 
 # plot cumultative transmission plot
 ggplot() +
@@ -835,7 +873,12 @@ exp_var.comb <- tidyr::expand_grid(x = c("RBC", "iRBC", "Gametocyte"),
   mutate(tmp = paste0(pmin(x, y), pmax(x, y))) %>% ## eliminate same variable but different order
   slice_head(n = 1, by = tmp) %>% 
   select(-tmp) 
-```
+
+# write data
+exp_ss.df %>% 
+  select(Study, Strain, Dose, Mouse, Gametocyte, iRBC, RBC) %>% 
+  write.csv(here("code_repository/supplementary_data/fig4_exp.csv"))
+``` 
 
 ## List-wise plotting
 ```{r}
@@ -981,6 +1024,11 @@ get_dual_rn <- function(df){
 ## split dual dynamics dataframe into list grouped by the dual cues
 dual_cue_dyn.ls <- dual_cue_dyn.df %>% group_split(id, id_b)
 
+## write csv
+dual_cue_dyn.df %>% 
+  select(cue_1 = label, cue_2 = label_b, time, variable, density = value) %>% 
+  write.csv(here("code_repository/supplementary_data/fig4_sim.csv"))
+
 ## run function across list
 dual_cue_rn.ls <- mclapply(dual_cue_dyn.ls, get_dual_rn, mc.cores = 6)
 
@@ -1079,7 +1127,6 @@ ggsave(here("code_repository/figures/sim_exp_disease_curve_legend.tiff"), units 
 ```
 
 
-
 #=================================#
 # MC simulation of single cue and dual cue infection
 #=================================#
@@ -1093,7 +1140,7 @@ mc_all.ls <- list.files(path = here("code_repository/data/mc_all_fitness"), patt
 mc_all_sc.ls <- mc_all.ls[!grepl("-", basename(mc_all.ls))]
 mc_all_dc.ls <- mc_all.ls[grepl("-", basename(mc_all.ls))]
 
-## we are expecting 11*5010 = 55110 data files for single cue and 4*5010=20040 files for dc
+## we are expecting 11*5010 = 55110 data files for single cue and 10*1000=10000 files for dc
 length(mc_all_sc.ls)
 length(mc_all_dc.ls)
 
@@ -1108,78 +1155,207 @@ mc_all_fitness_sc.df %>%
   tally()
 
 mc_all_fitness_dc.df %>% 
-  distinct(cue, cue_b, log, log_b, id) %>% 
+  distinct(cue, cue_b, log, log_b, iter) %>% 
   group_by(cue, cue_b, log, log_b) %>% 
   tally()
 
 ## combine dataframes
 mc_all_fitness.df <- mc_all_fitness_dc.df %>% 
-  mutate(iter = id,
+  mutate(
          id = gsub("log10", "log", paste0(cue, "_", log, "-", cue_b,"_", log_b))) %>%
-  select(id, iter, max_fitness) %>% 
+  select(id, iter, fitness) %>% 
   rbind(
     mc_all_fitness_sc.df %>% 
       mutate(iter = id,
+             fitness = max_fitness,
              id = ifelse(cue != "t", paste0(cue, "_", gsub("log10", "log", log)), "time")
              ) %>% 
-      select(id, iter, max_fitness)
+      select(id, iter, fitness)
     ) %>% 
   left_join(ez_label, by = "id") 
 ## for each cue and log, id = 1 is where all parameters are default values. Given that we simulated the time step with 0.01 rather than  0.001, we need to check whether this higher time step alters the fitness values. We can see that the difference is very small ~0.002 so this will not affect any our outcomes.
 ## Here, I also manually verified that the fitness values for the dual cue looked good!
 mc_all_fitness.df %>% filter(iter == 1) %>% 
   left_join(select(si_opt.df, cue, log, fitness_20), by = c("cue", "log")) %>% 
-  mutate(diff = max_fitness - fitness_20)
+  mutate(diff = fitness - fitness_20)
 
 ## write
 write_parquet(mc_all_fitness.df, here("code_repository/data/mc_all_fitness.parquet"))
+mc_all_fitness.df <- read_parquet(here("code_repository/data/mc_all_fitness.parquet"))
 ```
 
 ## process data for plotting fitness
 ```{r}
 ## normalize fitness and take only first 1000 measurement (this is done given that subsequent simulations only include 1000 reps!)
 mc_all_fitness.df_p <- mc_all_fitness.df %>% 
-  filter(iter %in% seq(1,1000,1)) %>% 
-  mutate(fitness_norm = max_fitness/9.883602,
-         short_label = gsub("I\\+Ig", "Total I", short_label))
+  filter(iter %in% seq(1,1000,1) & id != "time") %>% 
+  mutate(fitness_norm = fitness/9.883602,
+         cue_condition = ifelse(str_detect(id, "-"), "Dual cue", "Single cue"),
+         short_label = ifelse(str_detect(id, "-"), gsub("-"," & ",gsub("_", " ", id)), short_label), ## if dual cue, derive short label from id!
+         short_label = gsub("I\\+Ig", "Total I", short_label)) ## substitute I+Ig with Total I 
 
 ## get the reference fitness (default parameter variation), which is where iter = 1
 mc_all_fitness_ref.df <- mc_all_fitness.df_p %>% filter(iter == 1)
 
 ## get the rest of the data points (excluding iter == 1) and calculate median and mean
 mc_all_fitness_rand.df <- mc_all_fitness.df_p %>% 
-  filter(iter != 1) 
-
-## get mean and mode in a separate df
-mc_all_fitness_sum.df <- mc_all_fitness_rand.df %>% 
+  filter(iter != 1) %>% 
   group_by(short_label) %>% 
-  summarize(mean = mean(fitness_norm),
-            median = median(fitness_norm),
-            geom_mean = exp(mean(log(fitness_norm))),
+  summarize(geom_mean = exp(mean(log(fitness_norm))),
             sd = sd(fitness_norm)) %>% 
-  left_join(select(mc_all_fitness_ref.df, short_label, max_fitness), by = "short_label")
+  left_join(select(mc_all_fitness_ref.df, short_label, fitness, cue_condition), by = "short_label")
 
-mc_all_fitness_sum.df
+## write data
+mc_all_fitness.df_p %>% 
+  filter(iter != 1) %>% 
+  left_join(select(mc_all_fitness_ref.df, short_label, fitness_deterministic = fitness, cue_condition), by = "short_label") %>% 
+  select(label = short_label, iter, fitness_semi_stochastic = fitness, fitness_deterministic) %>% 
+  write.csv(here("code_repository/supplementary_data/fig5A.csv"))
 ```
 
-## plot fitness variation 
+# plot
 ```{r}
 mc_all_fitness.pl <- ggplot() +
-  geom_violin(data = mc_all_fitness_rand.df, aes(x = fitness_norm, y = fct_reorder(short_label, fitness_norm, .fun = function(x){exp(mean(log(x)))})),
-              fill = "light grey", color = "transparent", trim = T) +
-  geom_point(data = mc_all_fitness_ref.df, aes(x = fitness_norm, y = short_label, 
-                                               shape = "Deterministic", color = "Deterministic"), size = 3, alpha = 0.8) +
-  geom_point(data = mc_all_fitness_sum.df, aes(x = mean, y = short_label, 
-                                              shape = "Mean", color = "Mean"), size = 3, alpha = 0.8) +
-    geom_point(data = mc_all_fitness_sum.df, aes(x = geom_mean, y = short_label, 
-                                              shape = "Geometric mean", color = "Geometric mean"), size = 3, alpha = 0.8) +
-  labs(x ="Normalized fitness", y = "Cues", shape = "", color = "") +
-  scale_color_manual(values = c("black", "#785EF0", "#FFB000")) +
-  theme_classic() +
-  expand_limits(y =17) +
-  theme(legend.position = c(0.2,1), 
-        legend.direction = "horizontal",
-        legend.justification = "top") 
+  ggrepel::geom_label_repel(data = mc_all_fitness_rand.df, aes(x = fitness/9.883602, y = geom_mean, label = short_label, colour = factor(cue_condition)),box.padding
+=0.1, size = 3, label.padding = 0.1, force_pull = 0.2, force = 30) +
+  geom_point(data = mc_all_fitness_rand.df, aes(x = fitness/9.883602, y = geom_mean, shape = cue_condition, color = cue_condition), size = 2) +
+  #geom_errorbar(data = mc_all_fitness_sum.df, aes(x = fitness, y = geom_mean, ymin = geom_mean-sd, ymax = geom_mean+sd, color = cue_condition)) +
+  labs(x = "Relative deterministic model fitness", y = "Relative semi-stochastic model fitness (geometric mean)", color = "Legend", shape = "Legend", label = "") +
+  scale_shape_manual(values = c(17, 16)) +
+  scale_color_manual(values = c(blue, orange)) +
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  )
+```
+
+#------------Correlation of cue variation on fitness decline--------------#
+# import data
+```{r}
+# I log
+## to get the right file names, I limited the length of the file name to filter out the dual cue names and kept only the first 1000 interations
+mc_ilog_dyn.df_file <- Filter(function(x) str_length(basename(x)) <= 20 & as.numeric(str_extract(x, "(?<=_)[0-9]+(?=\\.parquet$)"))<=1000,
+       list.files(here("code_repository/data/mc_all_dyn"), pattern = "I_log10_[0-9]*.parquet", full.names = T))
+## read and combine
+mc_ilog_dyn.df <- do.call(rbind, mclapply(mc_ilog_dyn.df_file, 
+                                          function(x){
+                                              data <- read_parquet(x) %>% mutate(iter = str_extract(x, "(?<=_)[0-9]+(?=\\.parquet$)"))
+                                            
+                                          }
+,
+  mc.cores = 6))
+
+## R log and I log
+mc_rlog_ilog_dyn.df_file <- Filter(function(x) as.numeric(str_extract(x, "(?<=_)[0-9]+(?=\\.parquet$)"))<=1000,
+       list.files(here("code_repository/data/mc_all_dyn"), pattern = "R_log10-I_log10", full.names = T))
+## read and combine
+mc_rlog_ilog_dyn.df <- do.call(rbind, mclapply(mc_rlog_ilog_dyn.df_file, 
+                                          function(x){
+                                              data <- read_parquet(x) %>% mutate(iter = str_extract(x, "(?<=_)[0-9]+(?=\\.parquet$)"))
+                                            
+                                          }
+,
+  mc.cores = 6))
+```
+
+# filter data to keep only cues
+```{r}
+# Here, I am only keeping the relevant cues and conversion rate
+mc_ilog_dyn.df_cue <- mc_ilog_dyn.df %>% 
+  filter(variable %in% c("I", "R", "cr"))%>% 
+  mutate(value_logged = ifelse(variable == "cr", value, log10(value))) %>% 
+  pivot_wider(id_cols = c(time, iter), names_from = variable, values_from = value_logged)
+
+mc_rlog_ilog_dyn.df_cue <- mc_rlog_ilog_dyn.df %>% 
+  filter(variable %in% c("I", "R", "cr"))%>% 
+  mutate(value_logged = ifelse(variable == "cr", value, log10(value))) %>% 
+  pivot_wider(id_cols = c(time, iter), names_from = variable, values_from = value_logged) %>% 
+  group_by(iter) %>% 
+  arrange(time)
+
+# write data
+mc_ilog_dyn.df_cue %>% 
+  select(time, iter, RBC_log = R, iRBC_log = I, transmission_investment = cr) %>% 
+  write.csv(here("code_repository/supplementary_data/fig5B_1.csv"))
+
+# write data
+mc_rlog_ilog_dyn.df_cue %>% 
+  select(time, iter, RBC_log = R, iRBC_log = I, transmission_investment = cr) %>% 
+  write.csv(here("code_repository/supplementary_data/fig5B_2.csv"))
+```
+
+# plot variation of cue over time
+```{r}
+si_rn.df_p_Ilogsi_rn.df_p %>% filter(id == "I_log") %>% rbind(data.frame(cue_range = 10^7, cr = 0.3049818, id = "I_log", cue= "I", log = "log", min = 0, max = 113580.5, cue_label = "Asexual iRBC", log2 = "log"))
+
+si_rn.df %>% filter(id == "I_log") %>% arrange(desc(cue_range))
+```
+
+```{r}
+# I log
+## cue over time
+mc_ilog_cue.pl <- ggplot() +
+  geom_tile(data = si_rn.df %>% filter(id == "I_log"), aes(y = log10(cue_range), x= 10, width = 20, fill = cr)) +
+  geom_line(data = mc_ilog_dyn.df_cue, aes(x = time, y = I, group = iter), alpha = 0.05, color = "#D9615F") +
+ # geom_path(data = mc_ilog_dyn.df_cue %>% filter(iter == 1), aes(x = time, y = I), alpha = 1, size = 2, color = orange,arrow = arrow()) +
+  geom_path(data = mc_ilog_dyn.df_cue %>% filter(iter == 1), aes(x = time, y = I), alpha = 1, size = 2, color = "white",arrow = arrow()) +
+  labs(x = "Time (days)", y = "Asexual iRBC log", fill = "Transmission\ninvestment") +
+  #scale_fill_gradientn(colours = grey(seq(0,1,l=20)), limit = c(0,1)) +
+  scale_fill_viridis_c(limit = c(0,1)) +
+  ylim(1.75, 5.5) +
+  theme_bw() +
+  theme(
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  )
+
+# cr over time
+mc_ilog_cr.pl <- ggplot() +
+  geom_line(data = mc_ilog_dyn.df_cue, aes(x = time, y = cr, group = iter), alpha = 0.1, color = "grey") +
+  geom_line(data = mc_ilog_dyn.df_cue %>% filter(iter == 1), aes(x = time, y = cr), alpha =1,size = 2, color = orange) +
+  labs(x = "Time (days)", y = "Transmission investment", color = "Time (days)") +
+  #scale_color_viridis_c(option = "A") +
+  ylim(0,1) +
+  theme_bw() +
+  theme(
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  ) 
+
+# R log and I log
+# cue over time
+mc_ilog_cue.pl2 <- ggplot() +
+  geom_raster(data = Rlog_Ilog.hm, aes(x = cue_range_b, y = cue_range, fill = cr)) +
+  geom_path(data = mc_rlog_ilog_dyn.df_cue, aes(y = R, x = I, group = iter), alpha = 0.2, color = "#D9615F") +
+  #geom_path(data =mc_rlog_ilog_dyn.df_cue %>% filter(iter == 1), aes(y = R, x = I), alpha = 1, size = 2, color = blue, arrow = arrow()) +
+  geom_path(data =mc_rlog_ilog_dyn.df_cue %>% filter(iter == 1), aes(y = R, x = I), alpha = 1, size = 2, color = "white", arrow = arrow()) +
+  labs(x = "Asexual iRBC log", y = "RBC log", fill = "Transmission\ninvestment") +
+  #scale_fill_gradientn(colours = grey(seq(0,1,l=20)), limit = c(0,1)) +
+  scale_fill_viridis_c(limit = c(0,1)) +
+  xlim(1.75, 6.3) +
+  ylim(6.65, 7) +
+  theme_bw() +
+  theme(
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  )
+
+# cr over time
+mc_rlog_ilog_cr.pl <- ggplot() +
+  geom_line(data = mc_rlog_ilog_dyn.df_cue, aes(x = time, y = cr, group = iter), alpha = 0.1, color = "grey") +
+  geom_line(data = mc_rlog_ilog_dyn.df_cue %>% filter(iter == 1), aes(x = time, y = cr, group = iter), alpha = 1, size = 2, color = blue) +
+  labs(x = "Time (days)", y = "Transmission investment", color = "Time (days)") +
+  #scale_color_viridis_c(option = "A") +
+  ylim(0,1) +
+  theme_bw() +
+  theme(
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank()
+  )
+
+# plot together
+mc_cue.pl <- ggarrange(mc_ilog_cue.pl, mc_ilog_cue.pl2, mc_ilog_cr.pl,  mc_rlog_ilog_cr.pl, common.legend = T, ncol = 2, nrow = 2, align = "hv")
 ```
 
 #------------ Impact of individual parameter variation on fitness ------------#
@@ -1189,7 +1365,14 @@ mc_all_fitness.pl <- ggplot() +
 mc_single.ls <- list.files(path = here("code_repository/data/mc_single_fitness"), pattern = "*.csv", full.names = T)
 
 ## read and combine
-mc_single_fitness.df <- do.call(rbind, mclapply(mc_single.ls, function(x) read.csv(x), mc.cores = 6))
+mc_single_fitness.df <- do.call(rbind, mclapply(mc_single.ls, 
+                                                function(x){
+                                                  df <- read.csv(x)
+                                                  names(df) <- c("X","iter",	"rho",	"burst",	"iota_N1", "iota_N2",	"phi_N1",	"phi_N2",	"fitness_rho",	"fitness_beta",	"fitness_psin",	"fitness_psiw", "fitness_phin",	"fitness_phiw",	"id")
+                                                  return(df)
+                                                  }, 
+  
+  mc.cores = 6))
 
 # look at # of reps
 mc_single_fitness.df %>% 
@@ -1207,16 +1390,16 @@ mc_single_fitness.df %>% filter(iter == 1)
 ```{r}
 ## note that for each iter across the "single" and "all" dataset, the parameter alteration is the same. Thus, for each data point at which all parameter are varied, there is a corresponding datapoint where only one parameter is varied. We can join these 2 dataset by iter and cue and log
 mc_single_all_fitness.df <- mc_single_fitness.df %>% 
-  left_join(select(mc_all_fitness.df, fitness_all = max_fitness,id, iter), by = c("id", "iter")) %>% 
+  left_join(select(mc_all_fitness.df_p, fitness_all = fitness,id, iter, short_label), by = c("id", "iter")) %>% 
   filter(iter %in% seq(0,1000,1)) ## only include the top 1000 records
 
 ## make the dataframe into a long format such that all fitness variations are in a single column
 mc_single_fitness.long <- mc_single_all_fitness.df %>% 
   filter(iter != 1) %>% ## filter out iter = 1, which does not have variation
-  left_join(select(mc_all_fitness_ref.df, fitness_ref = max_fitness, id),
+  left_join(select(mc_all_fitness_ref.df, fitness_ref = fitness, id),
             by = c("id")) %>% ## add in the deterministic fitness values
-  select(id, max_fitness_rho, max_fitness_beta, max_fitness_psin, max_fitness_psiw, max_fitness_phin, max_fitness_phiw, iter, fitness_all, fitness_ref) %>% # keep only fitness and associated labels
-  tidyr::pivot_longer(-c("id", "fitness_all", "iter", "fitness_ref")) %>% ## make long
+  select(id, short_label,fitness_rho, fitness_beta, fitness_psin, fitness_psiw, fitness_phin, fitness_phiw, iter, fitness_all, fitness_ref) %>% # keep only fitness and associated labels
+  tidyr::pivot_longer(-c("id", "short_label","fitness_all", "iter", "fitness_ref")) %>% ## make long
   mutate(parameter = gsub("max_fitness_|fitness_", "", name)) ## isolate parameter being altered
 
 ## calculate degree deviation from deterministic values. note that rel_diff_single ranges from -1 to 1. -1 ->  one variable perturbation is acting in the opposite direction to the overall perturbation caused by randomizing all variables. 0 parameter variation contributes very little, 1 -> one variable contributes a lot
@@ -1225,7 +1408,7 @@ mc_single_fitness.long_p <- mc_single_fitness.long %>%
          diff_all = fitness_all-fitness_ref, ## pertubation to fintess caused by all parameter varying
          rel_diff_single = diff_single/diff_all ## normalized pertunation to fitness (single parameter)
          ) %>% 
-  left_join(ez_label, by = c("id"))
+  left_join(ez_label %>% select(-short_label), by = c("id"))
 
 ## calculate summary statistics. this includes median, credible interval (contains 89% data points calculated via Highest Density Interval, which is better for skewed data)
 mc_single_fitness.long_p %>% filter(id == "R_log-I+Ig_log")
@@ -1253,15 +1436,8 @@ mc_single_fitness.long_p_f <- mc_single_fitness.long_p %>%
   left_join(select(mc_single_fitness.sum, short_label, parameter, ci_lower, ci_higher, parameter_label), by = c("short_label", "parameter")) %>% 
   filter(rel_diff_single >= ci_lower & rel_diff_single < ci_higher)
 
-## arrange ordering of cues and parameters
-mc_single_fitness.long_p_f$short_label <- factor(mc_single_fitness.long_p_f$short_label, c(
-  "R & I log", "R log & I log",
-  "R & Total I log","R log & Total I log",
-  "R", "R log",
-  "I", "I log",
-  "Ig", "Ig log", 
-  "Total I", "Total I log",
-  "G", "G log"))
+## rank by descending performance in deterministic fitness
+mc_single_fitness.long_p_f$short_label <- factor(mc_single_fitness.long_p_f$short_label,c(mc_all_fitness_ref.df %>% arrange(desc(fitness_norm)) %>% select(short_label))$short_label)
 
 mc_single_fitness.long_p_f$parameter_label <- factor(mc_single_fitness.long_p_f$parameter_label,
                                                      c("Burst size (β)",
@@ -1277,9 +1453,9 @@ mc_single_fitness.long_p_f$parameter_label <- factor(mc_single_fitness.long_p_f$
 # plotting 89% credible interval. By visual inspection of the distribution, ci represented the distribution (more honestly) than quantile, even when quantile seems to display larger differences of logging cues.
 ```{r}
 mc_partition.pl <- ggplot() +
-  geom_violin(data = mc_single_fitness.long_p_f, aes(x = rel_diff_single, y = short_label,
+  geom_violin(data = mc_single_fitness.long_p_f %>% filter(str_detect(short_label, "log")), aes(x = rel_diff_single, y = short_label,
                                                  ), fill = "grey", color = "grey") + ## 89% credible interval
-  geom_point(data = mc_single_fitness.sum, aes(x = median, y = short_label)) +
+  geom_point(data = mc_single_fitness.sum %>% filter(str_detect(short_label, "log")), aes(x = median, y = short_label)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "#785EF0") +
   geom_vline(xintercept = 1, linetype = "dashed", color = "#785EF0") +
   facet_wrap(~parameter_label) +
@@ -1290,12 +1466,21 @@ mc_partition.pl <- ggplot() +
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank()
   )
+
+
 ```
 
 #--------- arrange plots together ---------#
 ```{r}
-ggarrange(mc_all_fitness.pl, mc_partition.pl, align = "h", widths = c(1.3, 2), labels = c("A", "B"))
-ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("code_repository/figures/mc_fitness_partition.tiff"), bg = "white", scale = 1.2)
+# v1
+ggarrange(mc_all_fitness.pl, mc_partition.pl, align = "h", widths = c(1.5, 2), labels = c("A", "B"))
+ggsave(units = "px", dpi = 300, width = 2250, height = 1500, filename = here("code_repository/figures/mc_fitness_partition.tiff"), bg = "white", scale = 1.3)
+
+# v2
+ggarrange(mc_all_fitness.pl, mc_cue.pl, align = "h", widths = c(1, 1.5), labels = c("A", "B"))
+ggsave(units = "px", dpi = 300, width = 2250, height = 1250, filename = here("code_repository/figures/mc_fitness_partition.tiff"), bg = "white", scale = 1.3)
+
+ggsave(units = "px", dpi = 300, width = 2250, height = 1250, filename = here("code_repository/figures/mc_fitness_partition_v2.tiff"), bg = "white", scale = 1.3)
 ```
 
 #==========================================#
@@ -1324,6 +1509,10 @@ posterior.long <- posterior.df %>%
   )) ## rename paramter values
 
 
+## write csv
+posterior.long %>% 
+  select(label, iter, parameter, value) %>% 
+  write.csv(here("code_repository/supplementary_data/S9_Data.csv"), row.names = F)
 ```
 
 ## plot
@@ -1366,9 +1555,9 @@ mc_single_fitness.long2 <- mc_single_fitness.df %>%
   filter(iter %in% seq(0,1000,1)) %>% ## filter out iter = 1, which does not have variation
   distinct(id, iter, .keep_all = T) %>% ## ensure there are not replicates
   filter(iter != 1) %>% 
-  dplyr::select(id, max_fitness_rho, max_fitness_beta, max_fitness_psin, max_fitness_psiw, max_fitness_phin, max_fitness_phiw, iter) %>% # keep only fitness and associated labels
+  dplyr::select(id, fitness_rho, fitness_beta, fitness_psin, fitness_psiw, fitness_phin, fitness_phiw, iter) %>% # keep only fitness and associated labels
   tidyr::pivot_longer(-c("id", "iter")) %>% ## make long
-  mutate(parameter = gsub("max_fitness_", "", name)) %>% 
+  mutate(parameter = gsub("fitness_", "", name)) %>% 
   mutate(
          parameter_label = case_when( ## recode parameter values
     parameter == "rho" ~ "RBC replenishment (ρ)",
@@ -1412,6 +1601,10 @@ mc_single_fitness.sum2 <- mc_single_fitness.long2 %>%
 mc_single_fitness.long2 <- mc_single_fitness.long2 %>% 
   left_join(select(mc_single_fitness.sum2, id,parameter_label, median, mean, geo_mean), by = c("id", "parameter_label", "short_label")) 
 
+# write data
+mc_single_fitness.long2 %>% 
+  select(cue = cue_label, paramater_varied = parameter_label, iter, geometric_mean_fitness = geo_mean, fitness_semi_stochastic_normalized = fitness_norm, fitness_deterministic_normalized = fitness_det_norm) %>% 
+  write.csv(here("code_repository/supplementary_data/S10_Data.csv"), row.names = F)
 ```
 
 # plot
@@ -1534,6 +1727,8 @@ mc_single_dyn_cr.sum <- read.csv(here("code_repository/data/mc_single_dyn_cr_sum
 mc_single_dyn_cr.sum_fitness <- mc_single_fitness.sum2 %>% 
   mutate(geo_mean_diff = geo_mean-fitness_det_norm) %>% 
   left_join(mc_single_dyn_cr.sum, by = c("id", "parameter"))
+
+mc_single_dyn_cr.sum_fitness
 ```
 
 # isolate examples of robust and non-robust cues
@@ -1633,13 +1828,66 @@ ggsave(here("code_repository/figures/mc_single_cr_dyn_int.tiff"), units = "px", 
 #=====================================#
 # Impact of cue perception on virulence
 #====================================#
+#--------- Simulate dual cue data ---------#
+# rerunning dual cue simulations to match single cue time step
+```{r}
+# function to rerun dual cue simulation
+get_dual_dyn <- function(df){
+  ## processing model input
+  par <- c(df$par1, df$par2, df$par3, df$par4, df$par5,df$par6,df$par7, df$par8, df$par9)## parameters
+  cue <- df$cue ## cue choice
+  cue_b <- df$cue_b
+  log <- ifelse(str_detect("log", df$log), "log10", "none")
+  log_b <- ifelse(str_detect("log", df$log_b), "log10", "none")
+  cue_range <- seq(df$low, df$high, length.out = 500) ## cue range
+  cue_range_b <- seq(df$low_b, df$high_b, length.out = 500)
+  id <- df$id ## id
+  id_b <- df$id_b ## id
+  
+  ## get dynamics data
+  dyn <- chabaudi_si_clean(
+            parameters_cr = par, 
+            parameters = parameters_tsukushi, 
+            time_range = seq(0, 30, 0.01),
+            immunity = "tsukushi",
+    cue = cue,
+    cue_b = cue_b,
+    cue_range = cue_range,
+    cue_range_b = cue_range_b,
+    log_cue = log,
+    log_cue_b = log_b,
+    solver = "vode",
+    gam = "te",
+    dyn = T)
+  
+  # append id
+  dyn2 <- cbind(dyn, 
+                id = rep(id, nrow(dyn)),
+                id_b = rep(id_b, nrow(dyn))
+                )
+  
+  # return results
+ return(dyn2)
+}
+
+# split and run
+dual_cue_dyn <- mclapply(dual_cue_f_final_df2.ls, get_dual_dyn, mc.cores = 8)
+
+# concatenate
+dual_cue_dyn.df <- do.call(rbind, dual_cue_dyn)
+
+## write csv
+write_parquet(dual_cue_dyn.df, here("code_repository/data/dual_cue_dyn_30.parquet"))
+```
+
+
 #--------- Divid dynamics data into high and low performing ---------------#
 # Single cue 
 ```{r}
-# classify top 4 performing single cues as "high performing"
-top_4_single_cue <- si_opt.df %>% 
+# classify top 2 performing single cues as "high performing"
+top_2_single_cue <- si_opt.df %>% 
   filter(cue != "t") %>% 
-  slice_max(n = 4, order_by = fitness_20) %>% 
+  slice_max(n = 2, order_by = fitness_20) %>% 
   mutate(short_label = gsub("I\\+Ig", "Total I", short_label))
 
 # get wide format dataframe. Here, we are interested in the RBC and total iRBC count
@@ -1650,34 +1898,30 @@ si_dc.df <- si_dyn_30.df %>%
   mutate(total = I+Ig)
 
 # split into top and poor-performing cues
-si_dc.high <- si_dc.df %>% filter(id %in% top_4_single_cue$id)
+si_dc.high <- si_dc.df %>% filter(id %in% top_2_single_cue$id)
 
 # join high performing with label
 si_dc.high <- si_dc.high %>% left_join(ez_label %>% distinct(id, .keep_all = T), by = "id")
 
 # reorder cues by descending fitness
-si_dc.high$short_label <- factor(si_dc.high$short_label, top_4_single_cue$short_label)
+si_dc.high$short_label <- factor(si_dc.high$short_label, top_2_single_cue$short_label)
 ```
 
 # Dual cue
 ```{r}
-# classify top 4 performing dual cues as "high performing"
-top_4_dual_cue <- dual_cue_f_final.df %>% 
-  mutate(label_alt = gsub("I\\+Ig", "Total I", paste(label, "&" , label_b))) %>% 
-  slice_max(n = 4, order_by = fitness)
-
 # get wide format dataframe. Here, we are interested in the RBC and total iRBC count
-dual_dc.df <- dual_cue_dyn_30.df %>% 
-  mutate(label_alt = gsub("I\\+Ig", "Total I", paste(label, "&" , label_b))) %>% ## get new label
+dual_dc.df <- dual_cue_dyn.df  %>% 
+  mutate(
+    short_label = paste0(gsub("_", " ", id), " & ", gsub("_", " ", id_b)),
+         short_label = gsub("I\\+Ig", "Total I", short_label)) %>% 
   filter(variable == "I" | variable == "Ig" | variable == "R") %>% ## get desired variables
-  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, label_alt)) %>%
+  tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, short_label)) %>%
   mutate(total = I+Ig)
 
-# split into top and poor-performing cues
-dual_dc.high <- dual_dc.df %>% filter(label_alt %in% top_4_dual_cue$label_alt)
 
-# reorder cues by descending fitness
-dual_dc.high$label_alt <- factor(dual_dc.high$label_alt, top_4_dual_cue$label_alt)
+# split into top and poor-performing cues
+dual_dc.high <- dual_dc.df %>% filter(short_label %in% c("R log & I log", "R log & Total I log"))
+
 ```
 
 #------------Get reference dynamics---------------#
@@ -1706,17 +1950,27 @@ time_high.vir <- time_high.dyn %>%
   filter(variable == "I" | variable == "Ig" | variable == "R") %>% ## get desired variables
   tidyr::pivot_wider(names_from = variable, values_from = value, id_cols = c(time, short_label)) %>%
   mutate(total = I+Ig)
+
+# combine 
+si_dc.high2 <- rbind(si_dc.high %>% select(time, short_label, R ,total), time_high.vir%>% select(time, short_label, R ,total))
+
+# write data
+si_dc.high2 %>% 
+  select(label = short_label, time, RBC = R, total_iRBC = total) %>% 
+  write.csv(here("code_repository/supplementary_data/fig6A.csv"))
+
+dual_dc.high %>% 
+  select(label = short_label, time, RBC = R, total_iRBC = total)%>% 
+  write.csv(here("code_repository/supplementary_data/fig6C.csv"))
 ```
 
 #-------------Plot disease curves-----------------#
 # Single cue
 ```{r}
 si_dc.plt <- ggplot() +
-  geom_point(data = time_high.vir %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
-  geom_point(data = si_dc.high %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
-  geom_path(data = time_high.vir, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-   geom_path(data = si_dc.high, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "black"), name = "Cues")  +
+  geom_point(data = si_dc.high2 %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
+   geom_path(data = si_dc.high2, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  scale_color_manual(values=c( "#fdcb44", "#fc8d59", "black"), name = "Cues")  +
   labs(fill = "Cues", x = "Total iRBC", y = "RBC", color = "Cues") +
   theme_classic()+ 
   scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
@@ -1728,10 +1982,10 @@ si_dc.plt <- ggplot() +
 ```{r}
 dual_dc.plt <- ggplot() +
   geom_point(data = time_high.vir %>% filter(row_number() %% 1000 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 3) +
-  geom_point(data = dual_dc.high %>% filter(row_number() %% 100 ==0), aes(x = total, y = R, color = label_alt, shape = label_alt), size = 2) +
+  geom_point(data = dual_dc.high %>% filter(row_number() %% 100 ==0), aes(x = total, y = R, color = short_label, shape = short_label), size = 2) +
   geom_path(data = time_high.vir, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-   geom_path(data = dual_dc.high, aes(x= total, y = R, group = label_alt, color = label_alt), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
-  scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "black"))  +
+   geom_path(data = dual_dc.high, aes(x= total, y = R, group = short_label, color = short_label), size = 1, arrow = arrow(type = "closed", angle = 10, length = unit(0.2, "inches"))) +
+  scale_color_manual(values=c( "#4575b4",  "#91bfdb", "black"))  +
     labs(fill = "Cues", x = "Total iRBC", y = "RBC", color = "Cues") +
   theme_classic()+ scale_y_continuous(labels = function(x) format(x, scientific = TRUE, accuracy = 0.1)) +
   guides(shape = FALSE) +
@@ -1761,7 +2015,8 @@ si_dc.area <- cbind.data.frame(area = as.numeric(lapply(si_dc.ls, get_dc_area)),
 si_opt_area.df <- si_opt.df %>% 
   filter(cue != "t") %>% 
   left_join(si_dc.area, by = "id") %>% 
-  mutate(fitness_norm = fitness_20/9.883602) ## normalize fitness (use fitness obtained using time df=9 given that we are plotting dual cue and single on the same graph!)
+  mutate(fitness_norm = fitness_20/9.883602,
+        short_label = gsub("I\\+Ig", "Total I", short_label)) ## normalize fitness (use fitness obtained using time df=9 given that we are plotting dual cue and single on the same graph!)
 
 # sanity check area. The area should be on the order if we assume a rectangle!
 si_dc.df %>% 
@@ -1774,15 +2029,15 @@ si_dc.df %>%
 # dual cue
 ```{r}
 # split
-dual_dc.ls <- split(dual_dc.df, dual_dc.df$label_alt)
+dual_dc.ls <- split(dual_dc.df, dual_dc.df$short_label)
 
 # get area
-dual_dc.area <- cbind.data.frame(area = as.numeric(lapply(dual_dc.ls, get_dc_area)), label_alt = names(lapply(dual_dc.ls, get_dc_area)))
+dual_dc.area <- cbind.data.frame(area = as.numeric(lapply(dual_dc.ls, get_dc_area)), short_label = names(lapply(dual_dc.ls, get_dc_area)))
 
 # join with fitness
 dual_cue_f_final_area.df <- dual_cue_f_final.df %>% 
-  mutate(label_alt = gsub("I\\+Ig", "Total I", paste(label, "&" , label_b))) %>% 
-  left_join(dual_dc.area, by = c("label_alt")) %>% 
+  mutate(short_label = gsub("I\\+Ig", "Total I", paste(label, "&" , label_b))) %>% 
+  left_join(dual_dc.area, by = c("short_label")) %>% 
   mutate(fitness_norm = fitness/9.883602) ## normalize fitness (use fitness obtained using time df=9 given that we are plotting dual cue and single on the same graph!)
 ```
 
@@ -1811,32 +2066,42 @@ summary(dual_lm)$r.squared ## 0.1053591
 # look at slope
 summary(si_lm) ## -5.674e-13
 summary(dual_lm) ## -3.185e-13
+
+# save data
+si_opt_area.df %>% 
+  select(label = short_label, fitness_normalized = fitness_norm, area) %>% 
+  write.csv(here("code_repository/supplementary_data/fig6B.csv"))
+
+dual_cue_f_final_area.df%>% 
+  select(label = short_label, fitness_normalized = fitness_norm, area) %>% 
+  write.csv(here("code_repository/supplementary_data/fig6D.csv"))
 ```
 
 # plot correlation
 ```{r}
 # single cue
 ## top 4 cues
-si_opt_area.df_4 <- si_opt_area.df %>% filter(id %in% top_4_single_cue$id)
-si_opt_area.df_4$short_label <- factor(si_opt_area.df_4$short_label, c("Ig log", "I+Ig log", "G log", "I log"))
+si_opt_area.df_2 <- si_opt_area.df %>% filter(id %in% top_2_single_cue$id)
 
 si_corr_area.plt1 <- ggplot() +
-  geom_point(data = si_opt_area.df_4, aes(x = area, y = fitness_norm, color = short_label, shape = short_label), size = 3, alpha = 0.7) +
-       scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "black"), name = "Cues") 
+  geom_point(data = si_opt_area.df_2, aes(x = area, y = fitness_norm, color = short_label, shape = short_label), size = 3, alpha = 0.7) +
+       scale_color_manual(values=c( "#fdcb44","#fc8d59"), name = "Cues") 
   
 si_corr_area.plt2 <- si_corr_area.plt1 + ggnewscale::new_scale_color()
 
 ## the rest
 si_corr_area.plt3 <- si_corr_area.plt2+
-  geom_point(data = si_opt_area.df%>% filter(!id %in% top_4_single_cue$id), aes(x = area, y = fitness_norm), color = "grey", size = 3) +
-  geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602, shape = "Time"), size = 3, color = "black") +
-  geom_line(data = si_lm.ci, aes(x = area, fit)) +
-  geom_ribbon(data = si_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
-  annotate(geom = "text", label = "R^2=0.18; slope = -5.67e-13", x = 2*(10^11), y = 0.76) +
-  annotate(geom = "text", label = "Time", x = 2.7*(10^11), y = 0.98) +
+  geom_point(data = si_opt_area.df%>% filter(!id %in% top_2_single_cue$id), aes(x = area, y = fitness_norm), color = "grey", size = 3) +
+  geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602), shape = 15,size = 3, color = "black") +
+   ggrepel::geom_label_repel(data = si_opt_area.df, aes(x = area, y = fitness_norm, label = short_label), box.padding
+=0.1, size = 3, label.padding = 0.1, force_pull = 0.2, force = 30, show.legend = F) +
+  #geom_line(data = si_lm.ci, aes(x = area, fit)) +
+  #geom_ribbon(data = si_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
+  #annotate(geom = "text", label = "R^2=0.18; slope = -5.67e-13", x = 2*(10^11), y = 0.76) +
+  annotate(geom = "text", label = "Time", x = 2.72*(10^11), y = 0.99) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
-
-  xlim(min(dual_cue_f_final_area.df$area), max(dual_cue_f_final_area.df$area)) +
+  #xlim(min(dual_cue_f_final_area.df$area), max(dual_cue_f_final_area.df$area)) +
+  scale_x_continuous(trans = "log10") +
   theme_classic() +
   theme(legend.position = "none")
 ```
@@ -1844,27 +2109,28 @@ si_corr_area.plt3 <- si_corr_area.plt2+
 
 ```{r}
 # dual cue
-dual_cue_f_final_area.df_4 <- dual_cue_f_final_area.df %>% filter(label_alt %in% top_4_dual_cue$label_alt)
-
-dual_cue_f_final_area.df_4$label_alt <- factor(dual_cue_f_final_area.df_4$label_alt, c("R log & I log", "R & I log", "R & Total I log", "R log & Total I log"))
-
+dual_cue_f_final_area.df_4 <- dual_cue_f_final_area.df %>% filter(short_label %in% c("R log & I log", "R log & Total I log"))
 
 dual_corr_area.plt1 <- ggplot() +
-  geom_point(data = dual_cue_f_final_area.df_4, aes(x = area, y = fitness_norm, color = label_alt, shape = label_alt), size = 3, alpha = 0.7) +
-       scale_color_manual(values=c( "#4575b4", "#fdcb44", "#91bfdb", "#fc8d59", "black"), name = "Cues") 
+  geom_point(data = dual_cue_f_final_area.df_4, aes(x = area, y = fitness_norm, color = short_label, shape =short_label), size = 3, alpha = 0.7) +
+       scale_color_manual(values=c("#4575b4",  "#91bfdb"), name = "Cues") 
 
 dual_corr_area.plt2 <- dual_corr_area.plt1 + ggnewscale::new_scale_color()
 
 dual_corr_area.plt3 <- dual_corr_area.plt2 +
-  geom_point(data = dual_cue_f_final_area.df%>% filter(!label_alt %in% top_4_dual_cue$label_alt), aes(x = area, y = fitness_norm), size = 3, alpha = 0.7, color = "grey") +
-  geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602,  shape = "Time"), size = 3, color = "black") +
-  geom_line(data = dual_lm.ci, aes(x = area, fit)) +
-  geom_ribbon(data = dual_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
-  annotate(geom = "text", label = "R^2=0.11; slope = -3.19e-13", x = 2*(10^11), y = 0.76) +
-  annotate(geom = "text", label = "Time", x = 2.7*(10^11), y = 0.98) +
+  geom_point(data = dual_cue_f_final_area.df%>% filter(!short_label %in% c("R log & I log", "R log & Total I log")), aes(x = area, y = fitness_norm), size = 3, alpha = 0.7, color = "grey") +
+  geom_point(aes(x = time_high.area, y = max(time_high.dyn %>% filter(variable == "tau_cum" & time == 20) %>% pull(value))/9.883602), shape = 15, size = 3, color = "black") +
+  ggrepel::geom_label_repel(data = dual_cue_f_final_area.df %>% filter(short_label %in% c("R log & I log", "R log & Total I log")), aes(x = area, y = fitness_norm, label = short_label), box.padding
+=0.1, size = 3, label.padding = 0.1, force_pull = 0.2, force = 50, show.legend = F, nudge_x = -0.01) +
+  #geom_line(data = dual_lm.ci, aes(x = area, fit)) +
+  #geom_ribbon(data = dual_lm.ci, aes(x = area, ymin = lwr, ymax = upr), alpha = .15) +
+  #annotate(geom = "text", label = "R^2=0.11; slope = -3.19e-13", x = 2*(10^11), y = 0.76) +
+  annotate(geom = "text", label = "Time", x = 2.72*(10^11), y = 0.9985) +
   labs(x = "Area", y = "Normalized fitness", shape = "Cue category", color = "Cue category") +
   scale_color_manual(values = c(blue, "black")) +
-  xlim(min(dual_cue_f_final_area.df$area), max(dual_cue_f_final_area.df$area)) +
+  scale_x_continuous(trans = "log10") +
+  ylim(0.97,NA) +
+  #xlim(min(dual_cue_f_final_area.df$area), max(dual_cue_f_final_area.df$area)) +
   theme_classic() +
   theme(legend.position = "none")
 ```
@@ -1894,6 +2160,11 @@ validation.df_p <- validation.df %>%
 
 ## no random strategy performed better!
 validation.df_p %>% filter(diff<=0)
+
+# write data
+validation.df_p %>% 
+  select(label = long_short_label, fitness_optimized = fitness_20, fitness_randomized = V1) %>% 
+  write.csv(here("code_repository/supplementary_data/S6_Data.csv"), row.names = F)
 ```
 
 # Plot
